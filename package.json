@@ -1,0 +1,19 @@
+{
+  "name": "pomegranate-ui-incubator",
+  "version": "0.0.0-private",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test:unit": "node --test tests/unit/*.test.mjs",
+    "test:browser": "playwright test",
+    "check:extraction": "node scripts/verify-extraction.mjs",
+    "report": "node scripts/generate-migration-report.mjs --check",
+    "check": "npm run test:unit && npm run check:extraction && npm run report && npm run test:browser"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1"
+  }
+}
