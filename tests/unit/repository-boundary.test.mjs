@@ -50,6 +50,20 @@ test('repository carries a preservation CI workflow', async () => {
   assert.match(workflow, /contents:\s*read/);
 });
 
+test('Git never normalizes byte-preserved evidence paths', async () => {
+  const attributes = await readFile(path.join(root, '.gitattributes'), 'utf8');
+  for (const pattern of [
+    '/design/foundations/sonder-ui-bible/** -text',
+    '/design/widget-specifications/sonder-panels-and-widgets/** -text',
+    '/prototypes/sonder-baseline/** -text',
+    '/provenance/SONDER_LICENSE.txt -text',
+    '/provenance/assets/** -text',
+    '/provenance/sonder-design/** -text',
+    '/provenance/sonder-guides/** -text',
+    '/provenance/sonder-plans-and-specs/** -text'
+  ]) assert.ok(attributes.split(/\r?\n/).includes(pattern), pattern);
+});
+
 test('root documentation keeps PomegranateUI a toolkit rather than an application frontend', async () => {
   const readme = await readFile(path.join(root, 'README.md'), 'utf8');
   assert.match(readme, /developer toolkit/i);
