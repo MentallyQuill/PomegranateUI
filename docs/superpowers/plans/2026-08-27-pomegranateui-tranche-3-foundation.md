@@ -540,7 +540,7 @@ git commit -m "feat(react): bind source-owned Widget views"
 - Consumes: public contracts, layout, and core APIs only.
 - Produces: `FIRST_SLICE_CONTRACT_IDS`, `createConformanceFixture`, `runCoreConformance`, and `assertCoreConformance`.
 
-- [ ] **Step 1: Write failing conformance tests**
+- [x] **Step 1: Write failing conformance tests**
 
 Define the exact eight ids in `FIRST_SLICE_CONTRACT_IDS`. The driver accepts a store factory and returns frozen results containing `contractId`, `passed`, and a plain diagnostic. Tests prove all results pass for the native store and fail meaningfully for a deliberately broken factory.
 
@@ -552,17 +552,17 @@ expect(runCoreConformance(() => createWorkbenchStore(options))).toEqual(
 );
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `npm.cmd exec vitest run packages/testkit/src/conformance.test.ts`
 
 Expected: FAIL because testkit APIs are absent.
 
-- [ ] **Step 3: Implement public-only drivers**
+- [x] **Step 3: Implement public-only drivers**
 
 Build fixtures through exported id helpers and public store APIs. Do not reach into package internals. Activation checks host/domain data by carrying a separate immutable fixture object. Docking checks an occupied left edge and order normalization. Persistence checks the v1 codec and Panel ordering.
 
-- [ ] **Step 4: Verify and commit testkit**
+- [x] **Step 4: Verify and commit testkit**
 
 Run:
 
