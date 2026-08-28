@@ -55,9 +55,9 @@ export const DEEP_CURRENT_THEME: ThemeDefinition = {
   },
   geometry: {
     cornerFamily: 'chamfered',
-    cornerSm: 4,
-    cornerMd: 8,
-    cornerLg: 14,
+    cornerSm: 6.4,
+    cornerMd: 8.8,
+    cornerLg: 13.6,
     cornerPill: 999,
     chamfer: 6,
     chamferAngle: 45,
@@ -66,7 +66,7 @@ export const DEEP_CURRENT_THEME: ThemeDefinition = {
     focusWidth: 2,
     focusOffset: 2
   },
-  spacing: { density: 'compact', xs: 4, sm: 6, md: 10, lg: 16, xl: 24, chromeHeight: 44 },
+  spacing: { density: 'compact', xs: 4, sm: 6, md: 12, lg: 16, xl: 24, chromeHeight: 44 },
   materials: {
     canvas: material('canvas', 'canvas', { opacity: 1, blurPx: 0, saturation: 1, shadowOpacity: 0, shadowBlurPx: 0 }),
     shelf: material('surface'),

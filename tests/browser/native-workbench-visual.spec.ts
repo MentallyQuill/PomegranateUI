@@ -10,6 +10,12 @@ async function fresh(page: Page, width: number, height: number) {
   await page.evaluate(() => document.fonts.ready);
 }
 
+async function selectTheme(page: Page, label: 'Pom Neutral' | 'Bunny') {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: label, exact: true }).click();
+  await page.getByRole('tab', { name: 'Scene' }).click();
+}
+
 const shot = (page: Page, name: string) => expect(page).toHaveScreenshot(name, {
   animations: 'disabled',
   caret: 'hide',
@@ -40,4 +46,19 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await shot(page, 'floating-widget.png');
   await page.getByRole('tab', { name: 'Library' }).click();
   await shot(page, 'renderer-error.png');
+});
+
+test('native workbench exposes the two original visual flexibility targets', async ({ page }) => {
+  for (const theme of [
+    { label: 'Pom Neutral' as const, name: 'pom-neutral' },
+    { label: 'Bunny' as const, name: 'bunny' }
+  ]) {
+    await fresh(page, 1440, 900);
+    await selectTheme(page, theme.label);
+    await shot(page, `wide-${theme.name}.png`);
+
+    await fresh(page, 390, 844);
+    await selectTheme(page, theme.label);
+    await shot(page, `compact-${theme.name}.png`);
+  }
 });

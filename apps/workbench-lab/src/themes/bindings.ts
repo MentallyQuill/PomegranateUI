@@ -98,6 +98,7 @@ export function compileThemeBindings(theme: ResolvedTheme): string {
     const material = theme.materials[role];
     add(`--pom-material-${role}`, withOpacity(material.base, material.opacity));
     add(`--pom-material-${role}-fallback`, material.fallback);
+    add(`--pom-material-${role}-fallback-surface`, withOpacity(material.fallback, Math.min(1, material.opacity + 0.04)));
     add(`--pom-material-${role}-blur`, `${material.blurPx}px`);
     add(`--pom-material-${role}-saturation`, decimal(material.saturation));
     add(`--pom-material-${role}-border`, material.border);
@@ -109,6 +110,16 @@ export function compileThemeBindings(theme: ResolvedTheme): string {
   const canvasImages = theme.canvas.map(compileCanvasLayer).filter((layer): layer is string => layer !== null);
   add('--pom-canvas-color', canvasColor?.kind === 'solid' ? canvasColor.color : theme.colors.canvas);
   add('--pom-canvas', canvasImages.length > 0 ? canvasImages.join(', ') : 'none');
+  add('--pom-atmosphere-one', theme.colors.danger);
+  add('--pom-atmosphere-two', theme.colors.success);
+  add('--pom-atmosphere-three', theme.colors.accent);
+
+  const textRed = Number.parseInt(theme.colors.text.slice(1, 3), 16);
+  const textGreen = Number.parseInt(theme.colors.text.slice(3, 5), 16);
+  const textBlue = Number.parseInt(theme.colors.text.slice(5, 7), 16);
+  const textLuminance = 0.2126 * textRed + 0.7152 * textGreen + 0.0722 * textBlue;
+  add('--pom-icon-filter', textLuminance > 150 ? 'invert(.72)' : 'none');
+  add('--pom-icon-filter-hover', textLuminance > 150 ? 'invert(.9)' : 'none');
 
   return bindings
     .sort(([left], [right]) => left.localeCompare(right))

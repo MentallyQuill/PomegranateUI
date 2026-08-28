@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveTheme } from '@pomegranate-ui/theme';
+import { contrastRatio, resolveTheme } from '@pomegranate-ui/theme';
 import { BUNNY_THEME } from './bunny.js';
 import { compileThemeBindings } from './bindings.js';
 import { createLabThemeController } from './controller.js';
@@ -13,6 +13,20 @@ describe('Workbench Lab theme conformance', () => {
     expect(preset).toBeDefined();
     const result = resolveTheme(preset?.definition);
     expect(result.ok).toBe(true);
+  });
+
+  it.each(LAB_THEME_IDS)('keeps rendered text and interaction colors readable in %s', (id) => {
+    const preset = LAB_THEME_PRESETS.find((candidate) => candidate.id === id);
+    const result = resolveTheme(preset?.definition);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const { colors, accessibility } = result.theme;
+    for (const background of [colors.canvas, colors.surface, colors.surfaceElevated, colors.surfaceInset]) {
+      expect(contrastRatio(colors.text, background)).toBeGreaterThanOrEqual(accessibility.minimumContrast);
+      expect(contrastRatio(colors.textMuted, background)).toBeGreaterThanOrEqual(accessibility.minimumContrast);
+    }
+    expect(contrastRatio(colors.textOnAccent, colors.accent)).toBeGreaterThanOrEqual(accessibility.minimumContrast);
+    expect(contrastRatio(colors.focus, colors.canvas)).toBeGreaterThanOrEqual(accessibility.minimumContrast);
   });
 
   it('compiles semantic values and ordered canvas layers without a theme-id selector', () => {
