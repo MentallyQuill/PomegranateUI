@@ -1,36 +1,82 @@
+![PomegranateUI](docs/assets/pomegranateui-logo-white.png)
+
 # PomegranateUI
 
-PomegranateUI is a developer toolkit for teams building AI roleplaying applications. It is not an application frontend and does not prescribe an adopter's brand, information architecture, backend, or product shell.
+**PomegranateUI — Pom for short — is a modular UI developer toolkit for teams building AI roleplay frontends.** It provides reusable interaction contracts and an adaptable Svelte view path for the dense, stateful workspaces that roleplay applications need, while leaving the actual product in the adopter's hands.
 
-The project begins with two evidence lanes:
+Pom is designed for the same broad problem space as frontends such as SillyTavern: conversations, characters, lore, scenes, world state, tools, settings, and extensible workspaces. It does not depend on SillyTavern, copy its product model, or replace it.
 
-- The **legacy evidence lane** preserves Sonder's HTML, CSS, JavaScript, design records, assets, and browser regressions byte-for-byte as executable behavioral oracles.
-- The **native toolkit lane** acquires framework-neutral contracts, state machines, test drivers, and a Svelte view integration one contract family at a time.
+Pom is not an application frontend. It is the modular interaction layer from which a team can build one.
 
-Tranche 3 establishes strict TypeScript workspaces after the extraction manifest proved that every baseline artifact, regression contract, audited Widget surface, license, and source-side integration test has an accountable owner.
+## What Pom is
 
-This repository remains a private incubator. Nothing in this phase is published to npm or presented as a finished component library.
+Pom is shared UI infrastructure for building a roleplay frontend without rebuilding every workspace behavior from scratch.
 
-The preserved source baseline is Sonder Engine commit `0fb98e43f303d62c42ef5c74e6ae38126f68161d`.
+| Pom provides | Your frontend owns |
+| --- | --- |
+| Panel, Widget, and catalog contracts | Product navigation and information architecture |
+| Framework-neutral layout state and transitions | The screens, markup, and composition players see |
+| Commands, events, registration, and subscriptions | Roleplay rules and domain semantics |
+| Responsive and accessibility behavior contracts | Branding, visual identity, and final styling |
+| Headless Svelte stores, context, renderers, and actions | Backend, model providers, authentication, and hosting |
+| Editable, copy-owned Svelte recipes | Saves, characters, chats, lore, and persistence adapters |
+| Public conformance fixtures and test drivers | Which capabilities to adopt and how they fit together |
 
-## Package graph
+This boundary is what makes Pom flexible. A team can use the full workspace model, adopt one contract family, replace every visible recipe, connect an existing backend, or build an entirely new roleplay experience over the same tested interaction machinery.
+
+## What Pom is not
+
+Pom is **not**:
+
+- a finished AI roleplay frontend;
+- a chatbot, model client, inference runtime, or prompt engine;
+- a character, chat, lore, campaign, or save data model;
+- a backend, authentication system, database, or hosting platform;
+- a fixed branded component library that dictates how an application must look;
+- a SvelteKit application shell; or
+- a replacement for SillyTavern, Sonder Engine, or another host application.
+
+Pom helps a frontend behave coherently. It does not decide what that frontend is.
+
+## How Pom fits together
+
+The maintained dependency path is:
+
+```text
+contracts -> layout -> core -> svelte
+    |                    \
+    -> theme              -> testkit (public APIs only)
+```
 
 - `@pomegranate-ui/contracts` owns JSON-safe public contracts and runtime schemas.
 - `@pomegranate-ui/layout` owns framework-neutral Panel and Widget layout transitions.
 - `@pomegranate-ui/core` owns registration, deterministic command dispatch, and subscriptions.
 - `@pomegranate-ui/theme` validates versioned declarative themes and resolves framework-neutral semantic colors, typography, geometry, spacing, materials, assets, canvas layers, and accessibility metadata.
-- `@pomegranate-ui/svelte` provides headless readable stores, typed context, renderer registration, and focus actions over public core APIs.
+- `@pomegranate-ui/svelte` exposes headless readable stores, typed context, renderer registration, and focus actions over public core APIs.
 - `@pomegranate-ui/testkit` provides public conformance fixtures and drivers.
+- `registry/recipes` contains source-owned recipes: editable Svelte files that adopters copy and own.
 
-The maintained view path is `contracts -> layout -> core -> svelte`, with the separate framework-neutral `contracts -> theme` path supplying semantic values to adopter-owned views. The testkit consumes public package APIs only. Reusable UI is distributed as source-owned recipes under `registry/recipes`: adopters copy and own those `.svelte` files instead of receiving a fixed branded component shell.
+The maintained view path is `contracts -> layout -> core -> svelte`, with the separate framework-neutral `contracts -> theme` path supplying semantic values to adopter-owned views. The testkit consumes public package APIs only. Contracts, layout, core, and theme contain no Svelte, React, DOM, backend, or roleplay-host imports. Svelte is the maintained reference view integration, not the authority for application state or product structure.
 
-## Workbench Lab
+## Adoption model
 
-The Svelte Workbench Lab rebuilds the approved mockup direction without making that mockup PomegranateUI's product model. The Atmospheric Workbench is the authority for macro layout, material, and responsive staging. The Widget Overhaul is the authority for Widget inventory, geometry, and state coverage. Both preserved prototypes remain executable evidence oracles; production authority belongs to the packages and the Lab's owned recipe copies.
+1. Choose the Pom contract families your frontend needs.
+2. Create the framework-neutral stores and register the available Widget types.
+3. Use the headless Svelte integration or consume the neutral packages directly.
+4. Copy the relevant recipes and reshape their markup, composition, and styling as product-owned source.
+5. Supply explicit adapters for backend state, storage, authentication, and roleplay-domain data.
+6. Run the public testkit and browser gates against the resulting frontend.
 
-Start the development server at `http://127.0.0.1:5173/`:
+See [What is Pom?](docs/what-is-pom.md) for the product model and [Adoption boundary](docs/adoption-boundary.md) for the ownership contract in more detail.
+
+## Explore the Workbench Lab
+
+The Svelte Workbench Lab is Pom's demanding reference consumer. It demonstrates the toolkit against an AI roleplay workspace without turning that mockup into Pom's product model.
+
+Install the locked dependencies and start the development server at `http://127.0.0.1:5173/`:
 
 ```powershell
+npm.cmd ci
 npm.cmd run dev:lab
 ```
 
@@ -41,7 +87,30 @@ npm.cmd run build
 npm.cmd run preview:lab
 ```
 
-The deployable boundary is the relative-base static output in `apps/workbench-lab/dist`. It does not require SvelteKit, a PomegranateUI backend, Sonder server code, or a network-only asset host. Production hosting is outside this tranche.
+The Atmospheric Workbench is the preserved authority for macro layout, material, and responsive staging. The Widget Overhaul is the preserved authority for Widget inventory, geometry, and state coverage. Both remain executable evidence oracles; production authority belongs to the packages and the Lab's owned recipe copies.
+
+## Documentation
+
+- [Documentation index](docs/README.md)
+- [What is Pom?](docs/what-is-pom.md)
+- [Adoption boundary](docs/adoption-boundary.md)
+- [Svelte integration](packages/svelte/README.md)
+- [Source-owned recipe registry](registry/recipes/README.md)
+- [Workbench Lab](apps/workbench-lab/README.md)
+- [Preservation and provenance](provenance/README.md)
+
+## Project status
+
+PomegranateUI develops against two complementary evidence lanes:
+
+- The **legacy evidence lane** preserves Sonder's HTML, CSS, JavaScript, design records, assets, and browser regressions byte-for-byte as executable behavioral oracles.
+- The **native toolkit lane** acquires framework-neutral contracts, state machines, test drivers, and the Svelte view integration one contract family at a time.
+
+PomegranateUI remains a private incubator. Npm package publication has not occurred, and production hosting is not part of the current tranche. Sonder cutover has not occurred; Sonder Engine remains unchanged until a separately approved integration tranche.
+
+The preserved source baseline is Sonder Engine commit `0fb98e43f303d62c42ef5c74e6ae38126f68161d`. Sonder is the first demanding consumer and the source of the preserved behavioral evidence; it is not Pom's internal data model, and no Sonder server code enters a Pom package or example.
+
+The deployable Lab boundary is the relative-base static output in `apps/workbench-lab/dist`. It does not require SvelteKit, a Pom backend, Sonder server code, or a network-only asset host.
 
 The Lab applies three complete definitions to the same live Panel and Widget tree: Pom Neutral, Deep Current, and Bunny. Switching is immediate and atomic; a failed definition or missing required local asset leaves the last valid theme active. These presets are Lab-owned demonstrations, not bundled product branding. Adopters continue to own markup, composition, asset resolution, preference persistence, and final visual identity.
 
@@ -49,28 +118,19 @@ This tranche intentionally does not add animated theme morphing, a visual theme 
 
 ## Local verification gate
 
-On Windows, install and verify the locked toolchain with:
+Use `npm.cmd` on Windows:
 
 ```powershell
-npm.cmd ci
-npm.cmd exec playwright install chromium
 npm.cmd run test:unit
 npm.cmd run typecheck
 npm.cmd run test:native
 npm.cmd run build
 npm.cmd run check:extraction
+npm.cmd run check:recipes
 npm.cmd run report
 npm.cmd run test:pack
 npm.cmd run test:browser
 npm.cmd run check
 ```
 
-The individual commands are useful while developing. The final `npm.cmd run check` executes them in the repository's required order and verifies unit contracts, strict types, native packages, clean packed consumers, source hashes, ownership and license provenance, generated reports, the Workbench Lab, and both preserved browser oracles.
-
-Npm package publication has not occurred. Sonder cutover has not occurred; Sonder remains an unchanged consumer candidate until a separately approved integration tranche.
-
-## Product boundary
-
-PomegranateUI will own reusable interaction machinery: Panels, Widgets, the Widget Catalog, layout and persistence envelopes, responsive staging, accessibility behavior, semantic theme foundations, commands, events, capability declarations, and test drivers.
-
-Adopters remain responsible for their application, backend integration, routes, authentication, saves, domain semantics, and final source-owned presentation.
+The final `npm.cmd run check` executes the required gates in repository order and verifies unit contracts, strict types, native packages, clean packed consumers, source hashes, ownership and license provenance, generated reports, the Workbench Lab, and both preserved browser oracles.
