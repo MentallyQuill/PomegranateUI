@@ -1,3 +1,3 @@
-# Mock Roleplaying Backend
+# Mock Roleplaying Backend Consumer
 
-Reserved for the clean independent consumer built in Tranche 3. This example must not import Sonder server code; it will exchange plain data, commands, events, and capability declarations with PomegranateUI.
+A clean framework-neutral consumer that creates and restores a PomegranateUI layout while keeping its roleplaying backend record as a separate host-owned object. It imports package roots only and must not import Sonder server code.

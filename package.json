@@ -15,6 +15,7 @@
     "build": "tsc -b && npm run build --workspace @pomegranate-ui/workbench-lab",
     "test:unit": "node --test tests/unit/*.test.mjs",
     "test:native": "vitest run",
+    "test:pack": "node scripts/verify-packed-consumers.mjs",
     "test:browser": "playwright test",
     "pretest:browser": "npm run build",
     "preview:lab": "npm run preview --workspace @pomegranate-ui/workbench-lab",

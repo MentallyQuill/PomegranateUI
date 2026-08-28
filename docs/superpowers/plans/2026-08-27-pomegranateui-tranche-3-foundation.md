@@ -671,13 +671,13 @@ git commit -m "feat(lab): prove Panel Widget vertical slice"
 - Consumes: package tarballs and public exports only.
 - Produces: clean-install proof for a backend-neutral consumer and a Sonder-shaped plain-data adapter with no repository import.
 
-- [ ] **Step 1: Write failing boundary and consumer tests**
+- [x] **Step 1: Write failing boundary and consumer tests**
 
 `packed-consumer.test.mjs` statically scans package and example imports. Reject `Sonder_Engine`, absolute drive paths, imports escaping an example, package-internal `src/` imports, and any React import outside `packages/react`, Workbench Lab, or consumer UI.
 
 The mock consumer test creates a store, places a Widget, encodes/reloads it, and asserts the backend record remains a separate object. The Sonder-shaped adapter test maps `{ active_story_id, capabilities }` to `{ storyId, capabilities }` without importing Sonder modules.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -688,11 +688,11 @@ npm.cmd exec vitest run examples
 
 Expected: FAIL because consumers and pack verifier are absent.
 
-- [ ] **Step 3: Implement both consumers**
+- [x] **Step 3: Implement both consumers**
 
 Give each example its own private package manifest, strict TypeScript config, public package imports, build script, and Vitest tests. Keep all fixtures plain and small; no copied Sonder implementation or mock backend hidden inside PomegranateUI packages.
 
-- [ ] **Step 4: Implement clean tarball verification**
+- [x] **Step 4: Implement clean tarball verification**
 
 `scripts/verify-packed-consumers.mjs` must:
 
@@ -704,11 +704,11 @@ Give each example its own private package manifest, strict TypeScript config, pu
 6. run `npm install --ignore-scripts`, `npm run build`, and `npm test` in each clean directory; and
 7. remove only the exact temporary root in `finally`.
 
-Use `npm.cmd` on Windows and `npm` elsewhere through `spawnSync` argument arrays without a shell.
+Use npm's exact CLI through `spawnSync` argument arrays without a shell. On Windows, launch `process.env.npm_execpath` through `process.execPath`; Node 24 rejects direct `.cmd` execution with `EINVAL` when `shell: false`. Use `npm` directly elsewhere.
 
 Add root script `test:pack: node scripts/verify-packed-consumers.mjs` and extend the repository-boundary test so the script and verifier file are both required.
 
-- [ ] **Step 5: Verify packed consumers GREEN**
+- [x] **Step 5: Verify packed consumers GREEN**
 
 Run:
 
@@ -720,7 +720,7 @@ npm.cmd run test:pack
 
 Expected: both examples build/test from tarballs; package content contains only `dist`, package metadata, and README.
 
-- [ ] **Step 6: Commit consumers**
+- [x] **Step 6: Commit consumers**
 
 ```powershell
 git add examples scripts/verify-packed-consumers.mjs tests/unit/packed-consumer.test.mjs package.json package-lock.json
