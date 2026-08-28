@@ -4691,6 +4691,118 @@
       "status": "preserved-verbatim"
     },
     {
+      "contractId": "POM-RENDER-4E5A79B301",
+      "sourcePath": "native:pomegranate-ui",
+      "sourceCommit": "native",
+      "sourceSha256": null,
+      "sourceEvidence": "One named Panels tablist exposes stable unique tab identities.",
+      "evidenceKind": "renderer-conformance",
+      "classification": "toolkit-generic",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "destinationEvidence": [
+        "packages/testkit/src/renderer-conformance.test.ts"
+      ],
+      "status": "native-test-added"
+    },
+    {
+      "contractId": "POM-RENDER-5F6B8AC412",
+      "sourcePath": "native:pomegranate-ui",
+      "sourceCommit": "native",
+      "sourceSha256": null,
+      "sourceEvidence": "The selected Panel tab and active panel expose reciprocal ARIA relationships.",
+      "evidenceKind": "renderer-conformance",
+      "classification": "toolkit-generic",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "destinationEvidence": [
+        "packages/testkit/src/renderer-conformance.test.ts"
+      ],
+      "status": "native-test-added"
+    },
+    {
+      "contractId": "POM-RENDER-607C9BD523",
+      "sourcePath": "native:pomegranate-ui",
+      "sourceCommit": "native",
+      "sourceSha256": null,
+      "sourceEvidence": "Panel activation preserves adopter-owned host story identity.",
+      "evidenceKind": "renderer-conformance",
+      "classification": "toolkit-generic",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "destinationEvidence": [
+        "packages/testkit/src/renderer-conformance.test.ts"
+      ],
+      "status": "native-test-added"
+    },
+    {
+      "contractId": "POM-RENDER-718DACF634",
+      "sourcePath": "native:pomegranate-ui",
+      "sourceCommit": "native",
+      "sourceSha256": null,
+      "sourceEvidence": "Panel reorder exposes truthful disabled directions at sequence edges.",
+      "evidenceKind": "renderer-conformance",
+      "classification": "toolkit-generic",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "destinationEvidence": [
+        "packages/testkit/src/renderer-conformance.test.ts"
+      ],
+      "status": "native-test-added"
+    },
+    {
+      "contractId": "POM-RENDER-829EBD0745",
+      "sourcePath": "native:pomegranate-ui",
+      "sourceCommit": "native",
+      "sourceSha256": null,
+      "sourceEvidence": "Widget placement appends to an occupied dock without replacement.",
+      "evidenceKind": "renderer-conformance",
+      "classification": "toolkit-generic",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "destinationEvidence": [
+        "packages/testkit/src/renderer-conformance.test.ts"
+      ],
+      "status": "native-test-added"
+    },
+    {
+      "contractId": "POM-RENDER-93AFCE1856",
+      "sourcePath": "native:pomegranate-ui",
+      "sourceCommit": "native",
+      "sourceSha256": null,
+      "sourceEvidence": "An unresolved Widget remains in layout with a named unavailable status.",
+      "evidenceKind": "renderer-conformance",
+      "classification": "toolkit-generic",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "destinationEvidence": [
+        "packages/testkit/src/renderer-conformance.test.ts"
+      ],
+      "status": "native-test-added"
+    },
+    {
+      "contractId": "POM-RENDER-A4B0DF2967",
+      "sourcePath": "native:pomegranate-ui",
+      "sourceCommit": "native",
+      "sourceSha256": null,
+      "sourceEvidence": "A Widget renderer failure is contained without mutating state or disabling siblings.",
+      "evidenceKind": "renderer-conformance",
+      "classification": "toolkit-generic",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "destinationEvidence": [
+        "packages/testkit/src/renderer-conformance.test.ts"
+      ],
+      "status": "native-test-added"
+    },
+    {
+      "contractId": "POM-RENDER-B5C1E03A78",
+      "sourcePath": "native:pomegranate-ui",
+      "sourceCommit": "native",
+      "sourceSha256": null,
+      "sourceEvidence": "Semantic focus movement reaches the named Panel control.",
+      "evidenceKind": "renderer-conformance",
+      "classification": "toolkit-generic",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "destinationEvidence": [
+        "packages/testkit/src/renderer-conformance.test.ts"
+      ],
+      "status": "native-test-added"
+    },
+    {
       "contractId": "POM-RESPONSIVE-017C197C55",
       "sourcePath": "docs/experiments/sonder-atmospheric-workbench/sonder-drag-regression.html",
       "sourceCommit": "0fb98e43f303d62c42ef5c74e6ae38126f68161d",

@@ -33,7 +33,8 @@ test('reports all accountability totals from inputs and is byte-deterministic', 
   for (const expected of [
     'Total baseline contracts: 2', 'Preserved artifacts: 2',
     'Assigned Widget/renderer surfaces: 1', 'Dual-green contracts: 0',
-    'Sonder-owned contracts: 1', 'Awaiting native port: 1',
+    'Native renderer contracts: 0', 'Sonder-owned contracts: 1', 'Awaiting native port: 1',
+    'Retired contracts: 0',
     'Unaccounted: 0', 'Atmospheric Workbench: 95/95 passed',
     'Widget overhaul: 212/212 passed', 'POM-WIDGET',
     'toolkit-generic', 'preserved-verbatim', '@pomegranate-ui/widget'
@@ -65,8 +66,10 @@ test('production report carries the exact first-slice migration totals and is cu
   for (const expected of [
     'Total baseline contracts: 497',
     'Dual-green contracts: 8',
+    'Native renderer contracts: 8',
     'Sonder-owned contracts: 54',
     'Awaiting native port: 435',
+    'Retired contracts: 0',
     'Unaccounted: 0'
   ]) assert.match(reports.report, new RegExp(expected));
   assert.deepEqual(await checkGeneratedReports({ root, reports }), []);

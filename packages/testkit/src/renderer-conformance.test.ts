@@ -136,6 +136,19 @@ class ThrowingActivationHarness extends PassingHarness {
 }
 
 describe('renderer conformance', () => {
+  it('publishes the reviewed native renderer contract identities', () => {
+    expect(Object.values(RENDERER_CONTRACT_IDS)).toEqual([
+      'POM-RENDER-4E5A79B301',
+      'POM-RENDER-5F6B8AC412',
+      'POM-RENDER-607C9BD523',
+      'POM-RENDER-718DACF634',
+      'POM-RENDER-829EBD0745',
+      'POM-RENDER-93AFCE1856',
+      'POM-RENDER-A4B0DF2967',
+      'POM-RENDER-B5C1E03A78'
+    ]);
+  });
+
   it('accepts a named Panel tablist with stable tab identities', async () => {
     const results = await runRendererConformance(new PassingHarness());
     expect(results[0]).toEqual({

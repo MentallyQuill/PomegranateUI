@@ -27,24 +27,29 @@ function escapeCell(value) {
 
 export function buildReports({ manifest, contractIndex, testDispositions, sourceCommits, runtimeHarnessCases }) {
   const contracts = contractIndex.contracts || [];
+  const baselineContracts = contracts.filter((item) => item.status !== 'native-test-added');
   const artifacts = manifest.artifacts || [];
   const unaccounted = manifest.unaccounted?.length || 0;
   const assignedSurfaces = contracts.filter((item) => item.evidenceKind === 'widget-ledger' && item.destinationOwner).length;
   const dualGreen = contracts.filter((item) => item.status === 'dual-green').length;
+  const nativeRenderer = contracts.filter((item) => item.status === 'native-test-added').length;
   const sonderOwned = contracts.filter((item) => item.status === 'sonder-owned').length;
-  const awaitingNative = contracts.filter((item) => item.status === 'preserved-verbatim' || item.status === 'native-test-added').length;
+  const awaitingNative = contracts.filter((item) => item.status === 'preserved-verbatim').length;
+  const retired = contracts.filter((item) => item.status === 'retired-approved').length;
   const harnesses = runtimeHarnessCases?.harnesses?.length
     ? new Map(runtimeHarnessCases.harnesses.map((harness) => [harness.name, harness.reportedResult]))
     : harnessResults(sourceCommits);
   const family = (contract) => contract.contractId.replace(/-[A-F0-9]{10}$/, '');
   const report = [
     '# PomegranateUI Migration Report', '',
-    `- Total baseline contracts: ${contracts.length}`,
+    `- Total baseline contracts: ${baselineContracts.length}`,
     `- Preserved artifacts: ${artifacts.length}`,
     `- Assigned Widget/renderer surfaces: ${assignedSurfaces}`,
     `- Dual-green contracts: ${dualGreen}`,
+    `- Native renderer contracts: ${nativeRenderer}`,
     `- Sonder-owned contracts: ${sonderOwned}`,
     `- Awaiting native port: ${awaitingNative}`,
+    `- Retired contracts: ${retired}`,
     `- Sonder test dispositions: ${(testDispositions.entries || []).length}`,
     `- **Unaccounted: ${unaccounted}**`, '',
     '## Preserved browser oracles', '',
@@ -58,7 +63,7 @@ export function buildReports({ manifest, contractIndex, testDispositions, source
   ].join('\n');
   const ledger = [
     '# PomegranateUI Extraction Ledger', '',
-    `- Baseline contracts: ${contracts.length}`,
+    `- Baseline contracts: ${baselineContracts.length}`,
     `- Preserved artifacts: ${artifacts.length}`,
     `- Unaccounted: ${unaccounted}`, '',
     '| Contract ID | Kind | Source evidence | Owner | Status | Destination evidence |',

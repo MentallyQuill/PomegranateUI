@@ -19,11 +19,19 @@ PomegranateUI is a developer toolkit for teams building AI roleplaying applicati
 
 ## TypeScript package rules
 
-- Runtime dependencies flow `contracts -> layout -> core -> react`; `testkit` consumes public APIs only.
-- Keep `contracts`, `layout`, and `core` free of React and DOM imports.
+- Runtime dependencies flow `contracts -> layout -> core -> svelte`; `testkit` consumes public APIs only.
+- Keep `contracts`, `layout`, and `core` free of Svelte, React, and DOM imports.
 - Parse untrusted public input through schemas in `@pomegranate-ui/contracts`.
 - Keep package exports source-ownable and backend-neutral; host/domain data enters through explicit adapters.
+- Treat `@pomegranate-ui/svelte` as headless integration and `registry/recipes` as copy-owned Svelte source, not as a branded application shell.
 - `@pomegranate-ui/theme` remains reserved until its own approved tranche.
+
+## Local Workbench Lab
+
+- The Atmospheric Workbench owns macro layout/material/responsive mockup authority; the Widget Overhaul owns Widget inventory/geometry/state authority.
+- Use `npm.cmd run dev:lab` for `http://127.0.0.1:5173/`.
+- Use `npm.cmd run build` then `npm.cmd run preview:lab` for `http://127.0.0.1:4174/`.
+- `apps/workbench-lab/dist` is the static relative-base artifact boundary. Do not add SvelteKit, hosting, package publication, Sonder server imports, or a Sonder cutover in this tranche.
 
 ## Verification
 

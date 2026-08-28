@@ -187,3 +187,20 @@ test('native evidence must exist, cite its contract id, and retain preserved evi
     assert.match(findings.join('\n'), expected, name);
   }
 });
+
+test('native-only renderer evidence requires its cited repository proof without a preserved artifact', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'pomegranate-native-renderer-'));
+  temporaryRoots.push(root);
+  await mkdir(path.join(root, 'packages', 'testkit', 'src'), { recursive: true });
+  await writeFile(
+    path.join(root, 'packages', 'testkit', 'src', 'renderer.test.ts'),
+    "test('POM-RENDER-AAAAAAAAAA portable renderer proof', () => {});\n"
+  );
+  const contract = {
+    contractId: 'POM-RENDER-AAAAAAAAAA',
+    sourcePath: 'native:pomegranate-ui',
+    destinationEvidence: ['packages/testkit/src/renderer.test.ts'],
+    status: 'native-test-added'
+  };
+  assert.deepEqual(await verifyNativeContractEvidence({ root, contracts: [contract], artifacts: [] }), []);
+});

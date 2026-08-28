@@ -5,7 +5,7 @@ PomegranateUI is a developer toolkit for teams building AI roleplaying applicati
 The project begins with two evidence lanes:
 
 - The **legacy evidence lane** preserves Sonder's HTML, CSS, JavaScript, design records, assets, and browser regressions byte-for-byte as executable behavioral oracles.
-- The **native toolkit lane** acquires framework-neutral contracts, state machines, test drivers, and React-first bindings one contract family at a time.
+- The **native toolkit lane** acquires framework-neutral contracts, state machines, test drivers, and a Svelte view integration one contract family at a time.
 
 Tranche 3 establishes strict TypeScript workspaces after the extraction manifest proved that every baseline artifact, regression contract, audited Widget surface, license, and source-side integration test has an accountable owner.
 
@@ -18,11 +18,30 @@ The preserved source baseline is Sonder Engine commit `0fb98e43f303d62c42ef5c74e
 - `@pomegranate-ui/contracts` owns JSON-safe public contracts and runtime schemas.
 - `@pomegranate-ui/layout` owns framework-neutral Panel and Widget layout transitions.
 - `@pomegranate-ui/core` owns registration, deterministic command dispatch, and subscriptions.
-- `@pomegranate-ui/react` provides React bindings over the public core.
+- `@pomegranate-ui/svelte` provides headless readable stores, typed context, renderer registration, and focus actions over public core APIs.
 - `@pomegranate-ui/testkit` provides public conformance fixtures and drivers.
 - `@pomegranate-ui/theme` remains reserved for a later tranche.
 
-Runtime dependencies flow from `contracts` to `layout` to `core` to `react`. The testkit consumes public package APIs only.
+The maintained view path is `contracts -> layout -> core -> svelte`. The testkit consumes public package APIs only. Reusable UI is distributed as source-owned recipes under `registry/recipes`: adopters copy and own those `.svelte` files instead of receiving a fixed branded component shell.
+
+## Workbench Lab
+
+The Svelte Workbench Lab rebuilds the approved mockup direction without making that mockup PomegranateUI's product model. The Atmospheric Workbench is the authority for macro layout, material, and responsive staging. The Widget Overhaul is the authority for Widget inventory, geometry, and state coverage. Both preserved prototypes remain executable evidence oracles; production authority belongs to the packages and the Lab's owned recipe copies.
+
+Start the development server at `http://127.0.0.1:5173/`:
+
+```powershell
+npm.cmd run dev:lab
+```
+
+Build and inspect the static production artifact at `http://127.0.0.1:4174/`:
+
+```powershell
+npm.cmd run build
+npm.cmd run preview:lab
+```
+
+The deployable boundary is the relative-base static output in `apps/workbench-lab/dist`. It does not require SvelteKit, a PomegranateUI backend, Sonder server code, or a network-only asset host. Production hosting is outside this tranche.
 
 ## Local verification gate
 

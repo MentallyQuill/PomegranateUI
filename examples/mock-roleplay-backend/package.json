@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node ../../node_modules/@typescript/native/bin/tsc -p tsconfig.json --pretty false",
+    "build": "tsc -p tsconfig.json --pretty false",
     "test": "vitest run"
   },
   "dependencies": {

@@ -29,6 +29,17 @@ const expectedFirstSliceIds = [
   'POM-PERSIST-D50D69D3C4'
 ];
 
+const expectedRendererIds = [
+  'POM-RENDER-4E5A79B301',
+  'POM-RENDER-5F6B8AC412',
+  'POM-RENDER-607C9BD523',
+  'POM-RENDER-718DACF634',
+  'POM-RENDER-829EBD0745',
+  'POM-RENDER-93AFCE1856',
+  'POM-RENDER-A4B0DF2967',
+  'POM-RENDER-B5C1E03A78'
+];
+
 test('extracts each literal run title once', async () => {
   for (const sourcePath of [
     'prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html',
@@ -114,6 +125,56 @@ test('native evidence overlay accepts only reviewed promotions of known preserve
   ], valid), /preserved-verbatim/i);
 });
 
+test('native evidence overlay appends reviewed renderer-only contracts without mutating preserved IDs', () => {
+  const contracts = [{
+    contractId: 'POM-PANEL-AAAAAAAAAA',
+    destinationEvidence: ['prototypes/oracle.html'],
+    status: 'preserved-verbatim'
+  }];
+  const applied = applyNativeEvidenceOverlay(contracts, {
+    schemaVersion: 1,
+    entries: [],
+    nativeContracts: [{
+      contractId: 'POM-RENDER-AAAAAAAAAA',
+      sourceEvidence: 'Named Panels tablist',
+      destinationOwner: '@pomegranate-ui/testkit',
+      nativeEvidence: ['packages/testkit/src/renderer-conformance.test.ts']
+    }]
+  });
+  assert.equal(applied.length, 2);
+  assert.deepEqual(applied[0], contracts[0]);
+  assert.deepEqual(applied[1], {
+    contractId: 'POM-RENDER-AAAAAAAAAA',
+    sourcePath: 'native:pomegranate-ui',
+    sourceCommit: 'native',
+    sourceSha256: null,
+    sourceEvidence: 'Named Panels tablist',
+    evidenceKind: 'renderer-conformance',
+    classification: 'toolkit-generic',
+    destinationOwner: '@pomegranate-ui/testkit',
+    destinationEvidence: ['packages/testkit/src/renderer-conformance.test.ts'],
+    status: 'native-test-added'
+  });
+  assert.throws(() => applyNativeEvidenceOverlay(contracts, {
+    schemaVersion: 1,
+    entries: [],
+    nativeContracts: [
+      {
+        contractId: 'POM-RENDER-AAAAAAAAAA',
+        sourceEvidence: 'first',
+        destinationOwner: '@pomegranate-ui/testkit',
+        nativeEvidence: ['tests/first.ts']
+      },
+      {
+        contractId: 'POM-RENDER-AAAAAAAAAA',
+        sourceEvidence: 'collision',
+        destinationOwner: '@pomegranate-ui/testkit',
+        nativeEvidence: ['tests/collision.ts']
+      }
+    ]
+  }), /duplicate.*contract/i);
+});
+
 test('production overlay promotes exactly the eight first-slice contracts', async () => {
   const manifest = JSON.parse(await readFile(path.join(root, 'provenance/extraction-manifest.json'), 'utf8'));
   const rules = JSON.parse(await readFile(path.join(root, 'provenance/contract-family-rules.json'), 'utf8'));
@@ -129,6 +190,10 @@ test('production overlay promotes exactly the eight first-slice contracts', asyn
   assert.deepEqual(
     index.contracts.filter((item) => item.status === 'dual-green').map((item) => item.contractId).sort(),
     [...expectedFirstSliceIds].sort()
+  );
+  assert.deepEqual(
+    index.contracts.filter((item) => item.status === 'native-test-added').map((item) => item.contractId).sort(),
+    [...expectedRendererIds].sort()
   );
 });
 

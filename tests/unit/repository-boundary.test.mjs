@@ -17,6 +17,7 @@ const reservedReadmes = [
   'packages/core/README.md',
   'packages/layout/README.md',
   'packages/react/README.md',
+  'packages/svelte/README.md',
   'packages/testkit/README.md',
   'packages/theme/README.md',
   'prototypes/sonder-baseline/README.md',
@@ -93,6 +94,12 @@ test('root documentation keeps PomegranateUI a toolkit rather than an applicatio
   assert.match(readme, /native toolkit lane/i);
   assert.match(readme, /@pomegranate-ui\/contracts/);
   assert.match(readme, /private incubator/i);
+  assert.match(readme, /contracts\s*->\s*layout\s*->\s*core\s*->\s*svelte/i);
+  assert.match(readme, /source-owned recipes/i);
+  assert.match(readme, /npm\.cmd run dev:lab/);
+  assert.match(readme, /127\.0\.0\.1:5173/);
+  assert.match(readme, /127\.0\.0\.1:4174/);
+  assert.match(readme, /apps\/workbench-lab\/dist/);
 });
 
 test('root verification docs match scripts and record unpublished, uncut boundaries', async () => {
@@ -119,7 +126,7 @@ test('root verification docs match scripts and record unpublished, uncut boundar
 });
 
 test('package and example documentation preserves the adopter boundary', async () => {
-  for (const packageName of ['contracts', 'core', 'layout', 'react', 'testkit']) {
+  for (const packageName of ['contracts', 'core', 'layout', 'react', 'svelte', 'testkit']) {
     const readme = await readFile(path.join(root, 'packages', packageName, 'README.md'), 'utf8');
     assert.match(readme, new RegExp(`@pomegranate-ui/${packageName}`));
     assert.doesNotMatch(readme, /reserved for Tranche 3/i);
@@ -142,7 +149,7 @@ test('Tranche 3 exposes strict separately packable packages', async () => {
     assert.equal(typeof rootPackage.scripts[script], 'string', script);
   }
 
-  for (const name of ['contracts', 'layout', 'core', 'react', 'testkit']) {
+  for (const name of ['contracts', 'layout', 'core', 'react', 'svelte', 'testkit']) {
     const packageRoot = path.join(root, 'packages', name);
     const manifest = JSON.parse(await readFile(path.join(packageRoot, 'package.json'), 'utf8'));
     assert.equal(manifest.name, `@pomegranate-ui/${name}`);
@@ -156,13 +163,15 @@ test('Tranche 3 exposes strict separately packable packages', async () => {
   }
 });
 
-test('framework-neutral packages do not import React', async () => {
+test('framework-neutral packages do not import a view framework or DOM', async () => {
   for (const name of ['contracts', 'layout', 'core']) {
     const files = (await walk(path.join(root, 'packages', name, 'src')))
       .filter((file) => /\.(?:ts|tsx)$/.test(file));
     for (const file of files) {
       const source = await readFile(file, 'utf8');
       assert.doesNotMatch(source, /(?:from\s+|import\s*\()['"]react(?:\/[^'"]*)?['"]/);
+      assert.doesNotMatch(source, /(?:from\s+|import\s*\()['"]svelte(?:\/[^'"]*)?['"]/);
+      assert.doesNotMatch(source, /\b(?:document|window|HTMLElement|Element)\b/);
     }
   }
 });

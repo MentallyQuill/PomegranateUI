@@ -41,5 +41,55 @@
       "status": "dual-green",
       "nativeEvidence": ["tests/browser/native-workbench.spec.ts"]
     }
+  ],
+  "nativeContracts": [
+    {
+      "contractId": "POM-RENDER-4E5A79B301",
+      "sourceEvidence": "One named Panels tablist exposes stable unique tab identities.",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "nativeEvidence": ["packages/testkit/src/renderer-conformance.test.ts"]
+    },
+    {
+      "contractId": "POM-RENDER-5F6B8AC412",
+      "sourceEvidence": "The selected Panel tab and active panel expose reciprocal ARIA relationships.",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "nativeEvidence": ["packages/testkit/src/renderer-conformance.test.ts"]
+    },
+    {
+      "contractId": "POM-RENDER-607C9BD523",
+      "sourceEvidence": "Panel activation preserves adopter-owned host story identity.",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "nativeEvidence": ["packages/testkit/src/renderer-conformance.test.ts"]
+    },
+    {
+      "contractId": "POM-RENDER-718DACF634",
+      "sourceEvidence": "Panel reorder exposes truthful disabled directions at sequence edges.",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "nativeEvidence": ["packages/testkit/src/renderer-conformance.test.ts"]
+    },
+    {
+      "contractId": "POM-RENDER-829EBD0745",
+      "sourceEvidence": "Widget placement appends to an occupied dock without replacement.",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "nativeEvidence": ["packages/testkit/src/renderer-conformance.test.ts"]
+    },
+    {
+      "contractId": "POM-RENDER-93AFCE1856",
+      "sourceEvidence": "An unresolved Widget remains in layout with a named unavailable status.",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "nativeEvidence": ["packages/testkit/src/renderer-conformance.test.ts"]
+    },
+    {
+      "contractId": "POM-RENDER-A4B0DF2967",
+      "sourceEvidence": "A Widget renderer failure is contained without mutating state or disabling siblings.",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "nativeEvidence": ["packages/testkit/src/renderer-conformance.test.ts"]
+    },
+    {
+      "contractId": "POM-RENDER-B5C1E03A78",
+      "sourceEvidence": "Semantic focus movement reaches the named Panel control.",
+      "destinationOwner": "@pomegranate-ui/testkit",
+      "nativeEvidence": ["packages/testkit/src/renderer-conformance.test.ts"]
+    }
   ]
 }

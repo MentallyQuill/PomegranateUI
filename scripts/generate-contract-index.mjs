@@ -126,7 +126,7 @@ export function applyNativeEvidenceOverlay(contracts, overlay) {
     entriesById.set(entry.contractId, { status: entry.status, nativeEvidence });
   }
 
-  return contracts.map((contract) => {
+  const promoted = contracts.map((contract) => {
     const entry = entriesById.get(contract.contractId);
     return entry
       ? {
@@ -136,6 +136,41 @@ export function applyNativeEvidenceOverlay(contracts, overlay) {
         }
       : { ...contract, destinationEvidence: [...contract.destinationEvidence] };
   });
+  const knownIds = new Set(promoted.map((contract) => contract.contractId));
+  const nativeContracts = [];
+  for (const entry of overlay.nativeContracts || []) {
+    if (!entry || !/^POM-RENDER-[A-F0-9]{10}$/.test(entry.contractId || '')) {
+      throw new Error(`Invalid native renderer contract id: ${entry?.contractId ?? '(missing)'}`);
+    }
+    if (knownIds.has(entry.contractId)) throw new Error(`Duplicate native contract id: ${entry.contractId}`);
+    knownIds.add(entry.contractId);
+    if (typeof entry.sourceEvidence !== 'string' || !entry.sourceEvidence.trim()) {
+      throw new Error(`${entry.contractId}: native contract requires sourceEvidence`);
+    }
+    if (typeof entry.destinationOwner !== 'string' || !entry.destinationOwner.trim()) {
+      throw new Error(`${entry.contractId}: native contract requires destinationOwner`);
+    }
+    if (!Array.isArray(entry.nativeEvidence) || entry.nativeEvidence.length === 0) {
+      throw new Error(`${entry.contractId}: native contract requires nativeEvidence`);
+    }
+    const destinationEvidence = entry.nativeEvidence.map((value) => validateEvidencePath(value, entry.contractId));
+    if (new Set(destinationEvidence).size !== destinationEvidence.length) {
+      throw new Error(`${entry.contractId}: native contract contains duplicate paths`);
+    }
+    nativeContracts.push({
+      contractId: entry.contractId,
+      sourcePath: 'native:pomegranate-ui',
+      sourceCommit: 'native',
+      sourceSha256: null,
+      sourceEvidence: entry.sourceEvidence.trim(),
+      evidenceKind: 'renderer-conformance',
+      classification: 'toolkit-generic',
+      destinationOwner: entry.destinationOwner.trim(),
+      destinationEvidence,
+      status: 'native-test-added'
+    });
+  }
+  return [...promoted, ...nativeContracts].sort((left, right) => left.contractId.localeCompare(right.contractId));
 }
 
 export async function buildContractIndex({

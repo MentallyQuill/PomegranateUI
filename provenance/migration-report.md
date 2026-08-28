@@ -4,8 +4,10 @@
 - Preserved artifacts: 153
 - Assigned Widget/renderer surfaces: 190
 - Dual-green contracts: 8
+- Native renderer contracts: 8
 - Sonder-owned contracts: 54
 - Awaiting native port: 435
+- Retired contracts: 0
 - Sonder test dispositions: 240
 - **Unaccounted: 0**
 
@@ -25,6 +27,7 @@
 | POM-LAYOUT | 37 |
 | POM-PANEL | 56 |
 | POM-PERSIST | 26 |
+| POM-RENDER | 8 |
 | POM-RESPONSIVE | 61 |
 | POM-THEME | 14 |
 | POM-WIDGET | 103 |
@@ -37,13 +40,14 @@
 | historical-evidence | 51 |
 | reference-theme | 42 |
 | sonder-integration | 55 |
-| toolkit-generic | 456 |
+| toolkit-generic | 464 |
 
 ### Contracts by status
 
 | Value | Count |
 |---|---:|
 | dual-green | 8 |
+| native-test-added | 8 |
 | preserved-verbatim | 435 |
 | sonder-owned | 54 |
 
@@ -58,6 +62,7 @@
 | @pomegranate-ui/panel | 56 |
 | @pomegranate-ui/persist | 26 |
 | @pomegranate-ui/responsive | 61 |
+| @pomegranate-ui/testkit | 8 |
 | @pomegranate-ui/theme | 14 |
 | @pomegranate-ui/widget | 103 |
 | Sonder consumer suite | 54 |

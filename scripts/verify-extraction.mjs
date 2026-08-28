@@ -25,11 +25,12 @@ export async function verifyNativeContractEvidence({ root, contracts, artifacts 
   for (const contract of contracts || []) {
     if (contract.status !== 'native-test-added' && contract.status !== 'dual-green') continue;
     const preservedArtifact = artifactsBySource.get(contract.sourcePath);
-    if (
+    const nativeOnly = contract.status === 'native-test-added' && contract.sourcePath === 'native:pomegranate-ui';
+    if (!nativeOnly && (
       !preservedArtifact
       || preservedArtifact.status !== 'preserved-verbatim'
       || !contract.destinationEvidence?.includes(preservedArtifact.destinationPath)
-    ) {
+    )) {
       findings.push(`${contract.contractId}: preserved evidence is missing from native promotion`);
     }
     const nativePaths = (contract.destinationEvidence || []).filter((evidence) => (
