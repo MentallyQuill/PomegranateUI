@@ -62,7 +62,7 @@
 - Produces: `AUTHORITY_RECORDS`, `CONFORMANCE_VIEWPORTS`, `DEEP_CURRENT_MACRO_SCENARIOS`, and `validateConformanceManifest(scenarios, options): Promise<ValidatedConformanceManifest>`.
 - Throws: `ConformanceError` with code `REFERENCE_HASH_DRIFT` or `MANIFEST_INVALID` and stable details.
 
-- [ ] **Step 1: Write failing authority and manifest tests**
+- [x] **Step 1: Write failing authority and manifest tests**
 
 Assert a duplicate scenario, unknown viewport/driver/profile, missing deviation,
 absolute path, escaping path, and wrong hash each fail with the exact code. Use:
@@ -76,13 +76,13 @@ await assert.rejects(
 
 Assert the five preserved hashes and every viewport dimension from the spec.
 
-- [ ] **Step 2: Run the unit test and verify the module is absent**
+- [x] **Step 2: Run the unit test and verify the module is absent**
 
 Run: `node --test tests/unit/conformance.test.mjs`
 
 Expected: FAIL with `ERR_MODULE_NOT_FOUND` for the manifest module.
 
-- [ ] **Step 3: Implement immutable types and exact records**
+- [x] **Step 3: Implement immutable types and exact records**
 
 Define:
 
@@ -100,13 +100,13 @@ Hash exact bytes with `createHash('sha256')`, compare lower-case values, freeze
 all records, and seed `dc-shell-wide`, `dc-shell-medium`, `dc-shell-compact`,
 `dc-shell-landscape-short`, and `dc-shell-zoom-200`.
 
-- [ ] **Step 4: Reject filesystem escape before reading**
+- [x] **Step 4: Reject filesystem escape before reading**
 
 Reject absolute paths first. Resolve from an injected repository root and
 require `path.relative(root, resolved)` to be non-absolute and not begin with
 `..`. Validate all cross references before hashing.
 
-- [ ] **Step 5: Run gates and commit**
+- [x] **Step 5: Run gates and commit**
 
 ```powershell
 node --test tests/unit/conformance.test.mjs
