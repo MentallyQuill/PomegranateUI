@@ -82,6 +82,6 @@ export async function startBrowserServers({
 }
 
 export default async function globalSetup() {
-  const running = await startBrowserServers({ root: repositoryRoot });
+  const running = await startBrowserServers({ root: repositoryRoot, includeLab: true });
   return () => running.close();
 }

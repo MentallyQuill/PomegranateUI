@@ -595,7 +595,7 @@ git commit -m "test(testkit): add first-slice conformance"
 - Consumes: the five package public APIs.
 - Produces: a Vite-built inspectable Lab at port 4174 and browser evidence containing every first-slice contract id.
 
-- [ ] **Step 1: Write failing Playwright scenarios**
+- [x] **Step 1: Write failing Playwright scenarios**
 
 Add four tests whose titles contain both baseline ids for their behavior:
 
@@ -608,13 +608,13 @@ test('POM-PERSIST-28DFDC9A8F POM-PERSIST-D50D69D3C4 restores reordered Panels', 
 
 Each test opens `http://127.0.0.1:4174`, uses roles or stable Lab data attributes, reloads where required, and asserts visible state after reload.
 
-- [ ] **Step 2: Run native browser tests and verify RED**
+- [x] **Step 2: Run native browser tests and verify RED**
 
 Run: `npm.cmd exec playwright test tests/browser/native-workbench.spec.ts`
 
 Expected: FAIL because the Lab server and application are absent.
 
-- [ ] **Step 3: Implement the Lab as an adopter**
+- [x] **Step 3: Implement the Lab as an adopter**
 
 Register `story.summary` and `system.status` manifests and React renderers. Initialize Scene and Library Panels with an occupied Scene left dock. Keep `{ storyId: 'story-lab-1' }` in app-owned host context and render it separately. Provide:
 
@@ -627,11 +627,11 @@ Register `story.summary` and `system.status` manifests and React renderers. Init
 
 Use a Lab-owned `LayoutStorage` wrapper over `localStorage`; packages never call it directly.
 
-- [ ] **Step 4: Serve both browser lanes**
+- [x] **Step 4: Serve both browser lanes**
 
 Keep the existing in-process preservation server at 4173. Extend `tests/browser/global-setup.mjs` so its default setup starts the built Workbench Lab directory at 4174 as well. Change root `build` to `tsc -b && npm run build --workspace @pomegranate-ui/workbench-lab`, add `preview:lab` and `pretest:browser: npm run build`, and keep both preserved harness tests unchanged.
 
-- [ ] **Step 5: Verify native and preserved browser GREEN**
+- [x] **Step 5: Verify native and preserved browser GREEN**
 
 Run:
 
@@ -643,7 +643,7 @@ npm.cmd run test:browser
 
 Expected: four native scenarios pass; Atmospheric Workbench reports 95/95; Widget overhaul reports 212/212.
 
-- [ ] **Step 6: Commit the Lab**
+- [x] **Step 6: Commit the Lab**
 
 ```powershell
 git add apps/workbench-lab tests/browser/native-workbench.spec.ts playwright.config.mjs package.json package-lock.json

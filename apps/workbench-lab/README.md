@@ -1,3 +1,5 @@
 # Workbench Lab
 
-Reserved for the optional PomegranateUI development and demonstration consumer in Tranche 3. It will exercise toolkit packages without becoming a mandatory application shell.
+An inspectable React consumer of the five public PomegranateUI packages. It proves the first Panel/Widget vertical slice without becoming a mandatory application shell or package authority.
+
+The Lab owns its sample Widgets, host story context, local-storage adapter, composition, and CSS. PomegranateUI packages own the versioned state, commands, layout restoration, React bindings, and conformance evidence.
