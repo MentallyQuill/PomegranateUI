@@ -14,7 +14,17 @@ function manifest(type = 'story.summary'): WidgetManifest {
     title: 'Story summary',
     capabilities: ['story.read'],
     defaultConfiguration: { presentation: { density: 'compact' } },
-    defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+    defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' },
+    catalog: {
+      category: 'story',
+      purpose: 'Read a story summary.',
+      keywords: ['story', 'summary'],
+      iconKey: 'story.summary',
+      shape: 'medium',
+      minColumns: 1,
+      geometry: { minHeight: 160, idealHeight: 240, maxHeight: 480 },
+      supportedStates: ['ready', 'failure']
+    }
   };
 }
 
@@ -27,13 +37,20 @@ describe('Widget registry', () => {
 
     (source.capabilities as string[]).push('mutated');
     (source.defaultConfiguration.presentation as { density: string }).density = 'spacious';
+    (source.catalog?.keywords as string[]).push('mutated');
+    (source.catalog?.geometry as { idealHeight: number }).idealHeight = 999;
 
     const stored = registry.get(source.type);
     expect(stored?.capabilities).toEqual(['story.read']);
     expect(stored?.defaultConfiguration).toEqual({ presentation: { density: 'compact' } });
+    expect(stored?.catalog?.keywords).toEqual(['story', 'summary']);
+    expect(stored?.catalog?.geometry.idealHeight).toBe(240);
     expect(Object.isFrozen(stored)).toBe(true);
     expect(Object.isFrozen(stored?.capabilities)).toBe(true);
     expect(Object.isFrozen(stored?.defaultConfiguration.presentation)).toBe(true);
+    expect(Object.isFrozen(stored?.catalog)).toBe(true);
+    expect(Object.isFrozen(stored?.catalog?.keywords)).toBe(true);
+    expect(Object.isFrozen(stored?.catalog?.geometry)).toBe(true);
   });
 
   it('rejects invalid and duplicate manifests with named results', () => {

@@ -70,6 +70,107 @@ describe('public contracts', () => {
     expect(() => WidgetManifestSchema.parse({ ...parsed, defaultConfiguration: { unsafe: 1n } })).toThrow();
   });
 
+  it('validates optional Widget Catalog metadata', () => {
+    const parsed = WidgetManifestSchema.parse({
+      type: widgetType,
+      version: '1.0.0',
+      title: 'Story transcript',
+      capabilities: ['story.read'],
+      defaultConfiguration: {},
+      defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' },
+      catalog: {
+        category: 'story',
+        purpose: 'Read the current story transcript.',
+        keywords: ['story', 'transcript'],
+        iconKey: 'story.transcript',
+        shape: 'stage',
+        minColumns: 2,
+        geometry: { minHeight: 320, idealHeight: 560, maxHeight: 720 },
+        supportedStates: ['ready', 'loading', 'failure']
+      }
+    });
+
+    expect(parsed.catalog).toEqual({
+      category: 'story',
+      purpose: 'Read the current story transcript.',
+      keywords: ['story', 'transcript'],
+      iconKey: 'story.transcript',
+      shape: 'stage',
+      minColumns: 2,
+      geometry: { minHeight: 320, idealHeight: 560, maxHeight: 720 },
+      supportedStates: ['ready', 'loading', 'failure']
+    });
+  });
+
+  it('rejects duplicate Widget Catalog keywords', () => {
+    const parsed = WidgetManifestSchema.safeParse({
+      type: widgetType,
+      version: '1.0.0',
+      title: 'Story transcript',
+      capabilities: ['story.read'],
+      defaultConfiguration: {},
+      defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' },
+      catalog: {
+        category: 'story',
+        purpose: 'Read the current story transcript.',
+        keywords: ['story', 'story'],
+        iconKey: 'story.transcript',
+        shape: 'stage',
+        minColumns: 2,
+        geometry: { minHeight: 320, idealHeight: 560, maxHeight: 720 },
+        supportedStates: ['ready']
+      }
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it('rejects inverted Widget Catalog geometry', () => {
+    const parsed = WidgetManifestSchema.safeParse({
+      type: widgetType,
+      version: '1.0.0',
+      title: 'Story transcript',
+      capabilities: ['story.read'],
+      defaultConfiguration: {},
+      defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' },
+      catalog: {
+        category: 'story',
+        purpose: 'Read the current story transcript.',
+        keywords: ['story'],
+        iconKey: 'story.transcript',
+        shape: 'stage',
+        minColumns: 2,
+        geometry: { minHeight: 720, idealHeight: 560, maxHeight: 320 },
+        supportedStates: ['ready']
+      }
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it('rejects duplicate Widget Catalog states', () => {
+    const parsed = WidgetManifestSchema.safeParse({
+      type: widgetType,
+      version: '1.0.0',
+      title: 'Story transcript',
+      capabilities: ['story.read'],
+      defaultConfiguration: {},
+      defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' },
+      catalog: {
+        category: 'story',
+        purpose: 'Read the current story transcript.',
+        keywords: ['story'],
+        iconKey: 'story.transcript',
+        shape: 'stage',
+        minColumns: 2,
+        geometry: { minHeight: 320, idealHeight: 560, maxHeight: 720 },
+        supportedStates: ['ready', 'ready']
+      }
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
   it('uses exact state and snapshot schema discriminants', () => {
     expect(WorkbenchStateSchema.parse(state).schema).toBe('pomegranate.ui.state.v1');
     expect(LayoutSnapshotV1Schema.parse({

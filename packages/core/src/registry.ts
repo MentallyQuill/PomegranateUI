@@ -44,7 +44,17 @@ function copyManifest(manifest: WidgetManifest): WidgetManifest {
     title: manifest.title,
     capabilities: Object.freeze([...manifest.capabilities]),
     defaultConfiguration: cloneAndFreezeJson(manifest.defaultConfiguration) as JsonObject,
-    defaultPlacement: Object.freeze({ ...manifest.defaultPlacement })
+    defaultPlacement: Object.freeze({ ...manifest.defaultPlacement }),
+    ...(manifest.catalog
+      ? {
+          catalog: Object.freeze({
+            ...manifest.catalog,
+            keywords: Object.freeze([...manifest.catalog.keywords]),
+            geometry: Object.freeze({ ...manifest.catalog.geometry }),
+            supportedStates: Object.freeze([...manifest.catalog.supportedStates])
+          })
+        }
+      : {})
   });
 }
 

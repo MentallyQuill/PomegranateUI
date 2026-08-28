@@ -27,6 +27,21 @@ export type WidgetPlacementHint =
       readonly height: number;
     };
 
+export interface WidgetCatalogMetadata {
+  readonly category: string;
+  readonly purpose: string;
+  readonly keywords: readonly string[];
+  readonly iconKey: string;
+  readonly shape: 'narrow' | 'medium' | 'wide' | 'stage' | 'strip';
+  readonly minColumns: number;
+  readonly geometry: {
+    readonly minHeight: number;
+    readonly idealHeight: number;
+    readonly maxHeight: number;
+  };
+  readonly supportedStates: readonly string[];
+}
+
 export interface WidgetManifest {
   readonly type: WidgetType;
   readonly version: string;
@@ -34,6 +49,7 @@ export interface WidgetManifest {
   readonly capabilities: readonly string[];
   readonly defaultConfiguration: JsonObject;
   readonly defaultPlacement: WidgetPlacementHint;
+  readonly catalog?: WidgetCatalogMetadata;
 }
 
 export interface WidgetInstance {
@@ -111,6 +127,30 @@ export const WidgetPlacementHintSchema = z.discriminatedUnion('kind', [
   }).strict()
 ]);
 
+export const WidgetCatalogMetadataSchema = z.object({
+  category: unpaddedString('Widget catalog category'),
+  purpose: unpaddedString('Widget catalog purpose'),
+  keywords: z.array(unpaddedString('Widget catalog keyword')).refine(
+    (values) => new Set(values).size === values.length,
+    { message: 'Widget catalog keywords must be unique.' }
+  ),
+  iconKey: unpaddedString('Widget catalog iconKey'),
+  shape: z.enum(['narrow', 'medium', 'wide', 'stage', 'strip']),
+  minColumns: z.number().int().positive(),
+  geometry: z.object({
+    minHeight: finiteNumber.positive(),
+    idealHeight: finiteNumber.positive(),
+    maxHeight: finiteNumber.positive()
+  }).strict().refine(
+    ({ minHeight, idealHeight, maxHeight }) => minHeight <= idealHeight && idealHeight <= maxHeight,
+    { message: 'Widget catalog geometry must satisfy minHeight <= idealHeight <= maxHeight.' }
+  ),
+  supportedStates: z.array(unpaddedString('Widget catalog state')).refine(
+    (values) => new Set(values).size === values.length,
+    { message: 'Widget catalog states must be unique.' }
+  )
+}).strict();
+
 export const WidgetManifestSchema = z.object({
   type: WidgetTypeSchema,
   version: unpaddedString('version'),
@@ -120,7 +160,8 @@ export const WidgetManifestSchema = z.object({
     { message: 'Widget capabilities must be unique.' }
   ),
   defaultConfiguration: JsonObjectSchema,
-  defaultPlacement: WidgetPlacementHintSchema
+  defaultPlacement: WidgetPlacementHintSchema,
+  catalog: WidgetCatalogMetadataSchema.optional()
 }).strict();
 
 export const WidgetInstanceSchema = z.object({
