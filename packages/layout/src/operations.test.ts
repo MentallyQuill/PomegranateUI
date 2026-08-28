@@ -1,0 +1,184 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  asPanelId,
+  asWidgetInstanceId,
+  asWidgetType,
+  type PanelId,
+  type WidgetInstance,
+  type WidgetInstanceId,
+  type WidgetPlacement,
+  type WorkbenchState
+} from '@pomegranate-ui/contracts';
+
+import {
+  activatePanel,
+  createInitialWorkbenchState,
+  createPanel,
+  createWidget,
+  placeWidget,
+  removeWidget,
+  reorderPanel
+} from './index.js';
+
+const sceneId = asPanelId('scene');
+const libraryId = asPanelId('library');
+const summaryId = asWidgetInstanceId('summary');
+const notesId = asWidgetInstanceId('notes');
+
+function dock(
+  instancePanelId: PanelId,
+  edge: 'left' | 'main' | 'right',
+  order: number,
+  shelfId = 'primary'
+): WidgetPlacement {
+  return { kind: 'docked', panelId: instancePanelId, edge, shelfId, order };
+}
+
+function instance(id: WidgetInstanceId, type: string): WidgetInstance {
+  return {
+    id,
+    type: asWidgetType(type),
+    manifestVersion: '1.0.0',
+    configuration: {}
+  };
+}
+
+function populatedState(): WorkbenchState {
+  return {
+    schema: 'pomegranate.ui.state.v1',
+    revision: 0,
+    activePanelId: sceneId,
+    panels: [
+      { id: sceneId, name: 'Scene', templateId: 'standard', order: 0 },
+      { id: libraryId, name: 'Library', templateId: 'standard', order: 1 }
+    ],
+    widgets: {
+      [summaryId]: instance(summaryId, 'story.summary'),
+      [notesId]: instance(notesId, 'story.notes')
+    },
+    placements: {
+      [summaryId]: dock(sceneId, 'left', 0),
+      [notesId]: dock(sceneId, 'right', 0)
+    }
+  };
+}
+
+describe('atomic layout operations', () => {
+  it('creates a valid empty state and activates the first Panel', () => {
+    const empty = createInitialWorkbenchState();
+    expect(empty).toEqual({
+      schema: 'pomegranate.ui.state.v1',
+      revision: 0,
+      activePanelId: null,
+      panels: [],
+      widgets: {},
+      placements: {}
+    });
+
+    const created = createPanel(empty, {
+      id: sceneId,
+      name: 'Scene',
+      templateId: 'standard',
+      order: 0
+    });
+    expect(created.ok).toBe(true);
+    expect(created.state.activePanelId).toBe(sceneId);
+    expect(created.state.revision).toBe(1);
+  });
+
+  it('rejects duplicate ids without changing state identity', () => {
+    const before = populatedState();
+    const result = createPanel(before, before.panels[0]!);
+    expect(result.ok).toBe(false);
+    expect(result.state).toBe(before);
+    expect(!result.ok && result.error.code).toBe('DUPLICATE_ID');
+  });
+
+  it('activates an existing Panel and rejects a missing one atomically', () => {
+    const before = populatedState();
+    const activated = activatePanel(before, libraryId);
+    expect(activated.ok && activated.state.activePanelId).toBe(libraryId);
+    expect(activated.state.revision).toBe(1);
+
+    const rejected = activatePanel(activated.state, asPanelId('missing'));
+    expect(rejected.ok).toBe(false);
+    expect(rejected.state).toBe(activated.state);
+  });
+
+  it('reorders Panels with contiguous persisted order values', () => {
+    const result = reorderPanel(populatedState(), libraryId, 0);
+    expect(result.ok).toBe(true);
+    expect(result.state.panels.map((panel) => [panel.id, panel.order])).toEqual([
+      [libraryId, 0],
+      [sceneId, 1]
+    ]);
+  });
+
+  it('creates exactly one placement for a Widget and rejects duplicate instances', () => {
+    const before = populatedState();
+    const timelineId = asWidgetInstanceId('timeline');
+    const created = createWidget(
+      before,
+      instance(timelineId, 'story.timeline'),
+      dock(sceneId, 'main', 99)
+    );
+    expect(created.ok).toBe(true);
+    expect(Object.keys(created.state.widgets)).toContain(timelineId);
+    expect(Object.keys(created.state.placements).filter((id) => id === timelineId)).toHaveLength(1);
+
+    const duplicate = createWidget(created.state, instance(timelineId, 'story.timeline'), dock(sceneId, 'main', 0));
+    expect(duplicate.ok).toBe(false);
+    expect(duplicate.state).toBe(created.state);
+  });
+
+  it('appends a dock shelf in a populated destination and normalizes the old shelf', () => {
+    const result = placeWidget(populatedState(), notesId, dock(sceneId, 'left', 99));
+    expect(result.ok).toBe(true);
+    expect(result.state.placements[summaryId]).toMatchObject({ edge: 'left', order: 0 });
+    expect(result.state.placements[notesId]).toMatchObject({ edge: 'left', order: 1 });
+  });
+
+  it('retains accepted floating geometry exactly', () => {
+    const placement: WidgetPlacement = {
+      kind: 'floating',
+      panelId: libraryId,
+      x: -12.5,
+      y: 42.25,
+      width: 480.5,
+      height: 260.75,
+      z: 7
+    };
+    const result = placeWidget(populatedState(), notesId, placement);
+    expect(result.ok).toBe(true);
+    expect(result.state.placements[notesId]).toEqual(placement);
+  });
+
+  it('removes the Widget and its sole placement', () => {
+    const result = removeWidget(populatedState(), summaryId);
+    expect(result.ok).toBe(true);
+    expect(result.state.widgets[summaryId]).toBeUndefined();
+    expect(result.state.placements[summaryId]).toBeUndefined();
+  });
+
+  it('rejects an invalid move without changing state identity', () => {
+    const before = populatedState();
+    const result = placeWidget(before, asWidgetInstanceId('missing'), dock(sceneId, 'left', 1));
+    expect(result.ok).toBe(false);
+    expect(result.state).toBe(before);
+    expect(!result.ok && result.error.code).toBe('MISSING_WIDGET');
+  });
+
+  it('rejects invalid placement geometry and missing Panel references', () => {
+    const before = populatedState();
+    const invalidGeometry = placeWidget(before, notesId, {
+      kind: 'floating', panelId: sceneId, x: 0, y: 0, width: 0, height: 10, z: 0
+    });
+    expect(invalidGeometry.ok).toBe(false);
+    expect(invalidGeometry.state).toBe(before);
+
+    const missingPanel = placeWidget(before, notesId, dock(asPanelId('missing'), 'left', 0));
+    expect(missingPanel.ok).toBe(false);
+    expect(!missingPanel.ok && missingPanel.error.code).toBe('MISSING_PANEL');
+  });
+});

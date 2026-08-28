@@ -332,7 +332,7 @@ git commit -m "feat(contracts): define workbench protocol"
 - Consumes: all state and id contracts from `@pomegranate-ui/contracts`.
 - Produces: `createInitialWorkbenchState`, `createPanel`, `activatePanel`, `reorderPanel`, `createWidget`, `placeWidget`, `removeWidget`, `encodeLayoutSnapshot`, `decodeLayoutSnapshot`, `loadLayout`, and `saveLayout`.
 
-- [ ] **Step 1: Write failing atomic-operation tests**
+- [x] **Step 1: Write failing atomic-operation tests**
 
 Cover unique ids, active Panel repair, contiguous orders, dock append into a populated edge, floating geometry, exactly-one placement, remove cleanup, and state-reference preservation on rejection.
 
@@ -350,13 +350,13 @@ it('appends a dock shelf in a populated destination', () => {
 });
 ```
 
-- [ ] **Step 2: Run the operation tests and verify RED**
+- [x] **Step 2: Run the operation tests and verify RED**
 
 Run: `npm.cmd exec vitest run packages/layout/src/operations.test.ts`
 
 Expected: FAIL because layout operations are absent.
 
-- [ ] **Step 3: Implement immutable normalized operations**
+- [x] **Step 3: Implement immutable normalized operations**
 
 Every function returns:
 
@@ -368,13 +368,13 @@ export type LayoutResult =
 
 Validate the entire requested transition before cloning. On failure return the original `state`. On success clone only changed collections, increment revision once, normalize Panel order and dock order, and retain accepted floating geometry exactly.
 
-- [ ] **Step 4: Verify operation GREEN**
+- [x] **Step 4: Verify operation GREEN**
 
 Run: `npm.cmd exec vitest run packages/layout/src/operations.test.ts`
 
 Expected: all operation tests pass.
 
-- [ ] **Step 5: Write failing persistence tests**
+- [x] **Step 5: Write failing persistence tests**
 
 Prove deterministic encoding, a byte-stable encode/decode/encode round trip, asynchronous storage, retained unresolved types, malformed cross-reference rejection, unknown future schema rejection, finite geometry checks, and unchanged current state after a decode error.
 
@@ -388,17 +388,17 @@ it('keeps the last good state when hydration is invalid', () => {
 });
 ```
 
-- [ ] **Step 6: Run persistence tests and verify RED**
+- [x] **Step 6: Run persistence tests and verify RED**
 
 Run: `npm.cmd exec vitest run packages/layout/src/persistence.test.ts`
 
 Expected: FAIL because codecs and storage helpers are absent.
 
-- [ ] **Step 7: Implement `pomegranate.ui.layout.v1`**
+- [x] **Step 7: Implement `pomegranate.ui.layout.v1`**
 
 Serialize object keys in a fixed construction order and sort record keys. Decode into fresh null-prototype records, validate every id and reference, normalize orders, and return named diagnostics. `loadLayout` reads through `LayoutStorage`; `saveLayout` saves only the UI snapshot string. Do not call browser storage APIs.
 
-- [ ] **Step 8: Verify and commit layout**
+- [x] **Step 8: Verify and commit layout**
 
 Run:
 
