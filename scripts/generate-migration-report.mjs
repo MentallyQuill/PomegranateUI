@@ -25,7 +25,7 @@ function escapeCell(value) {
   return String(value ?? '').replaceAll('|', '\\|').replace(/\r?\n/g, ' ');
 }
 
-export function buildReports({ manifest, contractIndex, testDispositions, sourceCommits }) {
+export function buildReports({ manifest, contractIndex, testDispositions, sourceCommits, runtimeHarnessCases }) {
   const contracts = contractIndex.contracts || [];
   const artifacts = manifest.artifacts || [];
   const unaccounted = manifest.unaccounted?.length || 0;
@@ -33,7 +33,9 @@ export function buildReports({ manifest, contractIndex, testDispositions, source
   const dualGreen = contracts.filter((item) => item.status === 'dual-green').length;
   const sonderOwned = contracts.filter((item) => item.status === 'sonder-owned').length;
   const awaitingNative = contracts.filter((item) => item.status === 'preserved-verbatim' || item.status === 'native-test-added').length;
-  const harnesses = harnessResults(sourceCommits);
+  const harnesses = runtimeHarnessCases?.harnesses?.length
+    ? new Map(runtimeHarnessCases.harnesses.map((harness) => [harness.name, harness.reportedResult]))
+    : harnessResults(sourceCommits);
   const family = (contract) => contract.contractId.replace(/-[A-F0-9]{10}$/, '');
   const report = [
     '# PomegranateUI Migration Report', '',
@@ -56,9 +58,9 @@ export function buildReports({ manifest, contractIndex, testDispositions, source
   ].join('\n');
   const ledger = [
     '# PomegranateUI Extraction Ledger', '',
-    `Baseline contracts: ${contracts.length}  `,
-    `Preserved artifacts: ${artifacts.length}  `,
-    `Unaccounted: ${unaccounted}`, '',
+    `- Baseline contracts: ${contracts.length}`,
+    `- Preserved artifacts: ${artifacts.length}`,
+    `- Unaccounted: ${unaccounted}`, '',
     '| Contract ID | Kind | Source evidence | Owner | Status | Destination evidence |',
     '|---|---|---|---|---|---|',
     ...contracts.map((item) => `| ${escapeCell(item.contractId)} | ${escapeCell(item.evidenceKind)} | ${escapeCell(item.sourceEvidence)} | ${escapeCell(item.destinationOwner)} | ${escapeCell(item.status)} | ${escapeCell((item.destinationEvidence || []).join(', '))} |`),
@@ -87,10 +89,10 @@ export async function checkGeneratedReports({ root, reports }) {
 async function main() {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const json = async (name) => JSON.parse(await readFile(path.join(root, 'provenance', name), 'utf8'));
-  const [manifest, contractIndex, testDispositions, sourceCommits] = await Promise.all([
-    json('extraction-manifest.json'), json('contract-index.json'), json('sonder-test-dispositions.json'), readFile(path.join(root, 'provenance', 'source-commits.md'), 'utf8')
+  const [manifest, contractIndex, testDispositions, sourceCommits, runtimeHarnessCases] = await Promise.all([
+    json('extraction-manifest.json'), json('contract-index.json'), json('sonder-test-dispositions.json'), readFile(path.join(root, 'provenance', 'source-commits.md'), 'utf8'), json('preserved-harness-cases.json')
   ]);
-  const reports = buildReports({ manifest, contractIndex, testDispositions, sourceCommits });
+  const reports = buildReports({ manifest, contractIndex, testDispositions, sourceCommits, runtimeHarnessCases });
   if (process.argv.includes('--write')) {
     await writeFile(path.join(root, 'provenance', 'extraction-ledger.md'), reports.ledger);
     await writeFile(path.join(root, 'provenance', 'migration-report.md'), reports.report);

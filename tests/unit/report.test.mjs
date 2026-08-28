@@ -19,7 +19,11 @@ const input = {
     { contractId: 'POM-INTEGRATION-SONDER-BBBBBBBBBB', sourcePath: 'b', sourceEvidence: 'Route', evidenceKind: 'harness', destinationOwner: 'Sonder consumer suite', destinationEvidence: ['y'], classification: 'sonder-integration', status: 'sonder-owned' }
   ] },
   testDispositions: { entries: [{ sourcePath: 'tests/a.py', disposition: 'sonder-backend-authority' }] },
-  sourceCommits: '- Atmospheric Workbench: `79/79 passed`.\n- Widget overhaul: `212/212 passed`.\n'
+  sourceCommits: '- Atmospheric Workbench: `79/79 passed`.\n- Widget overhaul: `212/212 passed`.\n',
+  runtimeHarnessCases: { harnesses: [
+    { name: 'Atmospheric Workbench', reportedResult: '95/95 passed', cases: Array.from({ length: 95 }, (_, index) => `A${index}`) },
+    { name: 'Widget overhaul', reportedResult: '212/212 passed', cases: Array.from({ length: 212 }, (_, index) => `W${index}`) }
+  ] }
 };
 
 test('reports all accountability totals from inputs and is byte-deterministic', () => {
@@ -30,7 +34,7 @@ test('reports all accountability totals from inputs and is byte-deterministic', 
     'Total baseline contracts: 2', 'Preserved artifacts: 2',
     'Assigned Widget/renderer surfaces: 1', 'Dual-green contracts: 0',
     'Sonder-owned contracts: 1', 'Awaiting native port: 1',
-    'Unaccounted: 0', 'Atmospheric Workbench: 79/79 passed',
+    'Unaccounted: 0', 'Atmospheric Workbench: 95/95 passed',
     'Widget overhaul: 212/212 passed', 'POM-WIDGET',
     'toolkit-generic', 'preserved-verbatim', '@pomegranate-ui/widget'
   ]) assert.match(first.report, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));

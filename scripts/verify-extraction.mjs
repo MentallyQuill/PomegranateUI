@@ -19,7 +19,7 @@ function artifactWithinScope(artifact, scope) {
     || (scope.referencedAssetRules || []).some((rule) => artifact.sourcePath.startsWith(rule.sourceDirectory));
 }
 
-export async function verifyExtraction({ root, manifest, contractIndex, scope, testDispositions }) {
+export async function verifyExtraction({ root, manifest, contractIndex, scope, testDispositions, runtimeHarnessCases }) {
   const findings = [];
   const artifactsByDestination = new Map(manifest.artifacts.map((item) => [item.destinationPath, item]));
   const artifactsBySource = new Map(manifest.artifacts.map((item) => [item.sourcePath, item]));
@@ -55,17 +55,20 @@ export async function verifyExtraction({ root, manifest, contractIndex, scope, t
     const bytes = await fileBytes(root, artifact.destinationPath);
     if (!bytes) continue;
     const text = bytes.toString('utf8');
-    const harnessLike = kinds.has('harness') || (/\.html$/i.test(artifact.destinationPath) && /\brun\(\s*['"`]/.test(text));
+    const runtimeHarness = runtimeHarnessCases?.harnesses?.find((harness) => harness.sourcePath === artifact.sourcePath);
+    const harnessLike = kinds.has('harness') || kinds.has('harness-runtime') || (/\.html$/i.test(artifact.destinationPath) && /\brun\(\s*['"`]/.test(text));
     const ledgerLike = kinds.has('widget-ledger') || /WIDGET_UX_OVERHAUL_LEDGER\.md$/i.test(artifact.destinationPath) || (/\.md$/i.test(artifact.destinationPath) && /^\|\s*\d+\s*\|/m.test(text));
     if (!harnessLike && !ledgerLike) continue;
     const evidence = harnessLike
-      ? extractHarnessCases(text, artifact.destinationPath)
+      ? runtimeHarness
+        ? runtimeHarness.cases.map((sourceEvidence) => ({ kind: 'harness-runtime', evidence: sourceEvidence }))
+        : extractHarnessCases(text, artifact.destinationPath)
       : extractLedgerRows(text, artifact.destinationPath);
     for (const item of evidence) {
       const match = (contractIndex.contracts || []).find((contract) => contract.sourcePath === artifact.sourcePath
         && contract.evidenceKind === item.kind
         && normalizeEvidence(contract.sourceEvidence) === normalizeEvidence(item.evidence));
-      if (!match) findings.push(`${artifact.destinationPath}: ${item.kind === 'harness' ? 'harness case lacks stable contract ID' : 'Widget-ledger row lacks stable contract ID'}: ${item.evidence}`);
+      if (!match) findings.push(`${artifact.destinationPath}: ${item.kind.startsWith('harness') ? 'harness case lacks stable contract ID' : 'Widget-ledger row lacks stable contract ID'}: ${item.evidence}`);
       else if (item.kind === 'widget-ledger' && !match.destinationOwner?.trim()) findings.push(`${match.contractId}: Widget-ledger row lacks destination owner`);
     }
   }
@@ -98,6 +101,14 @@ export async function verifyExtraction({ root, manifest, contractIndex, scope, t
   }
 
   for (const item of manifest.unaccounted || []) findings.push(`unaccounted: ${typeof item === 'string' ? item : JSON.stringify(item)}`);
+  if (runtimeHarnessCases) {
+    if (runtimeHarnessCases.sourceCommit !== manifest.baseline.sourceCommit) findings.push('runtime harness snapshot source commit does not match baseline');
+    for (const harness of runtimeHarnessCases.harnesses || []) {
+      const match = harness.reportedResult.match(/^(\d+)\/(\d+) passed$/);
+      if (!match || match[1] !== match[2] || Number(match[2]) !== harness.cases.length) findings.push(`${harness.name}: runtime harness snapshot count is inconsistent`);
+      if (new Set(harness.cases).size !== harness.cases.length) findings.push(`${harness.name}: runtime harness snapshot contains duplicate cases`);
+    }
+  }
   if (!testDispositions?.entries?.length) findings.push('Sonder test dispositions are missing');
   return [...new Set(findings)].sort();
 }
@@ -105,10 +116,10 @@ export async function verifyExtraction({ root, manifest, contractIndex, scope, t
 async function main() {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const load = async (name) => JSON.parse(await readFile(path.join(root, 'provenance', name), 'utf8'));
-  const [manifest, contractIndex, scope, testDispositions] = await Promise.all([
-    load('extraction-manifest.json'), load('contract-index.json'), load('source-scope.json'), load('sonder-test-dispositions.json')
+  const [manifest, contractIndex, scope, testDispositions, runtimeHarnessCases] = await Promise.all([
+    load('extraction-manifest.json'), load('contract-index.json'), load('source-scope.json'), load('sonder-test-dispositions.json'), load('preserved-harness-cases.json')
   ]);
-  const findings = await verifyExtraction({ root, manifest, contractIndex, scope, testDispositions });
+  const findings = await verifyExtraction({ root, manifest, contractIndex, scope, testDispositions, runtimeHarnessCases });
   if (findings.length) {
     console.error(`Extraction verification failed (${findings.length}):\n- ${findings.join('\n- ')}`);
     process.exitCode = 1;

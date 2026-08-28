@@ -14,6 +14,7 @@
   ],
   "kindFallbacks": {
     "harness": "LAYOUT",
+    "harness-runtime": "LAYOUT",
     "widget-ledger": "WIDGET"
   }
 }

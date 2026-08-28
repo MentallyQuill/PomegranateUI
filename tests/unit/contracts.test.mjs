@@ -63,6 +63,18 @@ test('builds a complete unique index with approved statuses and owners', async (
   assert.equal(index.contracts.every((item) => item.destinationOwner && item.destinationEvidence.length), true);
 });
 
+test('production index assigns one stable ID to every executed runtime case', async () => {
+  const manifest = JSON.parse(await readFile(path.join(root, 'provenance/extraction-manifest.json'), 'utf8'));
+  const rules = JSON.parse(await readFile(path.join(root, 'provenance/contract-family-rules.json'), 'utf8'));
+  const runtimeHarnessCases = JSON.parse(await readFile(path.join(root, 'provenance/preserved-harness-cases.json'), 'utf8'));
+  const index = await buildContractIndex({ manifest, importedRoot: root, rules, runtimeHarnessCases });
+  const expectedRuntime = runtimeHarnessCases.harnesses.reduce((total, harness) => total + harness.cases.length, 0);
+  const runtimeContracts = index.contracts.filter((contract) => contract.evidenceKind === 'harness-runtime');
+  assert.equal(runtimeContracts.length, expectedRuntime);
+  assert.equal(expectedRuntime, 307);
+  assert.equal(index.contracts.length, expectedRuntime + 190);
+});
+
 test('every baseline Sonder UI test candidate has exactly one reviewed disposition', async () => {
   const manifest = JSON.parse(await readFile(path.join(root, 'provenance/extraction-manifest.json'), 'utf8'));
   const contractIndex = JSON.parse(await readFile(path.join(root, 'provenance/contract-index.json'), 'utf8'));

@@ -26,12 +26,12 @@ Before checkpointing:
 
 After both source commits:
 
-- Atmospheric Workbench: `79/79 passed`, zero failure rows.
+- Atmospheric Workbench: the later commit-addressed runtime capture reports `95/95 passed`, zero failure rows. This supersedes the earlier manually recorded `79/79` total.
 - Widget overhaul: `212/212 passed`, zero failure rows.
 
 From the independent PomegranateUI repository using Playwright `1.62.1` and its pinned Chromium:
 
-- Atmospheric Workbench: `79/79 passed`.
+- Atmospheric Workbench: `95/95 passed`.
 - Widget overhaul: `212/212 passed`.
 
 Preservation CI runs the same locked checks on Ubuntu and Windows. Its action releases are pinned to immutable commits and annotated in `.github/workflows/ci.yml`.

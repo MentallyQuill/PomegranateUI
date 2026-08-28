@@ -1,11 +1,15 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
+const contractIndex = JSON.parse(await readFile(path.resolve('provenance/contract-index.json'), 'utf8'));
 
 const HARNESSES = [
-  ['Atmospheric Workbench', '/prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html'],
-  ['Widget overhaul', '/prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html']
+  ['Atmospheric Workbench', '/prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html', 'docs/experiments/sonder-atmospheric-workbench/sonder-drag-regression.html'],
+  ['Widget overhaul', '/prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html', 'docs/experiments/sonder-widget-overhaul/sonder-widget-overhaul-regression.html']
 ];
 
-for (const [name, url] of HARNESSES) {
+for (const [name, url, sourcePath] of HARNESSES) {
   test(`${name} preserved oracle`, async ({ page }, testInfo) => {
     test.setTimeout(120_000);
     await page.goto(url);
@@ -24,5 +28,8 @@ for (const [name, url] of HARNESSES) {
     expect(match, `Unexpected result heading: ${heading}`).not.toBeNull();
     expect(Number(match[1])).toBeGreaterThan(0);
     expect(match[1]).toBe(match[2]);
+    const runtimeTitles = (await page.locator('#results > p').allInnerTexts()).map((text) => text.replace(/^(?:PASS|FAIL) — /, '').split('\n', 1)[0]);
+    const indexedTitles = new Set(contractIndex.contracts.filter((contract) => contract.sourcePath === sourcePath && contract.evidenceKind === 'harness-runtime').map((contract) => contract.sourceEvidence));
+    expect(runtimeTitles.filter((runtimeTitle) => !indexedTitles.has(runtimeTitle)), 'Every runtime harness case needs its own stable contract ID').toEqual([]);
   });
 }

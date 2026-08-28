@@ -8,3 +8,4 @@
 /provenance/sonder-plans-and-specs/** -text
 /provenance/extraction-ledger.md -text
 /provenance/migration-report.md -text
+/provenance/preserved-harness-cases.json -text

@@ -75,7 +75,7 @@ function artifactFor(manifest, destinationPath) {
   return artifact;
 }
 
-export async function buildContractIndex({ manifest, importedRoot, rules }) {
+export async function buildContractIndex({ manifest, importedRoot, rules, runtimeHarnessCases }) {
   const sources = [
     { kind: 'harness', path: 'prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html', extract: extractHarnessCases },
     { kind: 'harness', path: 'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html', extract: extractHarnessCases },
@@ -86,7 +86,18 @@ export async function buildContractIndex({ manifest, importedRoot, rules }) {
   for (const source of sources) {
     const artifact = artifactFor(manifest, source.path);
     const text = await readFile(path.join(importedRoot, ...source.path.split('/')), 'utf8');
-    for (const evidence of source.extract(text, source.path)) {
+    const runtime = source.kind === 'harness' && runtimeHarnessCases
+      ? runtimeHarnessCases.harnesses.find((harness) => harness.sourcePath === artifact.sourcePath)
+      : null;
+    if (source.kind === 'harness' && runtimeHarnessCases && !runtime) throw new Error(`Runtime harness snapshot is missing ${artifact.sourcePath}`);
+    const extracted = runtime
+      ? runtime.cases.map((evidence) => ({
+          kind: 'harness-runtime', sourcePath: source.path, evidence,
+          normalizedEvidence: normalizeEvidence(evidence),
+          discriminator: `harness-runtime:${artifact.sourcePath}`
+        }))
+      : source.extract(text, source.path);
+    for (const evidence of extracted) {
       const family = classifyContract(evidence, rules);
       const contractId = stableContractId({ family, normalizedEvidence: evidence.normalizedEvidence, discriminator: evidence.discriminator });
       if (ids.has(contractId)) throw new Error(`Duplicate contract ID: ${contractId}`);
@@ -118,7 +129,9 @@ async function main() {
   const indexPath = path.join(root, 'provenance', 'contract-index.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   const rules = JSON.parse(await readFile(path.join(root, 'provenance', 'contract-family-rules.json'), 'utf8'));
-  const index = await buildContractIndex({ manifest, importedRoot: root, rules });
+  const runtimeHarnessCases = JSON.parse(await readFile(path.join(root, 'provenance', 'preserved-harness-cases.json'), 'utf8'));
+  if (runtimeHarnessCases.sourceCommit !== manifest.baseline.sourceCommit) throw new Error('Runtime harness snapshot source commit does not match the extraction baseline.');
+  const index = await buildContractIndex({ manifest, importedRoot: root, rules, runtimeHarnessCases });
   const encoded = `${JSON.stringify(index, null, 2)}\n`;
   if (write) {
     manifest.contracts = index.contracts;
