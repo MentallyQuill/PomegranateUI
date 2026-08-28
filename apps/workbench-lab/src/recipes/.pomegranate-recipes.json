@@ -1,0 +1,35 @@
+{
+  "schema": "pomegranate.ui.recipe-install.v1",
+  "recipes": {
+    "error-state": {
+      "revision": 1,
+      "files": {
+        "RendererState.svelte": "6826A795E4ACACE3FAF1D7304FC8F7A7BB9E27BBF16E173123942F750FC4DEF8"
+      }
+    },
+    "panel-tabs": {
+      "revision": 1,
+      "files": {
+        "PanelTabs.svelte": "8FC052C166F2380C4163678FAB04559CB06119A02F7B5B0370A12F76D39B66D6"
+      }
+    },
+    "widget-catalog": {
+      "revision": 1,
+      "files": {
+        "WidgetCatalog.svelte": "7A48750A253BB781DC4EAEF494871ED42830E28BC58B89558CE4225143AC53E1"
+      }
+    },
+    "widget-frame": {
+      "revision": 1,
+      "files": {
+        "WidgetFrame.svelte": "526BB55D7A32182BA201D7034977E92243C566E659FFBA2997AF8B267496298E"
+      }
+    },
+    "workbench-surface": {
+      "revision": 1,
+      "files": {
+        "WorkbenchSurface.svelte": "700912FABB0275C6EF06EF1341B20BF2AA61D3D7A13C2A60C0A73900F642DC6B"
+      }
+    }
+  }
+}

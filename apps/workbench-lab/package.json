@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "node ../../node_modules/@typescript/native/bin/tsc --noEmit --pretty false"
@@ -12,13 +13,12 @@
     "@pomegranate-ui/contracts": "0.1.0-private.0",
     "@pomegranate-ui/core": "0.1.0-private.0",
     "@pomegranate-ui/layout": "0.1.0-private.0",
-    "@pomegranate-ui/react": "0.1.0-private.0",
+    "@pomegranate-ui/svelte": "0.1.0-private.0",
     "@pomegranate-ui/testkit": "0.1.0-private.0",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "svelte": "5.56.10"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "6.1.0",
+    "@sveltejs/vite-plugin-svelte": "7.3.0",
     "vite": "8.2.2"
   }
 }
