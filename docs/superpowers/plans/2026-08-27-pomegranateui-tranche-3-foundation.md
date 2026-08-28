@@ -485,7 +485,7 @@ git commit -m "feat(core): add Panel Widget state store"
 - Consumes: `WorkbenchStore`, public contracts, and React 18/19 APIs.
 - Produces: `createWidgetRendererRegistry<THostContext>`, `WorkbenchProvider`, `useWorkbenchState`, `useWorkbenchDispatch`, `PanelTabs`, `WorkbenchView`, `WidgetFrame`, and `WidgetErrorBoundary`.
 
-- [ ] **Step 1: Write failing component tests in jsdom**
+- [x] **Step 1: Write failing component tests in jsdom**
 
 Add `// @vitest-environment jsdom`. Prove subscription rendering, active-tab ARIA state, accessible left/right reorder controls, dock order, floating geometry, generic host context delivery, unresolved fallback, and one-renderer error containment.
 
@@ -499,23 +499,23 @@ it('activates a Panel without changing host context', async () => {
 });
 ```
 
-- [ ] **Step 2: Run React tests and verify RED**
+- [x] **Step 2: Run React tests and verify RED**
 
 Run: `npm.cmd exec vitest run packages/react/src/react.test.tsx`
 
 Expected: FAIL because bindings and primitives are absent.
 
-- [ ] **Step 3: Implement typed renderer registry and provider**
+- [x] **Step 3: Implement typed renderer registry and provider**
 
 `createWidgetRendererRegistry<THostContext>()` maps `WidgetType` to `ComponentType<WidgetRendererProps<THostContext>>`. Duplicate registration is rejected. `WorkbenchProvider` holds store, renderer registry, and generic host context in React contexts. `useWorkbenchState` uses `useSyncExternalStore`.
 
-- [ ] **Step 4: Implement structural components**
+- [x] **Step 4: Implement structural components**
 
 `PanelTabs` uses `role=tablist`, stable `role=tab` ids, `aria-selected`, and buttons labelled `Move {name} left/right`. `WorkbenchView` renders left/main/right dock regions and a floating layer for the active Panel. `WidgetFrame` exposes a labelled action menu with `Dock left`, `Dock right`, and `Float`; commands route through the store. Floating styles use accepted x/y/width/height values. No package stylesheet or Sonder class name ships.
 
 `WidgetErrorBoundary` renders `role=alert` with the Widget title and keeps sibling frames mounted.
 
-- [ ] **Step 5: Verify React and commit**
+- [x] **Step 5: Verify React and commit**
 
 Run:
 
