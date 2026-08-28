@@ -423,7 +423,7 @@ git commit -m "feat(layout): add atomic placement storage"
 - Consumes: contracts and layout operations.
 - Produces: `createWidgetRegistry`, `createWorkbenchStore`, `WidgetRegistry`, and `WorkbenchStore`.
 
-- [ ] **Step 1: Write failing registry and store tests**
+- [x] **Step 1: Write failing registry and store tests**
 
 Test duplicate manifest rejection, manifest unregister without instance deletion, unknown type rejection on creation, unresolved hydrated instances, synchronous snapshots, subscription ordering, one revision per accepted command, stable events, and no notification on rejection.
 
@@ -439,19 +439,19 @@ it('publishes one event after an accepted command', () => {
 });
 ```
 
-- [ ] **Step 2: Run core tests and verify RED**
+- [x] **Step 2: Run core tests and verify RED**
 
 Run: `npm.cmd exec vitest run packages/core/src`
 
 Expected: FAIL because registry and store APIs are absent.
 
-- [ ] **Step 3: Implement registry and dispatch**
+- [x] **Step 3: Implement registry and dispatch**
 
 `WidgetRegistry` exposes `register`, `unregister`, `get`, `has`, and `list`. It parses, copies, and freezes admitted manifests. `WorkbenchStore` exposes `getState`, `dispatch`, `subscribe`, and `registry`. Dispatch parses raw commands through `WorkbenchCommandSchema`, switches exhaustively over the parsed `WorkbenchCommand`, calls layout functions, emits one frozen event per accepted transition, and returns the original state with zero events on rejection. Catch unexpected handler failures and return non-recoverable `INTERNAL_ERROR`; never throw through dispatch.
 
 Use `useSyncExternalStore`-compatible subscription semantics: subscribe returns an idempotent unsubscribe function and listeners run from a snapshot so unsubscription during notification is safe.
 
-- [ ] **Step 4: Verify core and package boundaries**
+- [x] **Step 4: Verify core and package boundaries**
 
 Run:
 
@@ -463,7 +463,7 @@ rg -n "from ['\"]react|document\.|window\." packages/contracts/src packages/layo
 
 Expected: tests/typecheck pass and `rg` finds no framework or browser dependency.
 
-- [ ] **Step 5: Commit core**
+- [x] **Step 5: Commit core**
 
 ```powershell
 git add packages/core
