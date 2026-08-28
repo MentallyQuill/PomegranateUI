@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { PNG } from 'pngjs';
 
 import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../conformance/compare.ts';
+import { createDiagnosticImages, createEvidencePaths, writeComparisonReport } from '../conformance/evidence.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
 import { DEEP_CURRENT_MACRO_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
@@ -362,4 +365,75 @@ test('the Deep Current shell profile names each structural measurement and toler
     { path: 'regions.stage.box.width', comparator: 'within', tolerance: 2 },
     { path: 'regions.stage.visible', comparator: 'equal', tolerance: 0 }
   ]);
+});
+
+test('evidence paths reject unsafe scenario identities before constructing files', () => {
+  assert.throws(
+    () => createEvidencePaths(path.join(repositoryRoot, 'test-results', 'conformance'), '../escape'),
+    (error) => error.code === 'MANIFEST_INVALID' && error.details.scenarioId === '../escape'
+  );
+});
+
+test('comparison report writes are byte-deterministic across repeated runs', async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'pom-conformance-evidence-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const paths = createEvidencePaths(directory, 'dc-shell-wide');
+
+  await writeComparisonReport(paths, { z: 1, a: { status: 'open' } });
+  const first = await readFile(paths.reportJson, 'utf8');
+  await writeComparisonReport(paths, { z: 1, a: { status: 'open' } });
+  const second = await readFile(paths.reportJson, 'utf8');
+
+  assert.equal(first, second);
+  assert.equal(first, '{\n  "a": {\n    "status": "open"\n  },\n  "z": 1\n}\n');
+});
+
+test('diagnostic image generation reports dimension mismatch without rewriting source evidence', async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'pom-conformance-images-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const paths = createEvidencePaths(directory, 'dc-shell-wide');
+  const reference = PNG.sync.write(new PNG({ width: 1, height: 1 }));
+  const actual = PNG.sync.write(new PNG({ width: 2, height: 1 }));
+  await writeFile(paths.referencePng, reference);
+  await writeFile(paths.actualPng, actual);
+
+  const summary = await createDiagnosticImages(paths.referencePng, paths.actualPng, paths);
+
+  assert.deepEqual(summary, {
+    compatible: false,
+    reference: { width: 1, height: 1 },
+    actual: { width: 2, height: 1 },
+    differingPixels: null,
+    maximumChannelDelta: null
+  });
+  assert.deepEqual(await readFile(paths.referencePng), reference);
+  assert.deepEqual(await readFile(paths.actualPng), actual);
+  await assert.rejects(readFile(paths.overlayPng), { code: 'ENOENT' });
+  await assert.rejects(readFile(paths.diffPng), { code: 'ENOENT' });
+});
+
+test('diagnostic image generation writes an alpha overlay and absolute channel diff', async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'pom-conformance-diff-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const paths = createEvidencePaths(directory, 'dc-shell-wide');
+  const referenceImage = new PNG({ width: 2, height: 1 });
+  const actualImage = new PNG({ width: 2, height: 1 });
+  referenceImage.data.set([10, 20, 30, 255, 100, 100, 100, 255]);
+  actualImage.data.set([10, 20, 30, 255, 110, 90, 120, 255]);
+  await writeFile(paths.referencePng, PNG.sync.write(referenceImage));
+  await writeFile(paths.actualPng, PNG.sync.write(actualImage));
+
+  const summary = await createDiagnosticImages(paths.referencePng, paths.actualPng, paths);
+  const overlay = PNG.sync.read(await readFile(paths.overlayPng));
+  const diff = PNG.sync.read(await readFile(paths.diffPng));
+
+  assert.deepEqual(summary, {
+    compatible: true,
+    reference: { width: 2, height: 1 },
+    actual: { width: 2, height: 1 },
+    differingPixels: 1,
+    maximumChannelDelta: 20
+  });
+  assert.deepEqual([...overlay.data], [10, 20, 30, 255, 105, 95, 110, 255]);
+  assert.deepEqual([...diff.data], [0, 0, 0, 255, 10, 10, 20, 255]);
 });

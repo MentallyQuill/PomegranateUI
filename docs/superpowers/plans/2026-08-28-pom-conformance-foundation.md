@@ -227,27 +227,27 @@ git commit -m "test(conformance): compare structured evidence"
 **Interfaces:**
 - Produces: `createEvidencePaths`, `writeComparisonReport`, and `createDiagnosticImages`.
 
-- [ ] **Step 1: Write failing path and report tests**
+- [x] **Step 1: Write failing path and report tests**
 
 Reject unsafe scenario IDs, require output beneath the injected directory,
 require byte-identical repeated JSON, prohibit source overwrite, and return a
 structured dimension-mismatch diagnostic.
 
-- [ ] **Step 2: Implement exact evidence names**
+- [x] **Step 2: Implement exact evidence names**
 
 For `dc-shell-wide`, emit `.reference.png`, `.actual.png`, `.overlay.png`,
 `.diff.png`, `.measurements.json`, and `.report.json` under
 `test-results/conformance`. Use stable JSON and atomic rename inside the output
 directory.
 
-- [ ] **Step 3: Implement diagnostic PNGs**
+- [x] **Step 3: Implement diagnostic PNGs**
 
 Use Playwright's installed PNG decoder if resolvable; otherwise add exact
 `pngjs` dev dependency. For equal dimensions, write a 50-percent overlay and
 absolute RGBA diff plus differing-pixel/max-channel summaries. These summaries
 never decide conformance.
 
-- [ ] **Step 4: Run, prove ignore, and commit**
+- [x] **Step 4: Run, prove ignore, and commit**
 
 ```powershell
 node --test tests/unit/conformance.test.mjs
