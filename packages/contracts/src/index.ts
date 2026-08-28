@@ -6,3 +6,4 @@ export * from './ids.js';
 export * from './json.js';
 export * from './model.js';
 export * from './storage.js';
+export * from './theme.js';
