@@ -138,6 +138,7 @@ test('imports committed bytes, referenced assets, hashes, and source identity', 
   assert.equal(manifest.baseline.sourceRepository, 'https://example.invalid/source.git');
   assert.equal(manifest.artifacts.every((artifact) => artifact.sourceSha256 === artifact.destinationSha256), true);
   assert.equal(manifest.artifacts.every((artifact) => artifact.status === 'preserved-verbatim'), true);
+  assert.deepEqual(manifest.scopeInventory, manifest.artifacts.map((artifact) => artifact.sourcePath).sort());
 });
 
 test('fails before writing when a referenced icon is absent from its source manifest', async () => {

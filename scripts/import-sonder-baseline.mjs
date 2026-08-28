@@ -35,11 +35,20 @@ const manifest = await importBaseline({
 const manifestPath = path.join(repositoryRoot, 'provenance', 'extraction-manifest.json');
 
 if (options.write) {
+  try {
+    const existing = JSON.parse(await readFile(manifestPath, 'utf8'));
+    manifest.contracts = existing.contracts || [];
+    if (existing.testDispositions) manifest.testDispositions = existing.testDispositions;
+    if (existing.unaccounted) manifest.unaccounted = existing.unaccounted;
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 } else {
   const committed = JSON.parse(await readFile(manifestPath, 'utf8'));
   const failures = await verifyDestinationArtifacts(repositoryRoot, committed);
   if (JSON.stringify(committed.baseline) !== JSON.stringify(manifest.baseline)) failures.push('baseline identity differs from the requested source');
+  if (JSON.stringify(committed.scopeInventory) !== JSON.stringify(manifest.scopeInventory)) failures.push('scope inventory is stale');
   if (JSON.stringify(committed.artifacts) !== JSON.stringify(manifest.artifacts)) failures.push('artifact manifest is stale');
   if (failures.length) throw new Error(`Extraction drift:\n- ${failures.join('\n- ')}`);
 }

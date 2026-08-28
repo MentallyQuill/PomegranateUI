@@ -189,6 +189,7 @@ export async function importBaseline({ sourceRoot, sourceCommit, destinationRoot
   return {
     schemaVersion: 1,
     baseline: sourceIdentity(sourceRoot, sourceCommit, scope.sourceBranch),
+    scopeInventory: artifacts.map((artifact) => artifact.sourcePath).sort(),
     artifacts,
     contracts: []
   };
