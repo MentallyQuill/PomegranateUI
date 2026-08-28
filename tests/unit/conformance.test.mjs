@@ -11,7 +11,7 @@ import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../conformance/compare.ts';
 import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, writeMeasurementEvidence } from '../conformance/evidence.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
-import { DEEP_CURRENT_MACRO_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
+import { DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
 import { assertScenarioResolution } from '../conformance/runner.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
@@ -203,6 +203,39 @@ test('the initial Deep Current macro manifest validates against exact repository
 
   assert.equal(validated.scenarios.length, 5);
   assert.equal(Object.isFrozen(validated.scenarios), true);
+});
+
+test('the Deep Current interaction manifest names every approved behavior against Widget Overhaul', async () => {
+  assert.deepEqual(DEEP_CURRENT_INTERACTION_SCENARIOS.map(({ id }) => id), [
+    'dc-int-resize-left',
+    'dc-int-resize-right',
+    'dc-int-shelf-insert',
+    'dc-int-tab-merge',
+    'dc-int-tab-reorder',
+    'dc-int-float',
+    'dc-int-invalid-restore',
+    'dc-int-cancel-restore',
+    'dc-int-focus-back',
+    'dc-int-panel-persist',
+    'dc-int-catalog-place',
+    'dc-int-coarse-targets'
+  ]);
+  assert.equal(DEEP_CURRENT_INTERACTION_SCENARIOS.every((scenario) => (
+    scenario.authority === 'widget-overhaul'
+      && scenario.measurementProfile === 'deep-current-interaction'
+  )), true);
+
+  const validated = await validateConformanceManifest(DEEP_CURRENT_INTERACTION_SCENARIOS, {
+    repositoryRoot,
+    authorities: new Map(AUTHORITY_RECORDS.map((record) => [record.id, record])),
+    viewports: CONFORMANCE_VIEWPORTS,
+    driverIds: new Set(['widget-overhaul', 'workbench-lab']),
+    measurementProfileIds: new Set(['deep-current-interaction']),
+    assertionProfileIds: new Set(['deep-current-interaction']),
+    deviationIds: new Set(),
+    hashFile: hashAuthorityFile
+  });
+  assert.equal(validated.scenarios.length, 12);
 });
 
 test('discrepancy ledger parsing preserves the exact reviewed row contract', () => {
@@ -542,6 +575,16 @@ test('reference and Lab drivers keep selectors and imports independent', async (
   assert.doesNotMatch(labDriver, /\.sonder-|drivers\/reference|atmospheric/);
 });
 
+test('Widget Overhaul and Lab interaction drivers keep selectors and imports independent', async () => {
+  const [referenceDriver, labDriver] = await Promise.all([
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/reference/widget-overhaul.ts'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/workbench-lab/interactions.ts'), 'utf8')
+  ]);
+
+  assert.doesNotMatch(referenceDriver, /data-(?:conformance-region|pomegranate-)|workbench-lab/);
+  assert.doesNotMatch(labDriver, /#results|\.pass|drivers\/reference|widget-overhaul/);
+});
+
 test('Lab readiness permits responsive docks to remain intentionally hidden', () => {
   assert.deepEqual(VISIBLE_IMPLEMENTATION_REGION_IDS, ['shelf', 'stage', 'composer']);
 });
@@ -566,8 +609,36 @@ test('the reviewed Deep Current macro baseline freezes every authority viewport'
   }
 });
 
+test('the reviewed Deep Current interaction baseline freezes every approved behavior', async () => {
+  const baseline = JSON.parse(await readFile(
+    path.join(repositoryRoot, 'tests/conformance/baselines/deep-current-interactions.json'),
+    'utf8'
+  ));
+  assert.equal(baseline.schemaVersion, 'pomegranate.ui.conformance-baseline.v1');
+  assert.equal(baseline.authority, 'widget-overhaul');
+  assert.equal(baseline.authoritySha256, AUTHORITY_RECORDS[3].sha256);
+  assert.equal(baseline.measurementProfile, 'deep-current-interaction');
+  assert.deepEqual(Object.keys(baseline.scenarios), DEEP_CURRENT_INTERACTION_SCENARIOS.map(({ id }) => id));
+  for (const [id, frozenScenario] of Object.entries(baseline.scenarios)) {
+    const manifestScenario = DEEP_CURRENT_INTERACTION_SCENARIOS.find((scenario) => scenario.id === id);
+    assert.ok(manifestScenario);
+    assert.equal(frozenScenario.pass, true);
+    assert.equal(frozenScenario.viewport, manifestScenario.viewport);
+    assert.equal(frozenScenario.referenceState, manifestScenario.referenceState);
+    assert.deepEqual(frozenScenario.inputModes, manifestScenario.inputModes);
+    assert.deepEqual(frozenScenario.functional, {
+      authorityCasePassed: true,
+      outcomeReached: true,
+      identityStable: true,
+      persistenceVerified: true,
+      keyboardAccessible: true
+    });
+  }
+});
+
 test('inspection requires one exact known scenario without permitting update mode', () => {
   assert.equal(parseInspectionArguments(['--scenario', 'dc-shell-wide']).id, 'dc-shell-wide');
+  assert.equal(parseInspectionArguments(['--scenario', 'dc-int-tab-merge']).id, 'dc-int-tab-merge');
   assert.throws(() => parseInspectionArguments([]), /--scenario <id> is required/);
   assert.throws(() => parseInspectionArguments(['--scenario', 'unknown']), /Unknown conformance scenario/);
   assert.throws(() => parseInspectionArguments(['--scenario', 'dc-shell-wide', '--update-snapshots']), /Unexpected inspection argument/);

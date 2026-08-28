@@ -22,8 +22,12 @@ export type WorkbenchCommand =
   | { readonly type: 'panel.create'; readonly panel: PanelState }
   | { readonly type: 'panel.activate'; readonly panelId: PanelId }
   | { readonly type: 'panel.reorder'; readonly panelId: PanelId; readonly toIndex: number }
+  | { readonly type: 'panel.resize-dock'; readonly panelId: PanelId; readonly edge: 'left' | 'right'; readonly width: number }
   | { readonly type: 'widget.create'; readonly instance: WidgetInstance; readonly placement: WidgetPlacement }
   | { readonly type: 'widget.place'; readonly instanceId: WidgetInstanceId; readonly placement: WidgetPlacement }
+  | { readonly type: 'widget.group'; readonly instanceId: WidgetInstanceId; readonly targetInstanceId: WidgetInstanceId; readonly groupId: string }
+  | { readonly type: 'widget.group.activate'; readonly instanceId: WidgetInstanceId }
+  | { readonly type: 'widget.group.reorder'; readonly instanceId: WidgetInstanceId; readonly toIndex: number }
   | { readonly type: 'widget.remove'; readonly instanceId: WidgetInstanceId }
   | { readonly type: 'layout.hydrate'; readonly state: WorkbenchState };
 
@@ -36,6 +40,12 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     toIndex: z.number().int().nonnegative()
   }).strict(),
   z.object({
+    type: z.literal('panel.resize-dock'),
+    panelId: PanelIdSchema,
+    edge: z.enum(['left', 'right']),
+    width: z.number().finite().min(200).max(420)
+  }).strict(),
+  z.object({
     type: z.literal('widget.create'),
     instance: WidgetInstanceSchema,
     placement: WidgetPlacementSchema
@@ -44,6 +54,21 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     type: z.literal('widget.place'),
     instanceId: WidgetInstanceIdSchema,
     placement: WidgetPlacementSchema
+  }).strict(),
+  z.object({
+    type: z.literal('widget.group'),
+    instanceId: WidgetInstanceIdSchema,
+    targetInstanceId: WidgetInstanceIdSchema,
+    groupId: z.string().min(1).refine((value) => value.trim() === value)
+  }).strict(),
+  z.object({
+    type: z.literal('widget.group.activate'),
+    instanceId: WidgetInstanceIdSchema
+  }).strict(),
+  z.object({
+    type: z.literal('widget.group.reorder'),
+    instanceId: WidgetInstanceIdSchema,
+    toIndex: z.number().int().nonnegative()
   }).strict(),
   z.object({ type: z.literal('widget.remove'), instanceId: WidgetInstanceIdSchema }).strict(),
   z.object({ type: z.literal('layout.hydrate'), state: WorkbenchStateSchema }).strict()

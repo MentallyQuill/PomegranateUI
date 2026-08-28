@@ -11,6 +11,8 @@ import {
 
 const atmosphericPath = 'prototypes/sonder-baseline/atmospheric-workbench/sonder-workbench-calibration.html';
 const atmosphericSha256 = '38878d2cf8a86f5e879faba4b41a214e4293f22ed755975023e02c962d61b913';
+const widgetOverhaulPath = 'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul.html';
+const widgetOverhaulSha256 = '043167ad75c07fa5ff8661fbe8a86943a9c0b38eeea9811739309cb866e8a2a5';
 
 function createMacroScenario(id: string, title: string, viewport: string): ConformanceScenario {
   return Object.freeze({
@@ -39,6 +41,46 @@ export const DEEP_CURRENT_MACRO_SCENARIOS: readonly ConformanceScenario[] = Obje
   createMacroScenario('dc-shell-compact', 'Deep Current compact shell', 'compact'),
   createMacroScenario('dc-shell-landscape-short', 'Deep Current short landscape shell', 'landscape-short'),
   createMacroScenario('dc-shell-zoom-200', 'Deep Current 200-percent zoom equivalent shell', 'zoom-200')
+]);
+
+function createInteractionScenario(
+  id: string,
+  title: string,
+  state: string,
+  inputModes: ConformanceScenario['inputModes'],
+  viewport = 'standard'
+): ConformanceScenario {
+  return Object.freeze({
+    id,
+    title,
+    target: 'deep-current',
+    authority: 'widget-overhaul',
+    authorityPath: widgetOverhaulPath,
+    authoritySha256: widgetOverhaulSha256,
+    viewport,
+    inputModes: Object.freeze([...inputModes]),
+    referenceState: state,
+    implementationState: state,
+    capture: Object.freeze({ kind: 'viewport' as const }),
+    measurementProfile: 'deep-current-interaction',
+    assertionProfile: 'deep-current-interaction',
+    allowedDeviationIds: Object.freeze([])
+  });
+}
+
+export const DEEP_CURRENT_INTERACTION_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
+  createInteractionScenario('dc-int-resize-left', 'Resize the left toolbar', 'scene-left-toolbar-resized', ['fine-pointer', 'keyboard']),
+  createInteractionScenario('dc-int-resize-right', 'Resize the right toolbar', 'scene-right-toolbar-resized', ['fine-pointer', 'keyboard']),
+  createInteractionScenario('dc-int-shelf-insert', 'Insert a Widget shelf', 'scene-toolbar-new-shelf', ['fine-pointer', 'keyboard', 'coarse-pointer']),
+  createInteractionScenario('dc-int-tab-merge', 'Merge Widgets as tabs', 'scene-group-tab-merge', ['fine-pointer', 'keyboard', 'coarse-pointer']),
+  createInteractionScenario('dc-int-tab-reorder', 'Reorder grouped Widget tabs', 'scene-group-tab-reordered', ['fine-pointer', 'keyboard']),
+  createInteractionScenario('dc-int-float', 'Float and move a Widget', 'scene-widget-floating', ['fine-pointer', 'keyboard', 'coarse-pointer']),
+  createInteractionScenario('dc-int-invalid-restore', 'Restore an invalid Widget drop', 'scene-invalid-drop-restored', ['fine-pointer', 'coarse-pointer']),
+  createInteractionScenario('dc-int-cancel-restore', 'Restore a cancelled Widget drag', 'scene-pointer-cancel-restored', ['fine-pointer', 'coarse-pointer']),
+  createInteractionScenario('dc-int-focus-back', 'Focus and return one Widget', 'scene-widget-focused', ['fine-pointer', 'keyboard']),
+  createInteractionScenario('dc-int-panel-persist', 'Restore independent Panel layouts', 'panel-layout-restored', ['keyboard']),
+  createInteractionScenario('dc-int-catalog-place', 'Place a Catalog Widget with the keyboard', 'catalog-keyboard-placement', ['keyboard'], 'widget-standard'),
+  createInteractionScenario('dc-int-coarse-targets', 'Expose coarse-pointer interaction targets', 'scene-coarse-pointer', ['coarse-pointer'])
 ]);
 
 export async function hashAuthorityFile(absolutePath: string): Promise<string> {

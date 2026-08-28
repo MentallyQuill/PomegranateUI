@@ -8,14 +8,18 @@ import {
 } from '@pomegranate-ui/contracts';
 import {
   activatePanel,
+  activateWidgetGroup,
   createInitialWorkbenchState,
   createPanel,
   createWidget,
   decodeLayoutSnapshot,
   encodeLayoutSnapshot,
   placeWidget,
+  mergeWidgetGroup,
   removeWidget,
   reorderPanel,
+  reorderWidgetGroup,
+  resizePanelDock,
   type LayoutResult
 } from '@pomegranate-ui/layout';
 
@@ -60,10 +64,18 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'panel.activated', revision, panelId: command.panelId };
     case 'panel.reorder':
       return { type: 'panel.reordered', revision, panelId: command.panelId };
+    case 'panel.resize-dock':
+      return { type: 'panel.dock-resized', revision, panelId: command.panelId, edge: command.edge };
     case 'widget.create':
       return { type: 'widget.created', revision, instanceId: command.instance.id };
     case 'widget.place':
       return { type: 'widget.placed', revision, instanceId: command.instanceId };
+    case 'widget.group':
+      return { type: 'widget.grouped', revision, instanceId: command.instanceId };
+    case 'widget.group.activate':
+      return { type: 'widget.group-activated', revision, instanceId: command.instanceId };
+    case 'widget.group.reorder':
+      return { type: 'widget.group-reordered', revision, instanceId: command.instanceId };
     case 'widget.remove':
       return { type: 'widget.removed', revision, instanceId: command.instanceId };
     case 'layout.hydrate':
@@ -131,11 +143,23 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
           case 'panel.reorder':
             transition = reorderPanel(before, command.panelId, command.toIndex);
             break;
+          case 'panel.resize-dock':
+            transition = resizePanelDock(before, command.panelId, command.edge, command.width);
+            break;
           case 'widget.create':
             transition = createWidget(before, command.instance, command.placement);
             break;
           case 'widget.place':
             transition = placeWidget(before, command.instanceId, command.placement);
+            break;
+          case 'widget.group':
+            transition = mergeWidgetGroup(before, command.instanceId, command.targetInstanceId, command.groupId);
+            break;
+          case 'widget.group.activate':
+            transition = activateWidgetGroup(before, command.instanceId);
+            break;
+          case 'widget.group.reorder':
+            transition = reorderWidgetGroup(before, command.instanceId, command.toIndex);
             break;
           case 'widget.remove':
             transition = removeWidget(before, command.instanceId);

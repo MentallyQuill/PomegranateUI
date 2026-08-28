@@ -1,9 +1,14 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { DEEP_CURRENT_MACRO_SCENARIOS } from '../../tests/conformance/manifest.ts';
+import { DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS } from '../../tests/conformance/manifest.ts';
 
-export function parseInspectionArguments(argv, scenarios = DEEP_CURRENT_MACRO_SCENARIOS) {
+const DEEP_CURRENT_SCENARIOS = Object.freeze([
+  ...DEEP_CURRENT_MACRO_SCENARIOS,
+  ...DEEP_CURRENT_INTERACTION_SCENARIOS
+]);
+
+export function parseInspectionArguments(argv, scenarios = DEEP_CURRENT_SCENARIOS) {
   if (argv.length === 0) throw new Error('--scenario <id> is required.');
   if (argv[0] !== '--scenario' || !argv[1]) throw new Error('--scenario <id> is required.');
   if (argv.length !== 2) throw new Error(`Unexpected inspection argument: ${argv[2] ?? argv.at(-1)}`);

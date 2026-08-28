@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test';
 
+async function dragTo(
+  page: import('@playwright/test').Page,
+  handle: import('@playwright/test').Locator,
+  point: { x: number; y: number }
+) {
+  const box = await handle.boundingBox();
+  if (!box) throw new Error('Expected drag handle geometry.');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(point.x, point.y, { steps: 6 });
+  await page.mouse.up();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('http://127.0.0.1:4174');
   await page.evaluate(() => window.localStorage.clear());
@@ -26,6 +39,218 @@ test('native workbench POM-PANEL-0C32491298 POM-PANEL-E6D6A0E64B appends menu do
   await expect(leftDock.getByRole('article').nth(0)).toHaveAttribute('aria-label', 'Characters (Story)');
   await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Theme Settings');
   await expect(leftDock.getByRole('article').nth(2)).toHaveAttribute('aria-label', 'World State');
+});
+
+test('Deep Current dock separators resize with keyboard and persist exact bounded widths', async ({ page }) => {
+  const left = page.getByRole('separator', { name: 'Resize left toolbar' });
+  const right = page.getByRole('separator', { name: 'Resize right toolbar' });
+  await expect(left).toHaveAttribute('aria-valuemin', '200');
+  await expect(left).toHaveAttribute('aria-valuemax', '420');
+  await expect(left).toHaveAttribute('aria-valuenow', '286');
+
+  await left.focus();
+  await left.press('ArrowRight');
+  await expect(left).toHaveAttribute('aria-valuenow', '294');
+  await right.focus();
+  await right.press('End');
+  await expect(right).toHaveAttribute('aria-valuenow', '420');
+
+  const handle = await left.boundingBox();
+  if (!handle) throw new Error('Expected the left toolbar resize handle to have geometry.');
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + handle.width / 2 + 26, handle.y + handle.height / 2, { steps: 3 });
+  await page.mouse.up();
+  await expect(left).toHaveAttribute('aria-valuenow', '320');
+
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  await page.reload();
+  await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '320');
+  await expect(page.getByRole('separator', { name: 'Resize right toolbar' })).toHaveAttribute('aria-valuenow', '420');
+  await expect.poll(() => page.locator('[data-pomegranate-dock="left"]').evaluate((node) => node.getBoundingClientRect().width)).toBe(320);
+  await expect.poll(() => page.locator('[data-pomegranate-dock="right"]').evaluate((node) => node.getBoundingClientRect().width)).toBe(420);
+});
+
+test('Deep Current Widgets merge into an accessible persistent tab group and reorder', async ({ page }) => {
+  const ambience = page.getByRole('article', { name: 'Room Ambience' });
+  const worldBox = await page.getByRole('article', { name: 'World State' }).boundingBox();
+  if (!worldBox) throw new Error('Expected World State geometry.');
+  await dragTo(page, ambience.getByRole('button', { name: 'Drag Widget' }), {
+    x: worldBox.x + worldBox.width / 2,
+    y: worldBox.y + worldBox.height / 2
+  });
+
+  const group = page.getByRole('group', { name: 'Widget group' });
+  await expect(group.getByRole('tab')).toHaveText(['World State', 'Room Ambience']);
+  await expect(group.getByRole('tab', { name: 'Room Ambience' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('article', { name: 'World State' })).toHaveCount(0);
+
+  await group.getByRole('tab', { name: 'World State' }).click();
+  await expect(page.getByRole('article', { name: 'World State' })).toBeVisible();
+  await expect(page.getByRole('article', { name: 'Room Ambience' })).toHaveCount(0);
+
+  await group.getByRole('tab', { name: 'Room Ambience' }).press('Alt+ArrowLeft');
+  await expect(group.getByRole('tab')).toHaveText(['Room Ambience', 'World State']);
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  await page.reload();
+  const restored = page.getByRole('group', { name: 'Widget group' });
+  await expect(restored.getByRole('tab')).toHaveText(['Room Ambience', 'World State']);
+  await expect(restored.getByRole('tab', { name: 'World State' })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('Deep Current Focus and Back keep one Widget identity and restore invoking focus', async ({ page }) => {
+  const world = page.getByRole('article', { name: 'World State' });
+  const focus = world.getByRole('button', { name: 'Focus Widget' });
+  await focus.click();
+
+  const dialog = page.getByRole('dialog', { name: 'Focused World State' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('[data-pomegranate-widget="scene-world"]')).toHaveCount(1);
+  await expect(page.locator('[data-focused-widget-placeholder="scene-world"]')).toBeVisible();
+  await expect(page.locator('[data-pomegranate-widget="scene-world"]')).toHaveCount(1);
+
+  await dialog.getByRole('button', { name: 'Back to Workbench' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Focus Widget' })).toBeFocused();
+});
+
+test('Deep Current pointer drag floats and subsequently moves a Widget within the canvas', async ({ page }) => {
+  const world = page.getByRole('article', { name: 'World State' });
+  const stageBox = await page.locator('[data-pomegranate-dock="main"]').boundingBox();
+  if (!stageBox) throw new Error('Expected stage geometry.');
+  await dragTo(page, world.getByRole('button', { name: 'Drag Widget' }), {
+    x: stageBox.x + stageBox.width * 0.72,
+    y: stageBox.y + 90
+  });
+
+  const floating = page.locator('[data-widget-type="systems.world-state"][data-pomegranate-placement="floating"]');
+  await expect(floating).toBeVisible();
+  const first = await floating.boundingBox();
+  if (!first) throw new Error('Expected floating Widget geometry.');
+  const floatingHandle = floating.getByRole('button', { name: 'Drag Widget' });
+  const floatingHandleBox = await floatingHandle.boundingBox();
+  if (!floatingHandleBox) throw new Error('Expected floating drag handle geometry.');
+  await dragTo(page, floatingHandle, {
+    x: floatingHandleBox.x + floatingHandleBox.width / 2 + 60,
+    y: floatingHandleBox.y + floatingHandleBox.height / 2 + 40
+  });
+  const second = await floating.boundingBox();
+  expect(second?.x).toBeGreaterThan(first.x + 20);
+  expect(second?.y).toBeGreaterThan(first.y + 10);
+});
+
+test('Deep Current drag creates a new shelf and invalid release restores exact origin', async ({ page }) => {
+  const world = page.getByRole('article', { name: 'World State' });
+  const seam = page.locator('[data-shelf-insertion="left"]');
+  const seamBox = await seam.boundingBox();
+  if (!seamBox) throw new Error('Expected left shelf seam geometry.');
+  await dragTo(page, world.getByRole('button', { name: 'Drag Widget' }), {
+    x: seamBox.x + seamBox.width / 2,
+    y: seamBox.y + seamBox.height / 2
+  });
+  const placed = page.locator('[data-widget-type="systems.world-state"]');
+  await expect(placed).toHaveAttribute('data-pomegranate-edge', 'left');
+  await expect(placed).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
+
+  const ambience = page.locator('[data-widget-type="story.room-ambience"]');
+  const origin = await ambience.evaluate((node) => ({
+    parent: node.parentElement?.getAttribute('data-pomegranate-dock'),
+    edge: node.getAttribute('data-pomegranate-edge'),
+    shelf: node.getAttribute('data-pomegranate-shelf'),
+    order: node.getAttribute('data-pomegranate-order'),
+    style: node.getAttribute('style')
+  }));
+  const revision = await page.locator('main').getAttribute('data-workbench-revision');
+  await dragTo(page, ambience.getByRole('button', { name: 'Drag Widget' }), { x: 2, y: 2 });
+  await expect.poll(() => ambience.evaluate((node) => ({
+    parent: node.parentElement?.getAttribute('data-pomegranate-dock'),
+    edge: node.getAttribute('data-pomegranate-edge'),
+    shelf: node.getAttribute('data-pomegranate-shelf'),
+    order: node.getAttribute('data-pomegranate-order'),
+    style: node.getAttribute('style')
+  }))).toEqual(origin);
+  await expect(page.locator('main')).toHaveAttribute('data-workbench-revision', revision ?? '');
+
+  const cancelHandle = ambience.getByRole('button', { name: 'Drag Widget' });
+  const cancelBox = await cancelHandle.boundingBox();
+  if (!cancelBox) throw new Error('Expected cancel drag handle geometry.');
+  await page.mouse.move(cancelBox.x + cancelBox.width / 2, cancelBox.y + cancelBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(cancelBox.x + cancelBox.width / 2 + 18, cancelBox.y + cancelBox.height / 2 + 18);
+  await cancelHandle.dispatchEvent('pointercancel', { pointerId: 1, pointerType: 'mouse' });
+  await page.mouse.up();
+  await expect.poll(() => ambience.evaluate((node) => ({
+    parent: node.parentElement?.getAttribute('data-pomegranate-dock'),
+    edge: node.getAttribute('data-pomegranate-edge'),
+    shelf: node.getAttribute('data-pomegranate-shelf'),
+    order: node.getAttribute('data-pomegranate-order'),
+    style: node.getAttribute('style')
+  }))).toEqual(origin);
+  await expect(page.locator('main')).toHaveAttribute('data-workbench-revision', revision ?? '');
+});
+
+test('Deep Current accepts the same shelf placement path from a coarse touch pointer', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true });
+  const page = await context.newPage();
+  try {
+    await page.goto('http://127.0.0.1:4174');
+    await page.evaluate(() => window.localStorage.clear());
+    await page.reload();
+    const handle = page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Drag Widget' });
+    const handleBox = await handle.boundingBox();
+    const seamBox = await page.locator('[data-shelf-insertion="left"]').boundingBox();
+    if (!handleBox || !seamBox) throw new Error('Expected touch placement geometry.');
+    const start = { x: handleBox.x + handleBox.width / 2, y: handleBox.y + handleBox.height / 2 };
+    const end = { x: seamBox.x + seamBox.width / 2, y: seamBox.y + seamBox.height / 2 };
+    await handle.dispatchEvent('pointerdown', { pointerId: 17, pointerType: 'touch', isPrimary: true, button: 0, clientX: start.x, clientY: start.y });
+    await handle.dispatchEvent('pointermove', { pointerId: 17, pointerType: 'touch', isPrimary: true, button: 0, clientX: end.x, clientY: end.y });
+    await handle.dispatchEvent('pointerup', { pointerId: 17, pointerType: 'touch', isPrimary: true, button: 0, clientX: end.x, clientY: end.y });
+    await expect(page.locator('[data-widget-type="systems.world-state"]')).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Scene, Library, and Settings retain independent interaction layouts after reload', async ({ page }) => {
+  const sceneLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
+  await sceneLeft.focus();
+  await sceneLeft.press('End');
+  const sceneSeam = await page.locator('[data-shelf-insertion="left"]').boundingBox();
+  if (!sceneSeam) throw new Error('Expected Scene shelf seam.');
+  await dragTo(page, page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Drag Widget' }), {
+    x: sceneSeam.x + sceneSeam.width / 2,
+    y: sceneSeam.y + sceneSeam.height / 2
+  });
+  await page.getByRole('article', { name: 'Promise Ledger' }).getByRole('button', { name: 'Float' }).click();
+
+  await page.getByRole('tab', { name: 'Library' }).click();
+  const libraryLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
+  await libraryLeft.focus();
+  await libraryLeft.press('Home');
+  const character = page.getByRole('article', { name: 'Character Card' });
+  const characterBox = await character.boundingBox();
+  if (!characterBox) throw new Error('Expected Character Card geometry.');
+  await dragTo(page, page.getByRole('article', { name: 'Lore Entry Tree' }).getByRole('button', { name: 'Drag Widget' }), {
+    x: characterBox.x + characterBox.width / 2,
+    y: characterBox.y + characterBox.height / 2
+  });
+
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  const settingsRight = page.getByRole('separator', { name: 'Resize right toolbar' });
+  await settingsRight.focus();
+  await settingsRight.press('ArrowLeft');
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  await page.reload();
+
+  await expect(page.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('separator', { name: 'Resize right toolbar' })).toHaveAttribute('aria-valuenow', '278');
+  await page.getByRole('tab', { name: 'Library' }).click();
+  await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '200');
+  await expect(page.getByRole('group', { name: 'Widget group' }).getByRole('tab')).toHaveText(['Character Card', 'Lore Entry Tree']);
+  await page.getByRole('tab', { name: 'Scene' }).click();
+  await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '420');
+  await expect(page.locator('[data-widget-type="systems.world-state"]')).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
+  await expect(page.locator('[data-widget-type="systems.promise-ledger"]')).toHaveAttribute('data-pomegranate-placement', 'floating');
 });
 
 test('native workbench POM-PERSIST-842D422EB3 POM-PERSIST-9FA69F9FC1 restores a user Panel template and order', async ({ page }) => {

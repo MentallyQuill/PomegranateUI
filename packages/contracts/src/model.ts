@@ -73,6 +73,11 @@ export type DockedPlacement = {
   readonly edge: PanelEdge;
   readonly shelfId: string;
   readonly order: number;
+  readonly group?: {
+    readonly id: string;
+    readonly order: number;
+    readonly active: boolean;
+  };
 };
 
 export type FloatingPlacement = {
@@ -184,7 +189,12 @@ export const DockedPlacementSchema = z.object({
   panelId: PanelIdSchema,
   edge: PanelEdgeSchema,
   shelfId: unpaddedString('shelfId'),
-  order: nonnegativeInteger
+  order: nonnegativeInteger,
+  group: z.object({
+    id: unpaddedString('groupId'),
+    order: nonnegativeInteger,
+    active: z.boolean()
+  }).strict().optional()
 }).strict();
 
 export const FloatingPlacementSchema = z.object({

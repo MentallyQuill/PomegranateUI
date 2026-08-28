@@ -1,14 +1,16 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { asPanelId, asWidgetInstanceId, type WidgetManifest, type WorkbenchState } from '@pomegranate-ui/contracts';
   import { loadLayout, saveLayout } from '@pomegranate-ui/layout';
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
+  import type { WidgetFrameProjection } from '@pomegranate-ui/core';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
 
   import deepCurrentStage from './assets/deep-current-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
+  import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
   import WorkbenchSurface from './recipes/WorkbenchSurface.svelte';
@@ -69,6 +71,8 @@
 
   let workbench: WorkbenchState = $state(store.getState());
   let focusMode = $state(false);
+  let focusedFrame = $state<WidgetFrameProjection | null>(null);
+  let focusReturnId: string | null = null;
   let leftCollapsed = $state(false);
   let panelDialog: HTMLDialogElement;
   let panelName = $state('New Panel');
@@ -147,6 +151,22 @@
   function openPanelDialog() {
     panelDialog.showModal();
   }
+
+  function focusWidget(frame: WidgetFrameProjection) {
+    focusReturnId = frame.instanceId;
+    focusedFrame = frame;
+  }
+
+  async function returnFromFocusedWidget() {
+    const returnId = focusReturnId;
+    focusedFrame = null;
+    focusReturnId = null;
+    await tick();
+    if (!returnId) return;
+    const selector = `[data-focus-widget-for="${CSS.escape(returnId)}"]`;
+    const control = document.querySelector<HTMLElement>(selector);
+    control?.focus();
+  }
 </script>
 
 <svelte:head><title>PomegranateUI Workbench Lab</title></svelte:head>
@@ -204,15 +224,28 @@
           class:widget-float={frame.placement.kind === 'floating'}
           data-widget-type={frame.instance.type}
           data-widget-shape={frame.manifest?.catalog?.shape}
+          data-pomegranate-placement={frame.placement.kind}
+          data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.edge : undefined}
+          data-pomegranate-shelf={frame.placement.kind === 'docked' ? frame.placement.shelfId : undefined}
+          data-pomegranate-order={frame.placement.kind === 'docked' ? frame.placement.order : undefined}
           style={floatingStyle(frame)}
         >
-          <WidgetFrame
-            {frame}
-            {store}
-            {rendererRegistry}
-            {hostContext}
-            class="widget-frame"
-          />
+          {#if focusedFrame?.instanceId === frame.instanceId}
+            <div
+              class="focused-widget-placeholder"
+              data-focused-widget-placeholder={frame.instanceId}
+              role="status"
+            >{frame.title} is open in Focus.</div>
+          {:else}
+            <WidgetFrame
+              {frame}
+              {store}
+              {rendererRegistry}
+              {hostContext}
+              onfocuswidget={focusWidget}
+              class="widget-frame"
+            />
+          {/if}
         </div>
       {/snippet}
     </WorkbenchSurface>
@@ -225,6 +258,16 @@
   </footer>
 
   <WidgetCatalog {catalog} oncreate={addFromCatalog} class="widget-catalog" />
+
+  {#if focusedFrame}
+    <FocusedWidget
+      frame={focusedFrame}
+      {store}
+      {rendererRegistry}
+      {hostContext}
+      onreturn={() => void returnFromFocusedWidget()}
+    />
+  {/if}
 
   <dialog bind:this={panelDialog} aria-labelledby="panel-dialog-title">
     <form onsubmit={createPanel}>

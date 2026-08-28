@@ -2,6 +2,8 @@ import {
   PanelStateSchema,
   WidgetInstanceSchema,
   WidgetPlacementSchema,
+  type DockedPlacement,
+  type JsonObject,
   type PanelId,
   type PanelState,
   type WidgetInstance,
@@ -11,7 +13,7 @@ import {
 } from '@pomegranate-ui/contracts';
 
 import { acceptLayout, rejectLayout, type LayoutFailure, type LayoutResult } from './errors.js';
-import { nextRevision, normalizeDockOrders, normalizePanels } from './state.js';
+import { nextRevision, normalizeDockOrders, normalizePanels, normalizeTabGroups } from './state.js';
 
 function hasPanel(state: WorkbenchState, panelId: PanelId): boolean {
   return state.panels.some((panel) => panel.id === panelId);
@@ -43,22 +45,155 @@ function placeInRecord(
 ): Readonly<Record<string, WidgetPlacement>> {
   const withoutCurrent = { ...placements };
   delete withoutCurrent[instanceId];
-  const normalized = normalizeDockOrders(withoutCurrent);
+  const normalized = normalizeTabGroups(normalizeDockOrders(withoutCurrent));
 
   if (placement.kind === 'floating') {
     return { ...normalized, [instanceId]: placement };
   }
 
-  const order = Object.values(normalized).filter((candidate) => (
+  const siblings = Object.entries(normalized).filter(([, candidate]) => (
     candidate.kind === 'docked'
       && candidate.panelId === placement.panelId
       && candidate.edge === placement.edge
       && candidate.shelfId === placement.shelfId
-  )).length;
-  return {
-    ...normalized,
-    [instanceId]: { ...placement, order }
-  };
+  )).sort(([, left], [, right]) => (
+    left.kind === 'docked' && right.kind === 'docked' ? left.order - right.order : 0
+  ));
+  const order = Math.min(placement.order, siblings.length);
+  const shifted = { ...normalized };
+  for (const [siblingId, candidate] of siblings) {
+    if (candidate.kind === 'docked' && candidate.order >= order) {
+      shifted[siblingId] = { ...candidate, order: candidate.order + 1 };
+    }
+  }
+  return normalizeTabGroups(normalizeDockOrders({ ...shifted, [instanceId]: { ...placement, order } }));
+}
+
+export function resizePanelDock(
+  state: WorkbenchState,
+  panelId: PanelId,
+  edge: 'left' | 'right',
+  width: number
+): LayoutResult {
+  const index = state.panels.findIndex((panel) => panel.id === panelId);
+  if (index < 0) {
+    return rejectLayout(state, 'MISSING_PANEL', `Panel '${panelId}' does not exist.`, { panelId });
+  }
+  if (!Number.isFinite(width) || width < 200 || width > 420) {
+    return rejectLayout(state, 'INVALID_INDEX', 'Dock width must be between 200 and 420 CSS pixels.', { width });
+  }
+  const panel = state.panels[index]!;
+  const currentWidths = panel.configuration?.dockWidths;
+  const dockWidths = currentWidths !== null && typeof currentWidths === 'object' && !Array.isArray(currentWidths)
+    ? currentWidths as JsonObject
+    : {};
+  const nextDockWidths: JsonObject = { ...dockWidths, [edge]: width };
+  const panels = [...state.panels];
+  panels[index] = { ...panel, configuration: { ...panel.configuration, dockWidths: nextDockWidths } };
+  return acceptLayout({ ...state, revision: nextRevision(state), panels });
+}
+
+function dockedPlacement(state: WorkbenchState, instanceId: WidgetInstanceId): DockedPlacement | null {
+  const placement = state.placements[instanceId];
+  return placement?.kind === 'docked' ? placement : null;
+}
+
+export function mergeWidgetGroup(
+  state: WorkbenchState,
+  instanceId: WidgetInstanceId,
+  targetInstanceId: WidgetInstanceId,
+  groupId: string
+): LayoutResult {
+  if (instanceId === targetInstanceId) {
+    return rejectLayout(state, 'INVALID_PLACEMENT', 'A Widget cannot be grouped with itself.');
+  }
+  const source = dockedPlacement(state, instanceId);
+  const target = dockedPlacement(state, targetInstanceId);
+  if (!state.widgets[instanceId] || !state.widgets[targetInstanceId]) {
+    return rejectLayout(state, 'MISSING_WIDGET', 'Both grouped Widgets must exist.');
+  }
+  if (!source || !target || source.panelId !== target.panelId) {
+    return rejectLayout(state, 'INVALID_PLACEMENT', 'Grouped Widgets must be docked in the same Panel.');
+  }
+  if (!groupId || groupId.trim() !== groupId) {
+    return rejectLayout(state, 'INVALID_PLACEMENT', 'Widget group identity is invalid.');
+  }
+  const targetGroupId = target.group?.id ?? groupId;
+  if (target.group && target.group.id !== groupId) {
+    return rejectLayout(state, 'INVALID_PLACEMENT', 'The target Widget already belongs to a different group.');
+  }
+
+  const moved = placeInRecord(state.placements, instanceId, {
+    kind: 'docked',
+    panelId: target.panelId,
+    edge: target.edge,
+    shelfId: target.shelfId,
+    order: target.order + 1
+  });
+  const members = Object.entries(moved)
+    .filter(([id, placement]) => id === targetInstanceId || id === instanceId
+      || (placement.kind === 'docked' && placement.group?.id === targetGroupId))
+    .sort(([leftId, left], [rightId, right]) => {
+      const leftOrder = leftId === targetInstanceId ? -1 : left.kind === 'docked' ? (left.group?.order ?? left.order) : 0;
+      const rightOrder = rightId === targetInstanceId ? -1 : right.kind === 'docked' ? (right.group?.order ?? right.order) : 0;
+      return leftOrder - rightOrder || leftId.localeCompare(rightId);
+    });
+  const placements = { ...moved };
+  members.forEach(([id, placement], order) => {
+    if (placement.kind !== 'docked') return;
+    placements[id] = {
+      ...placement,
+      group: { id: targetGroupId, order, active: id === instanceId }
+    };
+  });
+  return acceptLayout({ ...state, revision: nextRevision(state), placements: normalizeTabGroups(placements) });
+}
+
+export function activateWidgetGroup(state: WorkbenchState, instanceId: WidgetInstanceId): LayoutResult {
+  const selected = dockedPlacement(state, instanceId);
+  if (!state.widgets[instanceId]) return rejectLayout(state, 'MISSING_WIDGET', `Widget instance '${instanceId}' does not exist.`);
+  if (!selected?.group) return rejectLayout(state, 'INVALID_PLACEMENT', 'Widget is not in a tab group.');
+  const placements = { ...state.placements };
+  for (const [id, placement] of Object.entries(placements)) {
+    const group = placement.kind === 'docked' ? placement.group : undefined;
+    if (placement.kind === 'docked' && placement.panelId === selected.panelId && group?.id === selected.group.id) {
+      placements[id] = { ...placement, group: { id: group.id, order: group.order, active: id === instanceId } };
+    }
+  }
+  return acceptLayout({ ...state, revision: nextRevision(state), placements });
+}
+
+export function reorderWidgetGroup(
+  state: WorkbenchState,
+  instanceId: WidgetInstanceId,
+  toIndex: number
+): LayoutResult {
+  const selected = dockedPlacement(state, instanceId);
+  if (!state.widgets[instanceId]) return rejectLayout(state, 'MISSING_WIDGET', `Widget instance '${instanceId}' does not exist.`);
+  if (!selected?.group) return rejectLayout(state, 'INVALID_PLACEMENT', 'Widget is not in a tab group.');
+  const members = Object.entries(state.placements)
+    .filter(([, placement]) => placement.kind === 'docked'
+      && placement.panelId === selected.panelId
+      && placement.group?.id === selected.group!.id)
+    .sort(([, left], [, right]) => (
+      left.kind === 'docked' && right.kind === 'docked'
+        ? (left.group?.order ?? 0) - (right.group?.order ?? 0)
+        : 0
+    ));
+  if (!Number.isInteger(toIndex) || toIndex < 0 || toIndex >= members.length) {
+    return rejectLayout(state, 'INVALID_INDEX', 'Widget group insertion index is outside the group.', { toIndex });
+  }
+  const fromIndex = members.findIndex(([id]) => id === instanceId);
+  const [moved] = members.splice(fromIndex, 1);
+  if (!moved) return rejectLayout(state, 'INTERNAL_ERROR', 'Widget group reorder could not isolate the member.', undefined, false);
+  members.splice(toIndex, 0, moved);
+  const placements = { ...state.placements };
+  members.forEach(([id, placement], order) => {
+    if (placement.kind === 'docked' && placement.group) {
+      placements[id] = { ...placement, group: { ...placement.group, order } };
+    }
+  });
+  return acceptLayout({ ...state, revision: nextRevision(state), placements });
 }
 
 export function createPanel(state: WorkbenchState, panel: PanelState): LayoutResult {
@@ -211,6 +346,6 @@ export function removeWidget(state: WorkbenchState, instanceId: WidgetInstanceId
     ...state,
     revision: nextRevision(state),
     widgets,
-    placements: normalizeDockOrders(placements)
+    placements: normalizeTabGroups(normalizeDockOrders(placements))
   });
 }

@@ -82,8 +82,17 @@ const shellProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('regions.stage.visible')
 ]);
 
+const interactionProfile: readonly ComparisonDefinition[] = Object.freeze([
+  exact('functional.authorityCasePassed'),
+  exact('functional.outcomeReached'),
+  exact('functional.identityStable'),
+  exact('functional.persistenceVerified'),
+  exact('functional.keyboardAccessible')
+]);
+
 export const MEASUREMENT_PROFILES: ReadonlyMap<string, readonly ComparisonDefinition[]> = new Map([
-  ['deep-current-shell', shellProfile]
+  ['deep-current-shell', shellProfile],
+  ['deep-current-interaction', interactionProfile]
 ]);
 
 function valueAtPath(root: NormalizedValue, evidencePath: string): NormalizedValue {
