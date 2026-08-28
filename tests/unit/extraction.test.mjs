@@ -43,7 +43,14 @@ async function createSourceRepository() {
   await writeFile(path.join(sourceRoot, 'docs', 'prototype', 'oracle.html'), '<p>committed 700-test-icon.svg</p>\n');
   await writeFile(path.join(sourceRoot, 'docs', 'single.md'), 'single committed\n');
   await writeFile(path.join(sourceRoot, 'assets', 'icons', '700-test-icon.svg'), Buffer.from([0, 1, 2, 3, 255]));
-  await writeFile(path.join(sourceRoot, 'assets', 'icons', 'manifest.json'), JSON.stringify({ icons: [{ filename: '700-test-icon.svg', sha256: sha256(Buffer.from([0, 1, 2, 3, 255])), licenseMetadata: 'CC0' }] }, null, 2));
+  await writeFile(path.join(sourceRoot, 'assets', 'icons', 'manifest.json'), JSON.stringify({
+    icons: [{
+      filename: '700-test-icon.svg',
+      sha256: sha256(Buffer.from([0, 1, 2, 3, 255])),
+      licenseMetadata: 'CC0',
+      sourceAssetUrl: 'https://example.invalid/show/700/shape-1-copy-55-64.svg'
+    }]
+  }, null, 2));
   git(sourceRoot, ['add', '.']);
   git(sourceRoot, ['commit', '-m', 'fixture baseline']);
   const sourceCommit = git(sourceRoot, ['rev-parse', 'HEAD']);

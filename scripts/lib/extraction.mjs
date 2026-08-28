@@ -140,7 +140,8 @@ export async function importBaseline({ sourceRoot, sourceCommit, destinationRoot
     const entries = iconManifestEntries(manifest);
     const byFilename = new Map(entries.map((entry) => [entry.filename, entry]));
     const pattern = new RegExp(rule.filenamePattern, 'g');
-    for (const filename of findReferencedIconBasenames(imported, pattern)) {
+    const evidenceFiles = imported.filter((item) => item.sourcePath !== normalizeRepoPath(rule.sourceManifest));
+    for (const filename of findReferencedIconBasenames(evidenceFiles, pattern)) {
       const record = byFilename.get(filename);
       if (!record) throw new Error(`Referenced icon ${filename} is absent from its source manifest.`);
       const sourcePath = normalizeRepoPath(`${rule.sourceDirectory}${filename}`);
