@@ -1,4 +1,4 @@
-![PomegranateUI](docs/assets/pomegranateui-logo.png)
+![PomegranateUI](docs/assets/pomegranateui-logo-white.png)
 
 # PomegranateUI
 
