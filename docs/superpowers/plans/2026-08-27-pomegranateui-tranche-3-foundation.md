@@ -232,7 +232,7 @@ git commit -m "build: establish TypeScript workspaces"
 - Consumes: no PomegranateUI runtime package.
 - Produces: `asPanelId`, `asWidgetInstanceId`, `asWidgetType`, `WidgetManifest`, `WidgetInstance`, `PanelState`, `WidgetPlacement`, `WorkbenchState`, `LayoutSnapshotV1`, `WorkbenchCommand`, `WorkbenchEvent`, `CommandResult`, `LayoutStorage`, `WorkbenchCommandSchema`, and `LayoutSnapshotV1Schema`.
 
-- [ ] **Step 1: Write failing public-contract tests**
+- [x] **Step 1: Write failing public-contract tests**
 
 Create tests that prove non-empty branded ids, JSON-safe configuration, the exact state/snapshot schema strings, docked and floating discriminants, command exhaustiveness, and storage round trips.
 
@@ -257,13 +257,13 @@ describe('public contracts', () => {
 });
 ```
 
-- [ ] **Step 2: Run the contracts test and verify RED**
+- [x] **Step 2: Run the contracts test and verify RED**
 
 Run: `npm.cmd exec vitest run packages/contracts/src/contracts.test.ts`
 
 Expected: FAIL because the public contracts do not exist.
 
-- [ ] **Step 3: Implement ids and JSON safety**
+- [x] **Step 3: Implement ids and JSON safety**
 
 Define branded aliases whose serialized form remains a string:
 
@@ -277,7 +277,7 @@ export type WidgetType = BrandedId<'WidgetType'>;
 
 `asPanelId`, `asWidgetInstanceId`, and `asWidgetType` trim nothing and reject an empty or surrounding-whitespace value. Define recursive `JsonValue`, `JsonObject`, and `isJsonValue` without accepting `undefined`, functions, symbols, bigint, class instances, or non-finite numbers.
 
-- [ ] **Step 4: Implement the state, command, event, result, and storage types**
+- [x] **Step 4: Implement the state, command, event, result, and storage types**
 
 Use these exact discriminants:
 
@@ -298,7 +298,7 @@ export type WorkbenchCommand =
 
 `WorkbenchState.schema` is `pomegranate.ui.state.v1`. `LayoutSnapshotV1.schema` is `pomegranate.ui.layout.v1`. Define Zod schemas for ids, JSON values, manifests, state, snapshots, and commands; export inferred raw-input and parsed types where useful. `LayoutStorage` has async `load(key)`, `save(key,value)`, and optional `remove(key)` methods. Command errors use stable codes `DUPLICATE_ID`, `MISSING_PANEL`, `MISSING_WIDGET`, `UNKNOWN_WIDGET_TYPE`, `INVALID_INDEX`, `INVALID_PLACEMENT`, `INVALID_SNAPSHOT`, and `INTERNAL_ERROR`, plus `message` and `recoverable`.
 
-- [ ] **Step 5: Export the public surface and verify GREEN**
+- [x] **Step 5: Export the public surface and verify GREEN**
 
 Run:
 
@@ -309,7 +309,7 @@ npm.cmd run typecheck
 
 Expected: tests and strict typecheck pass; `contracts` contains no React or DOM imports.
 
-- [ ] **Step 6: Commit contracts**
+- [x] **Step 6: Commit contracts**
 
 ```powershell
 git add packages/contracts
