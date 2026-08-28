@@ -58,6 +58,10 @@ export async function writeComparisonReport(paths: EvidencePaths, report: unknow
   await writeStableJson(paths.reportJson, report);
 }
 
+export async function writeMeasurementEvidence(paths: EvidencePaths, measurements: unknown): Promise<void> {
+  await writeStableJson(paths.measurementsJson, measurements);
+}
+
 export async function createDiagnosticImages(
   referencePath: string,
   actualPath: string,
@@ -67,8 +71,8 @@ export async function createDiagnosticImages(
   if (result.overlay && result.diff) {
     await mkdir(paths.directory, { recursive: true });
     await Promise.all([
-      writeFile(paths.overlayPng, result.overlay, { flag: 'wx' }),
-      writeFile(paths.diffPng, result.diff, { flag: 'wx' })
+      writeFile(paths.overlayPng, result.overlay),
+      writeFile(paths.diffPng, result.diff)
     ]);
   }
   return result.summary;

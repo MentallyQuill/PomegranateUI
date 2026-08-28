@@ -69,6 +69,7 @@ export async function startBrowserServers({
     return Object.freeze({
       preservationUrl: `${preservationOrigin}/prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html`,
       preservationOrigin,
+      labOrigin,
       labUrl: labOrigin,
       close() {
         closePromise ??= Promise.all(servers.toReversed().map(closeServer)).then(() => undefined);

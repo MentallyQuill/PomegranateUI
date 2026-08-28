@@ -36,7 +36,11 @@
     data-pomegranate-panel={surface.panelId}
   >
     {#each edges as edge}
-      <section data-pomegranate-dock={edge} aria-label={`${edge} dock`}>
+      <section
+        data-pomegranate-dock={edge}
+        data-conformance-region={edge === 'main' ? 'stage' : edge}
+        aria-label={`${edge} dock`}
+      >
         {#each surface.docks[edge] as frame (frame.instanceId)}
           {@render renderWidget(frame)}
         {/each}

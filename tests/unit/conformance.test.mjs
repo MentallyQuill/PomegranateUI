@@ -8,7 +8,7 @@ import { PNG } from 'pngjs';
 
 import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../conformance/compare.ts';
-import { createDiagnosticImages, createEvidencePaths, writeComparisonReport } from '../conformance/evidence.ts';
+import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, writeMeasurementEvidence } from '../conformance/evidence.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
 import { DEEP_CURRENT_MACRO_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
@@ -263,9 +263,13 @@ test('the checked-in Deep Current ledger is a valid bounded macro work queue', a
   const validation = validateDiscrepancyLedger(entries, DEEP_CURRENT_MACRO_SCENARIOS);
 
   assert.deepEqual(validation.entries.map((entry) => entry.id), [
-    'DC-001', 'DC-002', 'DC-003', 'DC-004', 'DC-005', 'DC-006', 'DC-007'
+    'DC-001', 'DC-002', 'DC-003', 'DC-004', 'DC-005', 'DC-006', 'DC-007', 'DC-008', 'DC-009'
   ]);
   assert.equal(validation.entries.every((entry) => entry.status === 'open'), true);
+  assert.deepEqual(
+    [...new Set(validation.entries.map((entry) => entry.scenario))].sort(),
+    DEEP_CURRENT_MACRO_SCENARIOS.map((scenario) => scenario.id).sort()
+  );
 });
 
 test('measurement normalization produces stable sorted CSS-pixel evidence', () => {
@@ -388,6 +392,20 @@ test('comparison report writes are byte-deterministic across repeated runs', asy
   assert.equal(first, '{\n  "a": {\n    "status": "open"\n  },\n  "z": 1\n}\n');
 });
 
+test('measurement evidence writes reference and implementation data to its dedicated path', async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'pom-conformance-measurements-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const paths = createEvidencePaths(directory, 'dc-shell-wide');
+
+  await writeMeasurementEvidence(paths, { implementation: { width: 10 }, reference: { width: 12 } });
+
+  assert.equal(
+    await readFile(paths.measurementsJson, 'utf8'),
+    '{\n  "implementation": {\n    "width": 10\n  },\n  "reference": {\n    "width": 12\n  }\n}\n'
+  );
+  await assert.rejects(readFile(paths.reportJson), { code: 'ENOENT' });
+});
+
 test('diagnostic image generation reports dimension mismatch without rewriting source evidence', async (t) => {
   const directory = await mkdtemp(path.join(tmpdir(), 'pom-conformance-images-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -426,6 +444,10 @@ test('diagnostic image generation writes an alpha overlay and absolute channel d
   const summary = await createDiagnosticImages(paths.referencePng, paths.actualPng, paths);
   const overlay = PNG.sync.read(await readFile(paths.overlayPng));
   const diff = PNG.sync.read(await readFile(paths.diffPng));
+  const firstOverlayBytes = await readFile(paths.overlayPng);
+  const firstDiffBytes = await readFile(paths.diffPng);
+
+  await createDiagnosticImages(paths.referencePng, paths.actualPng, paths);
 
   assert.deepEqual(summary, {
     compatible: true,
@@ -436,4 +458,16 @@ test('diagnostic image generation writes an alpha overlay and absolute channel d
   });
   assert.deepEqual([...overlay.data], [10, 20, 30, 255, 105, 95, 110, 255]);
   assert.deepEqual([...diff.data], [0, 0, 0, 255, 10, 10, 20, 255]);
+  assert.deepEqual(await readFile(paths.overlayPng), firstOverlayBytes);
+  assert.deepEqual(await readFile(paths.diffPng), firstDiffBytes);
+});
+
+test('reference and Lab drivers keep selectors and imports independent', async () => {
+  const [referenceDriver, labDriver] = await Promise.all([
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/reference/atmospheric.ts'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/workbench-lab/deep-current.ts'), 'utf8')
+  ]);
+
+  assert.doesNotMatch(referenceDriver, /data-(?:conformance-region|pomegranate-)|workbench-lab/);
+  assert.doesNotMatch(labDriver, /\.sonder-|drivers\/reference|atmospheric/);
 });

@@ -273,19 +273,19 @@ git commit -m "test(conformance): emit diagnostic evidence"
 - Lab driver produces `prepareDeepCurrentState` and `measureLabShell`.
 - Runner produces `runConformanceScenario(page, testInfo, scenario): Promise<ComparisonReport>`.
 
-- [ ] **Step 1: Write failing server and driver-boundary tests**
+- [x] **Step 1: Write failing server and driver-boundary tests**
 
 Require both origins from the browser server. Reject driver cross-imports,
 reference use of Lab selectors, and Lab use of `.sonder-*` selectors.
 
-- [ ] **Step 2: Implement semantic `scene-ready` setup**
+- [x] **Step 2: Implement semantic `scene-ready` setup**
 
 Reference opens the preserved same-origin preview iframe, clears only its
 documented key, waits for local fonts, and proves all macro regions. Lab opens
 port 4174, clears only Pom layout/theme keys, selects Deep Current, and proves
 the equivalent `data-conformance-region` elements.
 
-- [ ] **Step 3: Implement the shared measurement shape independently**
+- [x] **Step 3: Implement the shared measurement shape independently**
 
 Both drivers return:
 
@@ -300,7 +300,7 @@ interface ShellMeasurement {
 Selectors stay local. Each region includes box, visible, overflow, and named
 computed styles.
 
-- [ ] **Step 4: Orchestrate Playwright and capture expected red**
+- [x] **Step 4: Orchestrate Playwright and capture expected red**
 
 Validate authorities/ledger in `beforeAll`. Capture both images, measure,
 compare, write reports/diffs, attach files, and map failures to ledger IDs.
@@ -317,7 +317,7 @@ npm.cmd run test:conformance:deep-current
 Expected: preserved setup succeeds; current Lab fails only on ledgered macro
 differences and emits complete evidence.
 
-- [ ] **Step 5: Inspect evidence, refine diagnoses, and commit**
+- [x] **Step 5: Inspect evidence, refine diagnoses, and commit**
 
 Inspect wide/compact reference, actual, overlay, and structured report. Update
 diagnoses only; do not close rows or raise tolerance.
@@ -375,7 +375,8 @@ copy no standalone mockup script.
 
 - [ ] **Step 5: Restore geometry through theme-neutral structural CSS**
 
-At 1600x900 target 230 px initial left/right toolbars, flexible center stage,
+At wide sizes target equal side toolbars from the authority's
+`min(286px, 18vw)` formula, a flexible center stage,
 top shelf, and centered lower-stage composer. Bind every visual value through
 semantic custom properties. Use structural CSS for grid, resize ranges,
 docking, and reflow. Add no theme-ID selector.

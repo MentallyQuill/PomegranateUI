@@ -154,7 +154,7 @@
   style={themeSnapshot.cssText}
 >
   <div class="atmosphere" aria-hidden="true"><i></i><i></i><i></i></div>
-  <header class="top-shelf">
+  <header class="top-shelf" data-conformance-region="shelf">
     <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
     <PanelTabs {store} class="panel-tabs" />
     <div class="story-lockup">

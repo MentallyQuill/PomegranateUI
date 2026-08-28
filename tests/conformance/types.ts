@@ -64,6 +64,46 @@ export interface ViewportDefinition {
   readonly height: number;
 }
 
+export type ShellRegionId = 'shelf' | 'left' | 'stage' | 'right' | 'composer';
+
+export interface RegionMeasurement {
+  readonly box: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+    readonly right: number;
+    readonly bottom: number;
+  };
+  readonly visible: boolean;
+  readonly overflow: {
+    readonly x: boolean;
+    readonly y: boolean;
+    readonly scrollWidth: number;
+    readonly clientWidth: number;
+    readonly scrollHeight: number;
+    readonly clientHeight: number;
+  };
+  readonly styles: {
+    readonly backgroundColor: string;
+    readonly borderTopColor: string;
+    readonly color: string;
+    readonly fontFamily: string;
+    readonly backdropFilter: string;
+  };
+}
+
+export interface ShellMeasurement {
+  readonly viewport: { readonly width: number; readonly height: number };
+  readonly regions: Readonly<Record<ShellRegionId, RegionMeasurement>>;
+  readonly document: {
+    readonly scrollWidth: number;
+    readonly clientWidth: number;
+    readonly scrollHeight: number;
+    readonly clientHeight: number;
+  };
+}
+
 export interface ManifestValidationOptions {
   readonly repositoryRoot: string;
   readonly authorities: ReadonlyMap<string, AuthorityRecord>;

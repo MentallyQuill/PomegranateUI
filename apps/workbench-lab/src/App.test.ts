@@ -14,7 +14,7 @@ afterEach(() => {
 
 describe('Svelte Workbench Lab mockup', () => {
   it('renders the atmospheric shell, story lockup, Panels, and six seeded Scene Widgets', () => {
-    render(App);
+    const { container } = render(App);
     expect(screen.getByText('PomegranateUI')).toBeVisible();
     expect(screen.getByText('The Reservoir at Blue Hour')).toBeVisible();
     expect(screen.getByLabelText('Active story identity')).toHaveTextContent('story-lab-reservoir');
@@ -22,6 +22,9 @@ describe('Svelte Workbench Lab mockup', () => {
     for (const title of ['Characters (Story)', 'Transcript', 'Composer', 'World State', 'Room Ambience', 'Promise Ledger']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();
     }
+    expect([...container.querySelectorAll('[data-conformance-region]')].map((region) => region.getAttribute('data-conformance-region'))).toEqual([
+      'shelf', 'left', 'stage', 'composer', 'right'
+    ]);
   });
 
   it('carries the full audited 94-definition Catalog with exact category totals', async () => {
