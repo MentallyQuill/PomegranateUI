@@ -107,6 +107,13 @@ class PassingHarness implements RendererHarness {
         revision: 3
       };
     }
+    if (operation.type === 'widget.place' && operation.title === 'System Status' && operation.destination === 'right') {
+      this.current = {
+        ...this.current,
+        docks: { ...this.current.docks, left: ['Story Summary'], main: [], right: ['Missing Widget', 'System Status'] },
+        revision: this.current.revision + 1
+      };
+    }
     if (operation.type === 'renderer.fail' && operation.title === 'Story Summary') {
       this.current = {
         ...this.current,
@@ -133,6 +140,14 @@ class ThrowingActivationHarness extends PassingHarness {
     if (operation.type === 'panel.activate') throw new Error('activation boom');
     await super.perform(operation);
   }
+}
+
+class ThrowingResetHarness extends PassingHarness {
+  override async reset(): Promise<void> { throw new Error('reset boom'); }
+}
+
+class ThrowingInitialSnapshotHarness extends PassingHarness {
+  override async snapshot(): Promise<RendererSnapshot> { throw new Error('snapshot boom'); }
 }
 
 describe('renderer conformance', () => {
@@ -205,12 +220,29 @@ describe('renderer conformance', () => {
     });
   });
 
+  it('rejects an unavailable Widget record that is absent from every layout collection', async () => {
+    class StaleUnavailableHarness extends PassingHarness {
+      override async reset(): Promise<void> {
+        this.current = snapshot({
+          docks: { left: ['Story Summary'], main: ['System Status'], right: [] },
+          floating: []
+        });
+      }
+    }
+    const results = await runRendererConformance(new StaleUnavailableHarness());
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.unavailableRenderer)).toEqual({
+      contractId: RENDERER_CONTRACT_IDS.unavailableRenderer,
+      passed: false,
+      diagnostic: 'Expected Missing Widget to remain in layout with a named renderer-unavailable status.'
+    });
+  });
+
   it('contains a renderer failure without mutating state or disabling siblings', async () => {
     const results = await runRendererConformance(new PassingHarness());
     expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.rendererFailure)).toEqual({
       contractId: RENDERER_CONTRACT_IDS.rendererFailure,
       passed: true,
-      diagnostic: 'Story Summary failure was contained while System Status and the Workbench revision remained usable.'
+      diagnostic: 'Story Summary failure remained represented while System Status accepted a subsequent placement.'
     });
   });
 
@@ -230,6 +262,27 @@ describe('renderer conformance', () => {
       passed: false,
       diagnostic: 'Panel activation conformance failed: activation boom'
     });
+  });
+
+  it.each([
+    ['reset', new ThrowingResetHarness(), 'Renderer setup failed during reset: reset boom'],
+    ['initial snapshot', new ThrowingInitialSnapshotHarness(), 'Renderer setup failed during initial snapshot: snapshot boom']
+  ])('reports %s failures as per-contract results instead of throwing', async (_label, harness, diagnostic) => {
+    const results = await runRendererConformance(harness);
+    expect(results).toHaveLength(Object.keys(RENDERER_CONTRACT_IDS).length);
+    expect(results.every((entry) => !entry.passed && entry.diagnostic === diagnostic)).toBe(true);
+    expect(Object.isFrozen(results)).toBe(true);
+  });
+
+  it('requires a post-failure sibling action and retained failed layout identity', async () => {
+    class FrozenSiblingHarness extends PassingHarness {
+      override async perform(operation: RendererOperation): Promise<void> {
+        if (operation.type === 'widget.place' && operation.destination === 'right') return;
+        await super.perform(operation);
+      }
+    }
+    const results = await runRendererConformance(new FrozenSiblingHarness());
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.rendererFailure)?.passed).toBe(false);
   });
 
   it('aggregates literal renderer failures for CI gates', async () => {

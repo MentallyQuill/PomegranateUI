@@ -92,7 +92,13 @@ export function createRendererDomHarness(document) {
       widget.dataset.pomegranateWidget = slug(title);
       widget.dataset.widgetTitle = title;
       widget.dataset.pomegranatePlacement = placement;
-      widget.append(button(document, 'Float'), button(document, 'Remove'));
+      widget.append(
+        button(document, 'Dock left'),
+        button(document, 'Dock main'),
+        button(document, 'Dock right'),
+        button(document, 'Float'),
+        button(document, 'Remove')
+      );
       root.append(widget);
     }
 

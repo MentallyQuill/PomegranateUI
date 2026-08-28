@@ -18,11 +18,6 @@
     state = current.getState();
     return current.subscribe((next) => { state = next; });
   });
-  const categories = $derived(state
-    ? [...new Set(state.results
-        .map((entry) => entry.catalog?.category)
-        .filter((value): value is string => typeof value === 'string'))].sort()
-    : []);
 </script>
 
 {#if state?.open}
@@ -52,7 +47,7 @@
     </nav>
     <nav aria-label="Catalog categories">
       <button type="button" aria-pressed={state.category === null} onclick={() => catalog.setCategory(null)}>All</button>
-      {#each categories as category}
+      {#each state.categories as category}
         <button type="button" aria-pressed={state.category === category} onclick={() => catalog.setCategory(category)}>{category}</button>
       {/each}
     </nav>

@@ -58,9 +58,16 @@ test('packed verifier proves an isolated Svelte recipe consumer', async () => {
     "--copy', 'all', '--to",
     "svelte-check",
     "vite",
-    "renderer-conformance.test.mjs",
+    "renderer-conformance.test.ts",
+    "PanelTabs.svelte",
+    "WidgetCatalog.svelte",
+    "WidgetFrame.svelte",
+    "WorkbenchSurface.svelte",
+    "RendererState.svelte",
+    "createPackedRendererHarness",
     "assertLocalResolutions"
   ]) assert.match(verifier, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), expected);
+  assert.doesNotMatch(verifier, /renderer-dom-harness\.mjs/);
 
   const manifest = JSON.parse(await readFile(path.join(root, 'registry', 'recipes', 'recipe-manifest.json'), 'utf8'));
   assert.equal(manifest.schema, 'pomegranate.ui.recipes.v1');

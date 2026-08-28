@@ -73,6 +73,25 @@ describe('framework-neutral view projections', () => {
     });
   });
 
+  it('keeps encoded Panel relationship ids injective when an id resembles an escape', () => {
+    const slashPanel = asPanelId('a/b');
+    const escapeLikePanel = asPanelId('a_2Fb');
+    const projections = selectPanelTabs({
+      ...state(),
+      activePanelId: slashPanel,
+      panels: [
+        { id: slashPanel, name: 'Slash', templateId: 'columns.v1', order: 0 },
+        { id: escapeLikePanel, name: 'Escape-like', templateId: 'columns.v1', order: 1 }
+      ]
+    });
+
+    expect(projections.map((projection) => projection.tabId)).toEqual([
+      'pomegranate-panel-tab-a_2Fb',
+      'pomegranate-panel-tab-a_5F2Fb'
+    ]);
+    expect(new Set(projections.flatMap((projection) => [projection.tabId, projection.surfaceId])).size).toBe(4);
+  });
+
   it('projects deterministic docks, floating order, and missing-manifest titles', () => {
     const registry = createWidgetRegistry();
     registry.register({

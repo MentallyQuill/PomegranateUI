@@ -29,13 +29,34 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(CATALOG_TOTALS).toEqual({ story: 12, library: 19, systems: 21, settings: 39, extensions: 3 });
     const user = userEvent.setup();
     render(App);
-    await user.click(screen.getByRole('button', { name: 'Open Widget Catalog' }));
+    const launcher = screen.getByRole('button', { name: 'Open Widget Catalog' });
+    expect(launcher).toHaveAttribute('aria-expanded', 'false');
+    await user.click(launcher);
+    expect(launcher).toHaveAttribute('aria-expanded', 'true');
     const catalog = screen.getByLabelText('Widget Catalog');
     expect(within(catalog).getAllByRole('listitem')).toHaveLength(94);
+    await user.click(within(catalog).getByRole('button', { name: 'story' }));
+    for (const category of ['extensions', 'library', 'settings', 'story', 'systems']) {
+      expect(within(catalog).getByRole('button', { name: category })).toBeVisible();
+    }
+    await user.click(within(catalog).getByRole('button', { name: 'All' }));
     await user.click(within(catalog).getByRole('button', { name: 'Expanded' }));
     await user.click(within(catalog).getByRole('button', { name: 'Compact' }));
     expect(catalog).toHaveAttribute('data-presentation', 'expanded');
     expect(catalog).toHaveAttribute('data-result-mode', 'compact');
+    await user.click(within(catalog).getByRole('button', { name: 'Close Catalog' }));
+    expect(launcher).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('opens Panel creation as a native modal dialog', async () => {
+    const user = userEvent.setup();
+    render(App);
+    const launcher = screen.getByRole('button', { name: 'Create Panel' });
+    await user.click(launcher);
+    const dialog = screen.getByRole('dialog', { name: 'Create a Panel' });
+    expect(dialog).toHaveAttribute('open');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(dialog).not.toHaveAttribute('open');
   });
 
   it('contains unavailable and failed renderers without disabling siblings', async () => {

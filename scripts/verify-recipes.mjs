@@ -96,6 +96,8 @@ async function copyRecipes(manifest, requested, targetArgument) {
   if (selected.length === 0) throw new Error(`RECIPE_UNKNOWN: ${requested}`);
   await mkdir(target, { recursive: true });
   const record = await loadInstallRecord(target);
+  const nextRecord = structuredClone(record);
+  const writes = [];
   for (const recipe of selected) {
     for (const file of recipe.files) {
       const source = path.join(recipesRoot, recipe.id, ...file.split('/'));
@@ -110,14 +112,18 @@ async function copyRecipes(manifest, requested, targetArgument) {
           throw new Error(`RECIPE_DESTINATION_MODIFIED: ${destinationName}`);
         }
       }
-      await writeFile(destination, sourceBytes);
-      record.recipes[recipe.id] = {
+      writes.push({ destination, sourceBytes });
+      nextRecord.recipes[recipe.id] = {
         revision: recipe.revision,
-        files: { [destinationName]: sourceHash }
+        files: {
+          ...(nextRecord.recipes[recipe.id]?.files ?? {}),
+          [destinationName]: sourceHash
+        }
       };
     }
   }
-  await writeFile(path.join(target, installRecordName), `${JSON.stringify(record, null, 2)}\n`);
+  for (const { destination, sourceBytes } of writes) await writeFile(destination, sourceBytes);
+  await writeFile(path.join(target, installRecordName), `${JSON.stringify(nextRecord, null, 2)}\n`);
   console.log(`Copied ${selected.length} recipe${selected.length === 1 ? '' : 's'} to ${target}.`);
 }
 

@@ -8,8 +8,11 @@ export interface CatalogState {
   readonly resultMode: 'visual' | 'compact';
   readonly query: string;
   readonly category: string | null;
+  readonly categories: readonly string[];
   readonly results: readonly WidgetManifest[];
 }
+
+type CatalogValues = Omit<CatalogState, 'categories' | 'results'>;
 
 export interface CatalogController {
   getState(): CatalogState;
@@ -25,10 +28,15 @@ export interface CatalogController {
 
 function snapshot(
   registry: WidgetRegistry,
-  values: Omit<CatalogState, 'results'>
+  values: CatalogValues
 ): CatalogState {
   const query = values.query.trim().toLocaleLowerCase();
-  const results = Object.freeze(registry.list()
+  const registered = registry.list();
+  const categories = Object.freeze([...new Set(registered
+    .map((manifest) => manifest.catalog?.category)
+    .filter((category): category is string => typeof category === 'string'))]
+    .sort((left, right) => left.localeCompare(right)));
+  const results = Object.freeze(registered
     .filter((manifest) => values.category === null || manifest.catalog?.category === values.category)
     .filter((manifest) => {
       if (!query) return true;
@@ -43,11 +51,12 @@ function snapshot(
     .sort((left, right) => left.title.localeCompare(right.title) || left.type.localeCompare(right.type)));
   return Object.freeze({
     ...values,
+    categories,
     results
   });
 }
 
-const CLOSED_STATE: Omit<CatalogState, 'results'> = Object.freeze({
+const CLOSED_STATE: CatalogValues = Object.freeze({
   open: false,
   presentation: 'drawer',
   resultMode: 'visual',
@@ -67,8 +76,14 @@ export function createCatalogController(registry: WidgetRegistry): CatalogContro
       }
     }
   };
-  const update = (values: Partial<Omit<CatalogState, 'results'>>) => {
-    state = snapshot(registry, { ...state, ...values });
+  const update = (values: Partial<CatalogValues>) => {
+    state = snapshot(registry, {
+      open: values.open ?? state.open,
+      presentation: values.presentation ?? state.presentation,
+      resultMode: values.resultMode ?? state.resultMode,
+      query: values.query ?? state.query,
+      category: values.category === undefined ? state.category : values.category
+    });
     notify();
   };
   return Object.freeze({

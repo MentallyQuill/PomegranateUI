@@ -60,3 +60,15 @@ test('native workbench exposes coarse-pointer targets separately from compact ic
   expect(style).toContain('min-height: 44px');
   expect(style).toContain('width: 44px');
 });
+
+test('Panel creation uses the browser modal top layer and restores focus', async ({ page }) => {
+  await openFresh(page, 1024, 768);
+  const launcher = page.getByRole('button', { name: 'Create Panel' });
+  await launcher.click();
+  const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
+  await expect(dialog).toBeVisible();
+  expect(await dialog.evaluate((element) => element.matches(':modal'))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(launcher).toBeFocused();
+});

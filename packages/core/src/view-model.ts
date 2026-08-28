@@ -47,7 +47,7 @@ export interface WidgetActions {
 }
 
 function panelDomSuffix(panelId: PanelId): string {
-  return encodeURIComponent(panelId).replaceAll('%', '_');
+  return encodeURIComponent(panelId).replaceAll('_', '_5F').replaceAll('%', '_');
 }
 
 export function selectPanelTabs(state: WorkbenchState): readonly PanelTabProjection[] {

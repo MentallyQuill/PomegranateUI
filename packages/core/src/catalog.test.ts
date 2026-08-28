@@ -77,6 +77,8 @@ describe('Widget Catalog controller', () => {
     catalog.setQuery('');
     catalog.setCategory('story');
     expect(catalog.getState().results.map((entry) => entry.type)).toEqual(['story.alpha']);
+    expect(catalog.getState().categories).toEqual(['library', 'story']);
+    expect(Object.isFrozen(catalog.getState().categories)).toBe(true);
   });
 
   it('refreshes results after registry changes', () => {

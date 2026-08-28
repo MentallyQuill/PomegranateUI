@@ -2,7 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { asPanelId, asWidgetInstanceId, type WidgetManifest, type WorkbenchState } from '@pomegranate-ui/contracts';
   import { loadLayout, saveLayout } from '@pomegranate-ui/layout';
-  import { setWorkbenchContext } from '@pomegranate-ui/svelte';
+  import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
 
   import { LAB_HOST_CONTEXT } from './mockup/host-context.js';
@@ -16,12 +16,13 @@
   const runtime = createLabRuntime();
   const storage = createLocalLayoutStorage();
   const { store, catalog, rendererRegistry } = runtime;
+  const catalogState = toSvelteCatalogStore(catalog);
   setWorkbenchContext({ store, catalog, rendererRegistry, hostContext: LAB_HOST_CONTEXT });
 
   let workbench: WorkbenchState = $state(store.getState());
   let focusMode = $state(false);
   let leftCollapsed = $state(false);
-  let panelDialogOpen = $state(false);
+  let panelDialog: HTMLDialogElement;
   let panelName = $state('New Panel');
   let status = $state('Local mockup ready.');
   let eventLog: string[] = $state([]);
@@ -74,7 +75,7 @@
     });
     if (result.ok) {
       store.dispatch({ type: 'panel.activate', panelId: id });
-      panelDialogOpen = false;
+      panelDialog.close();
       status = `${panelName} created.`;
     } else status = result.error.message;
   }
@@ -94,6 +95,10 @@
     await storage.remove?.(LAB_LAYOUT_KEY);
     status = 'Cleared the saved local layout.';
   }
+
+  function openPanelDialog() {
+    panelDialog.showModal();
+  }
 </script>
 
 <svelte:head><title>PomegranateUI Workbench Lab</title></svelte:head>
@@ -109,7 +114,7 @@
       <small aria-label="Active story identity">{LAB_HOST_CONTEXT.storyId} · {LAB_HOST_CONTEXT.frameLabel}</small>
     </div>
     <div class="shelf-actions">
-      <button type="button" aria-label="Open Widget Catalog" aria-expanded={catalog.getState().open} onclick={() => catalog.open('drawer')}>Widgets</button>
+      <button type="button" aria-label="Open Widget Catalog" aria-expanded={$catalogState.open} onclick={() => catalog.open('drawer')}>Widgets</button>
       <button type="button" aria-pressed={focusMode} onclick={() => { focusMode = !focusMode; }}>Focus reading</button>
       <span class="runtime-status"><i></i>{LAB_HOST_CONTEXT.systemStatus}</span>
     </div>
@@ -119,7 +124,7 @@
     <p><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
     <div class="dock-controls">
       <button type="button" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
-      <button type="button" onclick={() => { panelDialogOpen = true; }}>Create Panel</button>
+      <button type="button" onclick={openPanelDialog}>Create Panel</button>
     </div>
     <div class="persistence-actions">
       <button type="button" onclick={() => void save()}>Save layout</button>
@@ -152,14 +157,12 @@
 
   <WidgetCatalog {catalog} oncreate={addFromCatalog} class="widget-catalog" />
 
-  {#if panelDialogOpen}
-    <dialog open aria-labelledby="panel-dialog-title">
-      <form onsubmit={createPanel}>
-        <h2 id="panel-dialog-title">Create a Panel</h2>
-        <label>Panel name<input bind:value={panelName} /></label>
-        <p>Starts as an adopter-owned two-column layout.</p>
-        <div><button type="button" onclick={() => { panelDialogOpen = false; }}>Cancel</button><button type="submit">Create Panel</button></div>
-      </form>
-    </dialog>
-  {/if}
+  <dialog bind:this={panelDialog} aria-labelledby="panel-dialog-title">
+    <form onsubmit={createPanel}>
+      <h2 id="panel-dialog-title">Create a Panel</h2>
+      <label>Panel name<input bind:value={panelName} /></label>
+      <p>Starts as an adopter-owned two-column layout.</p>
+      <div><button type="button" onclick={() => panelDialog.close()}>Cancel</button><button type="submit">Create Panel</button></div>
+    </form>
+  </dialog>
 </main>

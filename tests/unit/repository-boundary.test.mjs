@@ -175,6 +175,14 @@ test('framework-neutral packages do not import a view framework or DOM', async (
   }
 });
 
+test('visual baselines are canonical on Windows while functional browser coverage remains cross-platform', async () => {
+  const visual = await readFile(path.join(root, 'tests', 'browser', 'native-workbench-visual.spec.ts'), 'utf8');
+  const workflow = await readFile(path.join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
+  assert.match(visual, /test\.skip\(process\.platform !== 'win32'/);
+  assert.match(workflow, /os:\s*\[ubuntu-latest, windows-latest\]/);
+  assert.match(workflow, /npm run check/);
+});
+
 test('active repository configuration contains no retired React view layer', async () => {
   const activeFiles = [
     'package.json',

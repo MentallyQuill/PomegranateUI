@@ -65,6 +65,14 @@ function result(
   return Object.freeze({ contractId, passed, diagnostic });
 }
 
+function setupFailureResults(stage: 'reset' | 'initial snapshot', error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const diagnostic = `Renderer setup failed during ${stage}: ${message}`;
+  return Object.freeze(Object.values(RENDERER_CONTRACT_IDS).map((contractId) => (
+    result(contractId, false, diagnostic)
+  )));
+}
+
 interface OperationSnapshot {
   readonly snapshot: RendererSnapshot | null;
   readonly error: string | null;
@@ -88,8 +96,17 @@ async function performAndSnapshot(
 export async function runRendererConformance(
   harness: RendererHarness
 ): Promise<readonly RendererConformanceResult[]> {
-  await harness.reset();
-  const current = await harness.snapshot();
+  try {
+    await harness.reset();
+  } catch (error) {
+    return setupFailureResults('reset', error);
+  }
+  let current: RendererSnapshot;
+  try {
+    current = await harness.snapshot();
+  } catch (error) {
+    return setupFailureResults('initial snapshot', error);
+  }
   const tabIds = current.tabs.map((tab) => tab.id);
   const passed = current.tabListName === 'Panels'
     && current.tabs.length > 0
@@ -103,7 +120,11 @@ export async function runRendererConformance(
     && current.panel.labelledBy === selectedTab.id
   );
   const initialHostStoryId = current.hostStoryId;
-  const unavailablePassed = current.widgets.some((widget) => widget.title === 'Missing Widget')
+  const unavailableHasLayoutIdentity = Object.values(current.docks)
+    .some((titles) => titles.includes('Missing Widget'))
+    || current.floating.includes('Missing Widget');
+  const unavailablePassed = unavailableHasLayoutIdentity
+    && current.widgets.some((widget) => widget.title === 'Missing Widget')
     && current.statuses.includes('Renderer unavailable for Missing Widget.');
   const activation = await performAndSnapshot(harness, { type: 'panel.activate', name: 'Library' });
   const activationPassed = Boolean(
@@ -124,10 +145,18 @@ export async function runRendererConformance(
   });
   const placementPassed = placement.snapshot?.docks.left.join('|') === 'Story Summary|System Status';
   const failure = await performAndSnapshot(harness, { type: 'renderer.fail', title: 'Story Summary' });
+  const siblingAfterFailure = await performAndSnapshot(harness, {
+    type: 'widget.place', title: 'System Status', destination: 'right'
+  });
   const failurePassed = Boolean(
     failure.snapshot?.alerts.includes('Story Summary failed to render.')
-    && failure.snapshot.widgets.some((widget) => widget.title === 'System Status')
+    && failure.snapshot.docks.left.includes('Story Summary')
+    && failure.snapshot.widgets.some((widget) => (
+      widget.title === 'System Status' && widget.actionNames.includes('Dock right')
+    ))
     && failure.snapshot.revision === placement.snapshot?.revision
+    && siblingAfterFailure.snapshot?.docks.right.includes('System Status')
+    && siblingAfterFailure.snapshot.revision > failure.snapshot.revision
   );
   const focus = await performAndSnapshot(harness, { type: 'focus.next' });
   const focusPassed = focus.snapshot?.activeElementName === 'Library';
@@ -185,9 +214,11 @@ export async function runRendererConformance(
       failurePassed,
       failure.error
         ? `Renderer failure conformance failed: ${failure.error}`
+        : siblingAfterFailure.error
+        ? `Renderer sibling action after failure failed: ${siblingAfterFailure.error}`
         : failurePassed
-        ? 'Story Summary failure was contained while System Status and the Workbench revision remained usable.'
-        : 'Expected Story Summary failure containment without removing System Status or mutating Workbench state.'
+        ? 'Story Summary failure remained represented while System Status accepted a subsequent placement.'
+        : 'Expected Story Summary failure containment with retained layout identity and a usable System Status action.'
     ),
     result(
       RENDERER_CONTRACT_IDS.keyboardFocus,
