@@ -1,7 +1,7 @@
 # PomegranateUI Svelte View Layer and Framework-Portability Design
 
 - **Date:** 2026-08-27
-- **Status:** Approved direction; pending written-spec review
+- **Status:** Approved implementation direction
 - **Repository:** `MentallyQuill/PomegranateUI`
 - **Amends:** `2026-08-27-pomegranateui-tranche-3-foundation-design.md`
 
@@ -35,6 +35,9 @@ record of the approved and implemented first native slice.
 - Give AI frontend developers editable source recipes, literal public
   contracts, deterministic fixtures, and executable tests rather than an
   opaque application frontend.
+- Rebuild the approved Atmospheric Workbench and Widget Overhaul direction as
+  the inspectable Svelte Workbench Lab, with explicit visual, geometry,
+  responsive, and interaction fidelity evidence.
 - Keep difficult Panel, Widget, Catalog, placement, responsive, accessibility,
   command, event, persistence, and error contracts under PomegranateUI
   authority.
@@ -52,6 +55,9 @@ record of the approved and implemented first native slice.
 - This work does not use Web Components as a universal rendering layer.
 - This work does not publish packages to npm, cut Sonder over to PomegranateUI,
   choose a public license, or change Sonder source.
+- This work does not deploy a public demo or configure a production hosting
+  provider. It leaves the Lab as a host-ready static artifact whose deployment
+  is separately approved work.
 - This work does not implement the future public `pom` CLI. Private-incubator
   tooling may prove deterministic recipe copying without defining a public CLI
   contract.
@@ -196,6 +202,40 @@ keeps its status as an application-owned proof, not package authority. It owns
 its copied recipes, sample Widgets, host context, storage adapter, composition,
 and CSS.
 
+The Lab is also the native rebuild of the approved mockup direction. The
+preserved files remain immutable oracles; they are not embedded, framed, or
+served as the new implementation. Authority is applied in this order:
+
+1. `prototypes/sonder-baseline/atmospheric-workbench` owns macro composition,
+   typography, material, proportions, top-shelf behavior, docking feedback,
+   floating geometry, and exact restoration behavior.
+2. `prototypes/sonder-baseline/widget-overhaul` owns the later Panel, Widget,
+   Widget Catalog, sub-panel, responsive-height, icon, and audited Widget-state
+   direction where it intentionally extends the Atmospheric Workbench.
+3. `design/foundations` and `design/widget-specifications` generalize the
+   preserved examples into reusable contracts, inventory, accessibility,
+   geometry, responsive, and ownership rules.
+4. Current PomegranateUI package contracts remain the runtime authority. A
+   mockup interaction that has not yet been acquired must be implemented
+   through a new framework-neutral contract before a Svelte recipe uses it.
+
+The rebuild includes the atmospheric application canvas, top shelf and Panel
+tabs, active Panel surface, Widget chrome, dock regions, floating layer,
+Widget Catalog drawer and expanded presentation, representative ready/error
+states, responsive staging, keyboard-equivalent placement, and the audited
+sample Widget surfaces needed to demonstrate the system coherently. Sonder
+domain data remains Lab-owned fixture data; it does not enter package schemas
+or become PomegranateUI product semantics.
+
+Mockup fidelity is an acceptance contract rather than a mood-board reference.
+Playwright evidence must exercise the named wide, compact, focus, drawer,
+expanded-Catalog, docked, floating, unavailable-renderer, failed-renderer, and
+keyboard paths. Assertions cover literal geometry, stable attributes, focus,
+control availability, responsive layout, and interaction results. Approved
+reference screenshots or narrowly reviewed native snapshots cover typography,
+material, spacing, and composition. The preserved 95-case Atmospheric harness
+and the complete Widget Overhaul harness remain green independently.
+
 The clean-consumer gate adds a Svelte consumer installed only from packed Pom
 tarballs plus copied recipe source. It must build without workspace symlinks,
 Sonder imports, repository-internal source imports, or SvelteKit-only APIs.
@@ -203,6 +243,26 @@ Sonder imports, repository-internal source imports, or SvelteKit-only APIs.
 `examples/mock-roleplay-backend` remains a framework-neutral core consumer.
 `examples/sonder-integration` remains a plain-data boundary fixture. Neither
 example imports Svelte unless it is explicitly the Svelte clean consumer.
+
+### Local development and future demo artifact
+
+The repository exposes one friendly Windows entry point for daily browser
+work:
+
+```powershell
+npm.cmd run dev:lab
+```
+
+It starts Vite with hot reload on `http://127.0.0.1:5173/` using a strict,
+documented port. Production-artifact verification remains a separate build and
+preview path on `http://127.0.0.1:4174/`. Server lifecycle tests must prove
+startup failure on an occupied strict port and clean teardown.
+
+`apps/workbench-lab/dist` is the only deployable demo artifact. It uses a
+relative Vite base, contains no repository-source dependency, and can be served
+by a generic static host. Cloudflare Pages or another provider may later deploy
+that directory, but provider configuration, credentials, domains, analytics,
+and production publication are outside this tranche.
 
 ## Data and rendering flow
 
@@ -298,6 +358,10 @@ Implementation remains test-first. The completed migration must prove:
 - recipe metadata and hashes are deterministic;
 - clean packed core and Svelte consumers build without workspace leakage;
 - the Svelte Workbench Lab passes Playwright coverage;
+- the Lab reproduces the named approved mockup surfaces at the required wide,
+  compact, focus, Catalog, docked, floating, and error states;
+- `npm.cmd run dev:lab` serves the Lab with hot reload at the documented strict
+  local address, while the production preview serves only the built artifact;
 - preserved Sonder harnesses and extraction completeness remain green;
 - native evidence and migration reports deterministically replace React test
   paths with Svelte test paths while preserving contract identity;
@@ -336,6 +400,10 @@ following without expanding product scope:
 - editable Svelte recipes whose presentation is adopter-owned;
 - a public renderer-conformance lane usable by a non-Svelte adopter;
 - Svelte Workbench Lab and packed-consumer proof;
+- an explicit native rebuild of the approved mockup direction, with visual,
+  geometry, responsive, keyboard, and interaction evidence;
+- a one-command local live-reload workflow and a provider-neutral static demo
+  artifact;
 - preserved provenance with no retired or unaccounted baseline contracts;
 - no npm publication or Sonder cutover; and
 - a clean full verification gate.
