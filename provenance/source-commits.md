@@ -1,5 +1,12 @@
 # Sonder Extraction Source
 
+## PomegranateUI destination
+
+- Private repository: `https://github.com/MentallyQuill/PomegranateUI`
+- Default branch: `main`
+- The local `main` branch in `F:\\git\\PomegranateUI` is the reviewed push source.
+- Repository visibility must remain private during the extraction incubator phase.
+
 ## Baseline identity
 
 - Source repository: `https://github.com/N0819/Sonder_Engine.git`
