@@ -1,3 +1,3 @@
 # @pomegranate-ui/contracts
 
-Reserved for Tranche 3. This package will own framework-neutral public data, command, event, capability, and schema contracts.
+Framework-neutral JSON-safe data, command, event, capability, persistence, and runtime schema contracts. This package has no UI framework or DOM authority.

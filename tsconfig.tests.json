@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
+  },
+  "include": [
+    "packages/**/*.test.ts",
+    "packages/**/*.test.tsx",
+    "examples/**/*.test.ts",
+    "examples/**/*.test.tsx",
+    "tests/browser/**/*.ts",
+    "tests/native/**/*.ts",
+    "vitest.config.ts"
+  ]
+}

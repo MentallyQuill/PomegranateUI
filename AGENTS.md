@@ -16,7 +16,14 @@ PomegranateUI is a developer toolkit for teams building AI roleplaying applicati
 - Every legacy contract and audited Widget surface needs a stable contract ID and one destination owner.
 - Tranches 0-2 permit no retirement and no unaccounted evidence.
 - The preserved prototypes are executable oracles, not production package authority.
-- Do not begin production TypeScript or React implementation before the Tranche 3 plan.
+
+## TypeScript package rules
+
+- Runtime dependencies flow `contracts -> layout -> core -> react`; `testkit` consumes public APIs only.
+- Keep `contracts`, `layout`, and `core` free of React and DOM imports.
+- Parse untrusted public input through schemas in `@pomegranate-ui/contracts`.
+- Keep package exports source-ownable and backend-neutral; host/domain data enters through explicit adapters.
+- `@pomegranate-ui/theme` remains reserved until its own approved tranche.
 
 ## Verification
 
@@ -24,6 +31,9 @@ Use `npm.cmd` on Windows.
 
 ```powershell
 npm.cmd run test:unit
+npm.cmd run typecheck
+npm.cmd run test:native
+npm.cmd run build
 npm.cmd run check:extraction
 npm.cmd run report
 npm.cmd run test:browser

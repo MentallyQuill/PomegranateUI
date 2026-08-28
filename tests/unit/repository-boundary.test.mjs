@@ -73,16 +73,20 @@ test('root documentation keeps PomegranateUI a toolkit rather than an applicatio
   assert.match(readme, /not an application frontend/i);
   assert.match(readme, /legacy evidence lane/i);
   assert.match(readme, /native toolkit lane/i);
-  assert.match(readme, /TypeScript begins in Tranche 3/i);
+  assert.match(readme, /@pomegranate-ui\/contracts/);
+  assert.match(readme, /private incubator/i);
 });
 
-test('package and example boundaries do not claim unimplemented production code', async () => {
-  const packageNames = ['contracts', 'core', 'layout', 'react', 'testkit', 'theme'];
-  for (const packageName of packageNames) {
+test('package and example documentation preserves the adopter boundary', async () => {
+  for (const packageName of ['contracts', 'core', 'layout', 'react', 'testkit']) {
     const readme = await readFile(path.join(root, 'packages', packageName, 'README.md'), 'utf8');
     assert.match(readme, new RegExp(`@pomegranate-ui/${packageName}`));
-    assert.match(readme, /reserved for Tranche 3/i);
+    assert.doesNotMatch(readme, /reserved for Tranche 3/i);
   }
+
+  const themeReadme = await readFile(path.join(root, 'packages', 'theme', 'README.md'), 'utf8');
+  assert.match(themeReadme, /@pomegranate-ui\/theme/);
+  assert.match(themeReadme, /reserved/i);
 
   for (const exampleName of ['mock-roleplay-backend', 'sonder-integration']) {
     const readme = await readFile(path.join(root, 'examples', exampleName, 'README.md'), 'utf8');
@@ -90,11 +94,34 @@ test('package and example boundaries do not claim unimplemented production code'
   }
 });
 
-test('Tranches 0-2 contain no production TypeScript implementation', async () => {
-  const files = await walk(root);
-  const productionTypeScript = files.filter((file) => {
-    const relative = path.relative(root, file).replaceAll('\\', '/');
-    return !relative.startsWith('tests/') && /\.(?:ts|tsx)$/.test(relative);
-  });
-  assert.deepEqual(productionTypeScript, []);
+test('Tranche 3 exposes strict separately packable packages', async () => {
+  const rootPackage = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  assert.deepEqual(rootPackage.workspaces, ['packages/*', 'apps/*', 'examples/*']);
+  for (const script of ['typecheck', 'test:native', 'build']) {
+    assert.equal(typeof rootPackage.scripts[script], 'string', script);
+  }
+
+  for (const name of ['contracts', 'layout', 'core', 'react', 'testkit']) {
+    const packageRoot = path.join(root, 'packages', name);
+    const manifest = JSON.parse(await readFile(path.join(packageRoot, 'package.json'), 'utf8'));
+    assert.equal(manifest.name, `@pomegranate-ui/${name}`);
+    assert.equal(manifest.version, '0.1.0-private.0');
+    assert.equal(manifest.private, true);
+    assert.equal(manifest.type, 'module');
+    assert.deepEqual(manifest.files, ['dist', 'README.md']);
+    assert.ok(manifest.exports['.']);
+    assert.equal((await stat(path.join(packageRoot, 'tsconfig.json'))).isFile(), true);
+    assert.equal((await stat(path.join(packageRoot, 'src', 'index.ts'))).isFile(), true);
+  }
+});
+
+test('framework-neutral packages do not import React', async () => {
+  for (const name of ['contracts', 'layout', 'core']) {
+    const files = (await walk(path.join(root, 'packages', name, 'src')))
+      .filter((file) => /\.(?:ts|tsx)$/.test(file));
+    for (const file of files) {
+      const source = await readFile(file, 'utf8');
+      assert.doesNotMatch(source, /(?:from\s+|import\s*\()['"]react(?:\/[^'"]*)?['"]/);
+    }
+  }
 });

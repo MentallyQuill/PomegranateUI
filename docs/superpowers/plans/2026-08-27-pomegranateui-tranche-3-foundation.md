@@ -116,7 +116,7 @@ git commit -m "fix(test): close browser servers in-process"
 - Consumes: the Tranche 3 package dependency graph from the design.
 - Produces: buildable workspaces named `@pomegranate-ui/contracts`, `@pomegranate-ui/layout`, `@pomegranate-ui/core`, `@pomegranate-ui/react`, and `@pomegranate-ui/testkit` at version `0.1.0-private.0`.
 
-- [ ] **Step 1: Replace the Tranches 0-2 boundary assertions with failing Tranche 3 assertions**
+- [x] **Step 1: Replace the Tranches 0-2 boundary assertions with failing Tranche 3 assertions**
 
 Update `tests/unit/repository-boundary.test.mjs` so it requires each implemented package to have `package.json`, `tsconfig.json`, and `src/index.ts`; requires npm workspaces; requires `typecheck`, `test:native`, and `build` scripts; and rejects React imports under `contracts`, `layout`, and `core`. Keep every preserved-evidence and toolkit-boundary assertion. `test:pack` becomes required when Task 8 adds its executable verifier.
 
@@ -133,13 +133,13 @@ test('Tranche 3 exposes strict separately packable packages', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the boundary test and verify it fails**
+- [x] **Step 2: Run the boundary test and verify it fails**
 
 Run: `node --test tests/unit/repository-boundary.test.mjs`
 
 Expected: FAIL because workspace package manifests and TypeScript scripts are absent.
 
-- [ ] **Step 3: Add the pinned toolchain and workspace manifests**
+- [x] **Step 3: Add the pinned toolchain and workspace manifests**
 
 Set root workspaces to `packages/*`, `apps/*`, and `examples/*`. Add exact dev dependencies:
 
@@ -175,7 +175,7 @@ Each package manifest uses `type: module`, `private: true`, `files: ["dist", "RE
 
 `@pomegranate-ui/contracts` declares exact runtime dependency `zod: 4.4.3`. No other framework-neutral package adds a validation library directly; it consumes the public schemas from `contracts`.
 
-- [ ] **Step 4: Add strict project references**
+- [x] **Step 4: Add strict project references**
 
 `tsconfig.base.json` sets `target: ES2024`, `module: NodeNext`, `moduleResolution: NodeNext`, `lib: ["ES2024"]`, `strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`, `verbatimModuleSyntax: true`, `declaration: true`, `declarationMap: true`, `sourceMap: true`, `composite: true`, and `skipLibCheck: true`.
 
@@ -191,11 +191,11 @@ export const POMEGRANATE_CONTRACTS_VERSION = '0.1.0-private.0' as const;
 
 Use the matching constant name per package.
 
-- [ ] **Step 5: Update root and package documentation**
+- [x] **Step 5: Update root and package documentation**
 
 Remove claims that production TypeScript is absent or packages are merely reserved. Document the package graph, the private-incubator status, the native check commands, and the unchanged adopter/backend boundary. Keep `theme` explicitly reserved.
 
-- [ ] **Step 6: Install and verify the scaffold**
+- [x] **Step 6: Install and verify the scaffold**
 
 Run:
 
@@ -208,7 +208,7 @@ npm.cmd run build
 
 Expected: all commands pass and each implemented package contains `dist/index.js`, `dist/index.d.ts`, maps, and no CommonJS output.
 
-- [ ] **Step 7: Commit the toolchain**
+- [x] **Step 7: Commit the toolchain**
 
 ```powershell
 git add package.json package-lock.json tsconfig.base.json tsconfig.json tsconfig.tests.json vitest.config.ts README.md AGENTS.md tests/native/setup.ts tests/unit/repository-boundary.test.mjs packages

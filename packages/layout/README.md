@@ -1,3 +1,3 @@
 # @pomegranate-ui/layout
 
-Reserved for Tranche 3. This package will own docking, floating, placement, resizing, persistence envelopes, migrations, and undo behavior.
+Framework-neutral Panel ordering, docked and floating Widget placement, normalization, persistence envelopes, and migrations.

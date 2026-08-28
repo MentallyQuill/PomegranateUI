@@ -3,17 +3,38 @@
   "version": "0.0.0-private",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "examples/*"
+  ],
   "engines": {
     "node": ">=24"
   },
   "scripts": {
+    "build": "tsc -b",
     "test:unit": "node --test tests/unit/*.test.mjs",
+    "test:native": "vitest run",
     "test:browser": "playwright test",
+    "typecheck": "tsc -b --pretty false && tsc -p tsconfig.tests.json --noEmit --pretty false",
     "check:extraction": "node scripts/verify-extraction.mjs",
     "report": "node scripts/generate-migration-report.mjs --check",
     "check": "npm run test:unit && npm run check:extraction && npm run report && npm run test:browser"
   },
   "devDependencies": {
-    "@playwright/test": "1.62.1"
+    "@playwright/test": "1.62.1",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.6",
+    "@types/node": "26.4.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "@vitejs/plugin-react": "6.1.0",
+    "jsdom": "30.0.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "7.0.2",
+    "vite": "8.2.2",
+    "vitest": "4.1.11"
   }
 }
