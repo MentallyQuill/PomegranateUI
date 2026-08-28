@@ -46,7 +46,7 @@ test('root check composes every native and preservation gate in the approved ord
   const rootPackage = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   assert.equal(
     rootPackage.scripts.check,
-    'npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:extraction && npm run report && npm run test:pack && npm run test:browser'
+    'npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:extraction && npm run check:recipes && npm run report && npm run test:pack && npm run test:browser'
   );
 });
 

@@ -1,0 +1,109 @@
+{
+  "schema": "pomegranate.ui.recipes.v1",
+  "recipes": [
+    {
+      "id": "error-state",
+      "revision": 1,
+      "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
+      "files": [
+        "RendererState.svelte"
+      ],
+      "dependencies": [
+        "@pomegranate-ui/svelte",
+        "svelte"
+      ],
+      "rendererContractIds": [
+        "POM-RENDER-93AFCE1856",
+        "POM-RENDER-A4B0DF2967"
+      ],
+      "sha256": {
+        "RendererState.svelte": "6826A795E4ACACE3FAF1D7304FC8F7A7BB9E27BBF16E173123942F750FC4DEF8"
+      }
+    },
+    {
+      "id": "panel-tabs",
+      "revision": 1,
+      "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
+      "files": [
+        "PanelTabs.svelte"
+      ],
+      "dependencies": [
+        "@pomegranate-ui/contracts",
+        "@pomegranate-ui/core",
+        "svelte"
+      ],
+      "rendererContractIds": [
+        "POM-RENDER-4E5A79B301",
+        "POM-RENDER-5F6B8AC412",
+        "POM-RENDER-607C9BD523",
+        "POM-RENDER-718DACF634",
+        "POM-RENDER-B5C1E03A78"
+      ],
+      "sha256": {
+        "PanelTabs.svelte": "8FC052C166F2380C4163678FAB04559CB06119A02F7B5B0370A12F76D39B66D6"
+      }
+    },
+    {
+      "id": "widget-catalog",
+      "revision": 1,
+      "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
+      "files": [
+        "WidgetCatalog.svelte"
+      ],
+      "dependencies": [
+        "@pomegranate-ui/contracts",
+        "@pomegranate-ui/core",
+        "svelte"
+      ],
+      "rendererContractIds": [
+        "POM-RENDER-829EBD0745",
+        "POM-RENDER-B5C1E03A78"
+      ],
+      "sha256": {
+        "WidgetCatalog.svelte": "7A48750A253BB781DC4EAEF494871ED42830E28BC58B89558CE4225143AC53E1"
+      }
+    },
+    {
+      "id": "widget-frame",
+      "revision": 1,
+      "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
+      "files": [
+        "WidgetFrame.svelte"
+      ],
+      "dependencies": [
+        "@pomegranate-ui/contracts",
+        "@pomegranate-ui/core",
+        "@pomegranate-ui/svelte",
+        "svelte"
+      ],
+      "rendererContractIds": [
+        "POM-RENDER-829EBD0745",
+        "POM-RENDER-93AFCE1856",
+        "POM-RENDER-A4B0DF2967"
+      ],
+      "sha256": {
+        "WidgetFrame.svelte": "526BB55D7A32182BA201D7034977E92243C566E659FFBA2997AF8B267496298E"
+      }
+    },
+    {
+      "id": "workbench-surface",
+      "revision": 1,
+      "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
+      "files": [
+        "WorkbenchSurface.svelte"
+      ],
+      "dependencies": [
+        "@pomegranate-ui/core",
+        "svelte"
+      ],
+      "rendererContractIds": [
+        "POM-RENDER-5F6B8AC412",
+        "POM-RENDER-829EBD0745",
+        "POM-RENDER-A4B0DF2967"
+      ],
+      "sha256": {
+        "WorkbenchSurface.svelte": "700912FABB0275C6EF06EF1341B20BF2AA61D3D7A13C2A60C0A73900F642DC6B"
+      }
+    }
+  ]
+}
