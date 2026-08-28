@@ -164,4 +164,17 @@ describe('ThemeDefinitionSchema', () => {
       expect(result.error.issues.some((issue) => issue.path.join('.') === path)).toBe(true);
     }
   });
+
+  it.each(['colors', 'typography', 'geometry', 'spacing', 'materials', 'iconPackId', 'canvas', 'accessibility', 'capabilities'] as const)(
+    'rejects a missing %s semantic group',
+    (group) => {
+      const candidate = { ...VALID_THEME } as Record<string, unknown>;
+      delete candidate[group];
+      const result = ThemeDefinitionSchema.safeParse(candidate);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((issue) => issue.path[0] === group)).toBe(true);
+      }
+    }
+  );
 });
