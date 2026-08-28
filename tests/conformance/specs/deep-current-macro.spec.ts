@@ -44,7 +44,7 @@ test.describe('Deep Current macro conformance', () => {
   });
 
   for (const scenario of DEEP_CURRENT_MACRO_SCENARIOS) {
-    test(scenario.title, async ({ page }, testInfo) => {
+    test(`${scenario.id} ${scenario.title}`, async ({ page }, testInfo) => {
       await runConformanceScenario(page, testInfo, scenario);
     });
   }

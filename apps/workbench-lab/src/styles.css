@@ -489,9 +489,9 @@ main {
   .top-shelf { grid-template-columns: 74px minmax(0, 1fr) 42px; }
   .wordmark { grid-template-columns: 40px; padding: 0 9px; }
   .wordmark strong, .wordmark small { display: none; }
-  .panel-tabs { overflow-x: auto; scrollbar-width: none; }
+  .panel-tabs { grid-column: auto; grid-row: auto; overflow-x: auto; scrollbar-width: none; }
   .panel-tabs button[aria-label^="Move"] { display: none; }
-  .panel-tabs [role="tab"] { min-width: 76px; padding-inline: 8px; }
+  .panel-tabs [role="tab"] { min-width: 68px; padding-inline: 6px; }
   .shelf-actions button { display: none; width: 42px; padding: 0; overflow: hidden; font-size: 0; }
   .shelf-actions button:first-child { display: block; }
   .shelf-actions button:first-child::before { content: "+"; font-size: 18px; }
@@ -512,4 +512,19 @@ main {
   .context-rail button { min-height: 34px; }
   .persistence-actions { max-width: 300px; }
   [data-widget-type="story.composer"] { width: min(680px, calc(100% - 28px)); }
+}
+
+@media (pointer: coarse) {
+  .top-shelf { flex-basis: 44px; min-height: 44px; }
+  .panel-tabs button,
+  .shelf-actions button,
+  .context-rail button,
+  .widget-catalog button,
+  .composer button,
+  dialog button { min-width: 44px; min-height: 44px; }
+  .widget-frame nav button { width: 44px; min-height: 44px; }
+  @media (max-width: 680px) {
+    .top-shelf { grid-template-columns: 74px minmax(0, 1fr) 44px; }
+    .shelf-actions button:first-child { width: 44px; }
+  }
 }

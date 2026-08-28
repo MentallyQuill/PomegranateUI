@@ -20,6 +20,9 @@
     "pretest:browser": "npm run build",
     "test:conformance:deep-current": "playwright test --config playwright.conformance.config.mjs",
     "pretest:conformance:deep-current": "npm run build",
+    "test:conformance:unit": "node --test tests/unit/conformance.test.mjs",
+    "test:conformance": "npm run test:conformance:unit && npm run test:conformance:deep-current",
+    "inspect:conformance": "node scripts/conformance/inspect.mjs",
     "preview:lab": "npm exec --workspace @pomegranate-ui/workbench-lab -- vite preview --host 127.0.0.1 --port 4174 --strictPort",
     "dev:lab": "npm exec --workspace @pomegranate-ui/workbench-lab -- vite --host 127.0.0.1 --port 5173 --strictPort",
     "typecheck": "node ./node_modules/@typescript/native/bin/tsc -b --pretty false && node ./node_modules/@typescript/native/bin/tsc -p tsconfig.tests.json --noEmit --pretty false && npm run typecheck --workspace @pomegranate-ui/workbench-lab && npm run typecheck:svelte",
@@ -27,7 +30,7 @@
     "check:extraction": "node scripts/verify-extraction.mjs",
     "check:recipes": "node scripts/verify-recipes.mjs --check",
     "report": "node scripts/generate-migration-report.mjs --check",
-    "check": "npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:extraction && npm run check:recipes && npm run report && npm run test:pack && npm run test:browser"
+    "check": "npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:extraction && npm run check:recipes && npm run report && npm run test:pack && npm run test:browser && npm run test:conformance"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

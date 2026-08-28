@@ -122,7 +122,7 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
       page.getByRole('tab', { name: 'Scene' }),
       page.getByRole('button', { name: 'Open Widget Catalog' }),
       page.getByRole('button', { name: 'Collapse left dock' }),
-      page.getByRole('article', { name: 'Characters (Story)' }).getByRole('button', { name: 'Dock left' })
+      page.getByRole('button', { name: 'Send action' })
     ]) {
       const box = await control.boundingBox();
       const label = await control.getAttribute('aria-label') ?? await control.textContent() ?? 'control';

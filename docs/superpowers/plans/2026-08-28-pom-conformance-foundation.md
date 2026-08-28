@@ -417,26 +417,26 @@ git commit -m "feat(lab): restore Deep Current shell"
 **Interfaces:**
 - Produces: `test:conformance:unit`, `test:conformance:deep-current`, `test:conformance`, `inspect:conformance`, root gate integration, and CI evidence artifacts.
 
-- [ ] **Step 1: Write failing repository assertions**
+- [x] **Step 1: Write failing repository assertions**
 
 Require exact scripts, frozen conformance after browser tests in `check`, CI
 upload of `test-results/conformance/**`, named authorities, local commands,
 ledger gate, immediate themes, static artifact, and no publication/cutover.
 
-- [ ] **Step 2: Run and verify red**
+- [x] **Step 2: Run and verify red**
 
 Run: `node --test tests/unit/repository-boundary.test.mjs`
 
 Expected: FAIL on absent scripts/workflow/docs.
 
-- [ ] **Step 3: Add commands, CI, and operator docs**
+- [x] **Step 3: Add commands, CI, and operator docs**
 
 Focused scripts run only requested conformance specs; inspect requires
 `--scenario` and retains evidence. Ubuntu and Windows run structured checks;
 Windows remains canonical for pixels. Upload traces, reports, measurements,
 reference/actual/overlay/diff on failure.
 
-- [ ] **Step 4: Run full gate and commit**
+- [x] **Step 4: Run full gate and commit**
 
 ```powershell
 npm.cmd run check

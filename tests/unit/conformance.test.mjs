@@ -6,6 +6,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 
+import { parseInspectionArguments } from '../../scripts/conformance/inspect.mjs';
 import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../conformance/compare.ts';
 import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, writeMeasurementEvidence } from '../conformance/evidence.ts';
@@ -258,7 +259,7 @@ test('discrepancy ledger validation rejects unreviewable rows and broken scenari
   );
 });
 
-test('the checked-in Deep Current ledger is a valid bounded macro work queue', async () => {
+test('the checked-in Deep Current ledger is a valid frozen macro work queue', async () => {
   const markdown = await readFile(path.join(repositoryRoot, 'docs/conformance/deep-current-ledger.md'), 'utf8');
   const entries = parseDiscrepancyLedger(markdown);
   const validation = validateDiscrepancyLedger(entries, DEEP_CURRENT_MACRO_SCENARIOS);
@@ -266,7 +267,8 @@ test('the checked-in Deep Current ledger is a valid bounded macro work queue', a
   assert.deepEqual(validation.entries.map((entry) => entry.id), [
     'DC-001', 'DC-002', 'DC-003', 'DC-004', 'DC-005', 'DC-006', 'DC-007', 'DC-008', 'DC-009'
   ]);
-  assert.equal(validation.entries.every((entry) => entry.status === 'open'), true);
+  assert.equal(validation.entries.every((entry) => entry.status === 'closed'), true);
+  assert.equal(validation.entries.every((entry) => entry.regression !== 'none'), true);
   assert.deepEqual(
     [...new Set(validation.entries.map((entry) => entry.scenario))].sort(),
     DEEP_CURRENT_MACRO_SCENARIOS.map((scenario) => scenario.id).sort()
@@ -527,4 +529,11 @@ test('the reviewed Deep Current macro baseline freezes every authority viewport'
       assert.equal(box.every(Number.isFinite), true);
     }
   }
+});
+
+test('inspection requires one exact known scenario without permitting update mode', () => {
+  assert.equal(parseInspectionArguments(['--scenario', 'dc-shell-wide']).id, 'dc-shell-wide');
+  assert.throws(() => parseInspectionArguments([]), /--scenario <id> is required/);
+  assert.throws(() => parseInspectionArguments(['--scenario', 'unknown']), /Unknown conformance scenario/);
+  assert.throws(() => parseInspectionArguments(['--scenario', 'dc-shell-wide', '--update-snapshots']), /Unexpected inspection argument/);
 });

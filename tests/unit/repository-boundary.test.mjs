@@ -46,8 +46,16 @@ test('root check composes every native and preservation gate in the approved ord
   const rootPackage = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   assert.equal(
     rootPackage.scripts.check,
-    'npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:extraction && npm run check:recipes && npm run report && npm run test:pack && npm run test:browser'
+    'npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:extraction && npm run check:recipes && npm run report && npm run test:pack && npm run test:browser && npm run test:conformance'
   );
+});
+
+test('repository exposes the frozen conformance command contract', async () => {
+  const rootPackage = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  assert.equal(rootPackage.scripts['test:conformance:unit'], 'node --test tests/unit/conformance.test.mjs');
+  assert.equal(rootPackage.scripts['test:conformance:deep-current'], 'playwright test --config playwright.conformance.config.mjs');
+  assert.equal(rootPackage.scripts['test:conformance'], 'npm run test:conformance:unit && npm run test:conformance:deep-current');
+  assert.equal(rootPackage.scripts['inspect:conformance'], 'node scripts/conformance/inspect.mjs');
 });
 
 test('repository carries cross-platform native toolkit and preservation CI', async () => {
@@ -63,6 +71,8 @@ test('repository carries cross-platform native toolkit and preservation CI', asy
   assert.match(workflow, /if:\s*failure\(\)/);
   assert.match(workflow, /playwright-report\//);
   assert.match(workflow, /test-results\//);
+  assert.match(workflow, /test-results\/conformance\//);
+  assert.match(workflow, /test-results\/playwright-conformance\//);
   for (const line of workflow.split(/\r?\n/).filter((value) => /^\s*uses:/.test(value))) {
     assert.match(line, /@[a-f0-9]{40}(?:\s+#.*)?$/, line);
   }
@@ -114,6 +124,10 @@ test('root verification docs match scripts and record unpublished, uncut boundar
       'report',
       'test:pack',
       'test:browser',
+      'test:conformance:unit',
+      'test:conformance:deep-current',
+      'test:conformance',
+      'inspect:conformance',
       'check'
     ]) {
       assert.equal(typeof rootPackage.scripts[script], 'string', script);
@@ -121,6 +135,22 @@ test('root verification docs match scripts and record unpublished, uncut boundar
     }
     assert.match(source, /npm package publication has not occurred/i, document);
     assert.match(source, /Sonder cutover has not occurred/i, document);
+  }
+});
+
+test('operator docs name the conformance authorities and frozen deployment boundary', async () => {
+  for (const document of ['README.md', 'AGENTS.md', 'apps/workbench-lab/README.md', 'docs/conformance/README.md']) {
+    const source = await readFile(path.join(root, document), 'utf8');
+    assert.match(source, /Atmospheric Workbench/, document);
+    assert.match(source, /Widget Overhaul/, document);
+    assert.match(source, /npm\.cmd run test:conformance:unit/, document);
+    assert.match(source, /npm\.cmd run test:conformance:deep-current/, document);
+    assert.match(source, /npm\.cmd run test:conformance/, document);
+    assert.match(source, /npm\.cmd run inspect:conformance -- --scenario/, document);
+    assert.match(source, /immediate/i, document);
+    assert.match(source, /apps\/workbench-lab\/dist/, document);
+    assert.match(source, /(?:do not|does not|has not).*publish/i, document);
+    assert.match(source, /(?:do not|does not|has not).*cutover|Sonder cutover has not occurred/i, document);
   }
 });
 

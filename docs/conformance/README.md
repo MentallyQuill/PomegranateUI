@@ -49,12 +49,17 @@ Generated reference, actual, overlay, diff, measurement, trace, and report
 files live below ignored `test-results/conformance/`. Failed CI jobs upload
 that directory. Preserved sources and reviewed reference frames are read-only.
 
-Focused commands are added as the executable lane lands. The final interface is
+The executable interface is
 `npm.cmd run test:conformance:unit`,
 `npm.cmd run test:conformance:deep-current`,
 `npm.cmd run test:conformance`, and
 `npm.cmd run inspect:conformance -- --scenario <id>`.
 
-This machinery is test infrastructure for a developer toolkit. It does not
-import Sonder server code, publish packages, cut Sonder over, or deploy the
-later GitHub Pages showcase.
+The inspection command requires one exact scenario ID and retains its complete
+evidence set without updating a baseline. Deep Current switching is immediate
+and atomic on the same mounted Panel and Widget tree. The hostable boundary is
+still `apps/workbench-lab/dist`.
+
+This machinery is test infrastructure for a developer toolkit. It does not publish
+packages. Sonder cutover has not occurred. The lane does not import Sonder server
+code or deploy the later GitHub Pages showcase.

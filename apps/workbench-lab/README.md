@@ -16,6 +16,17 @@ npm.cmd run dev:lab
 
 The live Vite development surface is `http://127.0.0.1:5173/`. Use `npm.cmd run build` followed by `npm.cmd run preview:lab` to inspect the static `dist` output at `http://127.0.0.1:4174/`. Only `dist` is hostable; no deployment is configured.
 
+The Atmospheric Workbench owns macro layout, material, and responsive authority. The Widget Overhaul owns Widget inventory, geometry, Catalog, and audited state behavior. Run the frozen Deep Current macro loop or retain one scenario's evidence with:
+
+```powershell
+npm.cmd run test:conformance:unit
+npm.cmd run test:conformance:deep-current
+npm.cmd run test:conformance
+npm.cmd run inspect:conformance -- --scenario dc-shell-wide
+```
+
+These commands exercise the same immediate, atomic theme switch and the same mounted Workbench tree. The static artifact boundary remains `apps/workbench-lab/dist`; the Lab does not publish packages or cut Sonder over.
+
 Run the complete repository gate from the root with:
 
 ```powershell
