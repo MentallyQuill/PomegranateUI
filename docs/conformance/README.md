@@ -1,0 +1,60 @@
+# Pom conformance operations
+
+The conformance lane compares the maintained Svelte Workbench Lab with explicit
+authorities. Deep Current uses the preserved Atmospheric Workbench for macro
+composition, material, and responsive staging and the Widget Overhaul for
+Panel, Widget, Catalog, geometry, and audited state behavior. Pom Neutral and
+Bunny use original reviewed reference frames after Deep Current freezes.
+
+Current Lab screenshots are implementation evidence. They are not reference
+authority and cannot be refreshed to close a discrepancy.
+
+## Ledger lifecycle
+
+Every failing structured comparison has one stable target-prefixed row. The
+row names its authority, scenario, evidence, diagnosis, status, regression, and
+any reviewed deviation. Status moves from `open` to `fixing`, then `verified`
+and `closed` only after the named regression passes. A requested deviation must
+be cited by the scenario and contain its bounded review record.
+
+Severity means:
+
+- P0: reference integrity, security/data boundary, unusable primary flow, or
+  invalid conformance evidence;
+- P1: missing feature/state, wrong macro structure, inaccessible interaction,
+  persistence loss, or severe responsive failure;
+- P2: material geometry, styling, content, or interaction mismatch in ordinary
+  use; and
+- P3: minor polish with no layout, feature, comprehension, or accessibility
+  consequence.
+
+A target freezes with zero open P0/P1 rows, zero unapproved P2 rows, and only
+reviewed P3 rows. Raising a global pixel threshold never closes a discrepancy.
+After three ineffective fixes to the same row, revisit structure, authority
+interpretation, selectors, or the explicit tolerance instead of looping.
+
+## Failure meanings
+
+- `REFERENCE_HASH_DRIFT`: authority bytes changed before browser setup.
+- `REFERENCE_SETUP_FAILED`: the reference driver did not reach its state.
+- `IMPLEMENTATION_SETUP_FAILED`: the Lab driver did not reach its state.
+- `MANIFEST_INVALID`: scenario or ledger metadata is unsafe or inconsistent.
+- `MEASUREMENT_FAILED`: a required locator or value is unavailable.
+- `UNLEDGERED_DISCREPANCY`: a comparison failed without a work-queue row.
+- `DISCREPANCY_REMAINS`: a known row still fails.
+- `STALE_DISCREPANCY`: a closed row lacks passing regression evidence.
+- `UNAPPROVED_DEVIATION`: a cited exception lacks a complete review record.
+
+Generated reference, actual, overlay, diff, measurement, trace, and report
+files live below ignored `test-results/conformance/`. Failed CI jobs upload
+that directory. Preserved sources and reviewed reference frames are read-only.
+
+Focused commands are added as the executable lane lands. The final interface is
+`npm.cmd run test:conformance:unit`,
+`npm.cmd run test:conformance:deep-current`,
+`npm.cmd run test:conformance`, and
+`npm.cmd run inspect:conformance -- --scenario <id>`.
+
+This machinery is test infrastructure for a developer toolkit. It does not
+import Sonder server code, publish packages, cut Sonder over, or deploy the
+later GitHub Pages showcase.

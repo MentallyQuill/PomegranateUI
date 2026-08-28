@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
+import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
 import { DEEP_CURRENT_MACRO_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
 
@@ -42,6 +44,8 @@ const validationOptions = Object.freeze({
   deviationIds: new Set(),
   hashFile: async () => 'wrong'
 });
+
+const ledgerHeader = '| ID | Category | Severity | Authority | Scenario | Evidence | Diagnosis | Status | Regression | Deviation |';
 
 test('manifest validation rejects preserved reference hash drift before browser setup', async () => {
   await assert.rejects(
@@ -157,4 +161,104 @@ test('the initial Deep Current macro manifest validates against exact repository
 
   assert.equal(validated.scenarios.length, 5);
   assert.equal(Object.isFrozen(validated.scenarios), true);
+});
+
+test('discrepancy ledger parsing preserves the exact reviewed row contract', () => {
+  const entries = parseDiscrepancyLedger([
+    '# Deep Current ledger',
+    '',
+    ledgerHeader,
+    '|---|---|---|---|---|---|---|---|---|---|',
+    '| DC-001 | structure | P1 | Atmospheric Workbench | dc-shell-wide | dc-shell-wide.report.json | Toolbars are detached from the stage | open | none | none |'
+  ].join('\n'));
+
+  assert.deepEqual(entries, [{
+    id: 'DC-001',
+    category: 'structure',
+    severity: 'P1',
+    authority: 'Atmospheric Workbench',
+    scenario: 'dc-shell-wide',
+    evidence: 'dc-shell-wide.report.json',
+    diagnosis: 'Toolbars are detached from the stage',
+    status: 'open',
+    regression: 'none',
+    deviation: 'none'
+  }]);
+  assert.equal(Object.isFrozen(entries), true);
+  assert.equal(Object.isFrozen(entries[0]), true);
+});
+
+test('discrepancy ledger parsing rejects a table without its exact separator', () => {
+  assert.throws(
+    () => parseDiscrepancyLedger([
+      ledgerHeader,
+      '|---|---|',
+      '| DC-001 | structure | P1 | Atmospheric Workbench | dc-shell-wide | report.json | Wrong shell | open | none | none |'
+    ].join('\n')),
+    (error) => error.code === 'MANIFEST_INVALID' && /separator/.test(error.details.reason)
+  );
+});
+
+test('discrepancy ledger validation rejects duplicate stable identities', () => {
+  const entry = parseDiscrepancyLedger([
+    ledgerHeader,
+    '|---|---|---|---|---|---|---|---|---|---|',
+    '| DC-001 | structure | P1 | Atmospheric Workbench | dc-shell-wide | report.json | Wrong shell | open | none | none |'
+  ].join('\n'))[0];
+
+  assert.throws(
+    () => validateDiscrepancyLedger([entry, entry], DEEP_CURRENT_MACRO_SCENARIOS),
+    (error) => error.code === 'MANIFEST_INVALID' && error.details.discrepancyId === 'DC-001'
+  );
+});
+
+test('discrepancy ledger validation rejects unreviewable rows and broken scenario references', () => {
+  const base = {
+    id: 'DC-001',
+    category: 'structure',
+    severity: 'P1',
+    authority: 'Atmospheric Workbench',
+    scenario: 'dc-shell-wide',
+    evidence: 'dc-shell-wide.report.json',
+    diagnosis: 'Toolbars are detached from the stage',
+    status: 'open',
+    regression: 'none',
+    deviation: 'none'
+  };
+  const invalidCases = [
+    ['identity prefix', { id: 'PN-001' }],
+    ['category', { category: 'layout' }],
+    ['severity', { severity: 'P4' }],
+    ['status', { status: 'done' }],
+    ['scenario', { scenario: 'dc-missing' }],
+    ['closed regression', { status: 'closed', regression: 'none' }],
+    ['deviation approval', { status: 'deviation-requested', deviation: 'none' }]
+  ];
+
+  for (const [label, override] of invalidCases) {
+    assert.throws(
+      () => validateDiscrepancyLedger([{ ...base, ...override }], DEEP_CURRENT_MACRO_SCENARIOS),
+      (error) => error.code === 'MANIFEST_INVALID' && error.details.discrepancyId === (override.id ?? base.id),
+      label
+    );
+  }
+
+  assert.throws(
+    () => validateDiscrepancyLedger([], [{
+      ...validScenario,
+      allowedDeviationIds: ['DC-404']
+    }]),
+    (error) => error.code === 'MANIFEST_INVALID' && error.details.discrepancyId === 'DC-404'
+  );
+});
+
+test('the checked-in Deep Current ledger is a valid bounded macro work queue', async () => {
+  const markdown = await readFile(path.join(repositoryRoot, 'docs/conformance/deep-current-ledger.md'), 'utf8');
+  const entries = parseDiscrepancyLedger(markdown);
+  const validation = validateDiscrepancyLedger(entries, DEEP_CURRENT_MACRO_SCENARIOS);
+
+  assert.deepEqual(validation.entries.map((entry) => entry.id), [
+    'DC-001', 'DC-002', 'DC-003', 'DC-004', 'DC-005', 'DC-006', 'DC-007'
+  ]);
+  assert.equal(validation.entries.every((entry) => entry.status === 'open'), true);
 });

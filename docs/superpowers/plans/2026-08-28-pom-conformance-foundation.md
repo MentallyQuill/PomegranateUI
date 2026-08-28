@@ -130,19 +130,19 @@ git commit -m "test(conformance): validate authorities"
 **Interfaces:**
 - Produces: `parseDiscrepancyLedger(markdown): readonly Discrepancy[]` and `validateDiscrepancyLedger(entries, manifest): LedgerValidation`.
 
-- [ ] **Step 1: Write failing parser and cross-reference tests**
+- [x] **Step 1: Write failing parser and cross-reference tests**
 
 Require the exact design columns. Reject duplicate IDs, unknown scenarios,
 invalid status/severity, closed rows without regression evidence, incomplete
 deviations, and mismatch between scenario deviation IDs and ledger rows.
 
-- [ ] **Step 2: Run the test and verify the parser is absent**
+- [x] **Step 2: Run the test and verify the parser is absent**
 
 Run: `node --test tests/unit/conformance.test.mjs`
 
 Expected: FAIL importing `tests/conformance/ledger.ts`.
 
-- [ ] **Step 3: Implement the narrow repository-owned table parser**
+- [x] **Step 3: Implement the narrow repository-owned table parser**
 
 Require this header exactly:
 
@@ -153,14 +153,14 @@ Require this header exactly:
 Split only table rows, trim cells, reject embedded separators, and return
 frozen records. This is not a general Markdown parser.
 
-- [ ] **Step 4: Seed truthful target ledgers**
+- [x] **Step 4: Seed truthful target ledgers**
 
 Create open Deep Current rows for shell structure, toolbar widths, center stage,
 composer, canvas/portraits, and missing resize/docking states. Evidence names
 must match Task 5. Neutral and Bunny contain only the header and the explicit
 pre-reference note.
 
-- [ ] **Step 5: Document workflow, run, and commit**
+- [x] **Step 5: Document workflow, run, and commit**
 
 Document P0-P3, fail-closed errors, the three-attempt review rule, and the
 freeze gate. Then run and commit:
