@@ -18,7 +18,9 @@ async function selectTheme(page: Page, label: 'Pom Neutral' | 'Bunny') {
   await page.evaluate(async () => {
     await document.fonts.ready;
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    window.scrollTo(0, 0);
   });
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 }
 
 const shot = (page: Page, name: string) => expect(page).toHaveScreenshot(name, {
