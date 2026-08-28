@@ -1,0 +1,213 @@
+import {
+  RENDERER_CONTRACT_IDS,
+  type RendererContractId
+} from './contract-ids.js';
+
+export interface RendererTabSnapshot {
+  readonly name: string;
+  readonly id: string;
+  readonly controls: string;
+  readonly selected: boolean;
+  readonly moveLeftDisabled: boolean;
+  readonly moveRightDisabled: boolean;
+}
+
+export interface RendererPanelSnapshot {
+  readonly id: string;
+  readonly labelledBy: string;
+}
+
+export interface RendererWidgetSnapshot {
+  readonly title: string;
+  readonly instanceId: string;
+  readonly placement: 'docked' | 'floating';
+  readonly actionNames: readonly string[];
+}
+
+export interface RendererSnapshot {
+  readonly tabListName: string | null;
+  readonly tabs: readonly RendererTabSnapshot[];
+  readonly panel: RendererPanelSnapshot | null;
+  readonly docks: Readonly<Record<'left' | 'main' | 'right', readonly string[]>>;
+  readonly floating: readonly string[];
+  readonly widgets: readonly RendererWidgetSnapshot[];
+  readonly statuses: readonly string[];
+  readonly alerts: readonly string[];
+  readonly activeElementName: string | null;
+  readonly hostStoryId: string;
+  readonly revision: number;
+}
+
+export type RendererOperation =
+  | { readonly type: 'panel.activate'; readonly name: string }
+  | { readonly type: 'panel.reorder'; readonly name: string; readonly direction: 'left' | 'right' }
+  | { readonly type: 'widget.place'; readonly title: string; readonly destination: 'left' | 'right' | 'floating' }
+  | { readonly type: 'focus.next' }
+  | { readonly type: 'renderer.fail'; readonly title: string };
+
+export interface RendererHarness {
+  reset(): Promise<void>;
+  snapshot(): Promise<RendererSnapshot>;
+  perform(operation: RendererOperation): Promise<void>;
+}
+
+export interface RendererConformanceResult {
+  readonly contractId: RendererContractId;
+  readonly passed: boolean;
+  readonly diagnostic: string;
+}
+
+function result(
+  contractId: RendererContractId,
+  passed: boolean,
+  diagnostic: string
+): RendererConformanceResult {
+  return Object.freeze({ contractId, passed, diagnostic });
+}
+
+interface OperationSnapshot {
+  readonly snapshot: RendererSnapshot | null;
+  readonly error: string | null;
+}
+
+async function performAndSnapshot(
+  harness: RendererHarness,
+  operation: RendererOperation
+): Promise<OperationSnapshot> {
+  try {
+    await harness.perform(operation);
+    return { snapshot: await harness.snapshot(), error: null };
+  } catch (error) {
+    return {
+      snapshot: null,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+export async function runRendererConformance(
+  harness: RendererHarness
+): Promise<readonly RendererConformanceResult[]> {
+  await harness.reset();
+  const current = await harness.snapshot();
+  const tabIds = current.tabs.map((tab) => tab.id);
+  const passed = current.tabListName === 'Panels'
+    && current.tabs.length > 0
+    && current.tabs.every((tab) => Boolean(tab.name && tab.id))
+    && new Set(tabIds).size === tabIds.length;
+  const selectedTab = current.tabs.find((tab) => tab.selected);
+  const relationshipsPassed = Boolean(
+    selectedTab
+    && current.panel
+    && selectedTab.controls === current.panel.id
+    && current.panel.labelledBy === selectedTab.id
+  );
+  const initialHostStoryId = current.hostStoryId;
+  const unavailablePassed = current.widgets.some((widget) => widget.title === 'Missing Widget')
+    && current.statuses.includes('Renderer unavailable for Missing Widget.');
+  const activation = await performAndSnapshot(harness, { type: 'panel.activate', name: 'Library' });
+  const activationPassed = Boolean(
+    activation.snapshot?.tabs.some((tab) => tab.name === 'Library' && tab.selected)
+    && activation.snapshot.hostStoryId === initialHostStoryId
+  );
+  const reorder = await performAndSnapshot(harness, {
+    type: 'panel.reorder', name: 'Library', direction: 'left'
+  });
+  const reorderPassed = Boolean(
+    reorder.snapshot?.tabs[0]?.name === 'Library'
+    && reorder.snapshot.tabs[0].moveLeftDisabled
+    && !reorder.snapshot.tabs[0].moveRightDisabled
+    && reorder.snapshot.tabs.at(-1)?.moveRightDisabled === true
+  );
+  const placement = await performAndSnapshot(harness, {
+    type: 'widget.place', title: 'System Status', destination: 'left'
+  });
+  const placementPassed = placement.snapshot?.docks.left.join('|') === 'Story Summary|System Status';
+  const failure = await performAndSnapshot(harness, { type: 'renderer.fail', title: 'Story Summary' });
+  const failurePassed = Boolean(
+    failure.snapshot?.alerts.includes('Story Summary failed to render.')
+    && failure.snapshot.widgets.some((widget) => widget.title === 'System Status')
+    && failure.snapshot.revision === placement.snapshot?.revision
+  );
+  const focus = await performAndSnapshot(harness, { type: 'focus.next' });
+  const focusPassed = focus.snapshot?.activeElementName === 'Library';
+  return Object.freeze([
+    result(
+      RENDERER_CONTRACT_IDS.panelTabs,
+      passed,
+      passed
+        ? 'The renderer exposed one named Panels tablist with stable tab identities.'
+        : 'Expected one named Panels tablist with at least one uniquely identified tab.'
+    ),
+    result(
+      RENDERER_CONTRACT_IDS.panelRelationships,
+      relationshipsPassed,
+      relationshipsPassed
+        ? 'The selected Panel tab and active panel exposed reciprocal ARIA relationships.'
+        : 'Expected the selected Panel tab and active panel to reference each other.'
+    ),
+    result(
+      RENDERER_CONTRACT_IDS.panelActivation,
+      activationPassed,
+      activation.error
+        ? `Panel activation conformance failed: ${activation.error}`
+        : activationPassed
+        ? 'Panel activation selected Library while host story identity remained external and unchanged.'
+        : 'Expected Panel activation to select Library without changing host story identity.'
+    ),
+    result(
+      RENDERER_CONTRACT_IDS.panelReorder,
+      reorderPassed,
+      reorder.error
+        ? `Panel reorder conformance failed: ${reorder.error}`
+        : reorderPassed
+        ? 'Panel reorder moved Library left and exposed truthful edge controls.'
+        : 'Expected Panel reorder to move Library left with disabled controls only at sequence edges.'
+    ),
+    result(
+      RENDERER_CONTRACT_IDS.widgetPlacement,
+      placementPassed,
+      placement.error
+        ? `Widget placement conformance failed: ${placement.error}`
+        : placementPassed
+        ? 'Widget placement appended System Status after Story Summary in the occupied left dock.'
+        : 'Expected Widget placement to append System Status after Story Summary in the occupied left dock.'
+    ),
+    result(
+      RENDERER_CONTRACT_IDS.unavailableRenderer,
+      unavailablePassed,
+      unavailablePassed
+        ? 'The unresolved Widget remained in layout and exposed its named renderer-unavailable status.'
+        : 'Expected Missing Widget to remain in layout with a named renderer-unavailable status.'
+    ),
+    result(
+      RENDERER_CONTRACT_IDS.rendererFailure,
+      failurePassed,
+      failure.error
+        ? `Renderer failure conformance failed: ${failure.error}`
+        : failurePassed
+        ? 'Story Summary failure was contained while System Status and the Workbench revision remained usable.'
+        : 'Expected Story Summary failure containment without removing System Status or mutating Workbench state.'
+    ),
+    result(
+      RENDERER_CONTRACT_IDS.keyboardFocus,
+      focusPassed,
+      focus.error
+        ? `Keyboard focus conformance failed: ${focus.error}`
+        : focusPassed
+        ? 'The renderer moved focus to the named Library control through its semantic focus operation.'
+        : 'Expected the semantic focus operation to move focus to the named Library control.'
+    )
+  ]);
+}
+
+export async function assertRendererConformance(
+  harness: RendererHarness
+): Promise<readonly RendererConformanceResult[]> {
+  const results = await runRendererConformance(harness);
+  const failures = results.filter((entry) => !entry.passed);
+  if (failures.length > 0) {
+    throw new Error(failures.map((entry) => `${entry.contractId}: ${entry.diagnostic}`).join('\n'));
+  }
+  return results;
+}
