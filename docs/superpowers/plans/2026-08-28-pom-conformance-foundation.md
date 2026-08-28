@@ -457,7 +457,7 @@ git commit -m "ci: gate Deep Current conformance"
 **Interfaces:**
 - Produces exact test-first plans for interaction parity, 49 implemented surfaces, 94 Catalog identities, and then original Neutral/Bunny frames.
 
-- [ ] **Step 1: Review scope and preservation**
+- [x] **Step 1: Review scope and preservation**
 
 ```powershell
 git status --short
@@ -468,31 +468,31 @@ npm.cmd run check:extraction
 
 Expected: no preserved path or generated evidence staged.
 
-- [ ] **Step 2: Mutate each failure boundary mentally and with fixtures**
+- [x] **Step 2: Mutate each failure boundary mentally and with fixtures**
 
 Prove wrong hash, broken reference selector, missing Lab region, unknown
 mismatch, and stale closed row each yield their exact designed error.
 
-- [ ] **Step 3: Write the interaction plan**
+- [x] **Step 3: Write the interaction plan**
 
 Give separate red/green tasks to toolbar resizing, shelf insertion, tab
 merge/reorder, floating, invalid-drop/pointer-cancel restoration, focus/Back,
 keyboard/touch, and persistence across Scene/Library/Settings. Name scenario
 IDs and authority states in every task.
 
-- [ ] **Step 4: Write the 49-surface Widget plan**
+- [x] **Step 4: Write the 49-surface Widget plan**
 
 Enumerate all 49 ledger surfaces by exact Widget type. Give each a ready-state
 scenario and its smallest authoritative error/empty/pending/focused/responsive
 matrix. Add distinct Catalog inventory/search/preview/placement/fallback tasks
 for all 94 identities without specialized bodies for the other 46.
 
-- [ ] **Step 5: Defer the theme plan until Deep Current freezes**
+- [x] **Step 5: Defer the theme plan until Deep Current freezes**
 
 Start it with original frame creation and review, record hashes, reuse the
 frozen semantic matrix, and add a structural test rejecting theme-ID branches.
 
-- [ ] **Step 6: Verify and commit plans**
+- [x] **Step 6: Verify and commit plans**
 
 ```powershell
 npm.cmd run check
