@@ -42,6 +42,14 @@ test('repository reserves every approved toolkit area', async () => {
   }
 });
 
+test('repository carries a preservation CI workflow', async () => {
+  const workflow = await readFile(path.join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
+  assert.match(workflow, /node-version:\s*24/);
+  assert.match(workflow, /npm ci/);
+  assert.match(workflow, /npm run check/);
+  assert.match(workflow, /contents:\s*read/);
+});
+
 test('root documentation keeps PomegranateUI a toolkit rather than an application frontend', async () => {
   const readme = await readFile(path.join(root, 'README.md'), 'utf8');
   assert.match(readme, /developer toolkit/i);

@@ -29,6 +29,13 @@ After both source commits:
 - Atmospheric Workbench: `79/79 passed`, zero failure rows.
 - Widget overhaul: `212/212 passed`, zero failure rows.
 
+From the independent PomegranateUI repository using Playwright `1.62.1` and its pinned Chromium:
+
+- Atmospheric Workbench: `79/79 passed`.
+- Widget overhaul: `212/212 passed`.
+
+Preservation CI runs the same locked checks on Ubuntu and Windows. Its action releases are pinned to immutable commits and annotated in `.github/workflows/ci.yml`.
+
 ## Excluded working-tree state
 
 No dirty paths remained after the three path-scoped checkpoint commits. No source artifact was removed, moved, reset, cleaned, or cut over during baseline selection.
