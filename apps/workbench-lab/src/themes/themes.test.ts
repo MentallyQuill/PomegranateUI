@@ -15,6 +15,24 @@ describe('Workbench Lab theme conformance', () => {
     expect(result.ok).toBe(true);
   });
 
+  it.each(LAB_THEME_IDS)('uses only packaged primary fonts and generic fallbacks in %s', (id) => {
+    const preset = LAB_THEME_PRESETS.find((candidate) => candidate.id === id);
+    expect(preset).toBeDefined();
+    if (!preset) return;
+    const packaged = new Set(['Pomegranate Sans', 'Pomegranate Serif', 'Pomegranate Mono']);
+    const generic = new Set(['monospace', 'sans-serif', 'serif', 'system-ui', 'ui-monospace', 'ui-sans-serif', 'ui-serif']);
+    const roles = [
+      preset.definition.typography.ui,
+      preset.definition.typography.prose,
+      preset.definition.typography.technical,
+      preset.definition.typography.display
+    ].filter((role) => role !== undefined);
+    for (const role of roles) {
+      expect(packaged.has(role.family), `${id}: ${role.family}`).toBe(true);
+      expect(role.fallbacks.every((fallback) => generic.has(fallback)), `${id}: ${role.fallbacks.join(', ')}`).toBe(true);
+    }
+  });
+
   it.each(LAB_THEME_IDS)('keeps rendered text and interaction colors readable in %s', (id) => {
     const preset = LAB_THEME_PRESETS.find((candidate) => candidate.id === id);
     const result = resolveTheme(preset?.definition);

@@ -18,15 +18,15 @@ theme foundation. It is evidence for this tranche, not a permanent budget gate.
 
 | Category | Baseline raw | Theme raw | Delta raw | Baseline gzip | Theme gzip | Delta gzip |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| JavaScript | 196,876 | 222,293 | +25,417 | 53,320 | 60,929 | +7,609 |
+| JavaScript | 196,876 | 222,281 | +25,405 | 53,320 | 60,830 | +7,510 |
 | CSS | 20,078 | 25,295 | +5,217 | 5,140 | 5,853 | +713 |
 | Fonts | 566,512 | 566,512 | 0 | 386,242 | 386,242 | 0 |
 | Images | 0 | 0 | 0 | 0 | 0 | 0 |
 | Other | 426 | 426 | 0 | 287 | 287 | 0 |
-| **Total** | **783,892** | **814,526** | **+30,634** | **444,989** | **453,311** | **+8,322** |
+| **Total** | **783,892** | **814,514** | **+30,622** | **444,989** | **453,212** | **+8,223** |
 
-The complete static artifact grows by 30,634 raw bytes and 8,322 gzip bytes
-(1.87% compressed). The JavaScript and CSS payload alone grows by 8,322 gzip
+The complete static artifact grows by 30,622 raw bytes and 8,223 gzip bytes
+(1.85% compressed). The JavaScript and CSS payload alone grows by 8,223 gzip
 bytes. Fonts are unchanged, and the deployable artifact adds no images or other
 binary runtime assets.
 

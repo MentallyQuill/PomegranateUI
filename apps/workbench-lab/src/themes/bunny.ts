@@ -13,10 +13,10 @@ export const BUNNY_THEME = mergeTheme(DEEP_CURRENT_THEME, {
     border: '#e6cedb', borderStrong: '#c998b0', shadow: '#7a5d78'
   },
   typography: {
-    ui: { family: 'Segoe UI Rounded', fallbacks: ['Yu Gothic UI', 'Meiryo', 'system-ui', 'sans-serif'], weight: 480, strongWeight: 700, lineHeight: 1.4, trackingEm: 0.01 },
-    prose: { family: 'Yu Mincho', fallbacks: ['Georgia', 'ui-serif', 'serif'], weight: 400, strongWeight: 650, lineHeight: 1.62, trackingEm: 0.01 },
-    technical: { family: 'Cascadia Mono', fallbacks: ['ui-monospace', 'monospace'], weight: 450, strongWeight: 650, lineHeight: 1.4, trackingEm: 0.03 },
-    display: { family: 'Segoe UI Rounded', fallbacks: ['Yu Gothic UI', 'Meiryo', 'system-ui', 'sans-serif'], weight: 650, strongWeight: 750, lineHeight: 1.18, trackingEm: 0.01 },
+    ui: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 480, strongWeight: 700, lineHeight: 1.4, trackingEm: 0.01 },
+    prose: { family: 'Pomegranate Serif', fallbacks: ['ui-serif', 'serif'], weight: 400, strongWeight: 650, lineHeight: 1.62, trackingEm: 0.01 },
+    technical: { family: 'Pomegranate Mono', fallbacks: ['ui-monospace', 'monospace'], weight: 450, strongWeight: 650, lineHeight: 1.4, trackingEm: 0.03 },
+    display: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 650, strongWeight: 750, lineHeight: 1.18, trackingEm: 0.01 },
     scale: { xs: 11, sm: 13, md: 15, lg: 19, xl: 26 }
   },
   geometry: {

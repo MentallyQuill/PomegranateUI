@@ -13,10 +13,10 @@ export const POM_NEUTRAL_THEME = mergeTheme(DEEP_CURRENT_THEME, {
     border: '#cdd2d9', borderStrong: '#aeb6c1', shadow: '#39414d'
   },
   typography: {
-    ui: { family: 'Segoe UI Variable', fallbacks: ['Segoe UI', 'system-ui', 'sans-serif'], weight: 430, strongWeight: 650, lineHeight: 1.35, trackingEm: 0 },
-    prose: { family: 'Charter', fallbacks: ['Georgia', 'ui-serif', 'serif'], weight: 400, strongWeight: 600, lineHeight: 1.55, trackingEm: 0 },
-    technical: { family: 'Cascadia Mono', fallbacks: ['ui-monospace', 'monospace'], weight: 450, strongWeight: 650, lineHeight: 1.4, trackingEm: 0.02 },
-    display: { family: 'Segoe UI Variable Display', fallbacks: ['Segoe UI', 'system-ui', 'sans-serif'], weight: 560, strongWeight: 680, lineHeight: 1.15, trackingEm: -0.01 }
+    ui: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 430, strongWeight: 650, lineHeight: 1.35, trackingEm: 0 },
+    prose: { family: 'Pomegranate Serif', fallbacks: ['ui-serif', 'serif'], weight: 400, strongWeight: 600, lineHeight: 1.55, trackingEm: 0 },
+    technical: { family: 'Pomegranate Mono', fallbacks: ['ui-monospace', 'monospace'], weight: 450, strongWeight: 650, lineHeight: 1.4, trackingEm: 0.02 },
+    display: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 560, strongWeight: 680, lineHeight: 1.15, trackingEm: -0.01 }
   },
   geometry: {
     cornerFamily: 'rounded', cornerSm: 7, cornerMd: 12, cornerLg: 18, chamfer: 0, borderWidth: 1, sharedEdge: 'hairline', focusWidth: 2, focusOffset: 2
