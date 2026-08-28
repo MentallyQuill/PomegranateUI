@@ -125,15 +125,17 @@ test('root verification docs match scripts and record unpublished, uncut boundar
 });
 
 test('package and example documentation preserves the adopter boundary', async () => {
-  for (const packageName of ['contracts', 'core', 'layout', 'svelte', 'testkit']) {
+  for (const packageName of ['contracts', 'core', 'layout', 'svelte', 'testkit', 'theme']) {
     const readme = await readFile(path.join(root, 'packages', packageName, 'README.md'), 'utf8');
     assert.match(readme, new RegExp(`@pomegranate-ui/${packageName}`));
     assert.doesNotMatch(readme, /reserved for Tranche 3/i);
   }
 
   const themeReadme = await readFile(path.join(root, 'packages', 'theme', 'README.md'), 'utf8');
-  assert.match(themeReadme, /@pomegranate-ui\/theme/);
-  assert.match(themeReadme, /reserved/i);
+  assert.match(themeReadme, /framework-neutral/i);
+  assert.match(themeReadme, /declarative/i);
+  assert.match(themeReadme, /adopter/i);
+  assert.match(themeReadme, /does not bundle.*preset/i);
 
   for (const exampleName of ['mock-roleplay-backend', 'sonder-integration']) {
     const readme = await readFile(path.join(root, 'examples', exampleName, 'README.md'), 'utf8');
@@ -148,7 +150,7 @@ test('Tranche 3 exposes strict separately packable packages', async () => {
     assert.equal(typeof rootPackage.scripts[script], 'string', script);
   }
 
-  for (const name of ['contracts', 'layout', 'core', 'svelte', 'testkit']) {
+  for (const name of ['contracts', 'layout', 'core', 'svelte', 'testkit', 'theme']) {
     const packageRoot = path.join(root, 'packages', name);
     const manifest = JSON.parse(await readFile(path.join(packageRoot, 'package.json'), 'utf8'));
     assert.equal(manifest.name, `@pomegranate-ui/${name}`);
@@ -163,7 +165,7 @@ test('Tranche 3 exposes strict separately packable packages', async () => {
 });
 
 test('framework-neutral packages do not import a view framework or DOM', async () => {
-  for (const name of ['contracts', 'layout', 'core']) {
+  for (const name of ['contracts', 'layout', 'core', 'theme']) {
     const files = (await walk(path.join(root, 'packages', name, 'src')))
       .filter((file) => /\.(?:ts|tsx)$/.test(file));
     for (const file of files) {

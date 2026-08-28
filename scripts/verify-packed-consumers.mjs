@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const packageNames = ['contracts', 'layout', 'core', 'svelte', 'testkit'];
+const packageNames = ['contracts', 'theme', 'layout', 'core', 'svelte', 'testkit'];
 const exampleNames = ['mock-roleplay-backend', 'sonder-integration'];
 const npmCli = process.env.npm_execpath;
 const npmCommand = process.platform === 'win32' ? process.execPath : 'npm';
@@ -138,6 +138,7 @@ async function writeSvelteConsumer(consumerRoot, tarballs) {
     },
     dependencies: Object.fromEntries([
       '@pomegranate-ui/contracts',
+      '@pomegranate-ui/theme',
       '@pomegranate-ui/layout',
       '@pomegranate-ui/core',
       '@pomegranate-ui/svelte',
@@ -233,6 +234,7 @@ async function writeSvelteConsumer(consumerRoot, tarballs) {
     "  import { createCatalogController, createWidgetRegistry, createWorkbenchStore } from '@pomegranate-ui/core';",
     "  import { createInitialWorkbenchState, createPanel, createWidget, type LayoutResult } from '@pomegranate-ui/layout';",
     "  import { createWidgetRendererRegistry, toSvelteWorkbenchStore } from '@pomegranate-ui/svelte';",
+    "  import { resolveTheme } from '@pomegranate-ui/theme';",
     "  import FixtureWidget from './FixtureWidget.svelte';",
     "  import PanelTabs from './recipes/PanelTabs.svelte';",
     "  import WidgetCatalog from './recipes/WidgetCatalog.svelte';",
@@ -245,6 +247,21 @@ async function writeSvelteConsumer(consumerRoot, tarballs) {
     '    readonly storyId: string;',
     '    readonly failures: Readable<ReadonlySet<string>>;',
     '  }',
+    "  const packedMaterialRoles = ['canvas', 'shelf', 'panel', 'widget', 'field', 'button', 'menu', 'dialog', 'floating'];",
+    '  const packedThemeResolution = resolveTheme({',
+    "    schemaVersion: 'pomegranate.ui.theme.v1', id: 'packed-fixture', label: 'Packed Fixture',",
+    "    colors: { canvas: '#f4f4f4', surface: '#ffffff', surfaceElevated: '#ffffff', surfaceInset: '#eeeeee', chrome: '#ffffff', text: '#202020', textMuted: '#555555', textFaint: '#666666', textOnAccent: '#ffffff', accent: '#315fbd', selection: '#d9e4ff', focus: '#234f9f', success: '#287052', warning: '#7a5900', danger: '#9b3548', border: '#cccccc', borderStrong: '#999999', shadow: '#202020' },",
+    "    typography: { ui: { family: 'system-ui', fallbacks: ['sans-serif'], weight: 400, strongWeight: 700, lineHeight: 1.4, trackingEm: 0 }, prose: { family: 'serif', fallbacks: ['ui-serif'], weight: 400, strongWeight: 700, lineHeight: 1.6, trackingEm: 0 }, technical: { family: 'monospace', fallbacks: ['ui-monospace'], weight: 400, strongWeight: 700, lineHeight: 1.4, trackingEm: 0 }, scale: { xs: 10, sm: 12, md: 14, lg: 18, xl: 24 } },",
+    "    geometry: { cornerFamily: 'rounded', cornerSm: 4, cornerMd: 8, cornerLg: 12, cornerPill: 999, chamfer: 0, chamferAngle: 45, borderWidth: 1, sharedEdge: 'hairline', focusWidth: 2, focusOffset: 2 },",
+    "    spacing: { density: 'balanced', xs: 4, sm: 8, md: 12, lg: 16, xl: 24, chromeHeight: 44 },",
+    "    materials: Object.fromEntries(packedMaterialRoles.map((role) => [role, { base: role === 'canvas' ? 'canvas' : 'surface', fallback: 'surface', opacity: 1, blurPx: 0, saturation: 1, border: 'border', shadow: 'shadow', shadowOpacity: 0.15, shadowBlurPx: 24, insetHighlight: 0, bloom: 0 }])),",
+    "    iconPackId: 'icons.fixture', assets: [{ id: 'icons.fixture', kind: 'icon-pack', required: true }],",
+    "    canvas: [{ kind: 'solid', color: '#f4f4f4' }],",
+    "    accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },",
+    "    capabilities: { translucency: false, textures: false, localImages: false }",
+    '  });',
+    "  if (!packedThemeResolution.ok) throw new Error(packedThemeResolution.diagnostics.map(({ message }) => message).join('; '));",
+    '  const packedThemeId = packedThemeResolution.theme.id;',
     "  const sceneId = asPanelId('scene');",
     "  const libraryId = asPanelId('library');",
     "  const storyType = asWidgetType('fixture.story-summary');",
@@ -305,6 +322,7 @@ async function writeSvelteConsumer(consumerRoot, tarballs) {
     '    {/snippet}',
     '  </WorkbenchSurface>',
     '  <WidgetCatalog {catalog} oncreate={() => undefined} />',
+    '  <p role="status" data-packed-theme>{packedThemeId} resolved from packed theme.</p>',
     '  <section data-recipe-probe><RendererState title="Recipe Probe" state="unavailable" /></section>',
     '</main>',
     ''
@@ -443,6 +461,7 @@ try {
   run(['install', '--ignore-scripts'], svelteConsumerRoot);
   await assertLocalResolutions(svelteConsumerRoot, [
     '@pomegranate-ui/contracts',
+    '@pomegranate-ui/theme',
     '@pomegranate-ui/layout',
     '@pomegranate-ui/core',
     '@pomegranate-ui/svelte',

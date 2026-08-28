@@ -5,19 +5,62 @@
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
 
-  import { LAB_HOST_CONTEXT } from './mockup/host-context.js';
+  import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
   import WorkbenchSurface from './recipes/WorkbenchSurface.svelte';
   import { createLocalLayoutStorage, LAB_LAYOUT_KEY } from './storage.js';
+  import { createLabThemeController } from './themes/controller.js';
+  import { LAB_THEME_PRESETS } from './themes/presets.js';
+  import { createLocalThemePreference } from './themes/theme-storage.js';
 
   const runtime = createLabRuntime();
   const storage = createLocalLayoutStorage();
   const { store, catalog, rendererRegistry } = runtime;
   const catalogState = toSvelteCatalogStore(catalog);
-  setWorkbenchContext({ store, catalog, rendererRegistry, hostContext: LAB_HOST_CONTEXT });
+  const themeController = createLabThemeController({ preference: createLocalThemePreference(window.localStorage) });
+  const initialThemeSnapshot = themeController.getSnapshot();
+  let themeSnapshot = $state(initialThemeSnapshot);
+
+  function themeInspector(): LabThemeInspector {
+    return {
+      colors: themeSnapshot.resolved.colors,
+      typography: [
+        themeSnapshot.resolved.typography.ui.family,
+        themeSnapshot.resolved.typography.prose.family,
+        themeSnapshot.resolved.typography.technical.family
+      ],
+      geometry: `${themeSnapshot.resolved.geometry.cornerFamily} · ${themeSnapshot.resolved.geometry.cornerMd}px`,
+      density: themeSnapshot.resolved.spacing.density,
+      iconPackId: themeSnapshot.resolved.iconPackId
+    };
+  }
+
+  function activateTheme(id: string) {
+    const result = themeController.activate(id);
+    if (result.ok) {
+      themeSnapshot = result.snapshot;
+      hostContext.theme.activeId = result.snapshot.activeId;
+      hostContext.theme.inspector = themeInspector();
+      status = `${result.snapshot.resolved.label} applied without changing Workbench state.`;
+    } else {
+      status = result.diagnostics[0]?.message ?? 'Theme activation failed.';
+    }
+  }
+
+  let hostContext = $state(createLabHostContext({
+    activeId: initialThemeSnapshot.activeId,
+    presets: LAB_THEME_PRESETS.map(({ id, definition }) => ({
+      id,
+      label: definition.label,
+      description: definition.description ?? definition.label
+    })),
+    inspector: themeInspector(),
+    activate: activateTheme
+  }));
+  setWorkbenchContext({ store, catalog, rendererRegistry, hostContext });
 
   let workbench: WorkbenchState = $state(store.getState());
   let focusMode = $state(false);
@@ -103,20 +146,26 @@
 
 <svelte:head><title>PomegranateUI Workbench Lab</title></svelte:head>
 
-<main class:focus-mode={focusMode} class:left-collapsed={leftCollapsed}>
+<main
+  class:focus-mode={focusMode}
+  class:left-collapsed={leftCollapsed}
+  data-pom-theme={themeSnapshot.activeId}
+  data-workbench-revision={workbench.revision}
+  style={themeSnapshot.cssText}
+>
   <div class="atmosphere" aria-hidden="true"><i></i><i></i><i></i></div>
   <header class="top-shelf">
     <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
     <PanelTabs {store} class="panel-tabs" />
     <div class="story-lockup">
       <span>Active story</span>
-      <strong>{LAB_HOST_CONTEXT.storyTitle}</strong>
-      <small aria-label="Active story identity">{LAB_HOST_CONTEXT.storyId} · {LAB_HOST_CONTEXT.frameLabel}</small>
+      <strong>{hostContext.storyTitle}</strong>
+      <small aria-label="Active story identity">{hostContext.storyId} · {hostContext.frameLabel}</small>
     </div>
     <div class="shelf-actions">
       <button type="button" aria-label="Open Widget Catalog" aria-expanded={$catalogState.open} onclick={() => catalog.open('drawer')}>Widgets</button>
       <button type="button" aria-pressed={focusMode} onclick={() => { focusMode = !focusMode; }}>Focus reading</button>
-      <span class="runtime-status"><i></i>{LAB_HOST_CONTEXT.systemStatus}</span>
+      <span class="runtime-status"><i></i>{hostContext.systemStatus}</span>
     </div>
   </header>
 
@@ -141,7 +190,7 @@
             {frame}
             {store}
             {rendererRegistry}
-            hostContext={LAB_HOST_CONTEXT}
+            {hostContext}
             class="widget-frame"
           />
         </div>

@@ -88,4 +88,22 @@ describe('Svelte Workbench Lab mockup', () => {
     }
     expect(container.textContent).not.toMatch(/(?:sk-[A-Za-z0-9]{12,}|api[_-]?key\s*[:=])/i);
   });
+
+  it('applies Bunny immediately without changing the live Workbench identity', async () => {
+    const user = userEvent.setup();
+    const { container } = render(App);
+    const root = container.querySelector('main');
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+    const before = {
+      revision: root?.getAttribute('data-workbench-revision'),
+      panel: container.querySelector('[data-pomegranate-panel]')?.getAttribute('data-pomegranate-panel'),
+      widgets: [...container.querySelectorAll('[data-pomegranate-widget]')].map((node) => node.getAttribute('data-pomegranate-widget'))
+    };
+    await user.click(screen.getByRole('button', { name: 'Bunny' }));
+    expect(root).toHaveAttribute('data-pom-theme', 'bunny');
+    expect(root).toHaveAttribute('data-workbench-revision', before.revision);
+    expect(container.querySelector('[data-pomegranate-panel]')).toHaveAttribute('data-pomegranate-panel', before.panel);
+    expect([...container.querySelectorAll('[data-pomegranate-widget]')].map((node) => node.getAttribute('data-pomegranate-widget'))).toEqual(before.widgets);
+    expect(window.localStorage.getItem('pomegranate-ui.workbench-lab.theme.v1')).toBe('bunny');
+  });
 });

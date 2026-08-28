@@ -44,19 +44,19 @@ The maintained dependency path is:
 
 ```text
 contracts -> layout -> core -> svelte
-                         \
-                          -> testkit (public APIs only)
+    |                    \
+    -> theme              -> testkit (public APIs only)
 ```
 
 - `@pomegranate-ui/contracts` owns JSON-safe public contracts and runtime schemas.
 - `@pomegranate-ui/layout` owns framework-neutral Panel and Widget layout transitions.
 - `@pomegranate-ui/core` owns registration, deterministic command dispatch, and subscriptions.
+- `@pomegranate-ui/theme` validates versioned declarative themes and resolves framework-neutral semantic colors, typography, geometry, spacing, materials, assets, canvas layers, and accessibility metadata.
 - `@pomegranate-ui/svelte` exposes headless readable stores, typed context, renderer registration, and focus actions over public core APIs.
 - `@pomegranate-ui/testkit` provides public conformance fixtures and drivers.
 - `registry/recipes` contains source-owned recipes: editable Svelte files that adopters copy and own.
-- `@pomegranate-ui/theme` is reserved for a later tranche.
 
-The contracts, layout, and core packages contain no Svelte, React, DOM, backend, or roleplay-host imports. Svelte is the maintained reference view integration, not the authority for application state or product structure.
+The maintained view path is `contracts -> layout -> core -> svelte`, with the separate framework-neutral `contracts -> theme` path supplying semantic values to adopter-owned views. The testkit consumes public package APIs only. Contracts, layout, core, and theme contain no Svelte, React, DOM, backend, or roleplay-host imports. Svelte is the maintained reference view integration, not the authority for application state or product structure.
 
 ## Adoption model
 
@@ -111,6 +111,10 @@ PomegranateUI remains a private incubator. Npm package publication has not occur
 The preserved source baseline is Sonder Engine commit `0fb98e43f303d62c42ef5c74e6ae38126f68161d`. Sonder is the first demanding consumer and the source of the preserved behavioral evidence; it is not Pom's internal data model, and no Sonder server code enters a Pom package or example.
 
 The deployable Lab boundary is the relative-base static output in `apps/workbench-lab/dist`. It does not require SvelteKit, a Pom backend, Sonder server code, or a network-only asset host.
+
+The Lab applies three complete definitions to the same live Panel and Widget tree: Pom Neutral, Deep Current, and Bunny. Switching is immediate and atomic; a failed definition or missing required local asset leaves the last valid theme active. These presets are Lab-owned demonstrations, not bundled product branding. Adopters continue to own markup, composition, asset resolution, preference persistence, and final visual identity.
+
+This tranche intentionally does not add animated theme morphing, a visual theme editor, remote theme loading, package publication, public hosting, or a Sonder cutover. That keeps the foundation small enough to evaluate before any of those costs become product commitments.
 
 ## Local verification gate
 

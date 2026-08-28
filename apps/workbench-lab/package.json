@@ -15,6 +15,7 @@
     "@pomegranate-ui/layout": "0.1.0-private.0",
     "@pomegranate-ui/svelte": "0.1.0-private.0",
     "@pomegranate-ui/testkit": "0.1.0-private.0",
+    "@pomegranate-ui/theme": "0.1.0-private.0",
     "svelte": "5.56.10"
   },
   "devDependencies": {

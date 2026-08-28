@@ -1,3 +1,24 @@
+import type { LabThemeId } from '../themes/presets.js';
+
+export interface LabThemeInspector {
+  readonly colors: Readonly<Record<string, string>>;
+  readonly typography: readonly string[];
+  readonly geometry: string;
+  readonly density: string;
+  readonly iconPackId: string;
+}
+
+export interface LabThemeHostContext {
+  activeId: LabThemeId;
+  readonly presets: readonly {
+    readonly id: LabThemeId;
+    readonly label: string;
+    readonly description: string;
+  }[];
+  inspector: LabThemeInspector;
+  readonly activate: (id: string) => void;
+}
+
 export interface LabHostContext {
   readonly storyId: string;
   readonly storyTitle: string;
@@ -5,9 +26,10 @@ export interface LabHostContext {
   readonly location: string;
   readonly timeLabel: string;
   readonly systemStatus: string;
+  readonly theme: LabThemeHostContext;
 }
 
-export const LAB_HOST_CONTEXT: LabHostContext = Object.freeze({
+const LAB_STORY_CONTEXT = Object.freeze({
   storyId: 'story-lab-reservoir',
   storyTitle: 'The Reservoir at Blue Hour',
   frameLabel: 'Present frame · Turn 42',
@@ -15,3 +37,7 @@ export const LAB_HOST_CONTEXT: LabHostContext = Object.freeze({
   timeLabel: 'Blue hour · rain easing',
   systemStatus: 'Local fixture ready'
 });
+
+export function createLabHostContext(theme: LabThemeHostContext): LabHostContext {
+  return { ...LAB_STORY_CONTEXT, theme };
+}

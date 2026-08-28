@@ -52,7 +52,9 @@ test('packed consumer fixtures and verifier are executable repository contracts'
 test('packed verifier proves an isolated Svelte recipe consumer', async () => {
   const verifier = await readFile(path.join(root, 'scripts', 'verify-packed-consumers.mjs'), 'utf8');
   for (const expected of [
-    "'contracts', 'layout', 'core', 'svelte', 'testkit'",
+    "'contracts', 'theme', 'layout', 'core', 'svelte', 'testkit'",
+    "'@pomegranate-ui/theme'",
+    'resolveTheme',
     "consumer-svelte-recipes",
     "verify-recipes.mjs",
     "--copy', 'all', '--to",
