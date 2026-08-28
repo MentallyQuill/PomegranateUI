@@ -10,10 +10,8 @@ export default defineConfig({
     environment: 'jsdom',
     include: [
       'packages/**/*.test.ts',
-      'packages/**/*.test.tsx',
       'apps/**/*.test.ts',
       'examples/**/*.test.ts',
-      'examples/**/*.test.tsx'
     ],
     setupFiles: ['./tests/native/setup.ts']
   }

@@ -16,7 +16,6 @@ const reservedReadmes = [
   'packages/contracts/README.md',
   'packages/core/README.md',
   'packages/layout/README.md',
-  'packages/react/README.md',
   'packages/svelte/README.md',
   'packages/testkit/README.md',
   'packages/theme/README.md',
@@ -126,7 +125,7 @@ test('root verification docs match scripts and record unpublished, uncut boundar
 });
 
 test('package and example documentation preserves the adopter boundary', async () => {
-  for (const packageName of ['contracts', 'core', 'layout', 'react', 'svelte', 'testkit']) {
+  for (const packageName of ['contracts', 'core', 'layout', 'svelte', 'testkit']) {
     const readme = await readFile(path.join(root, 'packages', packageName, 'README.md'), 'utf8');
     assert.match(readme, new RegExp(`@pomegranate-ui/${packageName}`));
     assert.doesNotMatch(readme, /reserved for Tranche 3/i);
@@ -149,7 +148,7 @@ test('Tranche 3 exposes strict separately packable packages', async () => {
     assert.equal(typeof rootPackage.scripts[script], 'string', script);
   }
 
-  for (const name of ['contracts', 'layout', 'core', 'react', 'svelte', 'testkit']) {
+  for (const name of ['contracts', 'layout', 'core', 'svelte', 'testkit']) {
     const packageRoot = path.join(root, 'packages', name);
     const manifest = JSON.parse(await readFile(path.join(packageRoot, 'package.json'), 'utf8'));
     assert.equal(manifest.name, `@pomegranate-ui/${name}`);
@@ -173,5 +172,28 @@ test('framework-neutral packages do not import a view framework or DOM', async (
       assert.doesNotMatch(source, /(?:from\s+|import\s*\()['"]svelte(?:\/[^'"]*)?['"]/);
       assert.doesNotMatch(source, /\b(?:document|window|HTMLElement|Element)\b/);
     }
+  }
+});
+
+test('active repository configuration contains no retired React view layer', async () => {
+  const activeFiles = [
+    'package.json',
+    'package-lock.json',
+    'tsconfig.json',
+    'tsconfig.tests.json',
+    'vitest.config.ts',
+    'README.md',
+    'AGENTS.md',
+    'scripts/verify-packed-consumers.mjs'
+  ];
+  for (const area of ['packages', 'apps', 'examples']) {
+    for (const file of await walk(path.join(root, area))) {
+      if (/\.(?:json|mjs|ts|tsx|svelte|md)$/.test(file)) activeFiles.push(path.relative(root, file));
+    }
+  }
+  const forbidden = /@pomegranate-ui\/react|@testing-library\/react|@types\/react(?:-dom)?|@vitejs\/plugin-react|(?:^|["'\/])react-dom(?:["'\/]|$)|(?:^|["'\/])react(?:["'\/]|$)/m;
+  for (const relativePath of activeFiles) {
+    const source = await readFile(path.join(root, relativePath), 'utf8');
+    assert.doesNotMatch(source, forbidden, relativePath.replaceAll('\\', '/'));
   }
 });

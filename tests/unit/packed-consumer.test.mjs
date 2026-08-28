@@ -52,7 +52,7 @@ test('packed consumer fixtures and verifier are executable repository contracts'
 test('packed verifier proves an isolated Svelte recipe consumer', async () => {
   const verifier = await readFile(path.join(root, 'scripts', 'verify-packed-consumers.mjs'), 'utf8');
   for (const expected of [
-    "'contracts', 'layout', 'core', 'react', 'svelte', 'testkit'",
+    "'contracts', 'layout', 'core', 'svelte', 'testkit'",
     "consumer-svelte-recipes",
     "verify-recipes.mjs",
     "--copy', 'all', '--to",
@@ -86,14 +86,6 @@ test('package and example imports remain public, relative, and repository-neutra
         assert.doesNotMatch(specifier, /(?:^|\/)packages\/[^/]+\/src(?:\/|$)/, `${relative}: ${specifier}`);
         if (relative.startsWith('examples/')) {
           assert.equal(specifier.startsWith('..'), false, `${relative}: escaping import ${specifier}`);
-        }
-        if (specifier === 'react' || specifier.startsWith('react/')) {
-          assert.ok(
-            relative.startsWith('packages/react/')
-              || relative.startsWith('apps/workbench-lab/')
-              || relative.includes('/consumer-ui/'),
-            `${relative}: React import outside a binding or consumer UI`
-          );
         }
       }
     }
