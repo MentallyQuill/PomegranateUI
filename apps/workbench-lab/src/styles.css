@@ -132,7 +132,7 @@ dialog form > div { display: flex; justify-content: flex-end; gap: .4rem; }
 .focus-mode .workbench-surface { grid-template-columns: minmax(0, 1fr); }
 .focus-mode .transcript { max-width: 54rem; font-size: 1.2rem; }
 
-@container (max-width: 19rem) { .fact-grid { grid-template-columns: 1fr; } .widget-frame nav { display: none; } }
+@container (max-width: 19rem) { .fact-grid { grid-template-columns: 1fr; } }
 @media (max-width: 1000px) {
   .top-shelf { grid-template-columns: auto 1fr auto; }
   .story-lockup { grid-column: 1 / -1; grid-row: 2; }
@@ -151,6 +151,7 @@ dialog form > div { display: flex; justify-content: flex-end; gap: .4rem; }
   .workbench-surface, .left-collapsed .workbench-surface { display: block; min-width: 0; }
   [data-pomegranate-dock] { min-height: 5rem; }
   [data-pomegranate-dock="right"] { display: block; }
+  [data-pomegranate-floating-layer] { position: static; }
   .widget-float { position: static; width: auto !important; min-height: auto !important; }
   .widget-catalog { inset: .35rem; width: auto; }
   .widget-catalog ul { grid-template-columns: 1fr; }
