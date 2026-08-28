@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit --pretty false"
+    "typecheck": "node ../../node_modules/@typescript/native/bin/tsc --noEmit --pretty false"
   },
   "dependencies": {
     "@pomegranate-ui/contracts": "0.1.0-private.0",

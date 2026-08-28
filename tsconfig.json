@@ -4,6 +4,7 @@
     { "path": "./packages/contracts" },
     { "path": "./packages/layout" },
     { "path": "./packages/core" },
+    { "path": "./packages/svelte" },
     { "path": "./packages/react" },
     { "path": "./packages/testkit" }
   ]

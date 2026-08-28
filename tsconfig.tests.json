@@ -13,6 +13,7 @@
   "include": [
     "packages/**/*.test.ts",
     "packages/**/*.test.tsx",
+    "packages/**/*.svelte",
     "examples/**/*.test.ts",
     "examples/**/*.test.tsx",
     "tests/browser/**/*.ts",
