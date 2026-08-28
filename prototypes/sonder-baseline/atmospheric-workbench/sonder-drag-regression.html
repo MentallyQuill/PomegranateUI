@@ -1,0 +1,1391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sonder drag regression</title>
+  <style>
+    body { margin: 0; background: #111; color: #ddd; font: 14px/1.5 system-ui, sans-serif; }
+    #results { padding: 16px; }
+    .pass { color: #82e89a; }
+    .fail { color: #ff8a8a; }
+    iframe { position: absolute; left: -10000px; width: 1440px; height: 900px; border: 0; }
+  </style>
+</head>
+<body>
+  <main id="results" aria-live="polite">Running drag regressions…</main>
+  <script>
+    const results = document.getElementById('results');
+
+    const nextFrame = (view) => new Promise((resolve) => view.requestAnimationFrame(() => view.requestAnimationFrame(resolve)));
+
+    const loadWorkbench = ({ height = 900, width = 1440, persistenceKey = '' } = {}) => new Promise((resolve, reject) => {
+      const frame = document.createElement('iframe');
+      frame.style.width = `${width}px`;
+      frame.style.height = `${height}px`;
+      const params = new URLSearchParams({ test: `${Date.now()}-${Math.random()}` });
+      if (persistenceKey) params.set('persistence', persistenceKey);
+      frame.src = `./sonder-workbench-calibration.html?${params}`;
+      frame.addEventListener('load', async () => {
+        try {
+          frame.contentDocument.body.style.margin = '0';
+          await nextFrame(frame.contentWindow);
+          resolve(frame);
+        } catch (error) {
+          reject(error);
+        }
+      }, { once: true });
+      document.body.append(frame);
+    });
+
+    const loadPreview = ({ height = 900, width = 1440 } = {}) => new Promise((resolve, reject) => {
+      const frame = document.createElement('iframe');
+      frame.style.width = `${width}px`;
+      frame.style.height = `${height}px`;
+      frame.src = `./sonder-workbench-calibration-preview.html?test=${Date.now()}-${Math.random()}`;
+      frame.addEventListener('load', async () => {
+        try {
+          await nextFrame(frame.contentWindow);
+          const previewFrame = frame.contentDocument.querySelector('iframe');
+          const previewDocument = previewFrame?.contentDocument;
+          const previewWindow = previewFrame?.contentWindow;
+          if (!previewDocument || !previewWindow) throw new Error('Preview sandbox prevented same-origin verification');
+          await nextFrame(previewWindow);
+          resolve({ frame, previewDocument, previewWindow });
+        } catch (error) {
+          reject(error);
+        }
+      }, { once: true });
+      document.body.append(frame);
+    });
+
+    const center = (element) => {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    };
+
+    const pointer = (target, type, point) => target.dispatchEvent(new PointerEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      buttons: ['pointerup', 'pointercancel'].includes(type) ? 0 : 1,
+      clientX: point.x,
+      clientY: point.y,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: 'mouse'
+    }));
+
+    const beginDrag = (doc, handle) => {
+      const start = center(handle);
+      pointer(handle, 'pointerdown', start);
+      pointer(doc, 'pointermove', { x: start.x + 8, y: start.y + 1 });
+    };
+
+    const beginPanelTabDrag = (doc, tab) => {
+      const start = center(tab);
+      pointer(tab, 'pointerdown', start);
+      pointer(doc, 'pointermove', { x: start.x + 8, y: start.y + 1 });
+      return start;
+    };
+
+    const panelTabOrder = (doc) => Array.from(doc.querySelectorAll('[data-panel-tab]')).map((tab) => tab.textContent.trim()).join(',');
+
+    const dragCatalogResultToPoint = (doc, result, destination) => {
+      const start = center(result);
+      const catalogRect = doc.querySelector('[data-widget-catalog]').getBoundingClientRect();
+      pointer(result, 'pointerdown', start);
+      pointer(doc, 'pointermove', { x: Math.max(1, catalogRect.left - 12), y: catalogRect.top + catalogRect.height / 2 });
+      pointer(doc, 'pointermove', destination);
+      pointer(doc, 'pointerup', destination);
+    };
+
+    const dragCatalogResultTo = (doc, result, target) => dragCatalogResultToPoint(doc, result, center(target));
+
+    const reloadWorkbench = (frame) => new Promise((resolve, reject) => {
+      frame.addEventListener('load', async () => {
+        try {
+          frame.contentDocument.body.style.margin = '0';
+          await nextFrame(frame.contentWindow);
+          resolve(frame);
+        } catch (error) {
+          reject(error);
+        }
+      }, { once: true });
+      frame.contentWindow.location.reload();
+    });
+
+    const run = async (name, test, options = 900) => {
+      const normalized = typeof options === 'number' ? { height: options } : options;
+      const frame = await loadWorkbench(normalized);
+      try {
+        await test(frame.contentDocument, frame.contentWindow, frame);
+        return { name, passed: true };
+      } catch (error) {
+        return { name, passed: false, error: error.message };
+      } finally {
+        if (normalized.persistenceKey) {
+          frame.contentWindow.localStorage.removeItem(`sonder.mock.panels.v1.${normalized.persistenceKey}`);
+        }
+        frame.remove();
+      }
+    };
+
+    const runPreview = async (name, test, options = 900) => {
+      const normalized = typeof options === 'number' ? { height: options } : options;
+      let frame = null;
+      try {
+        const loaded = await loadPreview(normalized);
+        frame = loaded.frame;
+        await test(loaded.previewDocument, loaded.previewWindow, loaded.previewFrame);
+        return { name, passed: true };
+      } catch (error) {
+        return { name, passed: false, error: error.message };
+      } finally {
+        frame?.remove();
+      }
+    };
+
+    const assert = (condition, message) => {
+      if (!condition) throw new Error(message);
+    };
+
+    const captureWidgetOrigin = (module) => {
+      const group = module.closest('.sonder-widget-group');
+      const parent = module.parentElement;
+      const rect = module.getBoundingClientRect();
+      return {
+        group,
+        groupParent: group?.parentElement || null,
+        groupIndex: group ? Array.from(group.parentElement?.children || []).filter((child) => child.classList.contains('sonder-widget-group')).indexOf(group) : -1,
+        parent,
+        parentIndex: parent ? Array.from(parent.children).indexOf(module) : -1,
+        stableClasses: Array.from(module.classList).filter((name) => name !== 'is-tab-active').sort().join(' '),
+        inlineStyle: module.getAttribute('style'),
+        rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
+      };
+    };
+
+    const assertWidgetRestored = (module, origin, label) => {
+      const rect = module.getBoundingClientRect();
+      const close = (actual, expected) => Math.abs(actual - expected) <= 1;
+      assert(module.closest('.sonder-widget-group') === origin.group, `${label} returned to a different Widget group`);
+      if (origin.group) {
+        assert(origin.group.parentElement === origin.groupParent, `${label} returned to a different layout owner`);
+        const groupIndex = Array.from(origin.group.parentElement?.children || []).filter((child) => child.classList.contains('sonder-widget-group')).indexOf(origin.group);
+        assert(groupIndex === origin.groupIndex, `${label} returned at layout position ${groupIndex} instead of ${origin.groupIndex}`);
+      } else {
+        assert(module.parentElement === origin.parent, `${label} returned to a different direct parent`);
+        const parentIndex = Array.from(origin.parent?.children || []).indexOf(module);
+        assert(parentIndex === origin.parentIndex, `${label} returned at direct position ${parentIndex} instead of ${origin.parentIndex}`);
+      }
+      const stableClasses = Array.from(module.classList).filter((name) => name !== 'is-tab-active').sort().join(' ');
+      assert(stableClasses === origin.stableClasses, `${label} returned with classes ${JSON.stringify(stableClasses)} instead of ${JSON.stringify(origin.stableClasses)}`);
+      assert(
+        module.getAttribute('style') === origin.inlineStyle,
+        `${label} retained temporary drag geometry: expected ${JSON.stringify(origin.inlineStyle)}, received ${JSON.stringify(module.getAttribute('style'))}`
+      );
+      assert(close(rect.left, origin.rect.left) && close(rect.top, origin.rect.top), `${label} returned at ${Math.round(rect.left)},${Math.round(rect.top)} instead of ${Math.round(origin.rect.left)},${Math.round(origin.rect.top)}`);
+      assert(close(rect.width, origin.rect.width) && close(rect.height, origin.rect.height), `${label} returned at ${Math.round(rect.width)}x${Math.round(rect.height)} instead of its original size`);
+      assert(!module.classList.contains('is-dragging'), `${label} remained in the dragging state`);
+    };
+
+    const commandWidget = (doc, widgetId, command) => {
+      const action = doc.querySelector(`[data-widget-actions="${widgetId}"]`);
+      assert(action, `No action menu was available for ${widgetId}`);
+      action.click();
+      const item = doc.querySelector(`[data-widget-command="${command}"]`);
+      assert(item, `No ${command} command was available for ${widgetId}`);
+      item.click();
+    };
+
+    const groupIds = (doc, side) => Array.from(doc.querySelector(`[data-dock-stack="${side}"]`).children)
+      .filter((child) => child.classList.contains('sonder-widget-group'))
+      .map((group) => Array.from(group.querySelectorAll(':scope > .sonder-module')).map((module) => module.dataset.widgetId).join('+'));
+
+    const documentedWidgetTypes = Object.freeze([
+      'story.transcript', 'story.composer', 'story.context', 'story.turn-progress',
+      'story.live-technical-detail', 'story.turn-versions', 'story.turn-inspector',
+      'story.player-condition', 'story.cast-condition', 'story.room-ambience',
+      'story.scene-backdrop', 'runtime.background-work',
+      'library.workspace', 'library.stories', 'library.characters', 'story.characters',
+      'library.personas', 'story.personas', 'library.lore', 'story.lorebooks',
+      'library.new-story', 'library.character-card', 'story.character-card',
+      'library.persona-card', 'library.greetings-quick-start', 'library.lore-entries',
+      'library.lore-entry-editor', 'library.lorebook-details',
+      'library.lore-relationships', 'library.lore-generator',
+      'library.lived-location-builder',
+      'systems.cast', 'systems.background-presences', 'systems.world-state',
+      'systems.attire', 'systems.genre-style', 'systems.dialogue-agency',
+      'systems.offscreen-life', 'systems.living-world',
+      'systems.institutions-charter', 'systems.institution-diagnostics',
+      'systems.background-life', 'systems.character-relationships',
+      'systems.memory-browser', 'systems.character-private-history',
+      'systems.persona-private-history', 'systems.dramatic-irony',
+      'systems.promise-ledger', 'systems.multiplayer-invites', 'systems.frames',
+      'systems.whos-where', 'systems.paradox-fixed-points',
+      'settings.group.account-access', 'settings.group.ai-models',
+      'settings.group.appearance-accessibility', 'settings.group.story-content',
+      'settings.group.data-extensions-maintenance', 'settings.group.advanced',
+      'settings.provider-credentials', 'settings.model-assignments', 'settings.theme',
+      'settings.reading-layout', 'settings.sound-motion', 'settings.accessibility',
+      'settings.content', 'settings.add-ons', 'settings.maintenance',
+      'settings.prompt-editor', 'settings.raw-story-data'
+    ]);
+
+    const documentedSettingsSubwidgetTypes = Object.freeze([
+      'settings.connections', 'settings.default-model', 'settings.memory-search-model',
+      'settings.response-limit', 'settings.openrouter-routing',
+      'settings.scene-backdrops', 'settings.room-ambience', 'settings.custom-theme',
+      'settings.story-reading-layout', 'settings.story-sound',
+      'settings.accessibility-controls', 'settings.content-preferences',
+      'settings.narrator-voice', 'settings.living-world-controls',
+      'settings.installed-extensions', 'settings.install-extension',
+      'settings.sonder-updates', 'settings.checkpoint-storage',
+      'settings.memory-search-repair', 'settings.diagnostics',
+      'settings.prompt-preset-editor', 'settings.raw-clothing-data'
+    ]);
+
+    const requiredViewportRuns = [
+      [1600, 900], [1180, 800], [1024, 768], [768, 1024],
+      [430, 932], [390, 844], [844, 390], [1024, 600], [800, 450]
+    ].map(([width, height], index) => run(`${index === 8 ? '200% zoom equivalent' : 'Required viewport'} ${width}×${height} preserves the workbench and Catalog`, async (doc, view) => {
+      const root = doc.getElementById('sonder-calibration');
+      const windowShell = doc.querySelector('.sonder-window');
+      assert(root && windowShell, 'Workbench shell is absent');
+      assert(doc.documentElement.scrollWidth <= view.innerWidth + 1, `Document overflows horizontally by ${doc.documentElement.scrollWidth - view.innerWidth}px`);
+      assert(doc.documentElement.scrollHeight <= view.innerHeight + 2, `Document overflows vertically by ${doc.documentElement.scrollHeight - view.innerHeight}px`);
+      const shellRect = windowShell.getBoundingClientRect();
+      assert(shellRect.left >= -1 && shellRect.right <= view.innerWidth + 1, 'Workbench shell escaped the viewport');
+      assert(shellRect.top >= -1 && shellRect.bottom <= view.innerHeight + 2, 'Workbench shell escaped the viewport height');
+      doc.querySelector('[data-widget-catalog-launcher]').click();
+      const catalog = doc.querySelector('[data-widget-catalog]');
+      const catalogRect = catalog.getBoundingClientRect();
+      assert(!catalog.hidden && catalogRect.width > 0 && catalogRect.height > 0, 'Catalog did not open');
+      assert(catalogRect.left >= -1 && catalogRect.right <= view.innerWidth + 1 && catalogRect.top >= -1 && catalogRect.bottom <= view.innerHeight + 1, 'Catalog escaped the viewport');
+      assert(doc.querySelector('[data-catalog-search]') && doc.querySelector('[data-catalog-close]') && doc.querySelector('[data-catalog-category="all"]'), 'Catalog lost search, Close, or category recovery controls');
+      assert(doc.documentElement.scrollWidth <= view.innerWidth + 1, 'Open Catalog caused horizontal document overflow');
+    }, { width, height }));
+
+    Promise.all([
+      ...requiredViewportRuns,
+      run('Accessibility preview preserves solid, contrast, reduced-motion, focus, and large-target contracts', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(typeof api?.setAccessibilityPreview === 'function', 'Accessibility preview API is absent');
+        api.setAccessibilityPreview({ solid: true, highContrast: true, reducedMotion: true, largeTargets: true });
+        const root = doc.getElementById('sonder-calibration');
+        assert(root.dataset.solidSurfaces === 'true' && root.dataset.highContrast === 'true' && root.dataset.reducedMotion === 'true' && root.dataset.largeTargets === 'true', 'Accessibility modes were not applied together');
+        const module = doc.querySelector('.sonder-module');
+        const moduleStyle = view.getComputedStyle(module);
+        assert(moduleStyle.backdropFilter === 'none', 'Solid surfaces left module blur active');
+        const action = doc.querySelector('[data-widget-actions]');
+        assert(action.getBoundingClientRect().height >= 44, `Large-target mode left ${action.className || action.tagName} at ${action.getBoundingClientRect().height}px (min ${view.getComputedStyle(action).minHeight}, height ${view.getComputedStyle(action).height})`);
+        assert(view.getComputedStyle(action).transitionDuration === '0s', 'Reduced-motion mode left structural transition duration active');
+        action.focus();
+        const focusStyle = view.getComputedStyle(action);
+        assert(focusStyle.outlineStyle !== 'none' && Number.parseFloat(focusStyle.outlineWidth) >= 2, 'High-contrast focus indication is not explicit');
+      }, { width: 1024, height: 768 }),
+      run('Workbench fills the usable browser height', async (doc, view) => {
+        const workbench = doc.querySelector('.sonder-window');
+        assert(workbench, 'Workbench window was not rendered');
+        const bottomGap = Math.abs(view.innerHeight - workbench.getBoundingClientRect().bottom);
+        assert(bottomGap <= 2, `Workbench leaves ${Math.round(bottomGap)}px of unused vertical space`);
+      }),
+      run('Top shelf exposes Panel tabs, New Panel, and trailing Widgets', async (doc) => {
+        const tabs = Array.from(doc.querySelectorAll('[data-panel-tab]'));
+        const create = doc.querySelector('[data-panel-create]');
+        const widgets = doc.querySelector('[data-widget-catalog-launcher]');
+        const status = doc.querySelector('.sonder-status');
+        assert(tabs.map((tab) => tab.textContent.trim()).join(',') === 'Scene,Library,Settings', 'Shipped Panel tabs are not Scene, Library, Settings');
+        assert(create?.getAttribute('aria-label') === 'Create Panel', 'New Panel control is missing');
+        assert(widgets && status && widgets.nextElementSibling === status, 'Widgets is not immediately before status');
+        assert(doc.querySelectorAll('.sonder-nav-cell').length === 0, 'Fixed destination cells still exist');
+      }),
+      run('Panel activation changes active identity without changing the story', async (doc) => {
+        const root = doc.getElementById('sonder-calibration');
+        const story = doc.querySelector('.sonder-story-lockup strong').textContent;
+        doc.querySelector('[data-panel-tab="panel-library"]').click();
+        assert(root.dataset.activePanel === 'panel-library', 'Library Panel did not activate');
+        assert(doc.querySelector('[data-panel-tab="panel-library"]').getAttribute('aria-selected') === 'true', 'Active Panel tab is not selected');
+        assert(doc.querySelector('.sonder-story-lockup strong').textContent === story, 'Panel switch changed active-story identity');
+      }),
+      run('Panel action menu opens against its top-shelf trigger', async (doc) => {
+        doc.querySelector('[data-panel-tab="panel-settings"]').click();
+        const trigger = doc.querySelector('[data-panel-more]');
+        trigger.click();
+        const menu = doc.querySelector('[data-panel-menu]');
+        const triggerRect = trigger.getBoundingClientRect();
+        const menuRect = menu.getBoundingClientRect();
+        const gap = menuRect.top - triggerRect.bottom;
+        assert(!menu.hidden, 'Panel action menu did not open');
+        assert(gap >= 2 && gap <= 6, `Panel action menu opened ${Math.round(gap)}px below its trigger`);
+      }),
+      run('Dragging an inactive Panel reorders it without activating it', async (doc) => {
+        const root = doc.getElementById('sonder-calibration');
+        const settings = doc.querySelector('[data-panel-tab="panel-settings"]');
+        const scene = doc.querySelector('[data-panel-tab="panel-scene"]');
+        beginPanelTabDrag(doc, settings);
+        assert(root.classList.contains('is-panel-tab-reordering'), 'Panel did not lift after crossing the drag threshold');
+        assert(root.dataset.activePanel === 'panel-scene', 'Dragging Settings activated it');
+        const sceneRect = scene.getBoundingClientRect();
+        pointer(doc, 'pointermove', { x: sceneRect.left + 2, y: center(scene).y });
+        assert(doc.querySelector('[data-panel-tab-insertion]'), 'Panel insertion marker was not rendered');
+        pointer(doc, 'pointerup', { x: sceneRect.left + 2, y: center(scene).y });
+        assert(panelTabOrder(doc) === 'Settings,Scene,Library', `Panel order became ${panelTabOrder(doc)}`);
+        assert(root.dataset.activePanel === 'panel-scene', 'Dropping Settings activated it');
+        assert(doc.querySelector('[data-panel-more]') === doc.querySelector('[data-panel-tabs]').lastElementChild, 'Active Panel menu moved into the reorderable tabs');
+      }),
+      run('Reordered Panel sequence persists after reload', async (doc, view, frame) => {
+        const library = doc.querySelector('[data-panel-tab="panel-library"]');
+        const scene = doc.querySelector('[data-panel-tab="panel-scene"]');
+        beginPanelTabDrag(doc, library);
+        const sceneRect = scene.getBoundingClientRect();
+        pointer(doc, 'pointermove', { x: sceneRect.left + 2, y: center(scene).y });
+        pointer(doc, 'pointerup', { x: sceneRect.left + 2, y: center(scene).y });
+        assert(panelTabOrder(doc) === 'Library,Scene,Settings', 'Panel did not reorder before reload');
+        await reloadWorkbench(frame);
+        assert(panelTabOrder(frame.contentDocument) === 'Library,Scene,Settings', `Reloaded order is ${panelTabOrder(frame.contentDocument)}`);
+      }, { persistenceKey: `panel-reorder-${Date.now()}-${Math.random()}` }),
+      run('Escape cancels an in-progress Panel reorder', async (doc) => {
+        const library = doc.querySelector('[data-panel-tab="panel-library"]');
+        const scene = doc.querySelector('[data-panel-tab="panel-scene"]');
+        beginPanelTabDrag(doc, library);
+        assert(doc.getElementById('sonder-calibration').classList.contains('is-panel-tab-reordering'), 'Panel reorder did not begin before Escape');
+        pointer(doc, 'pointermove', { x: scene.getBoundingClientRect().left + 2, y: center(scene).y });
+        doc.dispatchEvent(new doc.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(panelTabOrder(doc) === 'Scene,Library,Settings', `Escape left order ${panelTabOrder(doc)}`);
+        assert(!doc.getElementById('sonder-calibration').classList.contains('is-panel-tab-reordering'), 'Escape left Panel reorder active');
+        assert(!doc.querySelector('[data-panel-tab-drag-proxy]'), 'Escape left the dragged Panel proxy visible');
+      }),
+      run('Dropping outside the Panel strip cancels the reorder', async (doc) => {
+        const library = doc.querySelector('[data-panel-tab="panel-library"]');
+        const scene = doc.querySelector('[data-panel-tab="panel-scene"]');
+        const strip = doc.querySelector('[data-panel-tabs]').getBoundingClientRect();
+        beginPanelTabDrag(doc, library);
+        assert(doc.getElementById('sonder-calibration').classList.contains('is-panel-tab-reordering'), 'Panel reorder did not begin before the outside drop');
+        pointer(doc, 'pointermove', { x: scene.getBoundingClientRect().left + 2, y: center(scene).y });
+        pointer(doc, 'pointerup', { x: scene.getBoundingClientRect().left + 2, y: strip.bottom + 80 });
+        assert(panelTabOrder(doc) === 'Scene,Library,Settings', `Outside drop left order ${panelTabOrder(doc)}`);
+      }),
+      run('Keyboard reordering moves the focused Panel and preserves focus', async (doc) => {
+        const settings = doc.querySelector('[data-panel-tab="panel-settings"]');
+        settings.focus();
+        settings.dispatchEvent(new doc.defaultView.KeyboardEvent('keydown', { key: 'ArrowLeft', ctrlKey: true, shiftKey: true, bubbles: true }));
+        const moved = doc.querySelector('[data-panel-tab="panel-settings"]');
+        assert(panelTabOrder(doc) === 'Scene,Settings,Library', `Keyboard order became ${panelTabOrder(doc)}`);
+        assert(doc.activeElement === moved, 'Focus did not follow the keyboard-moved Panel');
+        assert(doc.getElementById('sonder-calibration').dataset.activePanel === 'panel-scene', 'Keyboard reorder activated Settings');
+        assert(doc.querySelector('[data-widget-announcement]').textContent.includes('Settings moved before Library'), 'Keyboard reorder was not announced');
+      }),
+      run('New Panel creates a named three-column Panel and activates it', async (doc) => {
+        doc.querySelector('[data-panel-create]').click();
+        const dialog = doc.querySelector('[data-panel-dialog]');
+        assert(dialog && !dialog.hidden, 'New Panel dialog did not open');
+        dialog.querySelector('[data-panel-name]').value = 'Director Desk';
+        dialog.querySelector('[data-template-choice="columns.v1"]').click();
+        dialog.querySelector('[data-column-count="3"]').click();
+        dialog.querySelector('[data-create-panel]').click();
+        const active = doc.querySelector('[data-panel-tab][aria-selected="true"]');
+        assert(active?.textContent.trim() === 'Director Desk', 'Created Panel did not become active');
+        assert(doc.getElementById('sonder-calibration').dataset.panelTemplate === 'columns', 'Created Panel did not use column layout');
+        assert(doc.getElementById('sonder-calibration').dataset.panelColumns === '3', 'Created Panel did not retain three columns');
+      }),
+      run('Panel dialog offers story stage, focus support, and two through six columns', async (doc) => {
+        doc.querySelector('[data-panel-create]').click();
+        const dialog = doc.querySelector('[data-panel-dialog]');
+        assert(dialog.querySelector('[data-template-choice="story-stage.v1"]'), 'Story-stage template is absent');
+        assert(dialog.querySelector('[data-template-choice="focus-support.v1"]'), 'Focus-support template is absent');
+        const columns = Array.from(dialog.querySelectorAll('[data-column-count]')).map((item) => item.dataset.columnCount);
+        assert(columns.join(',') === '2,3,4,5,6', `Column choices are ${columns.join(',')}`);
+      }),
+      run('Registry exposes the complete documented Widget model', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(api, 'The test inspection API is absent');
+        assert(api.builtInDefinitions.length === 91, `Built-in count is ${api.builtInDefinitions.length}, not 91`);
+        assert(api.extensionDefinitions.length === 3, `Extension count is ${api.extensionDefinitions.length}, not 3`);
+        assert(api.catalogDefinitions.length === 94, `Catalog count is ${api.catalogDefinitions.length}, not 94`);
+        assert(api.embeddedInspectorRenderers.length === 1, 'The extension Inspector renderer is absent');
+        assert(!api.catalogDefinitions.some((item) => item.type === 'settings.host-session'), 'Host session was registered as a Widget');
+        assert(doc.getElementById('sonder-calibration').dataset.widgetDefinitionCount === '94', 'Rendered definition count is not 94');
+      }),
+      run('Registry contains every fixed Widget and approved Settings subwidget', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(api, 'The test inspection API is absent');
+        const types = new Set(api.builtInDefinitions.map((item) => item.type));
+        documentedWidgetTypes.forEach((type) => assert(types.has(type), `${type} is absent from the fixed inventory`));
+        documentedSettingsSubwidgetTypes.forEach((type) => assert(types.has(type), `${type} is absent from the Settings subwidget inventory`));
+        assert(documentedWidgetTypes.length === 69, 'Fixed inventory fixture no longer has 69 types');
+        assert(documentedSettingsSubwidgetTypes.length === 22, 'Settings subwidget fixture no longer has 22 types');
+      }),
+      run('Registry types are unique and preserve documented category totals', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(api, 'The test inspection API is absent');
+        const types = api.catalogDefinitions.map((item) => item.type);
+        assert(new Set(types).size === types.length, 'Catalog contains duplicate Widget types');
+        const totals = api.catalogDefinitions.reduce((counts, item) => {
+          counts[item.category] = (counts[item.category] || 0) + 1;
+          return counts;
+        }, {});
+        assert(JSON.stringify(totals) === JSON.stringify({ story: 12, library: 19, systems: 21, settings: 39, extensions: 3 }), `Category totals are ${JSON.stringify(totals)}`);
+      }),
+      run('Every Widget and collection action resolves to a manifest-backed CC0 SVG', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(api, 'The test inspection API is absent');
+        [...api.builtInDefinitions, ...api.extensionDefinitions].forEach((definition) => {
+          const icon = api.iconDefinitions[definition.icon];
+          assert(icon, `${definition.type} has no icon definition`);
+          assert(Number.isInteger(icon.id) && icon.filename && icon.sourceUrl && icon.license === 'CC0' && icon.inManifest, `${definition.type} icon lacks manifest provenance`);
+        });
+        api.coreActionIcons.forEach((key) => assert(api.iconDefinitions[key]?.inManifest, `${key} is not manifest-backed`));
+        const rendered = Array.from(doc.querySelectorAll('svg[data-icon-key]'));
+        assert(rendered.length > 0, 'No product SVG icons were rendered');
+        rendered.forEach((icon) => {
+          assert(icon.querySelector('use'), `${icon.dataset.iconKey} does not use the shared SVG sprite`);
+          assert(icon.getAttribute('aria-hidden') === 'true' || icon.getAttribute('aria-label') || icon.closest('[aria-label]'), `${icon.dataset.iconKey} has no accessible owner`);
+        });
+        ['[data-widget-catalog-launcher]', '[data-catalog-close]'].forEach((selector) => {
+          const control = doc.querySelector(selector);
+          assert(control?.querySelector('svg[data-icon-key] use'), `${selector} does not use a collection SVG`);
+        });
+      }),
+      run('Quiet Panel and Widget chrome uses the original typographic controls', async (doc) => {
+        const controls = [
+          ['[data-panel-create]', '+'],
+          ['[data-roster-decrease]', '−'],
+          ['[data-roster-increase]', '+'],
+          ['[data-panel-more]', '⋮']
+        ];
+        controls.forEach(([selector, glyph]) => {
+          const control = doc.querySelector(selector);
+          assert(control, `${selector} is absent`);
+          assert(control.textContent.trim() === glyph, `${selector} rendered ${JSON.stringify(control.textContent.trim())} instead of ${glyph}`);
+          assert(!control.querySelector('svg[data-icon-key]'), `${selector} still renders a collection SVG`);
+        });
+        const widgetActions = Array.from(doc.querySelectorAll('[data-widget-actions]'));
+        assert(widgetActions.length > 0, 'No Widget options controls were rendered');
+        widgetActions.forEach((control) => {
+          assert(control.textContent.trim() === '⋮', `${control.getAttribute('aria-label')} did not render ⋮`);
+          assert(!control.querySelector('svg[data-icon-key]'), `${control.getAttribute('aria-label')} still renders a collection SVG`);
+        });
+      }),
+      run('The Widget mockup is self-contained at runtime', async (doc, view) => {
+        await doc.fonts.ready;
+        const external = view.performance.getEntriesByType('resource').map((entry) => entry.name).filter((name) => {
+          const url = new URL(name, view.location.href);
+          return url.protocol.startsWith('http') && url.origin !== view.location.origin;
+        });
+        assert(external.length === 0, `Runtime fetched external resources: ${external.join(', ')}`);
+        assert(doc.fonts.check('12px "Newsreader"') && doc.fonts.check('12px "Geist Sans"') && doc.fonts.check('12px "Geist Mono"'), 'Vendored Design Bible fonts did not load');
+      }),
+      runPreview('The package preview loads vendored fonts without remote resources', async (doc, view) => {
+        await doc.fonts.ready;
+        const external = view.performance.getEntriesByType('resource').map((entry) => entry.name).filter((name) => {
+          const url = new URL(name, view.location.href);
+          return url.protocol.startsWith('http') && url.origin !== view.location.origin;
+        });
+        assert(external.length === 0, `Package preview fetched external resources: ${external.join(', ')}`);
+        assert(doc.fonts.check('12px "Newsreader"') && doc.fonts.check('12px "Geist Sans"') && doc.fonts.check('12px "Geist Mono"'), 'Package preview did not load all vendored Design Bible fonts');
+      }),
+      run('Every declared Widget state renders an honest accessible surface', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(api, 'The test inspection API is absent');
+        api.catalogDefinitions.forEach((definition) => definition.states.forEach((stateId) => {
+          const rendered = api.renderState(definition.type, stateId);
+          assert(rendered?.title === definition.name, `${definition.type}/${stateId} has no stable title`);
+          assert(rendered?.stateText?.trim(), `${definition.type}/${stateId} has no visible state text`);
+          assert(rendered?.marker?.trim(), `${definition.type}/${stateId} relies on color alone`);
+          const sample = JSON.stringify(rendered).toLowerCase();
+          assert(!/(api[_ -]?key|bearer |password|private memory|secret token)/.test(sample), `${definition.type}/${stateId} exposes private or credential sample data`);
+        }));
+      }),
+      run('State manifests cover every normalized Widget state family', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        const declared = new Set(api.catalogDefinitions.flatMap((definition) => definition.states));
+        ['ready', 'loading', 'empty', 'unavailable', 'access-denied', 'stale', 'dirty', 'saving', 'conflict', 'review', 'running', 'partial', 'refused', 'success', 'offline', 'failure'].forEach((stateId) => {
+          assert(declared.has(stateId), `Normalized Widget state is not declared: ${stateId}`);
+          assert(api.stateCopy[stateId]?.label && api.stateCopy[stateId]?.text && api.stateCopy[stateId]?.marker, `Normalized Widget state has no visible copy: ${stateId}`);
+        });
+      }),
+      run('Every registered Widget renders a distinctive safe ready blueprint', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(typeof api?.renderReady === 'function', 'The ready-blueprint renderer is absent');
+        const rendered = api.catalogDefinitions.map((definition) => api.renderReady(definition.type));
+        rendered.forEach((blueprint, index) => {
+          const definition = api.catalogDefinitions[index];
+          assert(blueprint?.title === definition.name, `${definition.type} lost its ready title`);
+          assert(blueprint?.scope?.trim(), `${definition.type} has no visible scope`);
+          assert(blueprint?.rows?.length >= 3, `${definition.type} has fewer than three representative rows`);
+          assert(blueprint?.boundary?.trim(), `${definition.type} has no authority or ownership boundary`);
+          assert(!/(api[_ -]?key|bearer |password|secret token)/i.test(JSON.stringify(blueprint)), `${definition.type} leaks credential-shaped sample data`);
+        });
+        assert(new Set(rendered.map((blueprint) => JSON.stringify(blueprint.rows))).size >= 90, 'Ready content collapsed into generic duplicate blueprints');
+        assert(api.renderReady('story.turn-inspector').regions.includes('Extension evidence'), 'Turn Inspector lacks its embedded extension region');
+        assert(api.renderReady('settings.maintenance').rows.some(([label, value]) => label === 'Host session' && value === 'Full panel section · not detachable'), 'Maintenance does not keep Host session non-detachable');
+        assert(api.renderReady('systems.character-relationships').actions.length === 0, 'Character Relationships exposes a mutation action');
+        assert(api.renderReady('settings.provider-credentials').rows.every(([, value]) => !value.includes('••••')), 'Provider Credentials pretends to read stored secrets back');
+      }),
+      run('Settings panels and movable subwidgets share one scope-qualified owner', async (doc, view) => {
+        const definitions = new Map(view.SonderWidgetMockup.catalogDefinitions.map((definition) => [definition.type, definition]));
+        const expectOwner = (ownerId, types) => types.forEach((type) => assert(definitions.get(type)?.ownerId === ownerId, `${type} is not bound to ${ownerId}`));
+        expectOwner('settings-providers', ['settings.provider-credentials', 'settings.connections']);
+        expectOwner('settings-models', ['settings.model-assignments', 'settings.default-model', 'settings.memory-search-model', 'settings.response-limit', 'settings.openrouter-routing']);
+        expectOwner('settings-theme', ['settings.theme', 'settings.custom-theme']);
+        expectOwner('settings-reading', ['settings.reading-layout', 'settings.story-reading-layout']);
+        expectOwner('settings-sound-motion', ['settings.sound-motion', 'settings.scene-backdrops', 'settings.room-ambience', 'settings.story-sound']);
+        expectOwner('settings-accessibility', ['settings.accessibility', 'settings.accessibility-controls']);
+        expectOwner('settings-content', ['settings.content', 'settings.content-preferences', 'settings.narrator-voice']);
+        expectOwner('story-living-world', ['systems.living-world', 'settings.living-world-controls']);
+        expectOwner('settings-add-ons', ['settings.add-ons', 'settings.installed-extensions', 'settings.install-extension']);
+        expectOwner('settings-maintenance', ['settings.maintenance', 'settings.sonder-updates', 'settings.checkpoint-storage', 'settings.memory-search-repair', 'settings.diagnostics']);
+        expectOwner('settings-prompts', ['settings.prompt-editor', 'settings.prompt-preset-editor']);
+        const groups = [...definitions.values()].filter((definition) => definition.type.startsWith('settings.group.'));
+        assert(groups.length === 6 && groups.every((definition) => view.SonderWidgetMockup.renderReady(definition.type).actions.length === 0), 'Settings group summaries gained mutation actions');
+      }),
+      run('Every documented Widget traverses real placement, persistence, render, and removal', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(typeof api?.exerciseDefinitionPlacement === 'function', 'Definition placement verifier is absent');
+        api.catalogDefinitions.forEach((definition) => {
+          const result = api.exerciseDefinitionPlacement(definition.type);
+          assert(result?.placed, `${definition.type} could not be placed`);
+          assert(result?.persisted, `${definition.type} did not enter Panel persistence`);
+          assert(result?.rendered, `${definition.type} did not render after placement`);
+          assert(result?.removed, `${definition.type} could not be removed cleanly`);
+        });
+      }),
+      run('Placed Widgets render scope, regions, authority boundary, and visible actions', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const result = doc.querySelector('[data-catalog-result][data-widget-type="story.context"]');
+        const seam = doc.querySelector('[data-dock-stack="left"] > .sonder-splitter');
+        assert(result && seam, 'Story Context or a compatible toolbar seam is absent');
+        dragCatalogResultTo(doc, result, seam);
+        const module = doc.querySelector('[data-widget-type="story.context"]');
+        assert(module?.querySelector('[data-widget-scope]')?.textContent === 'Active Story · Present frame', 'Placed Widget lost its visible scope');
+        assert(module.querySelectorAll('[data-widget-region]').length === 2, 'Placed Widget does not expose its designed regions');
+        assert(module.querySelector('[data-widget-boundary]')?.textContent.includes('Panel state stores presentation'), 'Placed Widget lost its ownership boundary');
+        assert(Array.from(module.querySelectorAll('[data-widget-primary-action]')).some((button) => button.textContent.trim() === 'Open frame'), 'Placed Widget lost its visible action label');
+      }),
+      run('Mock state explorer changes visible state without persisting demo data', async (doc, view) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        dragCatalogResultTo(doc, doc.querySelector('[data-catalog-result][data-widget-type="story.context"]'), doc.querySelector('[data-dock-stack="left"] > .sonder-splitter'));
+        const module = doc.querySelector('[data-widget-type="story.context"]');
+        module.querySelector('[data-widget-actions]').click();
+        const stateCommand = doc.querySelector('[data-widget-command="state"]');
+        assert(stateCommand, 'Widget action menu has no mock state explorer command');
+        stateCommand.click();
+        const stateMenu = doc.querySelector('[data-widget-state-menu]');
+        assert(stateMenu && !stateMenu.hidden, 'Mock state explorer did not open');
+        const declaredCount = view.SonderWidgetMockup.catalogDefinitions.find((definition) => definition.type === 'story.context').states.length;
+        assert(stateMenu.querySelectorAll('[data-widget-demo-state]').length === declaredCount, 'Story Context state explorer does not match its declared states');
+        stateMenu.querySelector('[data-widget-demo-state="unavailable"]').click();
+        assert(module.dataset.widgetDemoState === 'unavailable', 'Placed Widget did not switch to unavailable state');
+        assert(module.querySelector('[data-widget-state-surface]')?.textContent.includes('compatible context'), 'Unavailable state lacks honest visible copy');
+        assert(module.querySelector('.sonder-state-chip')?.textContent.trim() === 'Unavailable', 'State chip did not name the unavailable state');
+        assert(doc.querySelector('[data-widget-announcement]').textContent.includes('Unavailable'), 'State change was not announced');
+        const stored = view.SonderWidgetMockup.panelStateSnapshot().panels.find((panel) => panel.id === 'panel-scene').widgets.find((widget) => widget.type === 'story.context');
+        assert(Object.keys(stored).sort().join(',') === 'id,placement,type', `Demo state leaked into persisted Widget data: ${Object.keys(stored).join(',')}`);
+      }),
+      run('Extension owners register and tear down Widget and Inspector contributions', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(typeof api?.registerExtensionWidget === 'function', 'Owner-bound extension Widget registration is absent');
+        assert(typeof api?.registerInspectorRenderer === 'function', 'Owner-bound Inspector registration is absent');
+        const unregisterWidget = api.registerExtensionWidget('test-owner', {
+          id: 'weather-vane',
+          name: 'Weather Vane',
+          context: 'active-story',
+          role: 'module',
+          shape: 'narrow',
+          minColumns: 1,
+          multiplicity: 'single',
+          purpose: 'Show a bounded synthetic weather signal.',
+          keywords: ['weather'],
+          states: ['ready', 'unavailable', 'failure']
+        });
+        assert(typeof unregisterWidget === 'function', 'Extension registration did not return teardown');
+        assert(api.extensionDefinitions.length === 4, 'Extension Widget was not registered');
+        const registered = api.extensionDefinitions.find((definition) => definition.type === 'ext:test-owner:weather-vane');
+        assert(registered?.icon === 'category.extensions', 'Extension icon fallback did not use the collection-backed extension icon');
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        doc.querySelector('[data-catalog-category="extensions"]').click();
+        assert(doc.querySelector('[data-catalog-result][data-widget-type="ext:test-owner:weather-vane"]'), 'Registered extension did not enter the live Catalog');
+        const unregisterInspector = api.registerInspectorRenderer('test-owner', 'weather-evidence', { label: 'Weather evidence' });
+        assert(api.embeddedInspectorRenderers.length === 2, 'Extension Inspector renderer was not registered');
+        unregisterInspector();
+        assert(api.embeddedInspectorRenderers.length === 1, 'Extension Inspector teardown failed');
+        unregisterWidget();
+        assert(api.extensionDefinitions.length === 3, 'Extension Widget teardown failed');
+        assert(!doc.querySelector('[data-catalog-result][data-widget-type="ext:test-owner:weather-vane"]'), 'Retired extension remains in the live Catalog');
+        let rejected = false;
+        try { api.registerExtensionWidget('test-owner', { id: '../escape', name: 'Invalid' }); } catch (error) { rejected = true; }
+        assert(rejected, 'Invalid extension namespace was accepted');
+      }),
+      run('Embedded extension evidence stays in Turn Inspector and falls back to stored host text', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(typeof api?.renderInspectorEvidence === 'function', 'Embedded Inspector evidence renderer is absent');
+        const baseline = api.renderInspectorEvidence('evidence-lab', 'director-scope', { summary: 'Stored bounded scope evidence' });
+        assert(baseline?.mode === 'live' && baseline.ownerId === 'evidence-lab', 'Registered Inspector evidence did not render with owner attribution');
+        assert(baseline.content.includes('Stored bounded scope evidence'), 'Registered Inspector evidence lost its frozen stored projection');
+        assert(!api.catalogDefinitions.some((definition) => definition.type.includes('inspector:')), 'Embedded Inspector evidence leaked into the Catalog');
+        const unregister = api.registerInspectorRenderer('test-inspector', 'test-step', {
+          label: 'Test evidence',
+          version: 1,
+          render: (projection) => `Rendered: ${projection.summary}`
+        });
+        const live = api.renderInspectorEvidence('test-inspector', 'test-step', { summary: 'Synthetic stored output' });
+        assert(live?.mode === 'live' && live.content === 'Rendered: Synthetic stored output', 'Owner renderer did not receive the bounded projection');
+        unregister();
+        const fallback = api.renderInspectorEvidence('test-inspector', 'test-step', { summary: 'Synthetic stored output' });
+        assert(fallback?.mode === 'fallback' && fallback.content.includes('Synthetic stored output'), 'Retired Inspector renderer did not preserve host JSON/text fallback');
+        const inspector = api.renderWidgetReady('story.turn-inspector');
+        assert(inspector.querySelector('[data-inspector-extension-evidence]')?.textContent.includes('Evidence Lab'), 'Turn Inspector does not visibly contain its embedded extension evidence');
+      }),
+      run('Extension retirement preserves placement, restores safely, and contains repeated faults', async (doc, view) => {
+        const api = view.SonderWidgetMockup;
+        assert(typeof api?.retireExtensionOwner === 'function', 'Owner retirement API is absent');
+        assert(typeof api?.recordExtensionFault === 'function', 'Extension fault containment API is absent');
+        const manifest = {
+          id: 'signal-lamp',
+          name: 'Signal Lamp',
+          context: 'active-story',
+          role: 'module',
+          shape: 'narrow',
+          minColumns: 1,
+          purpose: 'Show one contained extension signal.',
+          states: ['ready', 'unavailable', 'failure']
+        };
+        api.registerExtensionWidget('fault-owner', manifest);
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        doc.querySelector('[data-catalog-category="extensions"]').click();
+        const source = doc.querySelector('[data-catalog-result][data-widget-type="ext:fault-owner:signal-lamp"]');
+        dragCatalogResultTo(doc, source, doc.querySelector('[data-dock-stack="left"] > .sonder-splitter'));
+        const live = doc.querySelector('[data-widget-type="ext:fault-owner:signal-lamp"]');
+        assert(live && !live.hasAttribute('data-extension-placeholder'), 'Extension Widget was not placed as live content');
+        const instanceId = live.dataset.widgetId;
+        api.retireExtensionOwner('fault-owner', 'Extension disabled');
+        const placeholder = doc.querySelector(`[data-widget-id="${instanceId}"][data-extension-placeholder]`);
+        assert(placeholder, 'Retirement discarded persisted placement instead of rendering a host placeholder');
+        assert(placeholder.textContent.includes('Extension disabled'), 'Placeholder does not explain why the owner is unavailable');
+        assert(Array.from(placeholder.querySelectorAll('button')).some((button) => button.textContent.trim() === 'Open Add-ons'), 'Placeholder has no Open Add-ons recovery action');
+        assert(Array.from(placeholder.querySelectorAll('button')).some((button) => button.textContent.trim() === 'Remove placement'), 'Placeholder has no Remove placement recovery action');
+        api.registerExtensionWidget('fault-owner', manifest);
+        const restored = doc.querySelector(`[data-widget-id="${instanceId}"][data-widget-type="ext:fault-owner:signal-lamp"]`);
+        assert(restored && !restored.hasAttribute('data-extension-placeholder'), 'Compatible re-registration did not rehydrate the placed Widget');
+        assert(api.recordExtensionFault('fault-owner', new Error('one')).retired === false, 'Owner retired before the three-fault threshold');
+        assert(api.recordExtensionFault('fault-owner', new Error('two')).retired === false, 'Owner retired before the three-fault threshold');
+        assert(api.recordExtensionFault('fault-owner', new Error('three')).retired === true, 'Owner did not retire at the three-fault threshold');
+        assert(doc.querySelector(`[data-widget-id="${instanceId}"][data-extension-placeholder]`), 'Fault retirement did not replace live content with the host placeholder');
+      }),
+      run('Scene default renders stage, strip, roster, system, and tabbed ledger Widgets', async (doc) => {
+        const ids = ['story.transcript', 'story.composer', 'story.characters', 'settings.custom-theme', 'systems.world-state', 'story.room-ambience', 'systems.promise-ledger'];
+        ids.forEach((id) => assert(doc.querySelector(`[data-widget-type="${id}"]`), `${id} is missing from Scene`));
+        const ambience = doc.querySelector('[data-widget-type="story.room-ambience"]');
+        const promise = doc.querySelector('[data-widget-type="systems.promise-ledger"]');
+        assert(ambience.closest('.sonder-widget-group') === promise.closest('.sonder-widget-group'), 'Room Ambience and Promise Ledger are not tabbed together');
+      }),
+      run('Library and Settings defaults render different Widget compositions', async (doc) => {
+        doc.querySelector('[data-panel-tab="panel-library"]').click();
+        assert(doc.querySelector('[data-widget-type="library.workspace"]'), 'Library workspace is absent');
+        assert(doc.querySelector('[data-widget-type="library.character-card"]'), 'Character Card is absent');
+        doc.querySelector('[data-panel-tab="panel-settings"]').click();
+        const activeSurface = doc.querySelector('[data-panel-surface]');
+        assert(activeSurface.querySelector('[data-widget-type="settings.provider-credentials"]'), 'Provider Credentials is absent');
+        assert(activeSurface.querySelector('[data-widget-type="settings.prompt-editor"]'), 'Prompt Editor is absent');
+        assert(!activeSurface.querySelector('[data-widget-type="story.transcript"]'), 'Scene Transcript leaked into Settings');
+      }),
+      run('Widgets launcher opens one centered eighty-percent modal over a blurred Panel', async (doc) => {
+        const root = doc.getElementById('sonder-calibration');
+        const shell = doc.querySelector('.sonder-window');
+        const surface = doc.querySelector('.sonder-panel-surface');
+        const before = surface.getBoundingClientRect();
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const catalog = doc.querySelector('[data-widget-catalog]');
+        const shellRect = shell.getBoundingClientRect();
+        const catalogRect = catalog.getBoundingClientRect();
+        const after = surface.getBoundingClientRect();
+        const widthRatio = catalogRect.width / shellRect.width;
+        const heightRatio = catalogRect.height / shellRect.height;
+        assert(catalog && !catalog.hidden, 'Catalog modal did not open');
+        assert(widthRatio >= .78 && widthRatio <= .82, `Catalog width is ${Math.round(widthRatio * 100)}%, not 80%`);
+        assert(heightRatio >= .78 && heightRatio <= .82, `Catalog height is ${Math.round(heightRatio * 100)}%, not 80%`);
+        assert(Math.abs((catalogRect.left + catalogRect.right) / 2 - (shellRect.left + shellRect.right) / 2) <= 2, 'Catalog is not horizontally centered');
+        assert(Math.abs((catalogRect.top + catalogRect.bottom) / 2 - (shellRect.top + shellRect.bottom) / 2) <= 2, 'Catalog is not vertically centered');
+        assert(root.classList.contains('is-catalog-open'), 'Catalog open state did not blur the workbench');
+        assert(getComputedStyle(doc.querySelector('.sonder-workspace')).filter !== 'none', 'Underlying workspace is not blurred');
+        assert(!doc.querySelector('[data-catalog-expand]'), 'Obsolete drawer expand control is still present');
+        assert(Math.abs(before.width - after.width) < 1, 'Catalog modal resized the Panel');
+      }),
+      run('Catalog category and search use the complete definition registry', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        doc.querySelector('[data-catalog-category="settings"]').click();
+        const categories = new Set(Array.from(doc.querySelectorAll('[data-catalog-result]')).map((item) => item.dataset.widgetCategory));
+        assert(categories.size === 1 && categories.has('settings'), 'Settings filter returned another category');
+        const search = doc.querySelector('[data-catalog-search]');
+        search.value = 'prompt';
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+        const ids = Array.from(doc.querySelectorAll('[data-catalog-result]')).map((item) => item.dataset.widgetType);
+        assert(ids.join(',') === 'settings.group.advanced,settings.prompt-editor,settings.prompt-preset-editor', `Prompt search returned ${ids.join(',')}`);
+      }),
+      run('Catalog registers Custom Theme separately and does not hard-code an extension example', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const ids = Array.from(doc.querySelectorAll('[data-catalog-result]')).map((item) => item.dataset.widgetType);
+        assert(ids.includes('settings.theme'), 'The complete Theme Settings panel is absent');
+        assert(ids.includes('settings.custom-theme'), 'The detachable Custom Theme Widget is absent');
+        assert(!ids.includes('extension.campaign'), 'The example Campaign extension is still hard-coded as a built-in Widget');
+      }),
+      run('Catalog text is not selectable while its search field remains editable', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const catalog = doc.querySelector('[data-widget-catalog]');
+        const identity = doc.querySelector('[data-catalog-widget-identity]');
+        const search = doc.querySelector('[data-catalog-search]');
+        assert(getComputedStyle(catalog).userSelect === 'none', 'Catalog chrome still allows native text selection');
+        assert(getComputedStyle(identity).userSelect === 'none', 'Widget identity copy can still be highlighted');
+        assert(getComputedStyle(search).userSelect === 'text', 'Catalog search text can no longer be selected for editing');
+      }),
+      run('Catalog filters use the available width before wrapping', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const buttons = Array.from(doc.querySelectorAll('[data-catalog-category], [data-catalog-utility]'));
+        const tops = buttons.map((button) => Math.round(button.getBoundingClientRect().top));
+        assert(buttons.length === 10, `Catalog rendered ${buttons.length} filter controls`);
+        assert(Math.max(...tops) - Math.min(...tops) <= 1, 'Catalog filters wrapped despite having room for one line');
+      }, { width: 1440, height: 900 }),
+      run('Visual Catalog results are faithful miniature Widgets without action rows', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const results = Array.from(doc.querySelectorAll('[data-catalog-result]'));
+        assert(results.length === 94, `Visual Catalog rendered ${results.length} Widgets`);
+        results.forEach((result) => {
+          const miniature = result.querySelector('.sonder-widget-miniature');
+          assert(miniature?.querySelector('[data-preview-widget]'), `${result.dataset.widgetType} has no rendered Widget`);
+          assert(miniature.textContent.trim().length > 20, `${result.dataset.widgetType} has no recognizable live content`);
+          assert(!result.querySelector('[data-catalog-add], [data-catalog-place], [data-catalog-favorite], .sonder-catalog-card-actions'), `${result.dataset.widgetType} retained Catalog action controls`);
+          assert(!miniature.querySelector('button, input, select, textarea, a[href], [role="button"], [tabindex]'), `${result.dataset.widgetType} retained an interactive descendant inside its inert miniature`);
+        });
+        assert(!doc.querySelector('.sonder-catalog-preview'), 'Generic placeholder previews are still rendered');
+      }),
+      run('Visual Widget previews identify their name and purpose above the Widget', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const result = doc.querySelector('[data-catalog-result][data-widget-type="story.characters"]');
+        const identity = result?.querySelector('[data-catalog-widget-identity]');
+        const miniature = result?.querySelector('.sonder-widget-miniature');
+        assert(identity?.querySelector('strong')?.textContent === 'Characters (Story)', 'Visual preview is missing the Widget name');
+        assert(identity?.querySelector('span')?.textContent === 'See characters present in the active story.', 'Visual preview is missing the Widget purpose');
+        assert(identity.getBoundingClientRect().bottom <= miniature.getBoundingClientRect().top + 1, 'Widget identity is not above its preview');
+      }),
+      run('Designed Scene Widgets use their actual UI as the Catalog preview', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const expected = {
+          'story.transcript': '.sonder-transcript .sonder-story-title',
+          'story.composer': '.sonder-composer .sonder-composer-field',
+          'story.characters': '.sonder-character-module .sonder-roster-row',
+          'settings.custom-theme': '.sonder-theme-module .sonder-swatches',
+          'systems.world-state': '.sonder-effects-body .sonder-effect-row',
+          'story.room-ambience': '.sonder-persona-summary',
+          'systems.promise-ledger': '.sonder-connection-body'
+        };
+        Object.entries(expected).forEach(([type, selector]) => {
+          const result = doc.querySelector(`[data-catalog-result][data-widget-type="${type}"]`);
+          assert(result?.querySelector(`.sonder-widget-miniature ${selector}`), `${type} fell back to a generic Catalog skeleton`);
+        });
+      }),
+      run('Custom Theme preview preserves its ambient instrument without cloning the placed instance', async (doc) => {
+        const placed = doc.querySelector('[data-widget-id="scene-theme"][data-widget-type="settings.custom-theme"]');
+        assert(placed, 'Scene does not contain the canonical Custom Theme Widget');
+        placed.querySelector('.sonder-ambient-editor')?.remove();
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const result = doc.querySelector('[data-catalog-result][data-widget-type="settings.custom-theme"]');
+        const preview = result?.querySelector('[data-preview-widget="settings.custom-theme"]');
+        const ambient = preview?.querySelector('.sonder-ambient-editor');
+        assert(result?.querySelector('[data-catalog-widget-identity] strong')?.textContent === 'Custom Theme', 'Catalog still identifies the detachable Widget as Theme');
+        assert(preview?.querySelectorAll('.sonder-parameter').length === 4, 'Custom Theme preview lost material controls');
+        assert(preview?.querySelectorAll('.sonder-ambient-ring').length === 2, 'Custom Theme preview lost ambient size or intensity');
+        assert(ambient && getComputedStyle(ambient).display !== 'none', 'Custom Theme ambient instrument is hidden in the Catalog');
+      }),
+      run('Compact mode keeps whole rows draggable and removes per-Widget actions', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        doc.querySelector('[data-catalog-view="compact"]').click();
+        const row = doc.querySelector('[data-catalog-result][data-widget-type="story.turn-inspector"]');
+        assert(row?.classList.contains('is-compact'), 'Compact result row was not rendered');
+        assert(row.hasAttribute('data-catalog-drag-source'), 'Compact result is not the drag source');
+        assert(row.querySelector('.sonder-catalog-compact-sample'), 'Compact result lost Widget identity');
+        assert(!row.querySelector('button'), 'Compact result retained action buttons');
+      }),
+      run('Visual Catalog uses portrait Widget footprints instead of horizontal rows', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const portrait = doc.querySelector('[data-catalog-result][data-widget-type="library.character-card"]');
+        const rect = portrait.getBoundingClientRect();
+        const ratio = rect.height / rect.width;
+        assert(ratio >= 1.15 && ratio <= 1.45, `Character Card preview ratio is ${ratio.toFixed(2)}, not portrait`);
+      }, { width: 1440, height: 900 }),
+      run('Catalog lays out two Widget columns on a compact browser', async (doc, view) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const columns = getComputedStyle(doc.querySelector('[data-catalog-results]')).gridTemplateColumns.split(' ').filter(Boolean).length;
+        assert(columns === 2, `Compact Catalog rendered ${columns} columns`);
+      }, { width: 900, height: 900 }),
+      run('Catalog lays out three Widget columns on a standard browser', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const columns = getComputedStyle(doc.querySelector('[data-catalog-results]')).gridTemplateColumns.split(' ').filter(Boolean).length;
+        assert(columns === 3, `Standard Catalog rendered ${columns} columns`);
+      }, { width: 1280, height: 900 }),
+      run('Catalog caps its Widget grid at four columns on a wide browser', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const columns = getComputedStyle(doc.querySelector('[data-catalog-results]')).gridTemplateColumns.split(' ').filter(Boolean).length;
+        assert(columns === 4, `Wide Catalog rendered ${columns} columns`);
+      }, { width: 1920, height: 1080 }),
+      run('Dragging the whole Widget preview places it and restores the Catalog', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        doc.querySelector('[data-catalog-category="systems"]').click();
+        const catalogBefore = doc.querySelector('[data-widget-catalog]').getBoundingClientRect();
+        const result = doc.querySelector('[data-catalog-result][data-widget-type="systems.frames"]');
+        const target = doc.querySelector('.sonder-scene');
+        assert(result?.hasAttribute('data-catalog-drag-source'), 'Frames preview is not a whole-surface drag source');
+        dragCatalogResultTo(doc, result, target);
+        assert(doc.querySelector('[data-widget-id][data-widget-type="systems.frames"]'), 'Frames was not placed');
+        assert(doc.querySelector('[data-widget-announcement]').textContent.includes('Frames added'), 'Placement was not announced');
+        assert(!doc.querySelector('[data-widget-catalog]').hidden, 'Catalog did not return after placement');
+        const catalogAfter = doc.querySelector('[data-widget-catalog]').getBoundingClientRect();
+        assert(Math.abs(catalogAfter.left - catalogBefore.left) <= 1 && Math.abs(catalogAfter.top - catalogBefore.top) <= 1, 'Catalog did not return to the same position');
+        assert(doc.querySelector('[data-catalog-category="systems"]').getAttribute('aria-pressed') === 'true', 'Catalog category was not preserved after placement');
+      }),
+      run('Catalog drop places the floating Widget under the release point', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const result = doc.querySelector('[data-catalog-result][data-widget-type="library.character-card"]');
+        const sceneRect = doc.querySelector('.sonder-scene').getBoundingClientRect();
+        const destination = { x: sceneRect.right - 90, y: sceneRect.bottom - 90 };
+        dragCatalogResultToPoint(doc, result, destination);
+        const placed = doc.querySelector('[data-floating-layer] [data-widget-type="library.character-card"]');
+        const placedRect = placed.getBoundingClientRect();
+        assert(destination.x >= placedRect.left && destination.x <= placedRect.right
+          && destination.y >= placedRect.top && destination.y <= placedRect.bottom,
+        'Floating Character Card did not remain under the release point');
+      }),
+      run('Catalog-placed floating Widget remains movable', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const result = doc.querySelector('[data-catalog-result][data-widget-type="story.turn-inspector"]');
+        dragCatalogResultTo(doc, result, doc.querySelector('.sonder-scene'));
+        doc.querySelector('[data-catalog-close]').click();
+        const placed = doc.querySelector('[data-floating-layer] [data-widget-type="story.turn-inspector"]');
+        const handle = placed.querySelector('[data-widget-drag-surface]');
+        const before = placed.getBoundingClientRect();
+        const start = center(handle);
+        const hit = doc.elementFromPoint(start.x, start.y);
+        assert(hit?.closest('[data-widget-id]') === placed, 'Placed Widget does not receive pointer input');
+        const destination = { x: start.x + 100, y: start.y + 70 };
+        pointer(hit, 'pointerdown', start);
+        pointer(doc, 'pointermove', { x: start.x + 8, y: start.y + 4 });
+        pointer(doc, 'pointermove', destination);
+        pointer(doc, 'pointerup', destination);
+        const after = placed.getBoundingClientRect();
+        assert(Math.abs(after.left - before.left) >= 60 && Math.abs(after.top - before.top) >= 35,
+          `Placed Widget moved only ${Math.round(after.left - before.left)}px by ${Math.round(after.top - before.top)}px`);
+      }),
+      run('A Panel singleton already present becomes a subtle unavailable preview', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const first = doc.querySelector('[data-catalog-result][data-widget-type="systems.frames"]');
+        dragCatalogResultTo(doc, first, doc.querySelector('.sonder-scene'));
+        const current = doc.querySelector('[data-catalog-result][data-widget-type="systems.frames"]');
+        assert(current?.classList.contains('is-on-panel'), 'Placed singleton has no on-Panel state');
+        assert(current?.getAttribute('aria-disabled') === 'true', 'Placed singleton is not exposed as unavailable');
+        assert(!current?.hasAttribute('data-catalog-drag-source'), 'Placed singleton remains draggable');
+        assert(doc.querySelectorAll('[data-widget-id][data-widget-type="systems.frames"]').length === 1, 'Singleton Frames duplicated');
+      }),
+      run('Lifting a Widget inside the Catalog keeps the modal visible', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const catalog = doc.querySelector('[data-widget-catalog]');
+        const result = doc.querySelector('[data-catalog-result][data-widget-type="story.turn-inspector"]');
+        const start = center(result);
+        pointer(result, 'pointerdown', start);
+        pointer(doc, 'pointermove', { x: start.x + 10, y: start.y + 3 });
+        assert(!catalog.hidden, 'Catalog hid before the pointer crossed its boundary');
+        assert(doc.querySelector('[data-catalog-drag-proxy]'), 'Lifted Widget proxy was not rendered inside the Catalog');
+        assert(!doc.getElementById('sonder-calibration').classList.contains('is-catalog-placing'), 'Placement targets appeared before extraction');
+        doc.dispatchEvent(new doc.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(!doc.querySelector('[data-catalog-drag-proxy]'), 'Escape did not return the lifted Widget to the Catalog');
+      }),
+      run('Crossing the Catalog boundary hides it and exposes compatible targets', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const catalog = doc.querySelector('[data-widget-catalog]');
+        const sceneLabel = doc.querySelector('.sonder-scene').getAttribute('aria-label');
+        const result = doc.querySelector('[data-catalog-result][data-widget-type="story.turn-inspector"]');
+        const start = center(result);
+        const catalogRect = catalog.getBoundingClientRect();
+        pointer(result, 'pointerdown', start);
+        pointer(doc, 'pointermove', { x: start.x + 10, y: start.y + 3 });
+        pointer(doc, 'pointermove', { x: Math.max(1, catalogRect.left - 12), y: catalogRect.top + catalogRect.height / 2 });
+        assert(doc.getElementById('sonder-calibration').classList.contains('is-catalog-placing'), 'Placement mode did not begin');
+        assert(catalog.hidden, 'Catalog did not hide after extraction');
+        assert(doc.querySelectorAll('[data-placement-target]').length > 0, 'No compatible targets were exposed');
+        assert(doc.querySelector('[data-catalog-drag-proxy]'), 'Lifted Widget proxy was not rendered');
+        doc.dispatchEvent(new doc.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(!doc.getElementById('sonder-calibration').classList.contains('is-catalog-placing'), 'Escape did not cancel placement');
+        assert(!doc.querySelector('[data-widget-catalog]').hidden, 'Catalog did not return after cancellation');
+        assert(doc.querySelector('.sonder-scene').getAttribute('aria-label') === sceneLabel, 'Placement cleanup erased the Scene landmark label');
+        const splitters = Array.from(doc.querySelectorAll('[data-shelf-resizer]'));
+        assert(splitters.every((splitter) => splitter.getAttribute('role') === 'separator' && splitter.getAttribute('aria-label')?.startsWith('Resize ')), 'Placement cleanup erased splitter accessibility semantics');
+      }),
+      run('Catalog Widgets can create new shelves through toolbar seams', async (doc) => {
+        const types = ['systems.living-world', 'systems.frames', 'settings.accessibility'];
+        for (const type of types) {
+          if (doc.querySelector('[data-widget-catalog]').hidden) doc.querySelector('[data-widget-catalog-launcher]').click();
+          const result = doc.querySelector(`[data-catalog-result][data-widget-type="${type}"]`);
+          const seam = doc.querySelector('[data-dock-stack="left"] > .sonder-splitter');
+          assert(result && seam, `No Catalog result or toolbar seam was available for ${type}`);
+          dragCatalogResultTo(doc, result, seam);
+          assert(doc.querySelector(`[data-dock="left"] [data-widget-type="${type}"]`), `${type} did not become a toolbar shelf`);
+        }
+        const groups = groupIds(doc, 'left');
+        assert(groups.length === 5, `Expected five shelves after Catalog placement, got ${groups.length}`);
+        assert(doc.querySelector('[data-dock-stack="left"]').scrollHeight > doc.querySelector('[data-dock-stack="left"]').clientHeight + 20, 'Catalog shelves compressed instead of overflowing naturally');
+      }, 900),
+      run('Empty slot opens the same Catalog with Fits this slot visible', async (doc) => {
+        doc.querySelector('[data-panel-create]').click();
+        const dialog = doc.querySelector('[data-panel-dialog]');
+        dialog.querySelector('[data-panel-name]').value = 'Empty Columns';
+        dialog.querySelector('[data-template-choice="columns.v1"]').click();
+        dialog.querySelector('[data-column-count="2"]').click();
+        dialog.querySelector('[data-create-panel]').click();
+        doc.querySelector('[data-slot-add]').click();
+        assert(doc.querySelector('[data-widget-catalog]').dataset.catalogFilter === 'slot', 'Slot filter was not applied');
+        assert(doc.querySelector('[data-active-catalog-filter]').textContent.includes('Fits this slot'), 'Slot filter is not visible');
+      }),
+      run('A user Panel persists with its template and order', async (doc, view, frame) => {
+        doc.querySelector('[data-panel-create]').click();
+        const dialog = doc.querySelector('[data-panel-dialog]');
+        dialog.querySelector('[data-panel-name]').value = 'Director Desk';
+        dialog.querySelector('[data-template-choice="columns.v1"]').click();
+        dialog.querySelector('[data-column-count="4"]').click();
+        dialog.querySelector('[data-create-panel]').click();
+        const createdId = doc.querySelector('[data-panel-tab][aria-selected="true"]').dataset.panelTab;
+        await reloadWorkbench(frame);
+        const reloaded = frame.contentDocument;
+        const restored = reloaded.querySelector(`[data-panel-tab="${createdId}"]`);
+        assert(restored?.textContent.trim() === 'Director Desk', 'User Panel did not return after reload');
+        restored.click();
+        assert(reloaded.getElementById('sonder-calibration').dataset.panelColumns === '4', 'Restored Panel lost its four-column template');
+        assert(Array.from(reloaded.querySelectorAll('[data-panel-tab]')).at(-1) === restored, 'Restored Panel order changed');
+      }, { persistenceKey: `panel-create-${Date.now()}-${Math.random()}` }),
+      run('Reset Panel to Defaults restores Scene composition without changing story', async (doc, view) => {
+        const story = doc.querySelector('.sonder-story-lockup strong').textContent;
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        dragCatalogResultTo(doc, doc.querySelector('[data-catalog-result][data-widget-type="systems.frames"]'), doc.querySelector('.sonder-scene'));
+        assert(doc.querySelector('[data-widget-id][data-widget-type="systems.frames"]'), 'Frames was not added before reset');
+        doc.querySelector('[data-catalog-close]').click();
+        const sceneTab = doc.querySelector('[data-panel-tab="panel-scene"]');
+        sceneTab.dispatchEvent(new view.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+        const reset = doc.querySelector('[data-panel-command="reset"]');
+        assert(reset && !reset.hidden, 'Default Panel reset command is absent');
+        reset.click();
+        assert(!doc.querySelector('[data-widget-id][data-widget-type="systems.frames"]'), 'Reset retained the added Frames Widget');
+        assert(doc.querySelector('.sonder-story-lockup strong').textContent === story, 'Reset changed active story');
+      }),
+      run('Undo restores the exact removed Widget instance', async (doc) => {
+        const world = doc.querySelector('[data-widget-type="systems.world-state"]');
+        const instanceId = world.dataset.widgetId;
+        const groupId = world.closest('.sonder-widget-group').dataset.widgetGroup;
+        doc.querySelector(`[data-widget-actions="${instanceId}"]`).click();
+        doc.querySelector('[data-widget-command="remove"]').click();
+        assert(!doc.querySelector(`[data-widget-id="${instanceId}"]`), 'World State was not removed');
+        doc.querySelector('[data-layout-undo]').click();
+        const restored = doc.querySelector(`[data-widget-id="${instanceId}"]`);
+        assert(restored, 'Undo did not restore World State');
+        assert(restored.closest('.sonder-widget-group').dataset.widgetGroup === groupId, 'Undo changed the Widget group');
+      }),
+      run('Phone Catalog remains centered at eighty percent without horizontal overflow', async (doc, view) => {
+        const launcher = doc.querySelector('[data-widget-catalog-launcher]');
+        assert(launcher && launcher.getBoundingClientRect().right <= view.innerWidth, 'Widgets launcher is unreachable');
+        launcher.click();
+        const shellRect = doc.querySelector('.sonder-window').getBoundingClientRect();
+        const rect = doc.querySelector('[data-widget-catalog]').getBoundingClientRect();
+        assert(rect.width / shellRect.width >= .78 && rect.width / shellRect.width <= .82, 'Phone Catalog is not eighty percent wide');
+        assert(Math.abs((rect.left + rect.right) / 2 - (shellRect.left + shellRect.right) / 2) <= 2, 'Phone Catalog is not centered');
+        assert(doc.documentElement.scrollWidth <= view.innerWidth + 1, 'Phone layout has horizontal document overflow');
+      }, { width: 390, height: 844 }),
+      run('Short-height modal Catalog leaves useful result space', async (doc) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const resultsRect = doc.querySelector('.sonder-catalog-results').getBoundingClientRect();
+        assert(resultsRect.height >= 260, `Catalog results are only ${Math.round(resultsRect.height)}px tall`);
+      }, { width: 1024, height: 600 }),
+      run('Keyboard placement can select a target, confirm, and cancel', async (doc, view) => {
+        doc.querySelector('[data-widget-catalog-launcher]').click();
+        const inspector = doc.querySelector('[data-catalog-result][data-widget-type="story.turn-inspector"]');
+        inspector.focus();
+        inspector.dispatchEvent(new view.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+        const firstTarget = doc.querySelector('[data-placement-target][tabindex="0"]');
+        assert(firstTarget, 'Space did not pick up the Widget and expose a target');
+        doc.dispatchEvent(new view.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        const movedTarget = doc.activeElement;
+        assert(movedTarget?.matches('[data-placement-target]'), 'ArrowRight did not move between placement targets');
+        doc.dispatchEvent(new view.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        assert(doc.querySelector('[data-widget-id][data-widget-type="story.turn-inspector"]'), 'Enter did not confirm placement');
+        const maintenance = doc.querySelector('[data-catalog-result][data-widget-type="settings.maintenance"]');
+        maintenance.focus();
+        maintenance.dispatchEvent(new view.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+        doc.dispatchEvent(new view.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(!doc.querySelector('.sonder-workspace [data-widget-type="settings.maintenance"], .sonder-panel-surface [data-widget-type="settings.maintenance"], .sonder-floating-layer [data-widget-type="settings.maintenance"]'), 'Escape did not cancel Maintenance placement');
+        assert(doc.querySelector('[data-widget-announcement]').textContent.includes('cancelled'), 'Cancellation was not announced');
+      }),
+      run('Catalog Escape closes the single modal and returns focus to its launcher', async (doc, view) => {
+        const launcher = doc.querySelector('[data-widget-catalog-launcher]');
+        launcher.click();
+        doc.dispatchEvent(new view.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(doc.querySelector('[data-widget-catalog]').hidden, 'Escape did not close the Catalog modal');
+        assert(doc.activeElement === launcher, 'Focus did not return to Widgets launcher');
+        const mediaRules = Array.from(doc.styleSheets).flatMap((sheet) => Array.from(sheet.cssRules || []));
+        assert(mediaRules.some((rule) => String(rule.conditionText || '').includes('prefers-reduced-motion')), 'Reduced-motion catalog rules are absent');
+      }),
+      run('A standard-height toolbar accepts every available Widget as a shelf', async (doc) => {
+        commandWidget(doc, 'scene-world', 'left');
+        commandWidget(doc, 'scene-ambience', 'separate');
+        commandWidget(doc, 'scene-promises', 'left');
+        commandWidget(doc, 'scene-ambience', 'left');
+
+        const groups = groupIds(doc, 'left');
+        assert(groups.join(',') === 'scene-characters,scene-theme,scene-world,scene-promises,scene-ambience', `Expected five ordered shelves, got ${groups.join(',')}`);
+        const stack = doc.querySelector('[data-dock-stack="left"]');
+        assert(stack.scrollHeight > stack.clientHeight + 20, 'The populated toolbar compressed its shelves instead of becoming scrollable');
+        const undersized = Array.from(stack.querySelectorAll(':scope > .sonder-widget-group')).find((group) => group.getBoundingClientRect().height < 86);
+        assert(!undersized, 'A shelf was compressed below its usable minimum height');
+      }, 900),
+      run('Toolbar eligibility does not change at extreme display height', async (doc) => {
+        assert(!doc.getElementById('sonder-calibration').hasAttribute('data-dock-capacity'), 'The toolbar still exposes a height-derived capacity limit');
+        commandWidget(doc, 'scene-world', 'left');
+        assert(groupIds(doc, 'left').length === 3, 'A tall toolbar refused an additional shelf');
+      }, 2160),
+      run('Dragging Room Ambience onto the World State title bar merges it as a tab', async (doc) => {
+        const personasTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const effectsHead = doc.querySelector('[data-widget-id="scene-world"] [data-widget-drag-surface]');
+        assert(personasTab && effectsHead, 'Required widget handles were not rendered');
+        beginDrag(doc, personasTab);
+        const target = center(effectsHead);
+        pointer(doc, 'pointermove', target);
+        pointer(doc, 'pointerup', target);
+        const effectsGroup = doc.querySelector('[data-widget-id="scene-world"]').closest('.sonder-widget-group');
+        assert(effectsGroup.querySelector('[data-widget-id="scene-ambience"]'), 'Room Ambience was stacked near World State instead of becoming its tab');
+      }),
+      run('The title strip remains a hard tab target above Widget-body bands', async (doc) => {
+        const sourceTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const worldHead = doc.querySelector('[data-widget-id="scene-world"] [data-widget-drag-surface]');
+        assert(sourceTab && worldHead, 'Required title-strip priority fixtures were not rendered');
+        const rect = worldHead.getBoundingClientRect();
+        const target = { x: rect.left + rect.width / 2, y: rect.top + 5 };
+        beginDrag(doc, sourceTab);
+        pointer(doc, 'pointermove', target);
+        pointer(doc, 'pointerup', target);
+        const worldGroup = doc.querySelector('[data-widget-id="scene-world"]').closest('.sonder-widget-group');
+        assert(worldGroup.querySelector('[data-widget-id="scene-ambience"]'), 'The Widget-body Shelf above band overrode the title strip');
+      }, 900),
+      run('A short first shelf keeps its Shelf above seam below the title', async (doc, view) => {
+        commandWidget(doc, 'scene-theme', 'float');
+        const sourceTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const characters = doc.querySelector('[data-widget-id="scene-characters"]').closest('.sonder-widget-group');
+        const title = characters?.querySelector('[data-widget-drag-surface]');
+        assert(sourceTab && characters && title, 'Required short-shelf fixtures were not rendered');
+        characters.style.flex = '0 0 86px';
+        await nextFrame(view);
+        beginDrag(doc, sourceTab);
+        const rail = doc.querySelector('[data-drop-rail][data-drop-side="left"][data-drop-index="0"]');
+        const railRect = rail.getBoundingClientRect();
+        const titleRect = title.getBoundingClientRect();
+        const groupRect = characters.getBoundingClientRect();
+        assert(railRect.top >= titleRect.bottom - 1, `Shelf above begins at ${Math.round(railRect.top)}px before the title ends at ${Math.round(titleRect.bottom)}px`);
+        assert(railRect.bottom <= groupRect.bottom + 1, 'The short-shelf seam escaped its Widget body');
+        const target = center(rail);
+        pointer(doc, 'pointermove', target);
+        assert(rail.classList.contains('is-active'), 'The short first Shelf above seam was not an active target');
+        pointer(doc, 'pointerup', target);
+        assert(groupIds(doc, 'left').join(',') === 'scene-ambience,scene-characters', `Short-shelf placement produced ${groupIds(doc, 'left').join(',')}`);
+      }, 900),
+      run('The bottom quarter of a Widget creates a shelf below', async (doc) => {
+        const sourceTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const characters = doc.querySelector('[data-widget-id="scene-characters"]').closest('.sonder-widget-group');
+        assert(sourceTab && characters, 'Required Widget intent fixtures were not rendered');
+        const rect = characters.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+
+        beginDrag(doc, sourceTab);
+        pointer(doc, 'pointermove', { x, y: rect.top + rect.height * .82 });
+        const belowRail = doc.querySelector('[data-drop-rail][data-drop-side="left"][data-drop-index="1"]');
+        assert(belowRail?.classList.contains('is-active'), 'The bottom quarter did not activate Shelf below');
+        pointer(doc, 'pointerup', { x, y: rect.top + rect.height * .82 });
+        assert(groupIds(doc, 'left').join(',') === 'scene-characters,scene-ambience,scene-theme', `Bottom-quarter placement produced ${groupIds(doc, 'left').join(',')}`);
+      }, 900),
+      run('The center half of a Widget remains a tab target', async (doc) => {
+        const sourceTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const characters = doc.querySelector('[data-widget-id="scene-characters"]').closest('.sonder-widget-group');
+        assert(sourceTab && characters, 'Required Widget intent fixtures were not rendered');
+        const rect = characters.getBoundingClientRect();
+        const target = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        beginDrag(doc, sourceTab);
+        pointer(doc, 'pointermove', target);
+        pointer(doc, 'pointerup', target);
+        assert(characters.querySelector('[data-widget-id="scene-ambience"]'), 'The center half created a shelf instead of a tab');
+      }, 900),
+      run('The top quarter of a Widget creates a shelf above', async (doc) => {
+        const sourceTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const characters = doc.querySelector('[data-widget-id="scene-characters"]').closest('.sonder-widget-group');
+        assert(sourceTab && characters, 'Required Widget intent fixtures were not rendered');
+        const rect = characters.getBoundingClientRect();
+        const target = { x: rect.left + rect.width / 2, y: rect.top + rect.height * .18 };
+        beginDrag(doc, sourceTab);
+        pointer(doc, 'pointermove', target);
+        const aboveRail = doc.querySelector('[data-drop-rail][data-drop-side="left"][data-drop-index="0"]');
+        assert(aboveRail?.classList.contains('is-active'), 'The top quarter did not activate Shelf above');
+        pointer(doc, 'pointerup', target);
+        assert(groupIds(doc, 'left').join(',') === 'scene-ambience,scene-characters,scene-theme', `Top-quarter placement produced ${groupIds(doc, 'left').join(',')}`);
+      }, 900),
+      run('Shelf intent does not flicker at a quarter boundary', async (doc) => {
+        const sourceTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const characters = doc.querySelector('[data-widget-id="scene-characters"]').closest('.sonder-widget-group');
+        assert(sourceTab && characters, 'Required Widget intent fixtures were not rendered');
+        const rect = characters.getBoundingClientRect();
+        const titleRect = characters.querySelector('[data-widget-drag-surface]').getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const boundary = titleRect.bottom + (rect.bottom - titleRect.bottom) * .75;
+        beginDrag(doc, sourceTab);
+        pointer(doc, 'pointermove', { x, y: boundary + 16 });
+        const rail = doc.querySelector('[data-drop-rail][data-drop-side="left"][data-drop-index="1"]');
+        assert(rail?.classList.contains('is-active'), 'Shelf below did not activate before the stability check');
+        pointer(doc, 'pointermove', { x, y: boundary - 5 });
+        assert(rail.classList.contains('is-active'), 'Shelf intent flickered immediately after crossing the quarter boundary');
+        pointer(doc, 'pointermove', { x, y: boundary - 12 });
+        assert(!rail.classList.contains('is-active') && characters.classList.contains('is-tab-drop-target'), 'Shelf intent did not yield after the stability margin');
+      }, 900),
+      run('Shelf below feedback stays outside footer controls', async (doc) => {
+        commandWidget(doc, 'scene-theme', 'float');
+        const sourceTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const characters = doc.querySelector('[data-widget-id="scene-characters"]').closest('.sonder-widget-group');
+        const footer = characters?.querySelector('.sonder-roster-scale');
+        assert(sourceTab && characters && footer, 'Required footer collision fixtures were not rendered');
+        beginDrag(doc, sourceTab);
+        const rail = doc.querySelector('[data-drop-rail][data-drop-side="left"][data-drop-index="1"]');
+        const railRect = rail.getBoundingClientRect();
+        const footerRect = footer.getBoundingClientRect();
+        assert(railRect.top >= footerRect.bottom - 1, `Shelf below begins at ${Math.round(railRect.top)}px before the footer ends at ${Math.round(footerRect.bottom)}px`);
+        const charactersRect = characters.getBoundingClientRect();
+        pointer(doc, 'pointermove', { x: charactersRect.left + charactersRect.width / 2, y: charactersRect.top + charactersRect.height * .82 });
+        const ghost = doc.querySelector('[data-snap-ghost]');
+        const ghostRect = ghost.getBoundingClientRect();
+        assert(!ghost.hidden && ghostRect.top >= footerRect.bottom - 1, `Shelf below preview begins at ${Math.round(ghostRect.top)}px before the footer ends at ${Math.round(footerRect.bottom)}px`);
+      }, 900),
+      run('A constrained Shelf below preview never falls back over footer controls', async (doc, view) => {
+        commandWidget(doc, 'scene-theme', 'float');
+        const sourceTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const characters = doc.querySelector('[data-widget-id="scene-characters"]').closest('.sonder-widget-group');
+        const footer = characters?.querySelector('.sonder-roster-scale');
+        const dock = characters?.closest('[data-dock]');
+        assert(sourceTab && characters && footer && dock, 'Required constrained footer fixtures were not rendered');
+        characters.style.flex = '0 0 calc(100% - 14px)';
+        await nextFrame(view);
+        const charactersRect = characters.getBoundingClientRect();
+        const dockRect = dock.getBoundingClientRect();
+        assert(dockRect.bottom - charactersRect.bottom < 72, 'The footer fixture did not exercise the constrained preview fallback');
+        beginDrag(doc, sourceTab);
+        pointer(doc, 'pointermove', { x: charactersRect.left + charactersRect.width / 2, y: charactersRect.top + charactersRect.height * .82 });
+        const ghost = doc.querySelector('[data-snap-ghost]');
+        const ghostRect = ghost.getBoundingClientRect();
+        const footerRect = footer.getBoundingClientRect();
+        assert(!ghost.hidden, 'The constrained Shelf below preview disappeared');
+        assert(ghostRect.top >= footerRect.bottom - 1, `Constrained preview begins at ${Math.round(ghostRect.top)}px before the footer ends at ${Math.round(footerRect.bottom)}px`);
+        assert(ghostRect.bottom <= dockRect.bottom + 1, `Constrained preview ends at ${Math.round(ghostRect.bottom)}px beyond the dock at ${Math.round(dockRect.bottom)}px`);
+      }, 900),
+      run('Open space below a populated dock previews at the append edge', async (doc, view) => {
+        commandWidget(doc, 'scene-theme', 'float');
+        const sourceTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const characters = doc.querySelector('[data-widget-id="scene-characters"]').closest('.sonder-widget-group');
+        const dock = characters?.closest('[data-dock]');
+        assert(sourceTab && characters && dock, 'Required populated append fixtures were not rendered');
+        characters.style.flex = '0 0 300px';
+        await nextFrame(view);
+        const charactersRect = characters.getBoundingClientRect();
+        const dockRect = dock.getBoundingClientRect();
+        const target = { x: charactersRect.left + charactersRect.width / 2, y: dockRect.bottom - 24 };
+        assert(target.y > charactersRect.bottom, 'The append fixture did not leave open dock space below the final shelf');
+        beginDrag(doc, sourceTab);
+        pointer(doc, 'pointermove', target);
+        const ghost = doc.querySelector('[data-snap-ghost]');
+        const ghostRect = ghost.getBoundingClientRect();
+        assert(!ghost.hidden, 'The populated append preview disappeared');
+        assert(ghostRect.top >= charactersRect.bottom - 1, `Append preview began at ${Math.round(ghostRect.top)}px above the final shelf edge at ${Math.round(charactersRect.bottom)}px`);
+        pointer(doc, 'pointerup', target);
+        assert(groupIds(doc, 'left').join(',') === 'scene-characters,scene-ambience', `Open-space append produced ${groupIds(doc, 'left').join(',')}`);
+      }, 900),
+      run('Dragging a tab left reshuffles it before its neighbor', async (doc) => {
+        const connectionsTab = doc.querySelector('[data-group-tab="scene-promises"]');
+        const personasTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        assert(connectionsTab && personasTab, 'Required tabs were not rendered');
+        const targetRect = personasTab.getBoundingClientRect();
+        beginDrag(doc, connectionsTab);
+        const target = { x: targetRect.left + 4, y: targetRect.top + targetRect.height / 2 };
+        pointer(doc, 'pointermove', target);
+        pointer(doc, 'pointerup', target);
+        const group = doc.querySelector('[data-widget-id="scene-promises"]').closest('.sonder-widget-group');
+        const order = Array.from(group.querySelectorAll('[data-group-tab]')).map((tab) => tab.dataset.groupTab);
+        assert(order.join(',') === 'scene-promises,scene-ambience', `Expected Promise Ledger before Room Ambience, got ${order.join(',')}`);
+      }),
+      run('A three-tab strip accepts a precise middle-tab insertion', async (doc) => {
+        const personasTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const effectsHead = doc.querySelector('[data-widget-id="scene-world"] [data-widget-drag-surface]');
+        assert(personasTab && effectsHead, 'Initial tab transfer handles were not rendered');
+        beginDrag(doc, personasTab);
+        const effectsTarget = center(effectsHead);
+        pointer(doc, 'pointermove', effectsTarget);
+        pointer(doc, 'pointerup', effectsTarget);
+
+        const connectionsHead = doc.querySelector('[data-widget-id="scene-promises"] [data-widget-drag-surface]');
+        const effectsGroup = doc.querySelector('[data-widget-id="scene-world"]').closest('.sonder-widget-group');
+        const currentTabs = Array.from(effectsGroup.querySelectorAll('[data-group-tab]'));
+        assert(connectionsHead && currentTabs.length === 2, 'The three-tab setup did not reach its intermediate state');
+        const finalTabRect = currentTabs.at(-1).getBoundingClientRect();
+        beginDrag(doc, connectionsHead);
+        const appendTarget = { x: finalTabRect.right - 2, y: finalTabRect.top + finalTabRect.height / 2 };
+        pointer(doc, 'pointermove', appendTarget);
+        pointer(doc, 'pointerup', appendTarget);
+
+        const middleTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const firstTab = doc.querySelector('[data-group-tab="scene-world"]');
+        assert(middleTab && firstTab, 'The three-tab strip was not created');
+        const firstRect = firstTab.getBoundingClientRect();
+        beginDrag(doc, middleTab);
+        const reorderTarget = { x: firstRect.left + 3, y: firstRect.top + firstRect.height / 2 };
+        pointer(doc, 'pointermove', reorderTarget);
+        pointer(doc, 'pointerup', reorderTarget);
+
+        const reorderedGroup = doc.querySelector('[data-widget-id="scene-world"]').closest('.sonder-widget-group');
+        const order = Array.from(reorderedGroup.querySelectorAll('[data-group-tab]')).map((tab) => tab.dataset.groupTab);
+        assert(order.join(',') === 'scene-ambience,scene-world,scene-promises', `Expected Room Ambience, World State, Promise Ledger; got ${order.join(',')}`);
+      }),
+      run('Returning from a shelf rail to the title bar resolves as a tab', async (doc) => {
+        const personasTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        const effectsHead = doc.querySelector('[data-widget-id="scene-world"] [data-widget-drag-surface]');
+        assert(personasTab && effectsHead, 'Required widget handles were not rendered');
+        const headRect = effectsHead.getBoundingClientRect();
+        const target = center(effectsHead);
+        beginDrag(doc, personasTab);
+        pointer(doc, 'pointermove', { x: target.x, y: headRect.top + 5 });
+        pointer(doc, 'pointermove', target);
+        pointer(doc, 'pointerup', target);
+        const effectsGroup = doc.querySelector('[data-widget-id="scene-world"]').closest('.sonder-widget-group');
+        assert(effectsGroup.querySelector('[data-widget-id="scene-ambience"]'), 'A previously entered shelf rail overrode the final title-bar target');
+      }, 1440),
+      run('Every toolbar boundary exposes an explicit insertion seam', async (doc) => {
+        const personasTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        assert(personasTab, 'Room Ambience tab was not rendered');
+        beginDrag(doc, personasTab);
+        const leftGroups = groupIds(doc, 'left');
+        const leftRails = Array.from(doc.querySelectorAll('[data-drop-rail]')).filter((item) => item.dataset.dropSide === 'left');
+        assert(leftRails.length === leftGroups.length + 1, `Expected ${leftGroups.length + 1} insertion seams, got ${leftRails.length}`);
+        assert(leftRails.map((rail) => rail.dataset.dropIndex).join(',') === '0,1,2', 'Insertion seams were not ordered before, between, and after the shelves');
+      }, 900),
+      run('Separating a merged tab always creates another shelf', async (doc) => {
+        commandWidget(doc, 'scene-ambience', 'separate');
+        const personasGroup = doc.querySelector('[data-widget-id="scene-ambience"]').closest('.sonder-widget-group');
+        const connectionsGroup = doc.querySelector('[data-widget-id="scene-promises"]').closest('.sonder-widget-group');
+        assert(personasGroup !== connectionsGroup, 'Room Ambience remained trapped in the merged tab group');
+        assert(groupIds(doc, 'right').join(',') === 'scene-world,scene-promises,scene-ambience', `Unexpected shelf order after separation: ${groupIds(doc, 'right').join(',')}`);
+      }, 900),
+      run('Menu docking adds a shelf even when the destination is populated', async (doc) => {
+        commandWidget(doc, 'scene-world', 'left');
+        const effectsDock = doc.querySelector('[data-widget-id="scene-world"]').closest('[data-dock]');
+        assert(effectsDock?.dataset.dock === 'left', 'World State was refused by the populated left toolbar');
+        assert(groupIds(doc, 'left').join(',') === 'scene-characters,scene-theme,scene-world', 'World State was not appended as an ordered shelf');
+      }, 900),
+      run('Legacy Widget Shelf controls are retired in favor of Catalog and Remove', async (doc) => {
+        assert(!doc.querySelector('[data-widget-shelf-open]'), 'A side Shelf launcher is still exposed');
+        assert(!doc.querySelector('[data-widget-command="shelf"]'), 'The legacy Shelf command is still exposed');
+        assert(!doc.body.innerText.includes('Widget Shelf'), 'Legacy Shelf copy remains visible');
+        assert(doc.querySelector('[data-widget-catalog-launcher]'), 'The replacement Catalog launcher is absent');
+        assert(doc.querySelector('[data-widget-command="remove"]'), 'Remove from Panel is absent');
+      }, 900),
+      run('Dropping on a middle seam inserts between neighboring shelves', async (doc) => {
+        const personasTab = doc.querySelector('[data-group-tab="scene-ambience"]');
+        assert(personasTab, 'Room Ambience tab was not rendered');
+        beginDrag(doc, personasTab);
+        const rail = doc.querySelector('[data-drop-rail][data-drop-side="left"][data-drop-index="1"]');
+        assert(rail, 'The middle insertion seam was not exposed');
+        const target = center(rail);
+        pointer(doc, 'pointermove', target);
+        assert(rail.classList.contains('is-active'), 'Shelf rail did not clearly activate under the pointer');
+        pointer(doc, 'pointerup', target);
+        assert(groupIds(doc, 'left').join(',') === 'scene-characters,scene-ambience,scene-theme', `Middle insertion produced ${groupIds(doc, 'left').join(',')}`);
+      }, 900),
+      run('Settings invalid release restores the exact Widget origin', async (doc) => {
+        doc.querySelector('[data-panel-tab="panel-settings"]').click();
+        const module = doc.querySelector('[data-widget-id="settings-providers"]');
+        const handle = module?.querySelector('[data-widget-drag-surface]');
+        const surface = doc.querySelector('[data-panel-surface]');
+        assert(module && handle && surface, 'Settings drag fixtures were not rendered');
+        const origin = captureWidgetOrigin(module);
+        beginDrag(doc, handle);
+        const target = center(surface);
+        pointer(doc, 'pointermove', target);
+        pointer(doc, 'pointerup', target);
+        assertWidgetRestored(module, origin, 'Provider Credentials');
+      }),
+      run('Library Escape restores the exact Widget origin', async (doc) => {
+        doc.querySelector('[data-panel-tab="panel-library"]').click();
+        const module = doc.querySelector('[data-widget-id="library-main"]');
+        const handle = module?.querySelector('[data-widget-drag-surface]');
+        assert(module && handle, 'Library drag fixtures were not rendered');
+        const origin = captureWidgetOrigin(module);
+        beginDrag(doc, handle);
+        pointer(doc, 'pointermove', { x: doc.defaultView.innerWidth - 24, y: doc.defaultView.innerHeight - 24 });
+        doc.dispatchEvent(new doc.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assertWidgetRestored(module, origin, 'Library');
+      }),
+      run('Scene invalid release restores the exact docked Widget origin', async (doc) => {
+        const module = doc.querySelector('[data-widget-id="scene-world"]');
+        const handle = module?.querySelector('[data-widget-drag-surface]');
+        const panelTab = doc.querySelector('[data-panel-tab="panel-scene"]');
+        assert(module && handle && panelTab, 'Scene drag fixtures were not rendered');
+        const origin = captureWidgetOrigin(module);
+        beginDrag(doc, handle);
+        const target = center(panelTab);
+        pointer(doc, 'pointermove', target);
+        pointer(doc, 'pointerup', target);
+        assertWidgetRestored(module, origin, 'World State');
+      }),
+      run('Pointer cancellation restores the exact Widget origin', async (doc) => {
+        doc.querySelector('[data-panel-tab="panel-settings"]').click();
+        const module = doc.querySelector('[data-widget-id="settings-providers"]');
+        const handle = module?.querySelector('[data-widget-drag-surface]');
+        assert(module && handle, 'Pointer-cancel drag fixtures were not rendered');
+        const origin = captureWidgetOrigin(module);
+        beginDrag(doc, handle);
+        pointer(doc, 'pointermove', { x: doc.defaultView.innerWidth / 2, y: doc.defaultView.innerHeight / 2 });
+        pointer(doc, 'pointercancel', { x: doc.defaultView.innerWidth / 2, y: doc.defaultView.innerHeight / 2 });
+        assertWidgetRestored(module, origin, 'Pointer-cancelled Provider Credentials');
+      }),
+      run('Floating invalid release preserves custom geometry', async (doc, view) => {
+        const module = doc.querySelector('[data-widget-id="scene-world"]');
+        commandWidget(doc, 'scene-world', 'float');
+        module.style.cssText = 'left: 111px; top: 73px; width: 314px; height: 226px;';
+        await new Promise((resolve) => view.setTimeout(resolve, 260));
+        await nextFrame(view);
+        const origin = captureWidgetOrigin(module);
+        const handle = module.querySelector('[data-widget-drag-surface]');
+        beginDrag(doc, handle);
+        const panelTab = doc.querySelector('[data-panel-tab="panel-scene"]');
+        const target = center(panelTab);
+        pointer(doc, 'pointermove', target);
+        pointer(doc, 'pointerup', target);
+        await new Promise((resolve) => view.setTimeout(resolve, 260));
+        assertWidgetRestored(module, origin, 'Floating World State');
+      }),
+      run('Floating uses the dragged window without a duplicate trailing ghost', async (doc) => {
+        const effectsHead = doc.querySelector('[data-widget-id="scene-world"] [data-widget-drag-surface]');
+        const scene = doc.querySelector('.sonder-scene');
+        assert(effectsHead && scene, 'Required drag surfaces were not rendered');
+        beginDrag(doc, effectsHead);
+        const target = center(scene);
+        pointer(doc, 'pointermove', target);
+        const ghost = doc.querySelector('[data-snap-ghost]');
+        const module = doc.querySelector('[data-widget-id="scene-world"]');
+        assert(ghost.hidden, 'A duplicate floating ghost is still visible');
+        assert(module.classList.contains('is-float-ready'), 'The dragged window does not indicate that it will remain floating');
+      })
+    ]).then((tests) => {
+      const passed = tests.filter((test) => test.passed).length;
+      results.innerHTML = `<h1>${passed}/${tests.length} passed</h1>` + tests.map((test) =>
+        `<p class="${test.passed ? 'pass' : 'fail'}">${test.passed ? 'PASS' : 'FAIL'} — ${test.name}${test.error ? `<br>${test.error}` : ''}</p>`
+      ).join('');
+      document.title = `${passed === tests.length ? 'PASS' : 'FAIL'} — Sonder drag regression`;
+    });
+  </script>
+</body>
+</html>
