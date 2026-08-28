@@ -185,26 +185,26 @@ git commit -m "test(conformance): enforce discrepancy ledger"
 - Produces: `normalizeMeasurement`, `compareMeasurements`, and named `MEASUREMENT_PROFILES`.
 - `ComparisonReport` contains sorted path, expected, actual, tolerance, pass, category, and severity results.
 
-- [ ] **Step 1: Write failing deterministic normalization tests**
+- [x] **Step 1: Write failing deterministic normalization tests**
 
 Assert recursively sorted keys, stable array order, `-0` to `0`, two-decimal
 geometry, canonical `rgba(r, g, b, a)`, and rejection of non-finite/undefined
 required DOM values.
 
-- [ ] **Step 2: Write failing profile comparison tests**
+- [x] **Step 2: Write failing profile comparison tests**
 
 Use shelf/left/stage/right/composer boxes. Assert exact containment/order,
 declared numeric tolerance, style equality, missing-path failure, and
 deterministic result order. Prove one tolerance cannot affect another path.
 
-- [ ] **Step 3: Implement explicit comparators**
+- [x] **Step 3: Implement explicit comparators**
 
 Implement `equal`, `within`, `contains`, `ordered`, `no-overflow`, and
 `ratio-within`. The initial `deep-current-shell` profile compares macro order,
 viewport fill, shelf height, toolbar widths, stage/composer bounds, shared
 edges, overflow, and named styles. There is no global pass threshold.
 
-- [ ] **Step 4: Run gates and commit**
+- [x] **Step 4: Run gates and commit**
 
 ```powershell
 node --test tests/unit/conformance.test.mjs

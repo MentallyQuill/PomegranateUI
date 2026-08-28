@@ -5,8 +5,10 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
+import { compareMeasurements, MEASUREMENT_PROFILES } from '../conformance/compare.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
 import { DEEP_CURRENT_MACRO_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
+import { normalizeMeasurement } from '../conformance/normalize.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -261,4 +263,103 @@ test('the checked-in Deep Current ledger is a valid bounded macro work queue', a
     'DC-001', 'DC-002', 'DC-003', 'DC-004', 'DC-005', 'DC-006', 'DC-007'
   ]);
   assert.equal(validation.entries.every((entry) => entry.status === 'open'), true);
+});
+
+test('measurement normalization produces stable sorted CSS-pixel evidence', () => {
+  const normalized = normalizeMeasurement({
+    z: -0,
+    list: [2.555, 'rgb(1 2 3 / 50%)'],
+    a: { width: 1.235, color: 'rgba(10, 20, 30, 0.5)' }
+  });
+
+  assert.deepEqual(normalized, {
+    a: { color: 'rgba(10, 20, 30, 0.5)', width: 1.24 },
+    list: [2.56, 'rgba(1, 2, 3, 0.5)'],
+    z: 0
+  });
+  assert.deepEqual(Object.keys(normalized), ['a', 'list', 'z']);
+});
+
+test('measurement normalization rejects non-finite DOM evidence at its exact path', () => {
+  assert.throws(
+    () => normalizeMeasurement({ box: { width: Number.POSITIVE_INFINITY } }),
+    (error) => error.code === 'MEASUREMENT_FAILED' && error.details.path === 'box.width'
+  );
+});
+
+test('structured comparison applies only the comparator declared for each evidence path', () => {
+  const report = compareMeasurements(
+    { regions: { left: { box: { width: 230 } }, stage: { visible: true } } },
+    { regions: { left: { box: { width: 231.5 } }, stage: { visible: false } } },
+    [
+      { path: 'regions.stage.visible', comparator: 'equal', category: 'structure', severity: 'P1' },
+      { path: 'regions.left.box.width', comparator: 'within', tolerance: 2, category: 'geometry', severity: 'P2' }
+    ]
+  );
+
+  assert.equal(report.pass, false);
+  assert.deepEqual(report.results.map(({ path, pass, tolerance }) => ({ path, pass, tolerance })), [
+    { path: 'regions.left.box.width', pass: true, tolerance: 2 },
+    { path: 'regions.stage.visible', pass: false, tolerance: 0 }
+  ]);
+});
+
+test('structured comparison gives containment, ordering, overflow, and ratio distinct semantics', () => {
+  const report = compareMeasurements(
+    {
+      inventory: ['shelf', 'stage'],
+      order: ['shelf', 'left', 'stage', 'right'],
+      document: { scrollWidth: 100, clientWidth: 100 },
+      toolbar: 200
+    },
+    {
+      inventory: ['shelf', 'stage', 'composer'],
+      order: ['shelf', 'stage', 'left', 'right'],
+      document: { scrollWidth: 101, clientWidth: 100 },
+      toolbar: 204
+    },
+    [
+      { path: 'inventory', comparator: 'contains', category: 'content', severity: 'P1' },
+      { path: 'order', comparator: 'ordered', category: 'structure', severity: 'P1' },
+      { path: 'document', comparator: 'no-overflow', category: 'geometry', severity: 'P1' },
+      { path: 'toolbar', comparator: 'ratio-within', tolerance: 0.03, category: 'geometry', severity: 'P2' }
+    ]
+  );
+
+  assert.deepEqual(Object.fromEntries(report.results.map((result) => [result.comparator, result.pass])), {
+    'no-overflow': false,
+    contains: true,
+    ordered: false,
+    'ratio-within': true
+  });
+});
+
+test('structured comparison rejects a missing required measurement path', () => {
+  assert.throws(
+    () => compareMeasurements(
+      { regions: {} },
+      { regions: {} },
+      [{ path: 'regions.stage.visible', comparator: 'equal', category: 'structure', severity: 'P1' }]
+    ),
+    (error) => error.code === 'MEASUREMENT_FAILED' && error.details.path === 'regions.stage.visible'
+  );
+});
+
+test('the Deep Current shell profile names each structural measurement and tolerance independently', () => {
+  const profile = MEASUREMENT_PROFILES.get('deep-current-shell');
+  assert.ok(profile);
+  assert.deepEqual(profile.map(({ path, comparator, tolerance = 0 }) => ({ path, comparator, tolerance })), [
+    { path: 'document', comparator: 'no-overflow', tolerance: 0 },
+    { path: 'regions.composer.box.height', comparator: 'within', tolerance: 2 },
+    { path: 'regions.composer.visible', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.left.box.width', comparator: 'within', tolerance: 2 },
+    { path: 'regions.left.visible', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.right.box.width', comparator: 'within', tolerance: 2 },
+    { path: 'regions.right.visible', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.shelf.box.height', comparator: 'within', tolerance: 2 },
+    { path: 'regions.shelf.visible', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.stage.box.height', comparator: 'within', tolerance: 2 },
+    { path: 'regions.stage.box.width', comparator: 'within', tolerance: 2 },
+    { path: 'regions.stage.visible', comparator: 'equal', tolerance: 0 }
+  ]);
 });
