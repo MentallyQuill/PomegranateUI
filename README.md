@@ -18,11 +18,11 @@ The preserved source baseline is Sonder Engine commit `0fb98e43f303d62c42ef5c74e
 - `@pomegranate-ui/contracts` owns JSON-safe public contracts and runtime schemas.
 - `@pomegranate-ui/layout` owns framework-neutral Panel and Widget layout transitions.
 - `@pomegranate-ui/core` owns registration, deterministic command dispatch, and subscriptions.
+- `@pomegranate-ui/theme` validates versioned declarative themes and resolves framework-neutral semantic colors, typography, geometry, spacing, materials, assets, canvas layers, and accessibility metadata.
 - `@pomegranate-ui/svelte` provides headless readable stores, typed context, renderer registration, and focus actions over public core APIs.
 - `@pomegranate-ui/testkit` provides public conformance fixtures and drivers.
-- `@pomegranate-ui/theme` remains reserved for a later tranche.
 
-The maintained view path is `contracts -> layout -> core -> svelte`. The testkit consumes public package APIs only. Reusable UI is distributed as source-owned recipes under `registry/recipes`: adopters copy and own those `.svelte` files instead of receiving a fixed branded component shell.
+The maintained view path is `contracts -> layout -> core -> svelte`, with the separate framework-neutral `contracts -> theme` path supplying semantic values to adopter-owned views. The testkit consumes public package APIs only. Reusable UI is distributed as source-owned recipes under `registry/recipes`: adopters copy and own those `.svelte` files instead of receiving a fixed branded component shell.
 
 ## Workbench Lab
 
@@ -42,6 +42,10 @@ npm.cmd run preview:lab
 ```
 
 The deployable boundary is the relative-base static output in `apps/workbench-lab/dist`. It does not require SvelteKit, a PomegranateUI backend, Sonder server code, or a network-only asset host. Production hosting is outside this tranche.
+
+The Lab applies three complete definitions to the same live Panel and Widget tree: Pom Neutral, Deep Current, and Bunny. Switching is immediate and atomic; a failed definition or missing required local asset leaves the last valid theme active. These presets are Lab-owned demonstrations, not bundled product branding. Adopters continue to own markup, composition, asset resolution, preference persistence, and final visual identity.
+
+This tranche intentionally does not add animated theme morphing, a visual theme editor, remote theme loading, package publication, public hosting, or a Sonder cutover. That keeps the foundation small enough to evaluate before any of those costs become product commitments.
 
 ## Local verification gate
 
