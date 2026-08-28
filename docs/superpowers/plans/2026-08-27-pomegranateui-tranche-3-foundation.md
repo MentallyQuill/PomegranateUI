@@ -6,7 +6,7 @@
 
 **Architecture:** Use separately packable npm workspaces with `contracts -> layout -> core -> react` runtime dependencies and a public-only `testkit`. The Workbench Lab and clean consumer fixtures use package APIs exactly as adopters do; Sonder-shaped data crosses a plain adapter and no Sonder code enters a package.
 
-**Tech Stack:** Node.js 24, npm workspaces, TypeScript 7.0.2, React 19.2.8, Vite 8.2.2, Vitest 4.1.11, jsdom 30.0.1, Testing Library React 16.3.3, Testing Library DOM Matchers 7.0.1, Testing Library User Event 14.6.6, Node types 26.4.0, and Playwright 1.62.1.
+**Tech Stack:** Node.js 24, npm workspaces, TypeScript 7.0.2, Zod 4.4.3, React 19.2.8, Vite 8.2.2, Vitest 4.1.11, jsdom 30.0.1, Testing Library React 16.3.3, Testing Library DOM Matchers 7.0.1, Testing Library User Event 14.6.6, Node types 26.4.0, and Playwright 1.62.1.
 
 **Spec:** `docs/superpowers/specs/2026-08-27-pomegranateui-tranche-3-foundation-design.md`
 
@@ -27,6 +27,61 @@
 - Use `npm.cmd` on Windows.
 
 ---
+
+### Task 0: Make Playwright server shutdown deterministic
+
+**Files:**
+- Create: `tests/browser/global-setup.mjs`
+- Create: `tests/unit/browser-server-lifecycle.test.mjs`
+- Modify: `playwright.config.mjs`
+
+**Interfaces:**
+- Consumes: `createStaticServer` from `scripts/serve-static.mjs`.
+- Produces: `startBrowserServers({ root, includeLab })` and a Playwright global setup that returns an awaited teardown function.
+
+- [x] **Step 1: Write the failing lifecycle test**
+
+Start the browser servers with ephemeral ports, fetch the preservation root, call the returned teardown, then prove a second fetch cannot connect. Also assert teardown is idempotent.
+
+```js
+test('browser server teardown closes every listener', async () => {
+  const running = await startBrowserServers({ root, preservationPort: 0, includeLab: false });
+  assert.equal((await fetch(running.preservationUrl)).status, 200);
+  await running.close();
+  await running.close();
+  await assert.rejects(fetch(running.preservationUrl));
+});
+```
+
+- [x] **Step 2: Run the lifecycle test and verify RED**
+
+Run: `node --test tests/unit/browser-server-lifecycle.test.mjs`
+
+Expected: FAIL because `tests/browser/global-setup.mjs` is absent.
+
+- [x] **Step 3: Implement in-process setup and teardown**
+
+Export `startBrowserServers`. It starts `createStaticServer({ root, port })` directly, awaits the `listening` event, records the actual bound port, and returns URLs plus an idempotent `close()` that awaits every server's `close` callback. The default Playwright setup starts the repository server on 4173 and later starts the built Lab directory on 4174 when `includeLab` is true.
+
+Remove `webServer` from `playwright.config.mjs` and set `globalSetup: './tests/browser/global-setup.mjs'`. This eliminates the Windows `cmd.exe` child whose orphaned Node process prevented Playwright from exiting.
+
+- [x] **Step 4: Verify GREEN and the complete baseline**
+
+Run:
+
+```powershell
+node --test tests/unit/browser-server-lifecycle.test.mjs
+npm.cmd run check
+```
+
+Expected: lifecycle test passes; Playwright prints `2 passed` and exits zero; preserved results remain 95/95 and 212/212.
+
+- [x] **Step 5: Commit the lifecycle repair**
+
+```powershell
+git add tests/browser/global-setup.mjs tests/unit/browser-server-lifecycle.test.mjs playwright.config.mjs docs/superpowers/specs/2026-08-27-pomegranateui-tranche-3-foundation-design.md docs/superpowers/plans/2026-08-27-pomegranateui-tranche-3-foundation.md
+git commit -m "fix(test): close browser servers in-process"
+```
 
 ### Task 1: Establish strict TypeScript workspaces
 
@@ -118,6 +173,8 @@ Add scripts with these exact entry points:
 
 Each package manifest uses `type: module`, `private: true`, `files: ["dist", "README.md"]`, and exports `dist/index.js` plus `dist/index.d.ts`. Internal dependencies use exact `0.1.0-private.0`; React uses peer range `>=18.2.0 <20` while the workspace dev version stays pinned to 19.2.8.
 
+`@pomegranate-ui/contracts` declares exact runtime dependency `zod: 4.4.3`. No other framework-neutral package adds a validation library directly; it consumes the public schemas from `contracts`.
+
 - [ ] **Step 4: Add strict project references**
 
 `tsconfig.base.json` sets `target: ES2024`, `module: NodeNext`, `moduleResolution: NodeNext`, `lib: ["ES2024"]`, `strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`, `verbatimModuleSyntax: true`, `declaration: true`, `declarationMap: true`, `sourceMap: true`, `composite: true`, and `skipLibCheck: true`.
@@ -173,7 +230,7 @@ git commit -m "build: establish TypeScript workspaces"
 
 **Interfaces:**
 - Consumes: no PomegranateUI runtime package.
-- Produces: `asPanelId`, `asWidgetInstanceId`, `asWidgetType`, `WidgetManifest`, `WidgetInstance`, `PanelState`, `WidgetPlacement`, `WorkbenchState`, `LayoutSnapshotV1`, `WorkbenchCommand`, `WorkbenchEvent`, `CommandResult`, and `LayoutStorage`.
+- Produces: `asPanelId`, `asWidgetInstanceId`, `asWidgetType`, `WidgetManifest`, `WidgetInstance`, `PanelState`, `WidgetPlacement`, `WorkbenchState`, `LayoutSnapshotV1`, `WorkbenchCommand`, `WorkbenchEvent`, `CommandResult`, `LayoutStorage`, `WorkbenchCommandSchema`, and `LayoutSnapshotV1Schema`.
 
 - [ ] **Step 1: Write failing public-contract tests**
 
@@ -181,7 +238,7 @@ Create tests that prove non-empty branded ids, JSON-safe configuration, the exac
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { asPanelId, asWidgetType, isJsonValue } from './index.js';
+import { asPanelId, asWidgetType, isJsonValue, LayoutSnapshotV1Schema } from './index.js';
 
 describe('public contracts', () => {
   it('rejects blank public ids', () => {
@@ -192,6 +249,10 @@ describe('public contracts', () => {
   it('admits only JSON-safe values', () => {
     expect(isJsonValue({ safe: ['yes', 1, true, null] })).toBe(true);
     expect(isJsonValue({ unsafe: new Date() })).toBe(false);
+  });
+
+  it('parses raw snapshot input at the public boundary', () => {
+    expect(LayoutSnapshotV1Schema.safeParse({ schema: 'wrong.v1' }).success).toBe(false);
   });
 });
 ```
@@ -235,7 +296,7 @@ export type WorkbenchCommand =
   | { readonly type: 'layout.hydrate'; readonly state: WorkbenchState };
 ```
 
-`WorkbenchState.schema` is `pomegranate.ui.state.v1`. `LayoutSnapshotV1.schema` is `pomegranate.ui.layout.v1`. `LayoutStorage` has async `load(key)`, `save(key,value)`, and optional `remove(key)` methods. Command errors use stable codes `DUPLICATE_ID`, `MISSING_PANEL`, `MISSING_WIDGET`, `UNKNOWN_WIDGET_TYPE`, `INVALID_INDEX`, `INVALID_PLACEMENT`, and `INVALID_SNAPSHOT`.
+`WorkbenchState.schema` is `pomegranate.ui.state.v1`. `LayoutSnapshotV1.schema` is `pomegranate.ui.layout.v1`. Define Zod schemas for ids, JSON values, manifests, state, snapshots, and commands; export inferred raw-input and parsed types where useful. `LayoutStorage` has async `load(key)`, `save(key,value)`, and optional `remove(key)` methods. Command errors use stable codes `DUPLICATE_ID`, `MISSING_PANEL`, `MISSING_WIDGET`, `UNKNOWN_WIDGET_TYPE`, `INVALID_INDEX`, `INVALID_PLACEMENT`, `INVALID_SNAPSHOT`, and `INTERNAL_ERROR`, plus `message` and `recoverable`.
 
 - [ ] **Step 5: Export the public surface and verify GREEN**
 
@@ -386,7 +447,7 @@ Expected: FAIL because registry and store APIs are absent.
 
 - [ ] **Step 3: Implement registry and dispatch**
 
-`WidgetRegistry` exposes `register`, `unregister`, `get`, `has`, and `list`. It copies and freezes admitted manifests. `WorkbenchStore` exposes `getState`, `dispatch`, `subscribe`, and `registry`. Dispatch switches exhaustively over `WorkbenchCommand`, calls layout functions, emits one frozen event per accepted transition, and returns the original state with zero events on rejection.
+`WidgetRegistry` exposes `register`, `unregister`, `get`, `has`, and `list`. It parses, copies, and freezes admitted manifests. `WorkbenchStore` exposes `getState`, `dispatch`, `subscribe`, and `registry`. Dispatch parses raw commands through `WorkbenchCommandSchema`, switches exhaustively over the parsed `WorkbenchCommand`, calls layout functions, emits one frozen event per accepted transition, and returns the original state with zero events on rejection. Catch unexpected handler failures and return non-recoverable `INTERNAL_ERROR`; never throw through dispatch.
 
 Use `useSyncExternalStore`-compatible subscription semantics: subscribe returns an idempotent unsubscribe function and listeners run from a snapshot so unsubscription during notification is safe.
 
@@ -525,6 +586,7 @@ git commit -m "test(testkit): add first-slice conformance"
 - Create: `apps/workbench-lab/src/storage.ts`
 - Create: `apps/workbench-lab/src/styles.css`
 - Modify: `apps/workbench-lab/README.md`
+- Modify: `tests/browser/global-setup.mjs`
 - Create: `tests/browser/native-workbench.spec.ts`
 - Modify: `playwright.config.mjs`
 - Modify: `package.json`
@@ -567,7 +629,7 @@ Use a Lab-owned `LayoutStorage` wrapper over `localStorage`; packages never call
 
 - [ ] **Step 4: Serve both browser lanes**
 
-Keep the existing static server at 4173. Add a second Playwright `webServer` entry running `npm run preview:lab -- --host 127.0.0.1 --port 4174`. Change root `build` to `tsc -b && npm run build --workspace @pomegranate-ui/workbench-lab`, add `preview:lab` and `pretest:browser: npm run build`, and keep both preserved harness tests unchanged.
+Keep the existing in-process preservation server at 4173. Extend `tests/browser/global-setup.mjs` so its default setup starts the built Workbench Lab directory at 4174 as well. Change root `build` to `tsc -b && npm run build --workspace @pomegranate-ui/workbench-lab`, add `preview:lab` and `pretest:browser: npm run build`, and keep both preserved harness tests unchanged.
 
 - [ ] **Step 5: Verify native and preserved browser GREEN**
 

@@ -49,7 +49,7 @@ dependencies flow in one direction.
 
 | Package | Responsibility | Allowed dependencies |
 |---|---|---|
-| `@pomegranate-ui/contracts` | JSON-safe IDs, manifests, commands, events, capabilities, snapshots, results, and runtime codecs | No UI framework or DOM dependency |
+| `@pomegranate-ui/contracts` | JSON-safe IDs, manifests, commands, events, capabilities, snapshots, results, and Zod runtime schemas/codecs | Zod only; no UI framework or DOM dependency |
 | `@pomegranate-ui/layout` | Pure Panel ordering, docked/floating placement, normalization, persistence envelopes, and migrations | `contracts` |
 | `@pomegranate-ui/core` | Widget registry, instances, Panels, deterministic command dispatch, subscriptions, and invariants | `contracts`, `layout` |
 | `@pomegranate-ui/react` | Provider, hooks, source-ownable structural primitives, and renderer registry | `contracts`, `core` as runtime dependencies; React as a peer dependency |
@@ -111,8 +111,11 @@ manifest registry. Public mutation occurs through typed commands:
 
 Dispatch returns a discriminated result. Successful commands return the new
 revision and emitted events. Rejected commands return a stable error code,
-message, and relevant ids. A rejected command preserves the prior state by
-reference as well as by value; no partial move is observable.
+message, recoverability, and relevant ids. Public command and persistence
+boundaries parse raw input through Zod schemas. Handlers do not throw across a
+public boundary; unexpected failures become a non-recoverable `INTERNAL_ERROR`.
+A rejected command preserves the prior state by reference as well as by value;
+no partial move is observable.
 
 Events describe accepted UI transitions such as `panel.created`,
 `panel.activated`, `panel.reordered`, `widget.created`, `widget.placed`, and
