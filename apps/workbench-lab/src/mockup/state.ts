@@ -47,6 +47,7 @@ export function createLabState(): WorkbenchState {
 
   const fixtures = [
     ['scene-characters', LAB_WIDGET_TYPES.characters, LAB_PANEL_IDS.scene, 'left', 0, {}],
+    ['scene-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.scene, 'left', 1, {}],
     ['scene-transcript', LAB_WIDGET_TYPES.transcript, LAB_PANEL_IDS.scene, 'main', 0, {}],
     ['scene-composer', LAB_WIDGET_TYPES.composer, LAB_PANEL_IDS.scene, 'main', 1, {}],
     ['scene-world', LAB_WIDGET_TYPES.worldState, LAB_PANEL_IDS.scene, 'right', 0, {}],

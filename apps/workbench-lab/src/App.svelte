@@ -5,6 +5,7 @@
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
 
+  import deepCurrentStage from './assets/deep-current-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
@@ -20,7 +21,11 @@
   const storage = createLocalLayoutStorage();
   const { store, catalog, rendererRegistry } = runtime;
   const catalogState = toSvelteCatalogStore(catalog);
-  const themeController = createLabThemeController({ preference: createLocalThemePreference(window.localStorage) });
+  const themeController = createLabThemeController({
+    preference: createLocalThemePreference(window.localStorage),
+    availableAssets: new Set(['icons.minimal', 'image.deep-current-stage'])
+  });
+  const themeAssetBindings = `--pom-asset-image-deep-current-stage:url("${deepCurrentStage}")`;
   const initialThemeSnapshot = themeController.getSnapshot();
   let themeSnapshot = $state(initialThemeSnapshot);
 
@@ -151,7 +156,7 @@
   class:left-collapsed={leftCollapsed}
   data-pom-theme={themeSnapshot.activeId}
   data-workbench-revision={workbench.revision}
-  style={themeSnapshot.cssText}
+  style={`${themeSnapshot.cssText};${themeAssetBindings}`}
 >
   <div class="atmosphere" aria-hidden="true"><i></i><i></i><i></i></div>
   <header class="top-shelf" data-conformance-region="shelf">
@@ -171,6 +176,16 @@
 
   <section class="context-rail" aria-label="Workbench context">
     <p><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
+    <div class="theme-targets" role="group" aria-label="Visual target">
+      {#each LAB_THEME_PRESETS as preset (preset.id)}
+        <button
+          type="button"
+          aria-label={preset.definition.label}
+          aria-pressed={themeSnapshot.activeId === preset.id}
+          onclick={() => activateTheme(preset.id)}
+        >{preset.definition.label}</button>
+      {/each}
+    </div>
     <div class="dock-controls">
       <button type="button" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
       <button type="button" onclick={openPanelDialog}>Create Panel</button>
@@ -185,7 +200,12 @@
   <section id="workbench" class="workbench-shell" aria-label="Active Workbench">
     <WorkbenchSurface {store} class="workbench-surface">
       {#snippet renderWidget(frame)}
-        <div class:widget-float={frame.placement.kind === 'floating'} style={floatingStyle(frame)}>
+        <div
+          class:widget-float={frame.placement.kind === 'floating'}
+          data-widget-type={frame.instance.type}
+          data-widget-shape={frame.manifest?.catalog?.shape}
+          style={floatingStyle(frame)}
+        >
           <WidgetFrame
             {frame}
             {store}

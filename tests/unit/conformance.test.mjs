@@ -13,6 +13,7 @@ import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformanc
 import { DEEP_CURRENT_MACRO_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
+import { VISIBLE_IMPLEMENTATION_REGION_IDS } from '../conformance/drivers/workbench-lab/deep-current.ts';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -316,13 +317,13 @@ test('structured comparison gives containment, ordering, overflow, and ratio dis
     {
       inventory: ['shelf', 'stage'],
       order: ['shelf', 'left', 'stage', 'right'],
-      document: { scrollWidth: 100, clientWidth: 100 },
+      document: { scrollWidth: 100, clientWidth: 100, scrollHeight: 100, clientHeight: 100 },
       toolbar: 200
     },
     {
       inventory: ['shelf', 'stage', 'composer'],
       order: ['shelf', 'stage', 'left', 'right'],
-      document: { scrollWidth: 101, clientWidth: 100 },
+      document: { scrollWidth: 100, clientWidth: 100, scrollHeight: 101, clientHeight: 100 },
       toolbar: 204
     },
     [
@@ -357,16 +358,48 @@ test('the Deep Current shell profile names each structural measurement and toler
   assert.ok(profile);
   assert.deepEqual(profile.map(({ path, comparator, tolerance = 0 }) => ({ path, comparator, tolerance })), [
     { path: 'document', comparator: 'no-overflow', tolerance: 0 },
+    { path: 'regions.composer.box.bottom', comparator: 'within', tolerance: 2 },
     { path: 'regions.composer.box.height', comparator: 'within', tolerance: 2 },
+    { path: 'regions.composer.box.width', comparator: 'within', tolerance: 2 },
+    { path: 'regions.composer.box.x', comparator: 'within', tolerance: 2 },
+    { path: 'regions.composer.box.y', comparator: 'within', tolerance: 2 },
+    { path: 'regions.composer.overflow', comparator: 'no-overflow', tolerance: 0 },
+    { path: 'regions.composer.styles.backdropFilter', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.composer.styles.backgroundColor', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.composer.styles.borderTopColor', comparator: 'equal', tolerance: 0 },
     { path: 'regions.composer.visible', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.left.box.bottom', comparator: 'within', tolerance: 2 },
+    { path: 'regions.left.box.height', comparator: 'within', tolerance: 2 },
     { path: 'regions.left.box.width', comparator: 'within', tolerance: 2 },
+    { path: 'regions.left.box.x', comparator: 'within', tolerance: 2 },
+    { path: 'regions.left.overflow', comparator: 'no-overflow', tolerance: 0 },
+    { path: 'regions.left.styles.backdropFilter', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.left.styles.backgroundColor', comparator: 'equal', tolerance: 0 },
     { path: 'regions.left.visible', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.right.box.bottom', comparator: 'within', tolerance: 2 },
+    { path: 'regions.right.box.height', comparator: 'within', tolerance: 2 },
     { path: 'regions.right.box.width', comparator: 'within', tolerance: 2 },
+    { path: 'regions.right.box.x', comparator: 'within', tolerance: 2 },
+    { path: 'regions.right.overflow', comparator: 'no-overflow', tolerance: 0 },
+    { path: 'regions.right.styles.backdropFilter', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.right.styles.backgroundColor', comparator: 'equal', tolerance: 0 },
     { path: 'regions.right.visible', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.shelf.box.bottom', comparator: 'within', tolerance: 2 },
     { path: 'regions.shelf.box.height', comparator: 'within', tolerance: 2 },
+    { path: 'regions.shelf.box.width', comparator: 'within', tolerance: 2 },
+    { path: 'regions.shelf.box.x', comparator: 'within', tolerance: 2 },
+    { path: 'regions.shelf.box.y', comparator: 'within', tolerance: 2 },
+    { path: 'regions.shelf.overflow', comparator: 'no-overflow', tolerance: 0 },
+    { path: 'regions.shelf.styles.backdropFilter', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.shelf.styles.backgroundColor', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.shelf.styles.borderTopColor', comparator: 'equal', tolerance: 0 },
     { path: 'regions.shelf.visible', comparator: 'equal', tolerance: 0 },
+    { path: 'regions.stage.box.bottom', comparator: 'within', tolerance: 2 },
     { path: 'regions.stage.box.height', comparator: 'within', tolerance: 2 },
     { path: 'regions.stage.box.width', comparator: 'within', tolerance: 2 },
+    { path: 'regions.stage.box.x', comparator: 'within', tolerance: 2 },
+    { path: 'regions.stage.box.y', comparator: 'within', tolerance: 2 },
+    { path: 'regions.stage.overflow', comparator: 'no-overflow', tolerance: 0 },
     { path: 'regions.stage.visible', comparator: 'equal', tolerance: 0 }
   ]);
 });
@@ -470,4 +503,28 @@ test('reference and Lab drivers keep selectors and imports independent', async (
 
   assert.doesNotMatch(referenceDriver, /data-(?:conformance-region|pomegranate-)|workbench-lab/);
   assert.doesNotMatch(labDriver, /\.sonder-|drivers\/reference|atmospheric/);
+});
+
+test('Lab readiness permits responsive docks to remain intentionally hidden', () => {
+  assert.deepEqual(VISIBLE_IMPLEMENTATION_REGION_IDS, ['shelf', 'stage', 'composer']);
+});
+
+test('the reviewed Deep Current macro baseline freezes every authority viewport', async () => {
+  const baseline = JSON.parse(await readFile(
+    path.join(repositoryRoot, 'tests/conformance/baselines/deep-current-macro.json'),
+    'utf8'
+  ));
+  assert.equal(baseline.schemaVersion, 'pomegranate.ui.conformance-baseline.v1');
+  assert.equal(baseline.authoritySha256, AUTHORITY_RECORDS[0].sha256);
+  assert.equal(baseline.measurementProfile, 'deep-current-shell');
+  assert.deepEqual(Object.keys(baseline.scenarios), DEEP_CURRENT_MACRO_SCENARIOS.map(({ id }) => id));
+  for (const scenario of Object.values(baseline.scenarios)) {
+    assert.equal(scenario.pass, true);
+    assert.equal(scenario.documentOverflow, false);
+    assert.deepEqual(Object.keys(scenario.regions), ['shelf', 'left', 'stage', 'right', 'composer']);
+    for (const box of Object.values(scenario.regions)) {
+      assert.equal(box.length, 4);
+      assert.equal(box.every(Number.isFinite), true);
+    }
+  }
 });

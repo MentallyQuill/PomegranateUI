@@ -25,19 +25,61 @@ export interface ComparisonReport {
   readonly results: readonly ComparisonResult[];
 }
 
+const geometry = (path: string, severity: 'P1' | 'P2' = 'P1'): ComparisonDefinition => (
+  Object.freeze({ path, comparator: 'within', tolerance: 2, category: 'geometry', severity })
+);
+const exact = (path: string, category: 'structure' | 'visual' = 'structure'): ComparisonDefinition => (
+  Object.freeze({ path, comparator: 'equal', category, severity: category === 'visual' ? 'P2' : 'P1' })
+);
+const noOverflow = (path: string): ComparisonDefinition => (
+  Object.freeze({ path, comparator: 'no-overflow', category: 'geometry', severity: 'P1' })
+);
+
 const shellProfile: readonly ComparisonDefinition[] = Object.freeze([
-  Object.freeze({ path: 'document', comparator: 'no-overflow', category: 'geometry', severity: 'P1' }),
-  Object.freeze({ path: 'regions.composer.box.height', comparator: 'within', tolerance: 2, category: 'geometry', severity: 'P1' }),
-  Object.freeze({ path: 'regions.composer.visible', comparator: 'equal', category: 'structure', severity: 'P1' }),
-  Object.freeze({ path: 'regions.left.box.width', comparator: 'within', tolerance: 2, category: 'geometry', severity: 'P2' }),
-  Object.freeze({ path: 'regions.left.visible', comparator: 'equal', category: 'structure', severity: 'P1' }),
-  Object.freeze({ path: 'regions.right.box.width', comparator: 'within', tolerance: 2, category: 'geometry', severity: 'P2' }),
-  Object.freeze({ path: 'regions.right.visible', comparator: 'equal', category: 'structure', severity: 'P1' }),
-  Object.freeze({ path: 'regions.shelf.box.height', comparator: 'within', tolerance: 2, category: 'geometry', severity: 'P2' }),
-  Object.freeze({ path: 'regions.shelf.visible', comparator: 'equal', category: 'structure', severity: 'P1' }),
-  Object.freeze({ path: 'regions.stage.box.height', comparator: 'within', tolerance: 2, category: 'geometry', severity: 'P1' }),
-  Object.freeze({ path: 'regions.stage.box.width', comparator: 'within', tolerance: 2, category: 'geometry', severity: 'P1' }),
-  Object.freeze({ path: 'regions.stage.visible', comparator: 'equal', category: 'structure', severity: 'P1' })
+  noOverflow('document'),
+  geometry('regions.composer.box.bottom'),
+  geometry('regions.composer.box.height'),
+  geometry('regions.composer.box.width'),
+  geometry('regions.composer.box.x'),
+  geometry('regions.composer.box.y'),
+  noOverflow('regions.composer.overflow'),
+  exact('regions.composer.styles.backdropFilter', 'visual'),
+  exact('regions.composer.styles.backgroundColor', 'visual'),
+  exact('regions.composer.styles.borderTopColor', 'visual'),
+  exact('regions.composer.visible'),
+  geometry('regions.left.box.bottom'),
+  geometry('regions.left.box.height'),
+  geometry('regions.left.box.width', 'P2'),
+  geometry('regions.left.box.x'),
+  noOverflow('regions.left.overflow'),
+  exact('regions.left.styles.backdropFilter', 'visual'),
+  exact('regions.left.styles.backgroundColor', 'visual'),
+  exact('regions.left.visible'),
+  geometry('regions.right.box.bottom'),
+  geometry('regions.right.box.height'),
+  geometry('regions.right.box.width', 'P2'),
+  geometry('regions.right.box.x'),
+  noOverflow('regions.right.overflow'),
+  exact('regions.right.styles.backdropFilter', 'visual'),
+  exact('regions.right.styles.backgroundColor', 'visual'),
+  exact('regions.right.visible'),
+  geometry('regions.shelf.box.bottom'),
+  geometry('regions.shelf.box.height', 'P2'),
+  geometry('regions.shelf.box.width'),
+  geometry('regions.shelf.box.x'),
+  geometry('regions.shelf.box.y'),
+  noOverflow('regions.shelf.overflow'),
+  exact('regions.shelf.styles.backdropFilter', 'visual'),
+  exact('regions.shelf.styles.backgroundColor', 'visual'),
+  exact('regions.shelf.styles.borderTopColor', 'visual'),
+  exact('regions.shelf.visible'),
+  geometry('regions.stage.box.bottom'),
+  geometry('regions.stage.box.height'),
+  geometry('regions.stage.box.width'),
+  geometry('regions.stage.box.x'),
+  geometry('regions.stage.box.y'),
+  noOverflow('regions.stage.overflow'),
+  exact('regions.stage.visible')
 ]);
 
 export const MEASUREMENT_PROFILES: ReadonlyMap<string, readonly ComparisonDefinition[]> = new Map([
@@ -91,7 +133,13 @@ function comparisonPass(
       const record = actual as { readonly [key: string]: NormalizedValue };
       const scrollWidth = record.scrollWidth;
       const clientWidth = record.clientWidth;
-      return typeof scrollWidth === 'number' && typeof clientWidth === 'number' && scrollWidth <= clientWidth + tolerance;
+      const scrollHeight = record.scrollHeight;
+      const clientHeight = record.clientHeight;
+      return typeof scrollWidth === 'number'
+        && typeof clientWidth === 'number'
+        && scrollWidth <= clientWidth + tolerance
+        && (scrollHeight === undefined || clientHeight === undefined
+          || (typeof scrollHeight === 'number' && typeof clientHeight === 'number' && scrollHeight <= clientHeight + tolerance));
     }
     case 'ratio-within':
       if (typeof expected !== 'number' || typeof actual !== 'number') return false;

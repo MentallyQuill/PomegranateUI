@@ -11,6 +11,11 @@ const regionSelectors: Readonly<Record<ShellRegionId, string>> = Object.freeze({
   right: '[data-conformance-region="right"]',
   composer: '[data-conformance-region="composer"]'
 });
+export const VISIBLE_IMPLEMENTATION_REGION_IDS: readonly ShellRegionId[] = Object.freeze([
+  'shelf',
+  'stage',
+  'composer'
+]);
 
 async function settle(locator: Locator): Promise<void> {
   await locator.evaluate(async () => {
@@ -32,7 +37,10 @@ export async function prepareDeepCurrentState(page: Page, labOrigin: string): Pr
     await root.waitFor({ state: 'visible' });
     await settle(root);
     for (const selector of Object.values(regionSelectors)) {
-      await page.locator(selector).waitFor({ state: 'visible' });
+      await page.locator(selector).waitFor({ state: 'attached' });
+    }
+    for (const id of VISIBLE_IMPLEMENTATION_REGION_IDS) {
+      await page.locator(regionSelectors[id]).waitFor({ state: 'visible' });
     }
   } catch (cause) {
     throw new ConformanceError(

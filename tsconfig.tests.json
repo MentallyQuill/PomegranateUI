@@ -15,6 +15,7 @@
     "packages/**/*.svelte",
     "registry/**/*.svelte",
     "apps/**/*.test.ts",
+    "apps/**/*.d.ts",
     "apps/**/*.svelte",
     "examples/**/*.test.ts",
     "tests/browser/**/*.ts",

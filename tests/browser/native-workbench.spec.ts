@@ -19,12 +19,13 @@ test('native workbench POM-PANEL-07856BFE9A POM-PANEL-DF4EC7C581 activates a Pan
 
 test('native workbench POM-PANEL-0C32491298 POM-PANEL-E6D6A0E64B appends menu docking to an occupied edge', async ({ page }) => {
   const leftDock = page.locator('[data-pomegranate-dock="left"]');
-  await expect(leftDock.getByRole('article')).toHaveCount(1);
+  await expect(leftDock.getByRole('article')).toHaveCount(2);
   const world = page.getByRole('article', { name: 'World State' });
   await world.getByRole('button', { name: 'Dock left' }).click();
-  await expect(leftDock.getByRole('article')).toHaveCount(2);
+  await expect(leftDock.getByRole('article')).toHaveCount(3);
   await expect(leftDock.getByRole('article').nth(0)).toHaveAttribute('aria-label', 'Characters (Story)');
-  await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'World State');
+  await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Theme Settings');
+  await expect(leftDock.getByRole('article').nth(2)).toHaveAttribute('aria-label', 'World State');
 });
 
 test('native workbench POM-PERSIST-842D422EB3 POM-PERSIST-9FA69F9FC1 restores a user Panel template and order', async ({ page }) => {
@@ -57,11 +58,12 @@ test('native workbench applies complete themes without replacing live Workbench 
     panels: [...node.querySelectorAll('[data-pomegranate-panel]')].map((panel) => panel.getAttribute('data-pomegranate-panel')),
     widgets: [...node.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
   }));
-  const neutral = page.getByRole('button', { name: 'Pom Neutral', exact: true });
+  const themeTargets = page.getByRole('group', { name: 'Visual target' });
+  const neutral = themeTargets.getByRole('button', { name: 'Pom Neutral', exact: true });
   await neutral.click();
   await expect(root).toHaveAttribute('data-pom-theme', 'pom-neutral');
   await expect(neutral).toHaveAttribute('aria-pressed', 'true');
-  const bunny = page.getByRole('button', { name: 'Bunny', exact: true });
+  const bunny = themeTargets.getByRole('button', { name: 'Bunny', exact: true });
   await bunny.click();
   await expect(root).toHaveAttribute('data-pom-theme', 'bunny');
   await expect(bunny).toBeFocused();
@@ -79,12 +81,11 @@ test('all theme targets remain readable, transition-free, and contained at wide 
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
     for (const theme of [
-      { label: 'Deep Current', id: 'deep-current', text: 'rgb(238, 232, 222)' },
+      { label: 'Deep Current', id: 'deep-current', text: 'rgb(231, 246, 240)' },
       { label: 'Pom Neutral', id: 'pom-neutral', text: 'rgb(31, 37, 45)' },
       { label: 'Bunny', id: 'bunny', text: 'rgb(64, 55, 71)' }
     ]) {
-      await page.getByRole('tab', { name: 'Settings' }).click();
-      const button = page.getByRole('button', { name: theme.label, exact: true });
+      const button = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: theme.label, exact: true });
       await button.click();
       await expect(page.locator('main')).toHaveAttribute('data-pom-theme', theme.id);
       const evidence = await page.locator('main').evaluate((root) => {

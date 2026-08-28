@@ -13,18 +13,21 @@ afterEach(() => {
 });
 
 describe('Svelte Workbench Lab mockup', () => {
-  it('renders the atmospheric shell, story lockup, Panels, and six seeded Scene Widgets', () => {
+  it('renders the atmospheric shell, story lockup, Panels, and seven seeded Scene Widgets', () => {
     const { container } = render(App);
     expect(screen.getByText('PomegranateUI')).toBeVisible();
     expect(screen.getByText('The Reservoir at Blue Hour')).toBeVisible();
     expect(screen.getByLabelText('Active story identity')).toHaveTextContent('story-lab-reservoir');
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Library', 'Settings']);
-    for (const title of ['Characters (Story)', 'Transcript', 'Composer', 'World State', 'Room Ambience', 'Promise Ledger']) {
+    for (const title of ['Characters (Story)', 'Theme Settings', 'Transcript', 'Composer', 'World State', 'Room Ambience', 'Promise Ledger']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();
     }
     expect([...container.querySelectorAll('[data-conformance-region]')].map((region) => region.getAttribute('data-conformance-region'))).toEqual([
       'shelf', 'left', 'stage', 'composer', 'right'
     ]);
+    const composer = container.querySelector('[data-conformance-region="composer"]');
+    expect(composer?.closest('[data-conformance-region="stage"]')).not.toBeNull();
+    expect(composer?.closest('[data-widget-type="story.composer"]')).not.toBeNull();
   });
 
   it('carries the full audited 94-definition Catalog with exact category totals', async () => {
@@ -96,17 +99,22 @@ describe('Svelte Workbench Lab mockup', () => {
     const user = userEvent.setup();
     const { container } = render(App);
     const root = container.querySelector('main');
-    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+    const composer = screen.getByRole('textbox', { name: /Next action/ });
+    await user.clear(composer);
+    await user.type(composer, 'Keep this draft through the theme swap.');
     const before = {
       revision: root?.getAttribute('data-workbench-revision'),
       panel: container.querySelector('[data-pomegranate-panel]')?.getAttribute('data-pomegranate-panel'),
       widgets: [...container.querySelectorAll('[data-pomegranate-widget]')].map((node) => node.getAttribute('data-pomegranate-widget'))
     };
-    await user.click(screen.getByRole('button', { name: 'Bunny' }));
+    const bunny = within(screen.getByRole('group', { name: 'Visual target' })).getByRole('button', { name: 'Bunny' });
+    await user.click(bunny);
     expect(root).toHaveAttribute('data-pom-theme', 'bunny');
+    expect(bunny).toHaveFocus();
     expect(root).toHaveAttribute('data-workbench-revision', before.revision);
     expect(container.querySelector('[data-pomegranate-panel]')).toHaveAttribute('data-pomegranate-panel', before.panel);
     expect([...container.querySelectorAll('[data-pomegranate-widget]')].map((node) => node.getAttribute('data-pomegranate-widget'))).toEqual(before.widgets);
+    expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveValue('Keep this draft through the theme swap.');
     expect(window.localStorage.getItem('pomegranate-ui.workbench-lab.theme.v1')).toBe('bunny');
   });
 });

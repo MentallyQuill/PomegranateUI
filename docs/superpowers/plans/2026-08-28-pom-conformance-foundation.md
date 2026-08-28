@@ -345,19 +345,19 @@ git commit -m "test(conformance): expose Deep Current gaps"
 - Consumes: existing store, catalog, renderer registry, theme snapshot, commands, and stable IDs.
 - Produces: semantic shelf/left/stage/right/composer regions and authority-shaped geometry without state recreation.
 
-- [ ] **Step 1: Add failing component structure tests**
+- [x] **Step 1: Add failing component structure tests**
 
 Require exactly one of every `data-conformance-region`. Require composer as the
 stage footer owner rather than a tall generic Widget. Prove theme activation
 preserves revision, Panel, Widget IDs, draft, and focused control.
 
-- [ ] **Step 2: Add failing responsive browser assertions**
+- [x] **Step 2: Add failing responsive browser assertions**
 
 At 1600x900, 1180x800, 768x1024, 430x932, 390x844, 844x390, and 800x450,
 assert no horizontal overflow, composer reachability, active Panel visibility,
 and no toolbar collision. Coarse targets remain at least 44 by 44 CSS pixels.
 
-- [ ] **Step 3: Run focused tests and verify red**
+- [x] **Step 3: Run focused tests and verify red**
 
 ```powershell
 npm.cmd run test:native -- apps/workbench-lab/src/App.test.ts
@@ -366,14 +366,14 @@ npm.cmd run test:browser -- tests/browser/native-workbench-accessibility.spec.ts
 
 Expected: FAIL on absent semantic regions/current generic geometry.
 
-- [ ] **Step 4: Recompose without recreating runtime state**
+- [x] **Step 4: Recompose without recreating runtime state**
 
 Keep existing runtime/store/host/theme singletons. Put Panel strip/story lockup
 in the top band, integrated left/right owners around an image-led stage, and
 one shared composer draft/action at the stage footer. Add semantic attributes;
 copy no standalone mockup script.
 
-- [ ] **Step 5: Restore geometry through theme-neutral structural CSS**
+- [x] **Step 5: Restore geometry through theme-neutral structural CSS**
 
 At wide sizes target equal side toolbars from the authority's
 `min(286px, 18vw)` formula, a flexible center stage,
@@ -381,13 +381,13 @@ top shelf, and centered lower-stage composer. Bind every visual value through
 semantic custom properties. Use structural CSS for grid, resize ranges,
 docking, and reflow. Add no theme-ID selector.
 
-- [ ] **Step 6: Iterate and close one discrepancy at a time**
+- [x] **Step 6: Iterate and close one discrepancy at a time**
 
 Run its scenario, inspect geometry before pixels, make the smallest shared
 correction, rerun focused gates, and close only with passing regression. After
 three ineffective fixes revisit structure/authority mapping.
 
-- [ ] **Step 7: Freeze, verify, and commit**
+- [x] **Step 7: Freeze, verify, and commit**
 
 Write the normalized passing baseline and rerun without update mode:
 
