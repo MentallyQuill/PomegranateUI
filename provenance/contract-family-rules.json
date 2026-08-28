@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "families": [
+    { "family": "INTEGRATION-SONDER", "pattern": "route|endpoint|server|backend|director|living world|charter|authentication|archive" },
+    { "family": "A11Y", "pattern": "keyboard|focus|accessible|accessibility|announcement|reduced motion|input equivalence|screen reader|aria" },
+    { "family": "DRAG", "pattern": "drag|pointer|drop|release|cancel|exact.origin" },
+    { "family": "RESPONSIVE", "pattern": "viewport|width|height|phone|tablet|landscape|stack|reflow|compact|mobile|narrow|wide" },
+    { "family": "PERSIST", "pattern": "stored layout|save|restore|schema version|migration|persist|session" },
+    { "family": "CATALOG", "pattern": "catalog|discovery|filter|miniature|search|placement source" },
+    { "family": "THEME", "pattern": "theme|token|contrast|typography|color|motion|sound|feedback" },
+    { "family": "PANEL", "pattern": "panel|shelf|toolbar|slot|tab" },
+    { "family": "LAYOUT", "pattern": "dock|floating|resize|undo|layout|workspace|placement|region|shell" },
+    { "family": "WIDGET", "pattern": "widget|manifest|instance|renderer|lifecycle|state family|surface|settings|story|library|systems" }
+  ],
+  "kindFallbacks": {
+    "harness": "LAYOUT",
+    "widget-ledger": "WIDGET"
+  }
+}
