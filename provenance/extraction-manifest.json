@@ -8705,5 +8705,9 @@
       ],
       "status": "preserved-verbatim"
     }
-  ]
+  ],
+  "testDispositions": {
+    "path": "provenance/sonder-test-dispositions.json",
+    "count": 240
+  }
 }

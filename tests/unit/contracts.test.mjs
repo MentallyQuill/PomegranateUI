@@ -10,6 +10,10 @@ import {
   extractLedgerRows,
   stableContractId
 } from '../../scripts/generate-contract-index.mjs';
+import {
+  discoverSonderTestCandidates,
+  validateTestDispositions
+} from '../../scripts/generate-test-dispositions.mjs';
 
 const root = path.resolve(import.meta.dirname, '..', '..');
 
@@ -57,4 +61,16 @@ test('builds a complete unique index with approved statuses and owners', async (
   assert.equal(index.contracts.some((item) => item.status === 'retired-approved'), false);
   assert.equal(index.contracts.every((item) => /^POM-(?:INTEGRATION-SONDER|A11Y|DRAG|RESPONSIVE|PERSIST|CATALOG|THEME|PANEL|LAYOUT|WIDGET)-[A-F0-9]{10}$/.test(item.contractId)), true);
   assert.equal(index.contracts.every((item) => item.destinationOwner && item.destinationEvidence.length), true);
+});
+
+test('every baseline Sonder UI test candidate has exactly one reviewed disposition', async () => {
+  const manifest = JSON.parse(await readFile(path.join(root, 'provenance/extraction-manifest.json'), 'utf8'));
+  const contractIndex = JSON.parse(await readFile(path.join(root, 'provenance/contract-index.json'), 'utf8'));
+  const dispositions = JSON.parse(await readFile(path.join(root, 'provenance/sonder-test-dispositions.json'), 'utf8'));
+  const candidates = discoverSonderTestCandidates({
+    sourceRoot: 'F:/git/Sonder_Engine',
+    sourceCommit: manifest.baseline.sourceCommit,
+    fallbackCandidates: dispositions.entries.map((item) => item.sourcePath)
+  });
+  assert.deepEqual(validateTestDispositions({ candidates, dispositions, contractIndex }), []);
 });
