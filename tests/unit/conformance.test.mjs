@@ -13,7 +13,10 @@ import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, wri
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
 import { DEEP_CURRENT_MACRO_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
+import { assertScenarioResolution } from '../conformance/runner.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
+import { prepareAtmosphericState } from '../conformance/drivers/reference/atmospheric.ts';
+import { prepareDeepCurrentState } from '../conformance/drivers/workbench-lab/deep-current.ts';
 import { VISIBLE_IMPLEMENTATION_REGION_IDS } from '../conformance/drivers/workbench-lab/deep-current.ts';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -62,6 +65,38 @@ test('manifest validation rejects preserved reference hash drift before browser 
       assert.equal(error.details.scenarioId, 'dc-shell-wide');
       return true;
     }
+  );
+});
+
+test('reference and implementation setup failures remain distinct fail-closed lanes', async () => {
+  const unavailablePage = {
+    goto: async () => { throw new Error('required selector is unavailable'); }
+  };
+
+  await assert.rejects(
+    prepareAtmosphericState(unavailablePage, 'http://reference.invalid'),
+    (error) => error.code === 'REFERENCE_SETUP_FAILED'
+      && /required selector is unavailable/.test(error.details.cause)
+  );
+  await assert.rejects(
+    prepareDeepCurrentState(unavailablePage, 'http://implementation.invalid'),
+    (error) => error.code === 'IMPLEMENTATION_SETUP_FAILED'
+      && /required selector is unavailable/.test(error.details.cause)
+  );
+});
+
+test('scenario resolution rejects unknown mismatches and stale reviewed rows exactly', () => {
+  assert.throws(
+    () => assertScenarioResolution('dc-shell-wide', false, []),
+    (error) => error.code === 'UNLEDGERED_DISCREPANCY'
+      && error.details.scenarioId === 'dc-shell-wide'
+  );
+  assert.throws(
+    () => assertScenarioResolution('dc-shell-wide', true, [{
+      id: 'DC-001', scenario: 'dc-shell-wide', status: 'open'
+    }]),
+    (error) => error.code === 'STALE_DISCREPANCY'
+      && error.details.discrepancyIds[0] === 'DC-001'
   );
 });
 

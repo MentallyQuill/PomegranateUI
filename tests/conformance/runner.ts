@@ -14,7 +14,7 @@ import {
   writeMeasurementEvidence,
   type EvidencePaths
 } from './evidence.ts';
-import { parseDiscrepancyLedger } from './ledger.ts';
+import { parseDiscrepancyLedger, type Discrepancy } from './ledger.ts';
 import { ConformanceError, type ConformanceScenario } from './types.ts';
 import { CONFORMANCE_VIEWPORTS } from './viewports.ts';
 
@@ -42,6 +42,41 @@ async function attachEvidence(testInfo: TestInfo, paths: EvidencePaths): Promise
     attachIfPresent(testInfo, 'measurements', paths.measurementsJson, 'application/json'),
     attachIfPresent(testInfo, 'report', paths.reportJson, 'application/json')
   ]);
+}
+
+export function assertScenarioResolution(
+  scenarioId: string,
+  comparisonPass: boolean,
+  ledger: readonly Pick<Discrepancy, 'id' | 'scenario' | 'status'>[]
+): void {
+  const scenarioEntries = ledger.filter((entry) => entry.scenario === scenarioId);
+  const discrepancyIds = scenarioEntries.map((entry) => entry.id);
+
+  if (!comparisonPass) {
+    if (discrepancyIds.length === 0) {
+      throw new ConformanceError(
+        'UNLEDGERED_DISCREPANCY',
+        `Scenario ${scenarioId} has a structured mismatch without a ledger row.`,
+        { scenarioId }
+      );
+    }
+    throw new ConformanceError(
+      'DISCREPANCY_REMAINS',
+      `Scenario ${scenarioId} still differs from its preserved authority.`,
+      { scenarioId, discrepancyIds }
+    );
+  }
+
+  const unresolvedIds = scenarioEntries
+    .filter((entry) => entry.status !== 'closed')
+    .map((entry) => entry.id);
+  if (unresolvedIds.length > 0) {
+    throw new ConformanceError(
+      'STALE_DISCREPANCY',
+      `Scenario ${scenarioId} passes while its ledger rows remain unresolved.`,
+      { scenarioId, discrepancyIds: unresolvedIds }
+    );
+  }
 }
 
 export async function runConformanceScenario(
@@ -84,31 +119,7 @@ export async function runConformanceScenario(
   });
   await attachEvidence(testInfo, paths);
 
-  if (!comparison.pass) {
-    if (discrepancyIds.length === 0) {
-      throw new ConformanceError(
-        'UNLEDGERED_DISCREPANCY',
-        `Scenario ${scenario.id} has a structured mismatch without a ledger row.`,
-        { scenarioId: scenario.id }
-      );
-    }
-    throw new ConformanceError(
-      'DISCREPANCY_REMAINS',
-      `Scenario ${scenario.id} still differs from its preserved authority.`,
-      { scenarioId: scenario.id, discrepancyIds }
-    );
-  }
-
-  const unresolvedIds = ledger
-    .filter((entry) => entry.scenario === scenario.id && entry.status !== 'closed')
-    .map((entry) => entry.id);
-  if (unresolvedIds.length > 0) {
-    throw new ConformanceError(
-      'STALE_DISCREPANCY',
-      `Scenario ${scenario.id} passes while its ledger rows remain unresolved.`,
-      { scenarioId: scenario.id, discrepancyIds: unresolvedIds }
-    );
-  }
+  assertScenarioResolution(scenario.id, comparison.pass, ledger);
 
   return comparison;
 }
