@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  applyNativeEvidenceOverlay,
   buildContractIndex,
   classifyContract,
   extractHarnessCases,
@@ -16,6 +17,17 @@ import {
 } from '../../scripts/generate-test-dispositions.mjs';
 
 const root = path.resolve(import.meta.dirname, '..', '..');
+
+const expectedFirstSliceIds = [
+  'POM-PANEL-07856BFE9A',
+  'POM-PANEL-DF4EC7C581',
+  'POM-PANEL-0C32491298',
+  'POM-PANEL-E6D6A0E64B',
+  'POM-PERSIST-842D422EB3',
+  'POM-PERSIST-9FA69F9FC1',
+  'POM-PERSIST-28DFDC9A8F',
+  'POM-PERSIST-D50D69D3C4'
+];
 
 test('extracts each literal run title once', async () => {
   for (const sourcePath of [
@@ -61,6 +73,78 @@ test('builds a complete unique index with approved statuses and owners', async (
   assert.equal(index.contracts.some((item) => item.status === 'retired-approved'), false);
   assert.equal(index.contracts.every((item) => /^POM-(?:INTEGRATION-SONDER|A11Y|DRAG|RESPONSIVE|PERSIST|CATALOG|THEME|PANEL|LAYOUT|WIDGET)-[A-F0-9]{10}$/.test(item.contractId)), true);
   assert.equal(index.contracts.every((item) => item.destinationOwner && item.destinationEvidence.length), true);
+});
+
+test('native evidence overlay accepts only reviewed promotions of known preserved contracts', () => {
+  const contracts = [{
+    contractId: 'POM-PANEL-AAAAAAAAAA',
+    destinationEvidence: ['prototypes/oracle.html'],
+    status: 'preserved-verbatim'
+  }];
+  const valid = {
+    schemaVersion: 1,
+    entries: [{
+      contractId: 'POM-PANEL-AAAAAAAAAA',
+      status: 'dual-green',
+      nativeEvidence: ['tests/browser/native.spec.ts']
+    }]
+  };
+  const applied = applyNativeEvidenceOverlay(contracts, valid);
+  assert.deepEqual(applied[0].destinationEvidence, [
+    'prototypes/oracle.html',
+    'tests/browser/native.spec.ts'
+  ]);
+  assert.equal(applied[0].status, 'dual-green');
+  assert.equal(contracts[0].status, 'preserved-verbatim');
+
+  assert.throws(() => applyNativeEvidenceOverlay(contracts, {
+    ...valid,
+    entries: [...valid.entries, valid.entries[0]]
+  }), /duplicate.*overlay/i);
+  assert.throws(() => applyNativeEvidenceOverlay(contracts, {
+    ...valid,
+    entries: [{ ...valid.entries[0], contractId: 'POM-PANEL-BBBBBBBBBB' }]
+  }), /unknown contract/i);
+  assert.throws(() => applyNativeEvidenceOverlay(contracts, {
+    ...valid,
+    entries: [{ ...valid.entries[0], status: 'invented' }]
+  }), /unsupported.*status/i);
+  assert.throws(() => applyNativeEvidenceOverlay([
+    { ...contracts[0], status: 'sonder-owned' }
+  ], valid), /preserved-verbatim/i);
+});
+
+test('production overlay promotes exactly the eight first-slice contracts', async () => {
+  const manifest = JSON.parse(await readFile(path.join(root, 'provenance/extraction-manifest.json'), 'utf8'));
+  const rules = JSON.parse(await readFile(path.join(root, 'provenance/contract-family-rules.json'), 'utf8'));
+  const runtimeHarnessCases = JSON.parse(await readFile(path.join(root, 'provenance/preserved-harness-cases.json'), 'utf8'));
+  const nativeEvidence = JSON.parse(await readFile(path.join(root, 'provenance/native-contract-evidence.json'), 'utf8'));
+  const index = await buildContractIndex({
+    manifest,
+    importedRoot: root,
+    rules,
+    runtimeHarnessCases,
+    nativeEvidence
+  });
+  assert.deepEqual(
+    index.contracts.filter((item) => item.status === 'dual-green').map((item) => item.contractId).sort(),
+    [...expectedFirstSliceIds].sort()
+  );
+});
+
+test('contract generation retains the reviewed Sonder test disposition ledger', async () => {
+  const manifest = JSON.parse(await readFile(path.join(root, 'provenance/extraction-manifest.json'), 'utf8'));
+  const rules = JSON.parse(await readFile(path.join(root, 'provenance/contract-family-rules.json'), 'utf8'));
+  const runtimeHarnessCases = JSON.parse(await readFile(path.join(root, 'provenance/preserved-harness-cases.json'), 'utf8'));
+  const testDispositions = JSON.parse(await readFile(path.join(root, 'provenance/sonder-test-dispositions.json'), 'utf8'));
+  const index = await buildContractIndex({
+    manifest,
+    importedRoot: root,
+    rules,
+    runtimeHarnessCases,
+    sonderTests: testDispositions.entries
+  });
+  assert.deepEqual(index.sonderTests, testDispositions.entries);
 });
 
 test('production index assigns one stable ID to every executed runtime case', async () => {

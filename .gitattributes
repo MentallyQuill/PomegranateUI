@@ -6,6 +6,9 @@
 /provenance/sonder-design/** -text
 /provenance/sonder-guides/** -text
 /provenance/sonder-plans-and-specs/** -text
+/provenance/contract-index.json -text
+/provenance/extraction-manifest.json -text
 /provenance/extraction-ledger.md -text
 /provenance/migration-report.md -text
+/provenance/native-contract-evidence.json -text
 /provenance/preserved-harness-cases.json -text

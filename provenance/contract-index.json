@@ -3572,9 +3572,10 @@
       "classification": "toolkit-generic",
       "destinationOwner": "@pomegranate-ui/panel",
       "destinationEvidence": [
-        "prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html"
+        "prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html",
+        "tests/browser/native-workbench.spec.ts"
       ],
-      "status": "preserved-verbatim"
+      "status": "dual-green"
     },
     {
       "contractId": "POM-PANEL-0C32491298",
@@ -3586,9 +3587,10 @@
       "classification": "toolkit-generic",
       "destinationOwner": "@pomegranate-ui/panel",
       "destinationEvidence": [
-        "prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html"
+        "prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html",
+        "tests/browser/native-workbench.spec.ts"
       ],
-      "status": "preserved-verbatim"
+      "status": "dual-green"
     },
     {
       "contractId": "POM-PANEL-0EB21CB6FD",
@@ -4156,9 +4158,10 @@
       "classification": "toolkit-generic",
       "destinationOwner": "@pomegranate-ui/panel",
       "destinationEvidence": [
-        "prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html"
+        "prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html",
+        "tests/browser/native-workbench.spec.ts"
       ],
-      "status": "preserved-verbatim"
+      "status": "dual-green"
     },
     {
       "contractId": "POM-PANEL-E31FB95962",
@@ -4186,9 +4189,10 @@
       "classification": "toolkit-generic",
       "destinationOwner": "@pomegranate-ui/panel",
       "destinationEvidence": [
-        "prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html"
+        "prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html",
+        "tests/browser/native-workbench.spec.ts"
       ],
-      "status": "preserved-verbatim"
+      "status": "dual-green"
     },
     {
       "contractId": "POM-PANEL-E7919AD37D",
@@ -4328,9 +4332,10 @@
       "classification": "toolkit-generic",
       "destinationOwner": "@pomegranate-ui/persist",
       "destinationEvidence": [
-        "prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html"
+        "prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html",
+        "tests/browser/native-workbench.spec.ts"
       ],
-      "status": "preserved-verbatim"
+      "status": "dual-green"
     },
     {
       "contractId": "POM-PERSIST-38F4B2BE7A",
@@ -4482,9 +4487,10 @@
       "classification": "toolkit-generic",
       "destinationOwner": "@pomegranate-ui/persist",
       "destinationEvidence": [
-        "prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html"
+        "prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html",
+        "tests/browser/native-workbench.spec.ts"
       ],
-      "status": "preserved-verbatim"
+      "status": "dual-green"
     },
     {
       "contractId": "POM-PERSIST-856CE405DD",
@@ -4538,9 +4544,10 @@
       "classification": "toolkit-generic",
       "destinationOwner": "@pomegranate-ui/persist",
       "destinationEvidence": [
-        "prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html"
+        "prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html",
+        "tests/browser/native-workbench.spec.ts"
       ],
-      "status": "preserved-verbatim"
+      "status": "dual-green"
     },
     {
       "contractId": "POM-PERSIST-B7E49E4887",
@@ -4608,9 +4615,10 @@
       "classification": "toolkit-generic",
       "destinationOwner": "@pomegranate-ui/persist",
       "destinationEvidence": [
-        "prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html"
+        "prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html",
+        "tests/browser/native-workbench.spec.ts"
       ],
-      "status": "preserved-verbatim"
+      "status": "dual-green"
     },
     {
       "contractId": "POM-PERSIST-DFD5D11F50",

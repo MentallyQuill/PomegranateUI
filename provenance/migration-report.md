@@ -3,9 +3,9 @@
 - Total baseline contracts: 497
 - Preserved artifacts: 153
 - Assigned Widget/renderer surfaces: 190
-- Dual-green contracts: 0
+- Dual-green contracts: 8
 - Sonder-owned contracts: 54
-- Awaiting native port: 443
+- Awaiting native port: 435
 - Sonder test dispositions: 240
 - **Unaccounted: 0**
 
@@ -43,7 +43,8 @@
 
 | Value | Count |
 |---|---:|
-| preserved-verbatim | 443 |
+| dual-green | 8 |
+| preserved-verbatim | 435 |
 | sonder-owned | 54 |
 
 ### Contracts by destination owner

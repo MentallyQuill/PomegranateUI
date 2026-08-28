@@ -14,6 +14,7 @@ import {
   resolveScope,
   sha256
 } from '../../scripts/lib/extraction.mjs';
+import { verifyNativeContractEvidence } from '../../scripts/verify-extraction.mjs';
 
 const temporaryRoots = [];
 
@@ -153,4 +154,36 @@ test('fails before writing when a referenced icon is absent from its source mani
     /referenced icon.*source manifest/i
   );
   await assert.rejects(readFile(path.join(fixture.destinationRoot, 'prototype', 'oracle.html')), /ENOENT/);
+});
+
+test('native evidence must exist, cite its contract id, and retain preserved evidence', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'pomegranate-native-evidence-'));
+  temporaryRoots.push(root);
+  await mkdir(path.join(root, 'tests', 'browser'), { recursive: true });
+  await writeFile(
+    path.join(root, 'tests', 'browser', 'native.spec.ts'),
+    "test('POM-PANEL-AAAAAAAAAA native proof', () => {});\n"
+  );
+  const artifacts = [{
+    sourcePath: 'source/oracle.html',
+    destinationPath: 'prototypes/oracle.html',
+    status: 'preserved-verbatim'
+  }];
+  const contract = {
+    contractId: 'POM-PANEL-AAAAAAAAAA',
+    sourcePath: 'source/oracle.html',
+    destinationEvidence: ['prototypes/oracle.html', 'tests/browser/native.spec.ts'],
+    status: 'dual-green'
+  };
+  assert.deepEqual(await verifyNativeContractEvidence({ root, contracts: [contract], artifacts }), []);
+
+  for (const [name, changed, expected] of [
+    ['missing native file', { ...contract, destinationEvidence: ['prototypes/oracle.html', 'tests/browser/missing.spec.ts'] }, /missing native evidence/i],
+    ['id absent from file', { ...contract, contractId: 'POM-PANEL-BBBBBBBBBB' }, /does not cite/i],
+    ['preserved evidence removed', { ...contract, destinationEvidence: ['tests/browser/native.spec.ts'] }, /preserved evidence/i],
+    ['no native path', { ...contract, destinationEvidence: ['prototypes/oracle.html'] }, /native evidence outside prototypes/i]
+  ]) {
+    const findings = await verifyNativeContractEvidence({ root, contracts: [changed], artifacts });
+    assert.match(findings.join('\n'), expected, name);
+  }
 });

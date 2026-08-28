@@ -19,6 +19,40 @@ function artifactWithinScope(artifact, scope) {
     || (scope.referencedAssetRules || []).some((rule) => artifact.sourcePath.startsWith(rule.sourceDirectory));
 }
 
+export async function verifyNativeContractEvidence({ root, contracts, artifacts }) {
+  const findings = [];
+  const artifactsBySource = new Map((artifacts || []).map((artifact) => [artifact.sourcePath, artifact]));
+  for (const contract of contracts || []) {
+    if (contract.status !== 'native-test-added' && contract.status !== 'dual-green') continue;
+    const preservedArtifact = artifactsBySource.get(contract.sourcePath);
+    if (
+      !preservedArtifact
+      || preservedArtifact.status !== 'preserved-verbatim'
+      || !contract.destinationEvidence?.includes(preservedArtifact.destinationPath)
+    ) {
+      findings.push(`${contract.contractId}: preserved evidence is missing from native promotion`);
+    }
+    const nativePaths = (contract.destinationEvidence || []).filter((evidence) => (
+      evidence !== preservedArtifact?.destinationPath
+      && !String(evidence).startsWith('POM-')
+      && !String(evidence).startsWith('prototypes/')
+    ));
+    if (nativePaths.length === 0) {
+      findings.push(`${contract.contractId}: native evidence outside prototypes is required`);
+      continue;
+    }
+    for (const nativePath of nativePaths) {
+      const bytes = await fileBytes(root, nativePath);
+      if (!bytes) {
+        findings.push(`${contract.contractId}: missing native evidence ${nativePath}`);
+      } else if (!bytes.toString('utf8').includes(contract.contractId)) {
+        findings.push(`${contract.contractId}: native evidence ${nativePath} does not cite its contract id`);
+      }
+    }
+  }
+  return findings.sort();
+}
+
 export async function verifyExtraction({ root, manifest, contractIndex, scope, testDispositions, runtimeHarnessCases }) {
   const findings = [];
   const artifactsByDestination = new Map(manifest.artifacts.map((item) => [item.destinationPath, item]));
@@ -49,6 +83,11 @@ export async function verifyExtraction({ root, manifest, contractIndex, scope, t
       if (String(evidence).startsWith('POM-') && !knownContracts.has(evidence)) findings.push(`${contract.contractId}: unknown contract citation ${evidence}`);
     }
   }
+  findings.push(...await verifyNativeContractEvidence({
+    root,
+    contracts: contractIndex.contracts || [],
+    artifacts: manifest.artifacts || []
+  }));
 
   for (const artifact of manifest.artifacts) {
     const kinds = new Set((contractIndex.contracts || []).filter((contract) => contract.sourcePath === artifact.sourcePath).map((contract) => contract.evidenceKind));

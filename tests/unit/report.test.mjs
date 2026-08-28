@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -49,4 +49,25 @@ test('--check equivalent detects stale committed Markdown', async () => {
   await writeFile(path.join(root, 'provenance', 'migration-report.md'), 'stale');
   assert.deepEqual(await checkGeneratedReports({ root, reports }), ['provenance/migration-report.md is stale']);
   await rm(root, { recursive: true, force: true });
+});
+
+test('production report carries the exact first-slice migration totals and is current', async () => {
+  const root = path.resolve(import.meta.dirname, '..', '..');
+  const json = async (name) => JSON.parse(await readFile(path.join(root, 'provenance', name), 'utf8'));
+  const production = {
+    manifest: await json('extraction-manifest.json'),
+    contractIndex: await json('contract-index.json'),
+    testDispositions: await json('sonder-test-dispositions.json'),
+    sourceCommits: await readFile(path.join(root, 'provenance', 'source-commits.md'), 'utf8'),
+    runtimeHarnessCases: await json('preserved-harness-cases.json')
+  };
+  const reports = buildReports(production);
+  for (const expected of [
+    'Total baseline contracts: 497',
+    'Dual-green contracts: 8',
+    'Sonder-owned contracts: 54',
+    'Awaiting native port: 435',
+    'Unaccounted: 0'
+  ]) assert.match(reports.report, new RegExp(expected));
+  assert.deepEqual(await checkGeneratedReports({ root, reports }), []);
 });

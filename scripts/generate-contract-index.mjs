@@ -7,6 +7,7 @@ const APPROVED_FAMILIES = new Set([
   'INTEGRATION-SONDER', 'A11Y', 'DRAG', 'RESPONSIVE', 'PERSIST',
   'CATALOG', 'THEME', 'PANEL', 'LAYOUT', 'WIDGET'
 ]);
+const NATIVE_STATUSES = new Set(['native-test-added', 'dual-green']);
 
 export function normalizeEvidence(value) {
   return String(value).normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -75,7 +76,76 @@ function artifactFor(manifest, destinationPath) {
   return artifact;
 }
 
-export async function buildContractIndex({ manifest, importedRoot, rules, runtimeHarnessCases }) {
+function validateEvidencePath(value, contractId) {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${contractId}: native evidence path must be a non-empty string`);
+  }
+  const normalized = value.replaceAll('\\', '/');
+  if (
+    normalized !== value
+    || path.posix.isAbsolute(normalized)
+    || /^[A-Za-z]:\//.test(normalized)
+    || normalized.split('/').includes('..')
+  ) {
+    throw new Error(`${contractId}: native evidence path must be normalized and repository-relative: ${value}`);
+  }
+  return normalized;
+}
+
+export function applyNativeEvidenceOverlay(contracts, overlay) {
+  if (!overlay || overlay.schemaVersion !== 1 || !Array.isArray(overlay.entries)) {
+    throw new Error('Native evidence overlay must use schemaVersion 1 with an entries array.');
+  }
+  const contractsById = new Map(contracts.map((contract) => [contract.contractId, contract]));
+  const entriesById = new Map();
+  for (const entry of overlay.entries) {
+    if (!entry || typeof entry.contractId !== 'string') {
+      throw new Error('Native evidence overlay entry is missing contractId.');
+    }
+    if (entriesById.has(entry.contractId)) {
+      throw new Error(`Duplicate native overlay contract id: ${entry.contractId}`);
+    }
+    if (!NATIVE_STATUSES.has(entry.status)) {
+      throw new Error(`${entry.contractId}: unsupported native evidence status ${entry.status}`);
+    }
+    const contract = contractsById.get(entry.contractId);
+    if (!contract) throw new Error(`Native evidence overlay cites unknown contract: ${entry.contractId}`);
+    if (contract.status !== 'preserved-verbatim') {
+      throw new Error(`${entry.contractId}: native evidence can promote only preserved-verbatim contracts.`);
+    }
+    if (!Array.isArray(entry.nativeEvidence) || entry.nativeEvidence.length === 0) {
+      throw new Error(`${entry.contractId}: native evidence overlay requires at least one path.`);
+    }
+    const nativeEvidence = entry.nativeEvidence.map((value) => validateEvidencePath(value, entry.contractId));
+    if (new Set(nativeEvidence).size !== nativeEvidence.length) {
+      throw new Error(`${entry.contractId}: native evidence overlay contains duplicate paths.`);
+    }
+    if (nativeEvidence.some((value) => contract.destinationEvidence.includes(value))) {
+      throw new Error(`${entry.contractId}: native evidence must be distinct from preserved evidence.`);
+    }
+    entriesById.set(entry.contractId, { status: entry.status, nativeEvidence });
+  }
+
+  return contracts.map((contract) => {
+    const entry = entriesById.get(contract.contractId);
+    return entry
+      ? {
+          ...contract,
+          destinationEvidence: [...contract.destinationEvidence, ...entry.nativeEvidence],
+          status: entry.status
+        }
+      : { ...contract, destinationEvidence: [...contract.destinationEvidence] };
+  });
+}
+
+export async function buildContractIndex({
+  manifest,
+  importedRoot,
+  rules,
+  runtimeHarnessCases,
+  nativeEvidence,
+  sonderTests
+}) {
   const sources = [
     { kind: 'harness', path: 'prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html', extract: extractHarnessCases },
     { kind: 'harness', path: 'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html', extract: extractHarnessCases },
@@ -119,7 +189,12 @@ export async function buildContractIndex({ manifest, importedRoot, rules, runtim
     }
   }
   contracts.sort((a, b) => a.contractId.localeCompare(b.contractId));
-  return { schemaVersion: 1, baseline: manifest.baseline, contracts };
+  return {
+    schemaVersion: 1,
+    baseline: manifest.baseline,
+    contracts: nativeEvidence ? applyNativeEvidenceOverlay(contracts, nativeEvidence) : contracts,
+    ...(sonderTests ? { sonderTests } : {})
+  };
 }
 
 async function main() {
@@ -130,8 +205,17 @@ async function main() {
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   const rules = JSON.parse(await readFile(path.join(root, 'provenance', 'contract-family-rules.json'), 'utf8'));
   const runtimeHarnessCases = JSON.parse(await readFile(path.join(root, 'provenance', 'preserved-harness-cases.json'), 'utf8'));
+  const nativeEvidence = JSON.parse(await readFile(path.join(root, 'provenance', 'native-contract-evidence.json'), 'utf8'));
+  const testDispositions = JSON.parse(await readFile(path.join(root, 'provenance', 'sonder-test-dispositions.json'), 'utf8'));
   if (runtimeHarnessCases.sourceCommit !== manifest.baseline.sourceCommit) throw new Error('Runtime harness snapshot source commit does not match the extraction baseline.');
-  const index = await buildContractIndex({ manifest, importedRoot: root, rules, runtimeHarnessCases });
+  const index = await buildContractIndex({
+    manifest,
+    importedRoot: root,
+    rules,
+    runtimeHarnessCases,
+    nativeEvidence,
+    sonderTests: testDispositions.entries
+  });
   const encoded = `${JSON.stringify(index, null, 2)}\n`;
   if (write) {
     manifest.contracts = index.contracts;

@@ -747,7 +747,7 @@ git commit -m "test: verify packed clean consumers"
 - Consumes: exact native Playwright test ids and the existing generated contract index.
 - Produces: a reviewed overlay that is the only source allowed to promote a baseline contract to `native-test-added` or `dual-green`.
 
-- [ ] **Step 1: Write failing overlay and verifier tests**
+- [x] **Step 1: Write failing overlay and verifier tests**
 
 Add tests that reject unknown ids, duplicate overlay ids, unsupported statuses, missing native files, evidence files that do not contain their cited id, dual-green entries without preserved evidence, and stale generated reports. Require exactly eight dual-green ids in production.
 
@@ -758,25 +758,25 @@ assert.deepEqual(
 );
 ```
 
-- [ ] **Step 2: Run focused provenance tests and verify RED**
+- [x] **Step 2: Run focused provenance tests and verify RED**
 
 Run: `node --test tests/unit/contracts.test.mjs tests/unit/extraction.test.mjs tests/unit/report.test.mjs`
 
 Expected: FAIL because the native evidence overlay and enforcement do not exist.
 
-- [ ] **Step 3: Add the native evidence overlay**
+- [x] **Step 3: Add the native evidence overlay**
 
 Create schema version 1 with eight entries. Each entry has `contractId`, `status: dual-green`, and `nativeEvidence: ["tests/browser/native-workbench.spec.ts"]`.
 
-- [ ] **Step 4: Merge overlay evidence during generation**
+- [x] **Step 4: Merge overlay evidence during generation**
 
 Extend `buildContractIndex` with a `nativeEvidence` input. Build preserved contracts first, validate the overlay against their ids, append native paths after the preserved path, and change only the mapped status. Main reads the overlay and writes the index and manifest deterministically.
 
-- [ ] **Step 5: Enforce native evidence in extraction verification**
+- [x] **Step 5: Enforce native evidence in extraction verification**
 
 For `native-test-added` or `dual-green`, require at least one destination path outside `prototypes/`; require the file to exist; require its UTF-8 text to contain the contract id; and require the preserved source path to remain in destination evidence. Reject retired contracts exactly as before.
 
-- [ ] **Step 6: Add line-ending protection and regenerate reports**
+- [x] **Step 6: Add line-ending protection and regenerate reports**
 
 Add `-text` entries for `provenance/contract-index.json`, `provenance/extraction-manifest.json`, and `provenance/native-contract-evidence.json`. Run:
 
@@ -790,7 +790,7 @@ npm.cmd run report
 
 Expected report totals: 497 baseline contracts, 8 dual-green, 54 Sonder-owned, 435 awaiting native port, and 0 unaccounted.
 
-- [ ] **Step 7: Commit dual-green provenance**
+- [x] **Step 7: Commit dual-green provenance**
 
 ```powershell
 git add provenance scripts/generate-contract-index.mjs scripts/verify-extraction.mjs scripts/generate-migration-report.mjs tests/unit/contracts.test.mjs tests/unit/extraction.test.mjs tests/unit/report.test.mjs .gitattributes
