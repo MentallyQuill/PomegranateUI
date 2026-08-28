@@ -6,3 +6,5 @@
 /provenance/sonder-design/** -text
 /provenance/sonder-guides/** -text
 /provenance/sonder-plans-and-specs/** -text
+/provenance/extraction-ledger.md -text
+/provenance/migration-report.md -text

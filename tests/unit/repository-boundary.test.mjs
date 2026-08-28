@@ -60,7 +60,9 @@ test('Git never normalizes byte-preserved evidence paths', async () => {
     '/provenance/assets/** -text',
     '/provenance/sonder-design/** -text',
     '/provenance/sonder-guides/** -text',
-    '/provenance/sonder-plans-and-specs/** -text'
+    '/provenance/sonder-plans-and-specs/** -text',
+    '/provenance/extraction-ledger.md -text',
+    '/provenance/migration-report.md -text'
   ]) assert.ok(attributes.split(/\r?\n/).includes(pattern), pattern);
 });
 
