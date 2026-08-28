@@ -3,6 +3,7 @@ playwright-report/
 test-results/
 coverage/
 .tmp/
+.worktrees/
 **/dist/
 *.tsbuildinfo
 *.log
