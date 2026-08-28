@@ -9,7 +9,8 @@ const manifestPath = path.join(recipesRoot, 'recipe-manifest.json');
 const installRecordName = '.pomegranate-recipes.json';
 
 function sha256(bytes) {
-  return createHash('sha256').update(bytes).digest('hex').toUpperCase();
+  const normalized = Buffer.from(bytes.toString('utf8').replaceAll('\r\n', '\n'), 'utf8');
+  return createHash('sha256').update(normalized).digest('hex').toUpperCase();
 }
 
 async function exists(target) {

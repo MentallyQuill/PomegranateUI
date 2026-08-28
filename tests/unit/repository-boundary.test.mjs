@@ -28,7 +28,7 @@ async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    if (entry.name === '.git' || entry.name === 'node_modules') continue;
+    if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === 'dist') continue;
     const absolute = path.join(directory, entry.name);
     if (entry.isDirectory()) files.push(...await walk(absolute));
     else files.push(absolute);
@@ -173,6 +173,11 @@ test('framework-neutral packages do not import a view framework or DOM', async (
       assert.doesNotMatch(source, /\b(?:document|window|HTMLElement|Element)\b/);
     }
   }
+});
+
+test('active-source scans exclude generated package output', async () => {
+  const files = await walk(path.join(root, 'packages'));
+  assert.equal(files.some((file) => file.split(path.sep).includes('dist')), false);
 });
 
 test('visual baselines are canonical on Windows while functional browser coverage remains cross-platform', async () => {

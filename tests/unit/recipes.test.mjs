@@ -68,6 +68,24 @@ test('recipe copy is clean and refuses to overwrite adopter edits', async () => 
   assert.match(refused.stderr, /RECIPE_DESTINATION_MODIFIED: PanelTabs\.svelte/);
 });
 
+test('recipe hashes treat LF and CRLF as the same source-owned text', async () => {
+  const target = await mkdtemp(path.join(tmpdir(), 'pomegranate-recipes-eol-'));
+  temporaryRoots.push(target);
+  const copied = run(['--copy', 'panel-tabs', '--to', target]);
+  assert.equal(copied.status, 0, copied.stderr || copied.stdout);
+
+  const destination = path.join(target, 'PanelTabs.svelte');
+  const original = await readFile(destination, 'utf8');
+  const alternate = original.includes('\r\n')
+    ? original.replaceAll('\r\n', '\n')
+    : original.replaceAll('\n', '\r\n');
+  assert.notEqual(alternate, original);
+  await writeFile(destination, alternate);
+
+  const refreshed = run(['--copy', 'panel-tabs', '--to', target]);
+  assert.equal(refreshed.status, 0, refreshed.stderr || refreshed.stdout);
+});
+
 test('recipe copy preflights every destination before writing an upgrade', async () => {
   const target = await mkdtemp(path.join(tmpdir(), 'pomegranate-recipes-transaction-'));
   temporaryRoots.push(target);
