@@ -24,20 +24,27 @@ The preserved source baseline is Sonder Engine commit `0fb98e43f303d62c42ef5c74e
 
 Runtime dependencies flow from `contracts` to `layout` to `core` to `react`. The testkit consumes public package APIs only.
 
-## Local preservation gate
+## Local verification gate
 
 On Windows, install and verify the locked toolchain with:
 
 ```powershell
 npm.cmd ci
 npm.cmd exec playwright install chromium
+npm.cmd run test:unit
 npm.cmd run typecheck
 npm.cmd run test:native
 npm.cmd run build
+npm.cmd run check:extraction
+npm.cmd run report
+npm.cmd run test:pack
+npm.cmd run test:browser
 npm.cmd run check
 ```
 
-The full check verifies unit contracts, source hashes, ownership and license provenance, generated reports, and both preserved browser oracles.
+The individual commands are useful while developing. The final `npm.cmd run check` executes them in the repository's required order and verifies unit contracts, strict types, native packages, clean packed consumers, source hashes, ownership and license provenance, generated reports, the Workbench Lab, and both preserved browser oracles.
+
+Npm package publication has not occurred. Sonder cutover has not occurred; Sonder remains an unchanged consumer candidate until a separately approved integration tranche.
 
 ## Product boundary
 

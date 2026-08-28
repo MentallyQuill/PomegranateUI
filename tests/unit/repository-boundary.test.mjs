@@ -42,12 +42,30 @@ test('repository reserves every approved toolkit area', async () => {
   }
 });
 
-test('repository carries a preservation CI workflow', async () => {
+test('root check composes every native and preservation gate in the approved order', async () => {
+  const rootPackage = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  assert.equal(
+    rootPackage.scripts.check,
+    'npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:extraction && npm run report && npm run test:pack && npm run test:browser'
+  );
+});
+
+test('repository carries cross-platform native toolkit and preservation CI', async () => {
   const workflow = await readFile(path.join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
+  assert.match(workflow, /^name:\s*Native toolkit and preservation CI/m);
   assert.match(workflow, /node-version:\s*24/);
   assert.match(workflow, /npm ci/);
   assert.match(workflow, /npm run check/);
   assert.match(workflow, /contents:\s*read/);
+  assert.match(workflow, /os:\s*\[ubuntu-latest, windows-latest\]/);
+  assert.match(workflow, /playwright install --with-deps chromium/);
+  assert.match(workflow, /playwright install chromium/);
+  assert.match(workflow, /if:\s*failure\(\)/);
+  assert.match(workflow, /playwright-report\//);
+  assert.match(workflow, /test-results\//);
+  for (const line of workflow.split(/\r?\n/).filter((value) => /^\s*uses:/.test(value))) {
+    assert.match(line, /@[a-f0-9]{40}(?:\s+#.*)?$/, line);
+  }
 });
 
 test('Git never normalizes byte-preserved evidence paths', async () => {
@@ -75,6 +93,29 @@ test('root documentation keeps PomegranateUI a toolkit rather than an applicatio
   assert.match(readme, /native toolkit lane/i);
   assert.match(readme, /@pomegranate-ui\/contracts/);
   assert.match(readme, /private incubator/i);
+});
+
+test('root verification docs match scripts and record unpublished, uncut boundaries', async () => {
+  const rootPackage = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  for (const document of ['README.md', 'AGENTS.md']) {
+    const source = await readFile(path.join(root, document), 'utf8');
+    for (const script of [
+      'test:unit',
+      'typecheck',
+      'test:native',
+      'build',
+      'check:extraction',
+      'report',
+      'test:pack',
+      'test:browser',
+      'check'
+    ]) {
+      assert.equal(typeof rootPackage.scripts[script], 'string', script);
+      assert.match(source, new RegExp(`npm\\.cmd run ${script.replace(':', '\\:')}`), `${document}: ${script}`);
+    }
+    assert.match(source, /npm package publication has not occurred/i, document);
+    assert.match(source, /Sonder cutover has not occurred/i, document);
+  }
 });
 
 test('package and example documentation preserves the adopter boundary', async () => {

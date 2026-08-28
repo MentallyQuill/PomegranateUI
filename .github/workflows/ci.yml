@@ -1,4 +1,4 @@
-name: Preservation CI
+name: Native toolkit and preservation CI
 
 on:
   push:
@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  preservation:
-    name: Preserve (${{ matrix.os }})
+  verification:
+    name: Verify toolkit (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -32,7 +32,7 @@ jobs:
       - name: Install Chromium
         if: runner.os == 'Windows'
         run: npx playwright install chromium
-      - name: Verify the complete preserved baseline
+      - name: Verify native toolkit and preserved baseline
         run: npm run check
       - name: Upload Playwright failure evidence
         if: failure()

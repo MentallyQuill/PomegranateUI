@@ -22,7 +22,7 @@
     "typecheck": "tsc -b --pretty false && tsc -p tsconfig.tests.json --noEmit --pretty false && npm run typecheck --workspace @pomegranate-ui/workbench-lab",
     "check:extraction": "node scripts/verify-extraction.mjs",
     "report": "node scripts/generate-migration-report.mjs --check",
-    "check": "npm run test:unit && npm run check:extraction && npm run report && npm run test:browser"
+    "check": "npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:extraction && npm run report && npm run test:pack && npm run test:browser"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

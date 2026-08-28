@@ -810,17 +810,17 @@ git commit -m "test: record first dual-green contracts"
 - Consumes: every implemented package, consumer, native test, and preserved oracle.
 - Produces: one cross-platform `npm run check` gate and publishable private-repository evidence.
 
-- [ ] **Step 1: Write failing CI/documentation boundary assertions**
+- [x] **Step 1: Write failing CI/documentation boundary assertions**
 
 Update `repository-boundary.test.mjs` to require CI to run strict typecheck, native tests, builds, packed consumers, extraction/report verification, and browser tests through `npm run check`. Require README commands to match package scripts and require explicit text that npm publication and Sonder cutover have not occurred.
 
-- [ ] **Step 2: Run the boundary test and verify RED**
+- [x] **Step 2: Run the boundary test and verify RED**
 
 Run: `node --test tests/unit/repository-boundary.test.mjs`
 
 Expected: FAIL until CI and docs name all native gates.
 
-- [ ] **Step 3: Compose the root check and CI matrix**
+- [x] **Step 3: Compose the root check and CI matrix**
 
 Set the root check order to:
 
@@ -830,7 +830,7 @@ Set the root check order to:
 
 Keep Node 24, `npm ci`, Linux/Windows, pinned immutable GitHub Action SHAs, minimal `contents: read`, Chromium installation, and Playwright failure artifacts. Rename workflow/job copy to cover native and preservation verification without weakening any existing step.
 
-- [ ] **Step 4: Run focused and full local verification**
+- [x] **Step 4: Run focused and full local verification**
 
 Run:
 

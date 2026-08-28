@@ -36,8 +36,11 @@ npm.cmd run test:native
 npm.cmd run build
 npm.cmd run check:extraction
 npm.cmd run report
+npm.cmd run test:pack
 npm.cmd run test:browser
 npm.cmd run check
 ```
 
 Write tooling behavior test-first and keep generated provenance deterministic.
+
+Npm package publication has not occurred. Sonder cutover has not occurred. Do not publish packages or change Sonder from this repository without a separately approved integration tranche.
