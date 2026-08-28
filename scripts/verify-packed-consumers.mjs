@@ -410,9 +410,10 @@ async function writeSvelteConsumer(consumerRoot, tarballs) {
   ], root);
 }
 
+const temporaryBase = await realpath(os.tmpdir());
 let temporaryRoot;
 try {
-  temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'pomegranate-ui-pack-'));
+  temporaryRoot = await mkdtemp(path.join(temporaryBase, 'pomegranate-ui-pack-'));
   const tarballs = new Map();
 
   for (const packageName of packageNames) {
@@ -455,8 +456,8 @@ try {
   process.stdout.write(`Packed consumer verification passed: ${packageNames.length} packages, ${exampleNames.length + 1} clean consumers.\n`);
 } finally {
   if (temporaryRoot) {
-    const resolvedTemporaryRoot = path.resolve(temporaryRoot);
-    if (path.dirname(resolvedTemporaryRoot) !== path.resolve(os.tmpdir())) {
+    const resolvedTemporaryRoot = await realpath(temporaryRoot);
+    if (path.dirname(resolvedTemporaryRoot) !== temporaryBase) {
       throw new Error(`Refusing to remove unexpected temporary path '${resolvedTemporaryRoot}'.`);
     }
     await rm(resolvedTemporaryRoot, { recursive: true, force: true });
