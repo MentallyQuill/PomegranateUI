@@ -1,6 +1,8 @@
 import { THEME_COLOR_ROLES, THEME_MATERIAL_ROLES, type ThemeCanvasLayer } from '@pomegranate-ui/contracts';
 import type { ResolvedTheme } from '@pomegranate-ui/theme';
 
+import type { LabMaterialControls } from './material-controls.js';
+
 const GENERIC_FONT_FAMILIES = new Set([
   'cursive', 'fantasy', 'monospace', 'sans-serif', 'serif', 'system-ui',
   'ui-monospace', 'ui-rounded', 'ui-sans-serif', 'ui-serif'
@@ -25,6 +27,13 @@ function withOpacity(color: string, opacity: number): string {
   const colorAlpha = color.length === 9 ? Number.parseInt(color.slice(7, 9), 16) / 255 : 1;
   return `rgb(${red} ${green} ${blue} / ${decimal(colorAlpha * opacity)})`;
 }
+
+const DEFAULT_MATERIAL_CONTROLS: LabMaterialControls = Object.freeze({
+  glassDensity: 20,
+  barOpacity: 60,
+  selectedStrength: 6,
+  frostLevel: 50
+});
 
 function fontStack(family: string, fallbacks: readonly string[]): string {
   return [family, ...fallbacks].map((entry) => GENERIC_FONT_FAMILIES.has(entry)
@@ -68,7 +77,10 @@ function compileCanvasLayer(layer: ThemeCanvasLayer): string | null {
   }
 }
 
-export function compileThemeBindings(theme: ResolvedTheme): string {
+export function compileThemeBindings(
+  theme: ResolvedTheme,
+  controls: LabMaterialControls = DEFAULT_MATERIAL_CONTROLS
+): string {
   const bindings: Array<readonly [string, string]> = [];
   const add = (name: string, value: string | number) => bindings.push([name, String(value)]);
 
@@ -98,7 +110,7 @@ export function compileThemeBindings(theme: ResolvedTheme): string {
     const material = theme.materials[role];
     add(`--pom-material-${role}`, withOpacity(material.base, material.opacity));
     add(`--pom-material-${role}-fallback`, material.fallback);
-    add(`--pom-material-${role}-fallback-surface`, withOpacity(material.fallback, Math.min(1, material.opacity + 0.04)));
+    add(`--pom-material-${role}-fallback-surface`, withOpacity(material.fallback, material.opacity === 0 ? 0 : Math.min(1, material.opacity + 0.04)));
     add(`--pom-material-${role}-blur`, `${material.blurPx}px`);
     add(`--pom-material-${role}-saturation`, decimal(material.saturation));
     add(`--pom-material-${role}-border`, material.border);
@@ -113,6 +125,24 @@ export function compileThemeBindings(theme: ResolvedTheme): string {
   add('--pom-atmosphere-one', theme.colors.danger);
   add('--pom-atmosphere-two', theme.colors.success);
   add('--pom-atmosphere-three', theme.colors.accent);
+  const glassOpacity = controls.glassDensity / 100;
+  const barOpacity = controls.barOpacity / 100;
+  const selectedOpacity = controls.selectedStrength / 100;
+  const handleOpacity = Math.min(1, glassOpacity + 0.24);
+  const frostBlur = controls.frostLevel * 0.24;
+  add('--pom-glass-density', `${decimal(controls.glassDensity)}%`);
+  add('--pom-bar-opacity', `${decimal(controls.barOpacity)}%`);
+  add('--pom-handle-density', `${decimal(handleOpacity * 100)}%`);
+  add('--pom-selected-strength', `${decimal(controls.selectedStrength)}%`);
+  add('--pom-frost-level', `${decimal(controls.frostLevel)}%`);
+  add('--pom-frost-blur', `${decimal(frostBlur)}px`);
+  add('--pom-material-bar', withOpacity(theme.colors.chrome, barOpacity));
+  add('--pom-material-handle', withOpacity(theme.colors.borderStrong, handleOpacity));
+  add('--pom-material-selected', withOpacity(theme.colors.selection, selectedOpacity));
+  add('--pom-material-bar-highlight', withOpacity('#ffffff', 0.07 * barOpacity));
+  add('--pom-material-bar-accent', withOpacity(theme.colors.accent, 0.05 * barOpacity));
+  add('--pom-material-glass-highlight', withOpacity('#ffffff', 0.06 * glassOpacity));
+  add('--pom-material-glass-accent', withOpacity(theme.colors.accent, 0.03 * glassOpacity));
 
   const textRed = Number.parseInt(theme.colors.text.slice(1, 3), 16);
   const textGreen = Number.parseInt(theme.colors.text.slice(3, 5), 16);

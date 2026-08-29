@@ -1,6 +1,14 @@
 import { collectThemeAssetIds, resolveTheme, type ResolvedTheme, type ThemeDiagnostic } from '@pomegranate-ui/theme';
+import type { ThemeDefinition } from '@pomegranate-ui/contracts';
 
 import { compileThemeBindings } from './bindings.js';
+import {
+  defaultMaterialControls,
+  normalizeMaterialControl,
+  projectMaterialControls,
+  type LabMaterialControlId,
+  type LabMaterialControls
+} from './material-controls.js';
 import {
   LAB_THEME_PRESETS,
   isLabThemeId,
@@ -16,6 +24,7 @@ export interface ThemePreferenceAdapter {
 export interface LabThemeSnapshot {
   readonly activeId: LabThemeId;
   readonly resolved: ResolvedTheme;
+  readonly materialControls: LabMaterialControls;
   readonly cssText: string;
   readonly diagnostics: readonly ThemeDiagnostic[];
 }
@@ -47,11 +56,12 @@ function missingAssetDiagnostics(theme: ResolvedTheme, availableAssets: Readonly
   });
 }
 
-function createSnapshot(id: LabThemeId, theme: ResolvedTheme): LabThemeSnapshot {
+function createSnapshot(id: LabThemeId, theme: ResolvedTheme, materialControls: LabMaterialControls): LabThemeSnapshot {
   return Object.freeze({
     activeId: id,
     resolved: theme,
-    cssText: compileThemeBindings(theme),
+    materialControls: Object.freeze({ ...materialControls }),
+    cssText: compileThemeBindings(theme, materialControls),
     diagnostics: Object.freeze([])
   });
 }
@@ -63,16 +73,22 @@ export function createLabThemeController(options: {
   readonly availableAssets?: ReadonlySet<string>;
 } = {}) {
   const presets = options.presets ?? LAB_THEME_PRESETS;
-  const availableAssets = options.availableAssets ?? new Set(['icons.minimal', 'image.deep-current-stage']);
+  const availableAssets = options.availableAssets ?? new Set(['icons.minimal', 'image.deep-current-stage', 'image.bunny-garden']);
   const byId = new Map(presets.map((preset) => [preset.id, preset.definition]));
+  const materialDrafts = new Map<LabThemeId, LabMaterialControls>();
 
-  const resolvePreset = (id: string): ThemeActivationResult => {
+  const resolvePreset = (id: string, requestedControls?: LabMaterialControls): ThemeActivationResult => {
     if (!isLabThemeId(id) || !byId.has(id)) return { ok: false, diagnostics: unknownPresetDiagnostic(id) };
-    const resolution = resolveTheme(byId.get(id));
+    const definition = byId.get(id);
+    const baseResolution = resolveTheme(definition);
+    if (!baseResolution.ok) return baseResolution;
+    const materialControls = requestedControls ?? materialDrafts.get(id) ?? defaultMaterialControls(id);
+    const projected = projectMaterialControls(definition as ThemeDefinition, materialControls);
+    const resolution = resolveTheme(projected);
     if (!resolution.ok) return resolution;
     const assetDiagnostics = missingAssetDiagnostics(resolution.theme, availableAssets);
     if (assetDiagnostics.length > 0) return { ok: false, diagnostics: assetDiagnostics };
-    return { ok: true, snapshot: createSnapshot(id, resolution.theme) };
+    return { ok: true, snapshot: createSnapshot(id, resolution.theme, materialControls) };
   };
 
   let storedId: string | null = null;
@@ -98,6 +114,25 @@ export function createLabThemeController(options: {
       } catch {
         // The in-memory theme remains usable when host preference storage is unavailable.
       }
+      return result;
+    },
+    setMaterialControl(id: LabMaterialControlId, value: number): ThemeActivationResult {
+      const materialControls = Object.freeze({
+        ...snapshot.materialControls,
+        [id]: normalizeMaterialControl(value)
+      });
+      const result = resolvePreset(snapshot.activeId, materialControls);
+      if (!result.ok) return result;
+      materialDrafts.set(snapshot.activeId, materialControls);
+      snapshot = result.snapshot;
+      return result;
+    },
+    resetMaterialControls(): ThemeActivationResult {
+      const materialControls = defaultMaterialControls(snapshot.activeId);
+      const result = resolvePreset(snapshot.activeId, materialControls);
+      if (!result.ok) return result;
+      materialDrafts.delete(snapshot.activeId);
+      snapshot = result.snapshot;
       return result;
     }
   });

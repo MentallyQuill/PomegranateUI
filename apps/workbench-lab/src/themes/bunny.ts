@@ -23,6 +23,10 @@ export const BUNNY_THEME = mergeTheme(DEEP_CURRENT_THEME, {
     cornerFamily: 'rounded', cornerSm: 10, cornerMd: 17, cornerLg: 26, cornerPill: 999, chamfer: 0, borderWidth: 1, sharedEdge: 'none', focusWidth: 3, focusOffset: 3
   },
   spacing: { density: 'roomy', xs: 6, sm: 9, md: 14, lg: 21, xl: 32, chromeHeight: 52 },
+  assets: [
+    { id: 'icons.minimal', kind: 'icon-pack', required: true },
+    { id: 'image.bunny-garden', kind: 'image', required: true }
+  ],
   materials: {
     canvas: { base: 'canvas', fallback: 'canvas', opacity: 1, blurPx: 0, saturation: 1, border: 'border', shadow: 'shadow', shadowOpacity: 0, shadowBlurPx: 0, insetHighlight: 0, bloom: 0 },
     shelf: { base: 'chrome', fallback: 'surface', opacity: 0.74, blurPx: 30, saturation: 1.16, border: 'border', shadow: 'shadow', shadowOpacity: 0.18, shadowBlurPx: 42, insetHighlight: 0.72, bloom: 0.04 },
@@ -38,7 +42,8 @@ export const BUNNY_THEME = mergeTheme(DEEP_CURRENT_THEME, {
     { kind: 'radial-gradient', shape: 'ellipse', x: 0.5, y: 0.18, stops: [{ color: '#fffdfbf2', position: 0 }, { color: '#faeef600', position: 0.58 }] },
     { kind: 'four-corner', topLeft: '#f6cedd', topRight: '#d9d2f1', bottomLeft: '#d5ece5', bottomRight: '#f1deb9' },
     { kind: 'conic-gradient', angle: 16, x: 0.52, y: 0.45, stops: [{ color: '#ffffff24', position: 0 }, { color: '#ed75aa18', position: 0.32 }, { color: '#7ec7b71f', position: 0.66 }, { color: '#ffffff24', position: 1 }] },
+    { kind: 'image', assetId: 'image.bunny-garden', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 0.88, blend: 'normal' },
     { kind: 'solid', color: '#faeef6' }
   ],
-  capabilities: { translucency: true, textures: false, localImages: false }
+  capabilities: { translucency: true, textures: false, localImages: true }
 });

@@ -32,6 +32,11 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);
   await shot(page, 'wide-scene.png');
 
+  const materialControls = page.getByRole('article', { name: 'Theme Library' }).getByText('Material controls', { exact: true });
+  await materialControls.click();
+  await shot(page, 'wide-material-controls.png');
+  await materialControls.click();
+
   await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
   await shot(page, 'wide-catalog-drawer.png');
   const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
