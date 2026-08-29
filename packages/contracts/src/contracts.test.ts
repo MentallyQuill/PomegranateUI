@@ -43,6 +43,15 @@ const state: WorkbenchState = {
 };
 
 describe('public contracts', () => {
+  it('exports exact version discriminants for separated theme targets', async () => {
+    const contracts = await import('./index.js') as Record<string, unknown>;
+    expect(contracts.THEME_SCHEMA_VERSION_V3).toBe('pomegranate.ui.theme.v3');
+    expect(contracts.CANVAS_SCHEMA_VERSION).toBe('pomegranate.ui.canvas.v1');
+    expect(contracts.AMBIENT_SCHEMA_VERSION).toBe('pomegranate.ui.ambient.v1');
+    expect(contracts.THEME_TARGET_SCHEMA_VERSION).toBe('pomegranate.ui.theme-target.v1');
+    expect(typeof (contracts.ThemeTargetBundleSchema as { safeParse?: unknown } | undefined)?.safeParse).toBe('function');
+  });
+
   it('rejects blank or padded public ids without trimming them', () => {
     expect(() => asPanelId('  ')).toThrow(/PanelId/);
     expect(() => asWidgetInstanceId('summary-1 ')).toThrow(/WidgetInstanceId/);

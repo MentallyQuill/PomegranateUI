@@ -74,6 +74,7 @@ const fontNameSchema = z.string().regex(/^[a-z0-9 ._-]+$/i, 'Font names may cont
 
 export const ThemeColorRoleSchema = z.enum(THEME_COLOR_ROLES);
 export const ThemeMaterialRoleSchema = z.enum(THEME_MATERIAL_ROLES);
+export const ThemeIdSchema = themeIdSchema;
 
 const semanticColorsShape = Object.fromEntries(
   THEME_COLOR_ROLES.map((role) => [role, colorSchema])
