@@ -7,10 +7,10 @@ export const BUNNY_THEME = mergeTheme(DEEP_CURRENT_THEME, {
   label: 'Bunny',
   description: 'An original kawaii-inspired pastel theme with pillowy geometry, friendly type, and uncompromised readability.',
   colors: {
-    canvas: '#fff8f3', surface: '#fffdfb', surfaceElevated: '#ffffff', surfaceInset: '#f7eff8', chrome: '#fff2f6',
-    text: '#403747', textMuted: '#62566d', textFaint: '#796c83', textOnAccent: '#3a2934', accent: '#e98aad',
-    selection: '#f6cadb', focus: '#80457e', success: '#3d7766', warning: '#805d00', danger: '#9a3f5c',
-    border: '#e6cedb', borderStrong: '#c998b0', shadow: '#7a5d78'
+    canvas: '#faeef6', surface: '#fff8fc', surfaceElevated: '#ffffff', surfaceInset: '#f3eaf9', chrome: '#fff1f7',
+    text: '#45364d', textMuted: '#67566f', textFaint: '#806f88', textOnAccent: '#3b2634', accent: '#ed75aa',
+    selection: '#ffd4e5', focus: '#7552bd', success: '#3c8a73', warning: '#8b6200', danger: '#ad4267',
+    border: '#e8cddd', borderStrong: '#c891ae', shadow: '#765775'
   },
   typography: {
     ui: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 480, strongWeight: 700, lineHeight: 1.4, trackingEm: 0.01 },
@@ -35,9 +35,9 @@ export const BUNNY_THEME = mergeTheme(DEEP_CURRENT_THEME, {
     floating: { base: 'surfaceElevated', fallback: 'surfaceElevated', opacity: 0.98, blurPx: 16, saturation: 1.1, border: 'borderStrong', shadow: 'shadow', shadowOpacity: 0.22, shadowBlurPx: 56, insetHighlight: 0.7, bloom: 0.08 }
   },
   canvas: [
-    { kind: 'four-corner', topLeft: '#ffdce9', topRight: '#e5ddff', bottomLeft: '#d9f3e9', bottomRight: '#fff0bd' },
-    { kind: 'radial-gradient', shape: 'circle', x: 0.5, y: 0.25, stops: [{ color: '#ffffffcc', position: 0 }, { color: '#fff8f300', position: 1 }] },
-    { kind: 'solid', color: '#fff8f3' }
+    { kind: 'four-corner', topLeft: '#ffd8e8', topRight: '#e4dcff', bottomLeft: '#d5f3e9', bottomRight: '#fff0bd' },
+    { kind: 'radial-gradient', shape: 'circle', x: 0.5, y: 0.22, stops: [{ color: '#ffffffee', position: 0 }, { color: '#faeef600', position: 0.7 }] },
+    { kind: 'solid', color: '#faeef6' }
   ],
   capabilities: { translucency: true, textures: false, localImages: false }
 });

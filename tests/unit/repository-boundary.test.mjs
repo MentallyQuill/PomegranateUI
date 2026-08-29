@@ -83,6 +83,7 @@ test('Git never normalizes byte-preserved evidence paths', async () => {
   for (const pattern of [
     '/design/foundations/sonder-ui-bible/** -text',
     '/design/widget-specifications/sonder-panels-and-widgets/** -text',
+    '/design/theme-targets/** -text',
     '/prototypes/sonder-baseline/** -text',
     '/provenance/SONDER_LICENSE.txt -text',
     '/provenance/assets/** -text',

@@ -20,6 +20,8 @@
     "pretest:browser": "npm run build",
     "test:conformance:deep-current": "playwright test --config playwright.conformance.config.mjs",
     "pretest:conformance:deep-current": "npm run build",
+    "test:conformance:theme-targets": "playwright test --config playwright.conformance.config.mjs tests/conformance/specs/theme-targets.spec.ts",
+    "pretest:conformance:theme-targets": "npm run build",
     "test:conformance:unit": "node --test tests/unit/conformance.test.mjs",
     "test:conformance": "npm run test:conformance:unit && npm run test:conformance:deep-current",
     "inspect:conformance": "node scripts/conformance/inspect.mjs",

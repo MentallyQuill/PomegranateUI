@@ -14,6 +14,10 @@ const atmosphericPath = 'prototypes/sonder-baseline/atmospheric-workbench/sonder
 const atmosphericSha256 = '38878d2cf8a86f5e879faba4b41a214e4293f22ed755975023e02c962d61b913';
 const widgetOverhaulPath = 'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul.html';
 const widgetOverhaulSha256 = '043167ad75c07fa5ff8661fbe8a86943a9c0b38eeea9811739309cb866e8a2a5';
+const neutralReferencePath = 'design/theme-targets/pom-neutral-reference.html';
+const neutralReferenceSha256 = '6a188907925f0af7157f66017a2015e07dbe599d14413d2a590e390f0d97bd50';
+const bunnyReferencePath = 'design/theme-targets/bunny-reference.html';
+const bunnyReferenceSha256 = 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59';
 
 function createMacroScenario(id: string, title: string, viewport: string): ConformanceScenario {
   return Object.freeze({
@@ -121,6 +125,53 @@ export const DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS: readonly ConformanceSce
     allowedDeviationIds: Object.freeze([])
   }))
 );
+
+function createThemeTargetScenario(
+  id: string,
+  title: string,
+  target: 'pom-neutral' | 'bunny',
+  authority: string,
+  authorityPath: string,
+  authoritySha256: string,
+  state: 'scene' | 'catalog',
+  viewport: 'wide' | 'compact-small'
+): ConformanceScenario {
+  return Object.freeze({
+    id,
+    title,
+    target,
+    authority,
+    authorityPath,
+    authoritySha256,
+    viewport,
+    inputModes: Object.freeze(viewport === 'compact-small'
+      ? ['coarse-pointer', 'keyboard'] as const
+      : ['fine-pointer', 'keyboard'] as const),
+    referenceState: state,
+    implementationState: state,
+    capture: Object.freeze({ kind: 'viewport' as const }),
+    measurementProfile: 'theme-target',
+    assertionProfile: 'theme-target',
+    allowedDeviationIds: Object.freeze([])
+  });
+}
+
+export const POM_NEUTRAL_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
+  createThemeTargetScenario('pn-scene-wide', 'Pom Neutral wide Scene', 'pom-neutral', 'pom-neutral-original-reference', neutralReferencePath, neutralReferenceSha256, 'scene', 'wide'),
+  createThemeTargetScenario('pn-scene-compact', 'Pom Neutral compact Scene', 'pom-neutral', 'pom-neutral-original-reference', neutralReferencePath, neutralReferenceSha256, 'scene', 'compact-small'),
+  createThemeTargetScenario('pn-catalog-wide', 'Pom Neutral wide Catalog', 'pom-neutral', 'pom-neutral-original-reference', neutralReferencePath, neutralReferenceSha256, 'catalog', 'wide')
+]);
+
+export const BUNNY_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
+  createThemeTargetScenario('bn-scene-wide', 'Bunny wide Scene', 'bunny', 'bunny-original-reference', bunnyReferencePath, bunnyReferenceSha256, 'scene', 'wide'),
+  createThemeTargetScenario('bn-scene-compact', 'Bunny compact Scene', 'bunny', 'bunny-original-reference', bunnyReferencePath, bunnyReferenceSha256, 'scene', 'compact-small'),
+  createThemeTargetScenario('bn-catalog-wide', 'Bunny wide Catalog', 'bunny', 'bunny-original-reference', bunnyReferencePath, bunnyReferenceSha256, 'catalog', 'wide')
+]);
+
+export const ORIGINAL_THEME_TARGET_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
+  ...POM_NEUTRAL_SCENARIOS,
+  ...BUNNY_SCENARIOS
+]);
 
 export async function hashAuthorityFile(absolutePath: string): Promise<string> {
   return createHash('sha256').update(await readFile(absolutePath)).digest('hex');

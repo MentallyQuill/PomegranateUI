@@ -6,6 +6,7 @@ import { compileThemeBindings } from './bindings.js';
 import { createLabThemeController } from './controller.js';
 import { DEEP_CURRENT_THEME } from './deep-current.js';
 import { LAB_THEME_IDS, LAB_THEME_PRESETS } from './presets.js';
+import { POM_NEUTRAL_THEME } from './pom-neutral.js';
 import { createLocalThemePreference, LAB_THEME_KEY } from './theme-storage.js';
 
 describe('Workbench Lab theme conformance', () => {
@@ -53,7 +54,7 @@ describe('Workbench Lab theme conformance', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const cssText = compileThemeBindings(result.theme);
-    expect(cssText).toContain('--pom-color-text:#403747');
+    expect(cssText).toContain('--pom-color-text:#45364d');
     expect(cssText).toContain('--pom-radius-widget:18px');
     expect(cssText).toContain('--pom-canvas:');
     expect(cssText).not.toContain('bunny');
@@ -93,6 +94,25 @@ describe('Workbench Lab theme conformance', () => {
       blurPx: 12,
       saturation: 0.82
     });
+  });
+
+  it('pins the original Neutral and Bunny visual target contracts', () => {
+    expect(POM_NEUTRAL_THEME).toMatchObject({
+      id: 'pom-neutral',
+      colors: { canvas: '#dfe7f1', surfaceElevated: '#ffffff', accent: '#2f68cc', focus: '#1f5fc4' },
+      geometry: { cornerFamily: 'rounded', cornerMd: 12, cornerLg: 18 },
+      spacing: { density: 'balanced' },
+      capabilities: { localImages: false, textures: false, translucency: true }
+    });
+    expect(POM_NEUTRAL_THEME.canvas.every((layer) => layer.kind !== 'image')).toBe(true);
+    expect(BUNNY_THEME).toMatchObject({
+      id: 'bunny',
+      colors: { canvas: '#faeef6', surfaceElevated: '#ffffff', accent: '#ed75aa', focus: '#7552bd' },
+      geometry: { cornerFamily: 'pill', cornerMd: 18, cornerLg: 26 },
+      spacing: { density: 'roomy' },
+      capabilities: { localImages: false, textures: false, translucency: true }
+    });
+    expect(BUNNY_THEME.canvas[0]).toMatchObject({ kind: 'four-corner' });
   });
 
   it('switches one complete binding and persists only after validation succeeds', () => {

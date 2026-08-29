@@ -11,7 +11,7 @@ import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../conformance/compare.ts';
 import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, writeMeasurementEvidence } from '../conformance/evidence.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
-import { DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
+import { BUNNY_SCENARIOS, DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, hashAuthorityFile, ORIGINAL_THEME_TARGET_SCENARIOS, POM_NEUTRAL_SCENARIOS, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
 import { assertScenarioResolution } from '../conformance/runner.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
@@ -161,7 +161,9 @@ test('conformance authorities and viewports expose the independently recorded co
       'prototypes/sonder-baseline/atmospheric-workbench/sonder-workbench-calibration-preview.html': '14c735c159724e03b66e84cf166b7937f99f0654d9ea9d7d36374d0a9a15e557',
       'prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html': '737bb396b5d522e5449c9ec66f4689d525f0b4109d4e40693be50cb6c447f0c0',
       'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul.html': '043167ad75c07fa5ff8661fbe8a86943a9c0b38eeea9811739309cb866e8a2a5',
-      'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html': '79aa122abae1d51dff5d1cf292590efe03a53641b2ff44008e6a165beb3db8b3'
+      'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html': '79aa122abae1d51dff5d1cf292590efe03a53641b2ff44008e6a165beb3db8b3',
+      'design/theme-targets/pom-neutral-reference.html': '6a188907925f0af7157f66017a2015e07dbe599d14413d2a590e390f0d97bd50',
+      'design/theme-targets/bunny-reference.html': 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59'
     }
   );
   assert.deepEqual(Object.fromEntries(CONFORMANCE_VIEWPORTS), {
@@ -236,6 +238,40 @@ test('the Deep Current interaction manifest names every approved behavior agains
     hashFile: hashAuthorityFile
   });
   assert.equal(validated.scenarios.length, 12);
+});
+
+test('the original target manifest freezes both visual identities across Scene and Catalog states', async () => {
+  assert.deepEqual(ORIGINAL_THEME_TARGET_SCENARIOS.map(({ id, target, viewport, referenceState }) => ({ id, target, viewport, referenceState })), [
+    { id: 'pn-scene-wide', target: 'pom-neutral', viewport: 'wide', referenceState: 'scene' },
+    { id: 'pn-scene-compact', target: 'pom-neutral', viewport: 'compact-small', referenceState: 'scene' },
+    { id: 'pn-catalog-wide', target: 'pom-neutral', viewport: 'wide', referenceState: 'catalog' },
+    { id: 'bn-scene-wide', target: 'bunny', viewport: 'wide', referenceState: 'scene' },
+    { id: 'bn-scene-compact', target: 'bunny', viewport: 'compact-small', referenceState: 'scene' },
+    { id: 'bn-catalog-wide', target: 'bunny', viewport: 'wide', referenceState: 'catalog' }
+  ]);
+
+  const validated = await validateConformanceManifest(ORIGINAL_THEME_TARGET_SCENARIOS, {
+    repositoryRoot,
+    authorities: new Map(AUTHORITY_RECORDS.map((record) => [record.id, record])),
+    viewports: CONFORMANCE_VIEWPORTS,
+    driverIds: new Set(['pom-neutral-original-reference', 'bunny-original-reference', 'workbench-lab']),
+    measurementProfileIds: new Set(['theme-target']),
+    assertionProfileIds: new Set(['theme-target']),
+    deviationIds: new Set(),
+    hashFile: hashAuthorityFile
+  });
+  assert.equal(validated.scenarios.length, 6);
+});
+
+test('the frozen original target ledgers contain no unresolved or waived discrepancy', async () => {
+  for (const [filename, scenarios] of [
+    ['pom-neutral-ledger.md', POM_NEUTRAL_SCENARIOS],
+    ['bunny-ledger.md', BUNNY_SCENARIOS]
+  ]) {
+    const entries = parseDiscrepancyLedger(await readFile(path.join(repositoryRoot, 'docs/conformance', filename), 'utf8'));
+    const validation = validateDiscrepancyLedger(entries, scenarios);
+    assert.deepEqual(validation.entries, []);
+  }
 });
 
 test('discrepancy ledger parsing preserves the exact reviewed row contract', () => {
@@ -474,6 +510,27 @@ test('the Deep Current shell profile names each structural measurement and toler
   ]);
 });
 
+test('the original target profile compares identity, accessibility, theme tokens, and material shape', () => {
+  const profile = MEASUREMENT_PROFILES.get('theme-target');
+  assert.ok(profile);
+  assert.deepEqual(profile.map(({ path }) => path), [
+    'functional.targetApplied',
+    'functional.identityStable',
+    'functional.instant',
+    'functional.noHorizontalOverflow',
+    'functional.keyboardAccessible',
+    'functional.scenarioStateReached',
+    'structure.panelTabs',
+    'structure.anchorWidgets',
+    'visual.canvas',
+    'visual.accent',
+    'visual.text',
+    'visual.shellRadius',
+    'visual.widgetRadius',
+    'visual.buttonRadius'
+  ]);
+});
+
 test('evidence paths reject unsafe scenario identities before constructing files', () => {
   assert.throws(
     () => createEvidencePaths(path.join(repositoryRoot, 'test-results', 'conformance'), '../escape'),
@@ -599,6 +656,16 @@ test('Widget and Catalog conformance drivers keep preserved and Lab selectors in
   assert.doesNotMatch(labCatalog, /\.sonder-|SonderWidgetMockup|widget-overhaul|\.\.\/reference/);
 });
 
+test('original theme references and Lab driver keep their selectors and imports independent', async () => {
+  const [referenceDriver, labDriver] = await Promise.all([
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/reference/theme-target.ts'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/workbench-lab/theme-target.ts'), 'utf8')
+  ]);
+
+  assert.doesNotMatch(referenceDriver, /data-(?:conformance-region|pomegranate-)|workbench-lab/);
+  assert.doesNotMatch(labDriver, /data-theme-reference|\.showcase|\.catalog-card|\.\.\/reference/);
+});
+
 test('Lab readiness permits responsive docks to remain intentionally hidden', () => {
   assert.deepEqual(VISIBLE_IMPLEMENTATION_REGION_IDS, ['shelf', 'stage', 'composer']);
 });
@@ -674,9 +741,33 @@ test('the reviewed Deep Current Widget baseline freezes all 49 surfaces and six 
   }
 });
 
+test('the reviewed original theme baseline freezes every target scenario and authority hash', async () => {
+  const baseline = JSON.parse(await readFile(
+    path.join(repositoryRoot, 'tests/conformance/baselines/original-theme-targets.json'),
+    'utf8'
+  ));
+  assert.equal(baseline.schemaVersion, 'pomegranate.ui.conformance-baseline.v1');
+  assert.equal(baseline.measurementProfile, 'theme-target');
+  assert.deepEqual(baseline.authorities, {
+    'pom-neutral-original-reference': AUTHORITY_RECORDS[5].sha256,
+    'bunny-original-reference': AUTHORITY_RECORDS[6].sha256
+  });
+  assert.deepEqual(Object.keys(baseline.scenarios), ORIGINAL_THEME_TARGET_SCENARIOS.map(({ id }) => id));
+  for (const scenario of ORIGINAL_THEME_TARGET_SCENARIOS) {
+    assert.deepEqual(baseline.scenarios[scenario.id], {
+      pass: true,
+      target: scenario.target,
+      viewport: scenario.viewport,
+      state: scenario.referenceState
+    });
+  }
+});
+
 test('inspection requires one exact known scenario without permitting update mode', () => {
   assert.equal(parseInspectionArguments(['--scenario', 'dc-shell-wide']).id, 'dc-shell-wide');
   assert.equal(parseInspectionArguments(['--scenario', 'dc-int-tab-merge']).id, 'dc-int-tab-merge');
+  assert.equal(parseInspectionArguments(['--scenario', 'pn-scene-compact']).id, 'pn-scene-compact');
+  assert.equal(parseInspectionArguments(['--scenario', 'bn-catalog-wide']).id, 'bn-catalog-wide');
   assert.throws(() => parseInspectionArguments([]), /--scenario <id> is required/);
   assert.throws(() => parseInspectionArguments(['--scenario', 'unknown']), /Unknown conformance scenario/);
   assert.throws(() => parseInspectionArguments(['--scenario', 'dc-shell-wide', '--update-snapshots']), /Unexpected inspection argument/);

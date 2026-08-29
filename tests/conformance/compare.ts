@@ -116,11 +116,29 @@ const catalogProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('inventory.extensions')
 ]);
 
+const themeTargetProfile: readonly ComparisonDefinition[] = Object.freeze([
+  exact('functional.targetApplied'),
+  exact('functional.identityStable'),
+  exact('functional.instant'),
+  exact('functional.noHorizontalOverflow'),
+  exact('functional.keyboardAccessible'),
+  exact('functional.scenarioStateReached'),
+  exact('structure.panelTabs'),
+  Object.freeze({ path: 'structure.anchorWidgets', comparator: 'contains', category: 'structure', severity: 'P1' }),
+  exact('visual.canvas', 'visual'),
+  exact('visual.accent', 'visual'),
+  exact('visual.text', 'visual'),
+  exact('visual.shellRadius', 'visual'),
+  exact('visual.widgetRadius', 'visual'),
+  exact('visual.buttonRadius', 'visual')
+]);
+
 export const MEASUREMENT_PROFILES: ReadonlyMap<string, readonly ComparisonDefinition[]> = new Map([
   ['deep-current-shell', shellProfile],
   ['deep-current-interaction', interactionProfile],
   ['deep-current-widget-surface', widgetSurfaceProfile],
-  ['deep-current-catalog', catalogProfile]
+  ['deep-current-catalog', catalogProfile],
+  ['theme-target', themeTargetProfile]
 ]);
 
 function valueAtPath(root: NormalizedValue, evidencePath: string): NormalizedValue {

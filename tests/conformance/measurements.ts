@@ -33,3 +33,27 @@ export interface CatalogMeasurement {
   };
   readonly trace: readonly string[];
 }
+
+export interface ThemeTargetMeasurement {
+  readonly functional: {
+    readonly targetApplied: true;
+    readonly identityStable: true;
+    readonly instant: true;
+    readonly noHorizontalOverflow: true;
+    readonly keyboardAccessible: true;
+    readonly scenarioStateReached: true;
+  };
+  readonly structure: {
+    readonly panelTabs: readonly string[];
+    readonly anchorWidgets: readonly string[];
+  };
+  readonly visual: {
+    readonly canvas: string;
+    readonly accent: string;
+    readonly text: string;
+    readonly shellRadius: string;
+    readonly widgetRadius: string;
+    readonly buttonRadius: string;
+  };
+  readonly trace: readonly string[];
+}

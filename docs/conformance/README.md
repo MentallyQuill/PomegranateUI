@@ -4,7 +4,9 @@ The conformance lane compares the maintained Svelte Workbench Lab with explicit
 authorities. Deep Current uses the preserved Atmospheric Workbench for macro
 composition, material, and responsive staging and the Widget Overhaul for
 Panel, Widget, Catalog, geometry, and audited state behavior. Pom Neutral and
-Bunny use original reviewed reference frames after Deep Current freezes.
+Bunny use the independent, byte-hashed original frames in
+`design/theme-targets/`. All three targets preserve one mounted Panel and
+Widget tree; only theme-owned tokens and presentation change.
 
 Current Lab screenshots are implementation evidence. They are not reference
 authority and cannot be refreshed to close a discrepancy.
@@ -52,12 +54,13 @@ that directory. Preserved sources and reviewed reference frames are read-only.
 The executable interface is
 `npm.cmd run test:conformance:unit`,
 `npm.cmd run test:conformance:deep-current`,
+`npm.cmd run test:conformance:theme-targets`,
 `npm.cmd run test:conformance`, and
 `npm.cmd run inspect:conformance -- --scenario <id>`.
 
 The inspection command requires one exact scenario ID and retains its complete
-evidence set without updating a baseline. Deep Current switching is immediate
-and atomic on the same mounted Panel and Widget tree. The hostable boundary is
+evidence set without updating a baseline. Theme switching is immediate and
+atomic on the same mounted Panel and Widget tree. The hostable boundary is
 still `apps/workbench-lab/dist`.
 
 This machinery is test infrastructure for a developer toolkit. It does not publish

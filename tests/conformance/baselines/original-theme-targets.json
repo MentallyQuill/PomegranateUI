@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "pomegranate.ui.conformance-baseline.v1",
+  "measurementProfile": "theme-target",
+  "authorities": {
+    "pom-neutral-original-reference": "6a188907925f0af7157f66017a2015e07dbe599d14413d2a590e390f0d97bd50",
+    "bunny-original-reference": "b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59"
+  },
+  "scenarios": {
+    "pn-scene-wide": { "pass": true, "target": "pom-neutral", "viewport": "wide", "state": "scene" },
+    "pn-scene-compact": { "pass": true, "target": "pom-neutral", "viewport": "compact-small", "state": "scene" },
+    "pn-catalog-wide": { "pass": true, "target": "pom-neutral", "viewport": "wide", "state": "catalog" },
+    "bn-scene-wide": { "pass": true, "target": "bunny", "viewport": "wide", "state": "scene" },
+    "bn-scene-compact": { "pass": true, "target": "bunny", "viewport": "compact-small", "state": "scene" },
+    "bn-catalog-wide": { "pass": true, "target": "bunny", "viewport": "wide", "state": "catalog" }
+  }
+}

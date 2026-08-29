@@ -27,6 +27,16 @@ export const AUTHORITY_RECORDS: readonly AuthorityRecord[] = Object.freeze([
     path: 'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html',
     sha256: '79aa122abae1d51dff5d1cf292590efe03a53641b2ff44008e6a165beb3db8b3',
     expectedHarnessTotal: 212
+  }),
+  Object.freeze({
+    id: 'pom-neutral-original-reference',
+    path: 'design/theme-targets/pom-neutral-reference.html',
+    sha256: '6a188907925f0af7157f66017a2015e07dbe599d14413d2a590e390f0d97bd50'
+  }),
+  Object.freeze({
+    id: 'bunny-original-reference',
+    path: 'design/theme-targets/bunny-reference.html',
+    sha256: 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59'
   })
 ]);
 

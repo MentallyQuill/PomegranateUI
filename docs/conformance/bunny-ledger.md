@@ -1,9 +1,11 @@
 # Bunny conformance ledger
 
-**State:** Waiting for frozen Deep Current architecture and approved original
-reference frames.
+**State:** Frozen against the byte-hashed original reference frame with all
+three scenarios passing and no reviewed deviations.
 
 | ID | Category | Severity | Authority | Scenario | Evidence | Diagnosis | Status | Regression | Deviation |
 |---|---|---|---|---|---|---|---|---|---|
 
-Scenarios begin only after the reference pack is reviewed and hashed.
+The `bn-scene-wide`, `bn-scene-compact`, and `bn-catalog-wide` scenarios are
+closed by the executable `theme-target` profile. The implementation preserves
+the mounted Panel and Widget identities while applying the target immediately.
