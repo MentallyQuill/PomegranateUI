@@ -15,6 +15,25 @@ async function dragTo(
   await page.mouse.up();
 }
 
+async function horizontalOverflowEvidence(locator: import('@playwright/test').Locator) {
+  return locator.evaluate((root) => {
+    const rootRect = root.getBoundingClientRect();
+    const descendants = [root, ...root.querySelectorAll<HTMLElement>('*')]
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          label: `${element.tagName.toLowerCase()}.${element.className || '-'}`,
+          overflow: element.scrollWidth - element.clientWidth,
+          outside: Math.max(0, rect.right - rootRect.right, rootRect.left - rect.left),
+          overflowX: getComputedStyle(element).overflowX
+        };
+      })
+      .filter(({ overflow, outside }) => overflow > 1 || outside > 1)
+      .map(({ label, overflow, outside, overflowX }) => `${label} overflow=${overflow} outside=${outside.toFixed(2)} overflow-x=${overflowX}`);
+    return { amount: root.scrollWidth - root.clientWidth, descendants };
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('http://127.0.0.1:4174');
   await page.evaluate(() => window.localStorage.clear());
@@ -409,10 +428,12 @@ test('all 49 reviewed Widget surfaces expose exact ready, state, focus, and resp
       const separator = page.getByRole('separator', { name: `Resize ${side} toolbar` });
       await separator.press('Home');
       expect((await article.boundingBox())?.width, `${surface.type} compact width`).toBeLessThanOrEqual(202);
-      expect(await article.evaluate((root) => root.scrollWidth - root.clientWidth), `${surface.type} compact overflow`).toBeLessThanOrEqual(1);
+      const compactOverflow = await horizontalOverflowEvidence(article);
+      expect(compactOverflow.amount, `${surface.type} compact overflow: ${compactOverflow.descendants.join('; ')}`).toBeLessThanOrEqual(1);
       await separator.press('End');
       expect((await article.boundingBox())?.width, `${surface.type} wide width`).toBeLessThanOrEqual(422);
-      expect(await article.evaluate((root) => root.scrollWidth - root.clientWidth), `${surface.type} wide overflow`).toBeLessThanOrEqual(1);
+      const wideOverflow = await horizontalOverflowEvidence(article);
+      expect(wideOverflow.amount, `${surface.type} wide overflow: ${wideOverflow.descendants.join('; ')}`).toBeLessThanOrEqual(1);
     }
 
     await article.getByRole('button', { name: 'Focus Widget' }).click();
