@@ -3,14 +3,22 @@ import {
   ThemeDefinitionSchema,
   ThemePatchSchema,
   type ThemeDefinition,
+  type ThemeDefinitionV2,
+  type ThemeMaterialV2,
   type ThemeMaterialRole,
   type ThemePatch
 } from '@pomegranate-ui/contracts';
+import { resolveThemeAssets, type ThemeAssetRegistry } from './assets.js';
+import { migrateTheme } from './migrate.js';
 
 export type ThemeDiagnosticCode =
   | 'THEME_SCHEMA_INVALID'
   | 'THEME_UNKNOWN_PRESET'
   | 'THEME_ASSET_MISSING'
+  | 'THEME_ASSET_KIND_MISMATCH'
+  | 'THEME_ICON_PACK_MISSING'
+  | 'THEME_MIGRATION_INPUT_INVALID'
+  | 'THEME_MIGRATION_OUTPUT_INVALID'
   | 'THEME_CONTRAST_UNSAFE';
 
 export interface ThemeDiagnostic {
@@ -40,6 +48,23 @@ export interface ResolvedTheme extends Omit<ThemeDefinition, 'materials'> {
 
 export type ThemeResolution =
   | { readonly ok: true; readonly theme: ResolvedTheme; readonly diagnostics: readonly [] }
+  | { readonly ok: false; readonly diagnostics: readonly ThemeDiagnostic[] };
+
+export interface ResolvedMaterialV2 extends Omit<ThemeMaterialV2, 'base' | 'fallback' | 'border' | 'rim' | 'shadows'> {
+  readonly base: string;
+  readonly fallback: string;
+  readonly border: Omit<ThemeMaterialV2['border'], 'color'> & { readonly color: string };
+  readonly rim: Omit<ThemeMaterialV2['rim'], 'color'> & { readonly color: string };
+  readonly shadows: readonly (Omit<ThemeMaterialV2['shadows'][number], 'color'> & { readonly color: string })[];
+}
+
+export interface ResolvedThemeV2 extends Omit<ThemeDefinitionV2, 'materials' | 'assets'> {
+  readonly materials: Readonly<Record<string, ResolvedMaterialV2>>;
+  readonly assets: ThemeAssetRegistry;
+}
+
+export type ThemeResolutionV2 =
+  | { readonly ok: true; readonly theme: ResolvedThemeV2; readonly diagnostics: readonly [] }
   | { readonly ok: false; readonly diagnostics: readonly ThemeDiagnostic[] };
 
 function diagnosticPath(path: readonly PropertyKey[]): readonly (string | number)[] {
@@ -103,6 +128,34 @@ export function resolveTheme(input: unknown): ThemeResolution {
   return {
     ok: true,
     theme: deepFreeze({ ...theme, materials }),
+    diagnostics: []
+  };
+}
+
+export function resolveThemeV2(input: unknown, registry: ThemeAssetRegistry = {}): ThemeResolutionV2 {
+  const migrated = migrateTheme(input);
+  if (!migrated.ok) return { ok: false, diagnostics: migrated.diagnostics };
+
+  const theme = migrated.theme;
+  const resolvedAssets = resolveThemeAssets(theme, registry);
+  if (!resolvedAssets.ok) return { ok: false, diagnostics: resolvedAssets.diagnostics };
+
+  const materials = Object.fromEntries(Object.entries(theme.materials).map(([id, material]) => [id, {
+    ...material,
+    base: theme.colors[material.base],
+    fallback: theme.colors[material.fallback],
+    border: { ...material.border, color: theme.colors[material.border.color] },
+    rim: { ...material.rim, color: theme.colors[material.rim.color] },
+    shadows: material.shadows.map((shadow) => ({ ...shadow, color: theme.colors[shadow.color] }))
+  } satisfies ResolvedMaterialV2])) as Record<string, ResolvedMaterialV2>;
+
+  return {
+    ok: true,
+    theme: deepFreeze({
+      ...theme,
+      materials,
+      assets: resolvedAssets.assets
+    }),
     diagnostics: []
   };
 }

@@ -1,6 +1,6 @@
 import { THEME_MATERIAL_ROLES } from '@pomegranate-ui/contracts';
 
-import type { ResolvedTheme } from './resolve.js';
+import type { ResolvedTheme, ResolvedThemeV2 } from './resolve.js';
 
 function parseHex(color: string): readonly [number, number, number, number] {
   const match = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(color);
@@ -35,7 +35,7 @@ export function contrastRatio(foreground: string, background: string): number {
     / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
 }
 
-export function collectThemeAssetIds(theme: ResolvedTheme): readonly string[] {
+export function collectThemeAssetIds(theme: ResolvedTheme | ResolvedThemeV2): readonly string[] {
   const ordered: string[] = [];
   const seen = new Set<string>();
   const add = (id: string | undefined) => {
@@ -46,8 +46,13 @@ export function collectThemeAssetIds(theme: ResolvedTheme): readonly string[] {
   };
 
   add(theme.iconPackId);
-  for (const asset of theme.assets) add(asset.id);
-  for (const role of THEME_MATERIAL_ROLES) add(theme.materials[role].textureAssetId);
+  if (theme.schemaVersion === 'pomegranate.ui.theme.v2') {
+    for (const id of Object.keys(theme.assets)) add(id);
+    for (const material of Object.values(theme.materials)) add(material.texture?.assetId);
+  } else {
+    for (const asset of theme.assets) add(asset.id);
+    for (const role of THEME_MATERIAL_ROLES) add(theme.materials[role].textureAssetId);
+  }
   for (const layer of theme.canvas) {
     if (layer.kind === 'image' || layer.kind === 'texture') add(layer.assetId);
   }

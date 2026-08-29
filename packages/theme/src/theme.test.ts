@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ThemeDefinition } from '@pomegranate-ui/contracts';
-import { collectThemeAssetIds, contrastRatio, mergeTheme, resolveTheme } from './index.js';
+import { applyThemePolicy, collectThemeAssetIds, contrastRatio, mergeTheme, resolveTheme, resolveThemeV2 } from './index.js';
 
 const material = (base: ThemeDefinition['materials']['widget']['base']) => ({
   base,
@@ -51,6 +51,86 @@ const VALID_THEME: ThemeDefinition = {
 };
 
 describe('resolveTheme', () => {
+  it('resolves both schema generations into an immutable v2 presentation model', () => {
+    const result = resolveThemeV2(VALID_THEME, {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/minimal-icons.svg' }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.theme.schemaVersion).toBe('pomegranate.ui.theme.v2');
+    expect(result.theme.materials.widget).toMatchObject({
+      base: '#29252d',
+      fallback: '#29252d'
+    });
+    expect(result.theme.assets['icons.minimal']).toEqual({
+      kind: 'icon-pack',
+      source: '/assets/minimal-icons.svg'
+    });
+    expect(Object.isFrozen(result.theme)).toBe(true);
+    expect(Object.isFrozen(result.theme.recipes.parts['widget.surface'])).toBe(true);
+  });
+
+  it('fails closed with a literal diagnostic when a required icon pack is unavailable', () => {
+    const result = resolveThemeV2(VALID_THEME, {});
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result).not.toHaveProperty('theme');
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'THEME_ICON_PACK_MISSING', path: ['iconPackId'] })
+    ]));
+  });
+
+  it('lets device accessibility veto replace translucent part materials without mutating the source', () => {
+    const resolved = resolveThemeV2(VALID_THEME, {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/minimal-icons.svg' }
+    });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    const originalMaterial = resolved.theme.recipes.parts['widget.surface'].material;
+
+    const effective = applyThemePolicy(resolved.theme, {
+      runtime: { materialOpacity: { widget: 0.4 }, materialBlurPx: { widget: 18 } },
+      device: { reducedTransparency: true }
+    });
+
+    expect(effective.recipes.parts['widget.surface'].material).toBe('widget-opaque');
+    expect(effective.materials['widget-opaque']).toMatchObject({
+      opacity: 1,
+      backdrop: { blurPx: 0 }
+    });
+    expect(resolved.theme.recipes.parts['widget.surface'].material).toBe(originalMaterial);
+    expect(Object.isFrozen(effective)).toBe(true);
+  });
+
+  it('applies bounded user material preferences after runtime overrides', () => {
+    const resolved = resolveThemeV2(VALID_THEME, {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/minimal-icons.svg' }
+    });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+
+    const effective = applyThemePolicy(resolved.theme, {
+      runtime: { materialOpacity: { widget: 0.7 }, materialBlurPx: { widget: 18 } },
+      user: { materialOpacity: { widget: 0.35 }, materialBlurPx: { widget: 200 } },
+      device: { maximumBlurPx: 30 }
+    });
+
+    expect(effective.materials.widget?.opacity).toBe(0.35);
+    expect(effective.materials.widget?.backdrop.blurPx).toBe(30);
+  });
+
+  it('collects v2 asset dependencies in deterministic first-use order', () => {
+    const resolved = resolveThemeV2(VALID_THEME, {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/minimal-icons.svg' }
+    });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+
+    expect(collectThemeAssetIds(resolved.theme)).toEqual(['icons.minimal']);
+  });
+
   it('resolves material color roles into immutable presentation-neutral values', () => {
     const result = resolveTheme(VALID_THEME);
     expect(result.ok).toBe(true);
