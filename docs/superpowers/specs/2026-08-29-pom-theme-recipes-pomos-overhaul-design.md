@@ -377,4 +377,3 @@ The goal is complete only when all of the following are proven:
 8. Documentation and static hosting remain correct.
 9. The reviewed PR is merged and remote/Pages evidence identifies the delivered
    revision.
-

@@ -467,4 +467,3 @@ Merge without bypassing protection, verify the PR merge commit equals remote `ma
 - Type consistency: v2 schemas originate in contracts; migration/resolution/compiler/canvas/policy originate in theme; Svelte and Lab consume public outputs only.
 - Boundary consistency: target data may vary values and recipes but never selectors, actions, DOM identity, or product semantics.
 - Verification integrity: source checks cannot replace browser evidence, screenshots cannot replace function tests, and a narrow focused gate cannot support full completion.
-
