@@ -1,6 +1,8 @@
 # Deep Fidelity, Shared Workbench Capabilities, and Ash & Amber Design
 
-**Status:** Proposed for written-spec review
+**Status:** Approved for implementation
+
+**Approved:** 2026-08-29
 
 **Date:** 2026-08-29
 
@@ -16,6 +18,27 @@
 This decision supersedes the earlier tranche non-goals that limited the Lab to
 three targets and excluded a visual theme editor. It does not weaken their
 toolkit, preservation, shared-tree, or accessibility constraints.
+
+## Upstream coordination and integration order
+
+The concurrent `Align Svelte rebuild goals` task owns the
+`codex/theme-recipes-pomos-overhaul` work until it completes its gate and merges
+to `main`. Its accepted upstream surface is the exact versioned
+`pomegranate.ui.theme.v2` schema and migration, `resolveThemeV2`, host-owned
+`ThemeAssetRegistry`, `applyThemePolicy`, deterministic binding and fixed-part
+stylesheet compilers, layered root-only canvas compiler, the complete
+`data-pom-part` vocabulary, data-only target definitions, and their visual and
+browser evidence.
+
+This program does not cherry-pick that branch or edit its worktree. Plan 1
+starts only after the upstream task reports its final merged `main` SHA. The
+approved separation into `ThemeDefinition`, `CanvasDefinition`, and
+`AmbientProfile` is added through a new versioned target envelope and migration;
+the accepted V2 input schema remains byte-for-byte compatible. The rest of this
+program owns Panel/layout/persistence, Ash & Amber, Theme Settings and ambient
+follow-on work, and Deep exact fidelity. The upstream task has explicitly
+excluded new Panel templates, regions, shelves, docking, undo, and persistence
+contracts.
 
 ## Decision
 
