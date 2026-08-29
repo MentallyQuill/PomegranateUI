@@ -42,7 +42,7 @@ export async function renderOriginalThemeReference(
           widgetRadius: getComputedStyle(widget).borderTopLeftRadius,
           buttonRadius: getComputedStyle(button).borderTopLeftRadius
         }),
-        trace: Object.freeze([`opened byte-hashed ${expected.target} original reference`, `set ${expected.state} state`])
+        trace: Object.freeze([`opened byte-hashed ${expected.target} reference`, `set ${expected.state} state`])
       });
     }, { target: scenario.target, state: scenario.referenceState });
   } catch (cause) {

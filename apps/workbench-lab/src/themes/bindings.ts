@@ -129,6 +129,7 @@ export function compileThemeBindings(
   const barOpacity = controls.barOpacity / 100;
   const selectedOpacity = controls.selectedStrength / 100;
   const handleOpacity = Math.min(1, glassOpacity + 0.24);
+  const frostOpacity = controls.frostLevel / 100;
   const frostBlur = controls.frostLevel * 0.24;
   add('--pom-glass-density', `${decimal(controls.glassDensity)}%`);
   add('--pom-bar-opacity', `${decimal(controls.barOpacity)}%`);
@@ -143,6 +144,8 @@ export function compileThemeBindings(
   add('--pom-material-bar-accent', withOpacity(theme.colors.accent, 0.05 * barOpacity));
   add('--pom-material-glass-highlight', withOpacity('#ffffff', 0.06 * glassOpacity));
   add('--pom-material-glass-accent', withOpacity(theme.colors.accent, 0.03 * glassOpacity));
+  add('--pom-material-frost-haze', withOpacity('#ffffff', 0.2 * frostOpacity));
+  add('--pom-material-frost-accent', withOpacity(theme.colors.accent, 0.06 * frostOpacity));
 
   const textRed = Number.parseInt(theme.colors.text.slice(1, 3), 16);
   const textGreen = Number.parseInt(theme.colors.text.slice(3, 5), 16);

@@ -123,7 +123,7 @@ The preserved source baseline is Sonder Engine commit `0fb98e43f303d62c42ef5c74e
 
 The deployable Lab boundary is the relative-base static output in `apps/workbench-lab/dist`. It does not require SvelteKit, a Pom backend, Sonder server code, or a network-only asset host.
 
-The Lab applies three complete definitions to the same live Panel and Widget tree: Pom Neutral, Deep Current, and Bunny. Switching is immediate and atomic; a failed definition or missing required local asset leaves the last valid theme active. These presets are Lab-owned demonstrations, not bundled product branding. Adopters continue to own markup, composition, asset resolution, preference persistence, and final visual identity.
+The Lab applies three complete definitions to the same live Panel and Widget tree: PomOS (stable preset ID `pom-neutral`), Deep Current, and Bunny. Switching is immediate and atomic; a failed definition or missing required local asset leaves the last valid theme active. These presets are Lab-owned demonstrations, not bundled product branding. Adopters continue to own markup, composition, asset resolution, preference persistence, and final visual identity.
 
 This tranche intentionally does not add animated theme morphing, a visual theme editor, remote theme loading, package publication, public hosting, or a Sonder cutover. That keeps the foundation small enough to evaluate before any of those costs become product commitments.
 

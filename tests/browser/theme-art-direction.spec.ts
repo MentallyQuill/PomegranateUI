@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
+import { PNG } from 'pngjs';
 
 const TARGETS = [
   { id: 'deep-current', label: 'Deep Current' },
-  { id: 'pom-neutral', label: 'Pom Neutral' },
+  { id: 'pom-neutral', label: 'PomOS' },
   { id: 'bunny', label: 'Bunny' }
 ] as const;
 
@@ -15,7 +16,7 @@ type MaterialSample = {
   boxShadow: string;
 };
 
-type SurfaceName = 'shelf' | 'utility' | 'workbench' | 'dock' | 'transcript' | 'composer' | 'catalog' | 'dialog' | 'focused' | 'floating';
+type SurfaceName = 'shelf' | 'utility' | 'transcript' | 'composer' | 'catalog' | 'dialog' | 'focused' | 'floating';
 type SurfaceExpectation = {
   blur: number;
   radii: readonly [number, number];
@@ -92,12 +93,29 @@ function backgroundLuminance(sample: MaterialSample): number {
   return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
 }
 
+function pixelDifference(leftBuffer: Buffer, rightBuffer: Buffer): { mean: number; changedRatio: number } {
+  const left = PNG.sync.read(leftBuffer);
+  const right = PNG.sync.read(rightBuffer);
+  expect([right.width, right.height]).toEqual([left.width, left.height]);
+  let difference = 0;
+  let changed = 0;
+  const pixels = left.width * left.height;
+  for (let index = 0; index < left.data.length; index += 4) {
+    const pixelDifference = (
+      Math.abs(left.data[index]! - right.data[index]!)
+      + Math.abs(left.data[index + 1]! - right.data[index + 1]!)
+      + Math.abs(left.data[index + 2]! - right.data[index + 2]!)
+    ) / 3;
+    difference += pixelDifference;
+    if (pixelDifference >= 2) changed += 1;
+  }
+  return { mean: difference / pixels, changedRatio: changed / pixels };
+}
+
 const MATERIAL_EXPECTATIONS: Record<(typeof TARGETS)[number]['id'], Record<SurfaceName, SurfaceExpectation>> = {
   'deep-current': {
     shelf: { blur: 7.2, radii: [0, 0], shadow: false, tone: 'dark', translucent: true },
     utility: { blur: 7.2, radii: [2, 2], shadow: true, tone: 'dark', translucent: true },
-    workbench: { blur: 7.2, radii: [0, 0], shadow: false, tone: 'dark', translucent: true },
-    dock: { blur: 7.2, radii: [0, 0], shadow: false, tone: 'dark', translucent: true },
     transcript: { blur: 7.2, radii: [2, 2], shadow: true, tone: 'dark', translucent: true },
     composer: { blur: 7.2, radii: [0, 0], shadow: false, tone: 'dark', translucent: true },
     catalog: { blur: 7.2, radii: [2, 2], shadow: true, tone: 'dark', translucent: true },
@@ -106,22 +124,18 @@ const MATERIAL_EXPECTATIONS: Record<(typeof TARGETS)[number]['id'], Record<Surfa
     floating: { blur: 7.2, radii: [2, 2], shadow: true, tone: 'dark', translucent: true }
   },
   'pom-neutral': {
-    shelf: { blur: 12, radii: [18, 10], shadow: true, tone: 'light', translucent: true },
-    utility: { blur: 12, radii: [10, 10], shadow: true, tone: 'light', translucent: true },
-    workbench: { blur: 12, radii: [12, 18], shadow: true, tone: 'light', translucent: true },
-    dock: { blur: 12, radii: [16, 16], shadow: true, tone: 'light', translucent: true },
-    transcript: { blur: 12, radii: [15, 15], shadow: true, tone: 'light', translucent: true },
-    composer: { blur: 12, radii: [15, 15], shadow: true, tone: 'light', translucent: true },
-    catalog: { blur: 12, radii: [18, 18], shadow: true, tone: 'light', translucent: true },
-    dialog: { blur: 12, radii: [18, 18], shadow: true, tone: 'light', translucent: true },
-    focused: { blur: 12, radii: [18, 18], shadow: true, tone: 'light', translucent: true },
-    floating: { blur: 12, radii: [10, 10], shadow: true, tone: 'light', translucent: true }
+    shelf: { blur: 16.8, radii: [0, 0], shadow: false, tone: 'light', translucent: true },
+    utility: { blur: 16.8, radii: [14, 14], shadow: true, tone: 'light', translucent: true },
+    transcript: { blur: 16.8, radii: [22, 22], shadow: true, tone: 'light', translucent: true },
+    composer: { blur: 16.8, radii: [22, 22], shadow: true, tone: 'light', translucent: true },
+    catalog: { blur: 16.8, radii: [24, 24], shadow: true, tone: 'light', translucent: true },
+    dialog: { blur: 16.8, radii: [24, 24], shadow: true, tone: 'light', translucent: true },
+    focused: { blur: 16.8, radii: [24, 24], shadow: true, tone: 'light', translucent: true },
+    floating: { blur: 16.8, radii: [18, 18], shadow: true, tone: 'light', translucent: true }
   },
   bunny: {
     shelf: { blur: 4.8, radii: [24, 12], shadow: true, tone: 'light', translucent: true },
     utility: { blur: 4.8, radii: [12, 12], shadow: true, tone: 'light', translucent: true },
-    workbench: { blur: 4.8, radii: [14, 26], shadow: true, tone: 'light', translucent: true },
-    dock: { blur: 4.8, radii: [20, 20], shadow: true, tone: 'light', translucent: true },
     transcript: { blur: 4.8, radii: [18, 18], shadow: true, tone: 'light', translucent: true },
     composer: { blur: 4.8, radii: [18, 18], shadow: true, tone: 'light', translucent: true },
     catalog: { blur: 4.8, radii: [26, 26], shadow: true, tone: 'light', translucent: true },
@@ -144,7 +158,7 @@ function assertMaterial(target: (typeof TARGETS)[number], name: SurfaceName, sam
   else expect(luminance, `${label} light material`).toBeGreaterThan(180);
 }
 
-test('all visual targets render their configured layered frost', async ({ page }) => {
+test('all visual targets render their configured single-owner frost', async ({ page }) => {
   await fresh(page);
 
   for (const target of TARGETS) {
@@ -154,22 +168,29 @@ test('all visual targets render their configured layered frost', async ({ page }
     const utility = await material(page, '.context-rail');
     const workbench = await material(page, '.workbench-shell');
     const dock = await material(page, '[data-conformance-region="left"]');
+    const widget = await material(page, '[data-conformance-region="left"] .widget-frame');
     const stage = await material(page, '[data-conformance-region="stage"]');
     const stageDecoration = await page.locator('[data-conformance-region="stage"]').evaluate((element) => getComputedStyle(element, '::after').backgroundImage);
     const root = await material(page, 'main');
 
-    const shelfDepth = target.id === 'deep-current'
-      ? await pseudoMaterial(page, '.top-shelf', '::before')
-      : shelf;
+    const shelfDepth = await pseudoMaterial(page, '.top-shelf', '::before');
     const configuredBlur = MATERIAL_EXPECTATIONS[target.id].shelf.blur;
     expect(blurPx(shelf.backdropFilter), `${target.label} shelf authority blur`).toBeCloseTo(configuredBlur, 1);
-    expect(blurPx(shelfDepth.backdropFilter), `${target.label} visible shelf frost`).toBeCloseTo(configuredBlur, 1);
+    expect(blurPx(shelfDepth.backdropFilter), `${target.label} decorative shelf layer`).toBe(0);
     expect(blurPx(utility.backdropFilter), `${target.label} utility blur`).toBeCloseTo(configuredBlur, 1);
-    expect(Math.max(blurPx(workbench.backdropFilter), blurPx(dock.backdropFilter)), `${target.label} Workbench layer blur`).toBeCloseTo(configuredBlur, 1);
+    expect(blurPx(workbench.backdropFilter), `${target.label} structural Workbench`).toBe(0);
+    const dockBlur = target.id === 'deep-current' ? configuredBlur : 0;
+    const widgetBlur = target.id === 'deep-current' ? 0 : configuredBlur;
+    expect(blurPx(dock.backdropFilter), `${target.label} dock frost owner`).toBeCloseTo(dockBlur, 1);
+    expect(blurPx(widget.backdropFilter), `${target.label} visible Widget frost owner`).toBeCloseTo(widgetBlur, 1);
     expect(alpha(shelf.backgroundColor), `${target.label} shelf transparency`).toBeLessThan(1);
     expect(alpha(utility.backgroundColor), `${target.label} utility transparency`).toBeLessThan(1);
-    expect(shelf.boxShadow !== 'none' || shelfDepth.boxShadow !== 'none', `${target.label} shelf depth`).toBe(true);
-    expect(workbench.boxShadow !== 'none' || dock.backdropFilter !== 'none', `${target.label} Workbench depth`).toBe(true);
+    if (target.id === 'pom-neutral') {
+      expect(shelf.boxShadow, `${target.label} borderless desktop menu bar`).toBe('none');
+    } else {
+      expect(shelf.boxShadow !== 'none' || shelfDepth.boxShadow !== 'none', `${target.label} shelf depth`).toBe(true);
+    }
+    expect(workbench.boxShadow !== 'none' || widget.boxShadow !== 'none', `${target.label} Workbench depth`).toBe(true);
     expect(root.backgroundImage, `${target.label} dimensional canvas`).not.toBe('none');
     expect(stage.backgroundImage !== 'none' || stageDecoration !== 'none', `${target.label} stage canvas`).toBe(true);
     if (target.id === 'deep-current' || target.id === 'bunny') {
@@ -186,8 +207,6 @@ test('every named elevated surface exposes its material contract', async ({ page
     for (const [name, selector] of [
       ['shelf', '.top-shelf'],
       ['utility', '.context-rail'],
-      ['workbench', '.workbench-shell'],
-      ['dock', '[data-conformance-region="left"]'],
       ['transcript', '.transcript'],
       ['composer', '.composer']
     ] as const) samples.set(name, await material(page, selector));
@@ -347,6 +366,155 @@ test('recovered material controls tune and retain each theme draft', async ({ pa
   await page.locator('.panel-tabs').getByRole('tab', { name: 'Library' }).click();
   expect(alpha((await material(page, '.surface-workspace nav button[aria-current="true"]')).backgroundColor)).toBe(1);
   expect(alpha((await material(page, '.surface-tree button.is-selected')).backgroundColor)).toBe(1);
+});
+
+test('PomOS expresses the attached Tahoe references through theme-owned chrome and window cues', async ({ page }) => {
+  await fresh(page);
+  await selectTheme(page, TARGETS[1]);
+
+  const result = await page.locator('main').evaluate((root) => {
+    const style = (selector: string, pseudo?: string) => getComputedStyle(root.querySelector(selector)!, pseudo);
+    const shelf = style('.top-shelf');
+    const shell = style('.workbench-shell');
+    const stage = style('[data-conformance-region="stage"]');
+    const stageWaveOne = style('[data-conformance-region="stage"]', '::before');
+    const stageWaveTwo = style('[data-conformance-region="stage"]', '::after');
+    const widget = style('[data-conformance-region="left"] .widget-frame');
+    const windowChrome = style('[data-conformance-region="left"] .widget-frame > header', '::before');
+    const transcript = style('.transcript');
+    const composer = style('.composer');
+    return {
+      canvas: getComputedStyle(root).backgroundImage,
+      shelfRadius: shelf.borderTopLeftRadius,
+      shelfShadow: shelf.boxShadow,
+      shellFill: shell.backgroundColor,
+      stageBorder: stage.borderTopWidth,
+      stageWaveOneBorder: stageWaveOne.borderTopWidth,
+      stageWaveTwoBorder: stageWaveTwo.borderTopWidth,
+      stageWaveTwoImage: stageWaveTwo.backgroundImage,
+      widgetRadius: widget.borderTopLeftRadius,
+      widgetShadow: widget.boxShadow,
+      windowChromeContent: windowChrome.content,
+      windowChromeImage: windowChrome.backgroundImage,
+      transcriptRadius: transcript.borderTopLeftRadius,
+      composerRadius: composer.borderTopLeftRadius
+    };
+  });
+
+  expect(result.canvas.match(/radial-gradient/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+  expect(result.shelfRadius).toBe('0px');
+  expect(result.shelfShadow).toBe('none');
+  expect(alpha(result.shellFill)).toBe(0);
+  expect(result.stageBorder).toBe('0px');
+  expect(radiusPx(result.stageWaveOneBorder)).toBeGreaterThanOrEqual(30);
+  expect(radiusPx(result.stageWaveTwoBorder)).toBeGreaterThanOrEqual(40);
+  expect(result.stageWaveTwoImage).not.toBe('none');
+  expect(radiusPx(result.widgetRadius)).toBeGreaterThanOrEqual(18);
+  expect(result.widgetShadow).not.toBe('none');
+  expect(result.windowChromeContent).not.toBe('none');
+  expect(result.windowChromeImage.match(/radial-gradient/g)?.length ?? 0).toBe(3);
+  expect(radiusPx(result.transcriptRadius)).toBeGreaterThanOrEqual(20);
+  expect(radiusPx(result.composerRadius)).toBeGreaterThanOrEqual(20);
+});
+
+test('each visible Widget stack has one frost owner and no opaque inner-card floor', async ({ page }) => {
+  for (const target of TARGETS) {
+    await fresh(page);
+    await selectTheme(page, target);
+
+    const shell = await material(page, '.workbench-shell');
+    const dock = await material(page, '[data-conformance-region="left"]');
+    const widget = await material(page, '[data-conformance-region="left"] .widget-frame');
+    const stage = await material(page, '[data-conformance-region="stage"]');
+    const transcript = await material(page, '.transcript');
+
+    expect(blurPx(shell.backdropFilter), `${target.label} structural shell`).toBe(0);
+    expect(alpha(shell.backgroundColor), `${target.label} structural shell fill`).toBe(0);
+    const configuredBlur = MATERIAL_EXPECTATIONS[target.id].transcript.blur;
+    const dockBlur = target.id === 'deep-current' ? configuredBlur : 0;
+    const widgetBlur = target.id === 'deep-current' ? 0 : configuredBlur;
+    expect(blurPx(dock.backdropFilter), `${target.label} dock frost owner`).toBe(dockBlur);
+    expect(alpha(dock.backgroundColor) < 1, `${target.label} dock translucency`).toBe(true);
+    expect(blurPx(widget.backdropFilter), `${target.label} Widget frost owner`).toBe(widgetBlur);
+    expect(alpha(widget.backgroundColor), `${target.label} Widget fill`).toBeLessThan(1);
+    expect(blurPx(stage.backdropFilter), `${target.label} stage source plane`).toBe(0);
+    expect(blurPx(transcript.backdropFilter), `${target.label} transcript frost`).toBe(MATERIAL_EXPECTATIONS[target.id].transcript.blur);
+
+    await page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Focus Widget' }).click();
+    let focused = await material(page, '.focused-widget-dialog');
+    let focusedWidget = await material(page, '.focused-widget-dialog .widget-frame');
+    expect(blurPx(focused.backdropFilter), `${target.label} focused-dialog frost owner`).toBe(configuredBlur);
+    expect(blurPx(focusedWidget.backdropFilter), `${target.label} focused Widget child`).toBe(0);
+    await page.getByRole('dialog', { name: /Focused World State/ }).getByRole('button', { name: 'Back to Workbench' }).click();
+
+    const themeLibrary = page.getByRole('article', { name: 'Theme Library' });
+    await themeLibrary.getByText('Material controls', { exact: true }).click();
+    await themeLibrary.getByRole('slider', { name: 'Glass density' }).fill('0');
+    const frost = themeLibrary.getByRole('slider', { name: 'Frost level' });
+    await frost.fill('0');
+    const innerCard = await material(page, '[data-conformance-region="left"] .surface-roster > button');
+    expect(alpha(innerCard.backgroundColor), `${target.label} inner-card floor`).toBe(0);
+
+    await page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Focus Widget' }).click();
+    focused = await material(page, '.focused-widget-dialog');
+    focusedWidget = await material(page, '.focused-widget-dialog .widget-frame');
+    expect(blurPx(focused.backdropFilter), `${target.label} clear focused-dialog endpoint`).toBe(0);
+    expect(blurPx(focusedWidget.backdropFilter), `${target.label} clear focused Widget child`).toBe(0);
+    await page.getByRole('dialog', { name: /Focused World State/ }).getByRole('button', { name: 'Back to Workbench' }).click();
+
+    await frost.fill('100');
+    await page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Focus Widget' }).click();
+    focused = await material(page, '.focused-widget-dialog');
+    focusedWidget = await material(page, '.focused-widget-dialog .widget-frame');
+    expect(blurPx(focused.backdropFilter), `${target.label} full focused-dialog endpoint`).toBe(24);
+    expect(blurPx(focusedWidget.backdropFilter), `${target.label} full focused Widget child`).toBe(0);
+    await page.getByRole('dialog', { name: /Focused World State/ }).getByRole('button', { name: 'Back to Workbench' }).click();
+  }
+});
+
+test('frost endpoints make a perceptible visual difference on every target', async ({ page }) => {
+  for (const target of TARGETS) {
+    await fresh(page);
+    await selectTheme(page, target);
+    const themeLibrary = page.getByRole('article', { name: 'Theme Library' });
+    await themeLibrary.getByText('Material controls', { exact: true }).click();
+    await themeLibrary.getByRole('slider', { name: 'Glass density' }).fill('35');
+    const frost = themeLibrary.getByRole('slider', { name: 'Frost level' });
+    const widget = page.locator('[data-conformance-region="right"] .widget-frame').first();
+
+    await frost.fill('0');
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const clear = await widget.screenshot({ animations: 'disabled' });
+    await frost.fill('100');
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const frosted = await widget.screenshot({ animations: 'disabled' });
+    const difference = pixelDifference(clear, frosted);
+
+    expect(difference.changedRatio, `${target.label} visibly changed pixels`).toBeGreaterThan(0.15);
+    expect(difference.mean, `${target.label} frost mean pixel delta`).toBeGreaterThan(0.6);
+  }
+});
+
+test('expanded material controls remain complete across theme typography', async ({ page }) => {
+  for (const target of TARGETS) {
+    await fresh(page);
+    await selectTheme(page, target);
+    const themeLibrary = page.getByRole('article', { name: 'Theme Library' });
+    await themeLibrary.getByText('Material controls', { exact: true }).click();
+
+    const selectedLabel = themeLibrary.getByText('Selected strength', { exact: true });
+    expect(await selectedLabel.evaluate((element) => {
+      const textRange = document.createRange();
+      textRange.selectNodeContents(element);
+      return textRange.getBoundingClientRect().width + 2 <= element.getBoundingClientRect().width;
+    }), `${target.label} Selected strength label`).toBe(true);
+
+    const articleBox = await themeLibrary.boundingBox();
+    const settingsBox = await themeLibrary.getByRole('button', { name: 'Open Theme Settings' }).boundingBox();
+    expect(articleBox, `${target.label} Theme Library bounds`).not.toBeNull();
+    expect(settingsBox, `${target.label} Theme Settings bounds`).not.toBeNull();
+    expect(settingsBox!.y + settingsBox!.height, `${target.label} Theme Settings action`).toBeLessThanOrEqual(articleBox!.y + articleBox!.height);
+  }
 });
 
 test('material controls retain 44px coarse-pointer targets', async ({ browser }) => {

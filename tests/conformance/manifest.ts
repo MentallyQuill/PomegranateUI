@@ -14,8 +14,8 @@ const atmosphericPath = 'prototypes/sonder-baseline/atmospheric-workbench/sonder
 const atmosphericSha256 = '38878d2cf8a86f5e879faba4b41a214e4293f22ed755975023e02c962d61b913';
 const widgetOverhaulPath = 'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul.html';
 const widgetOverhaulSha256 = '043167ad75c07fa5ff8661fbe8a86943a9c0b38eeea9811739309cb866e8a2a5';
-const neutralReferencePath = 'design/theme-targets/pom-neutral-reference.html';
-const neutralReferenceSha256 = '6a188907925f0af7157f66017a2015e07dbe599d14413d2a590e390f0d97bd50';
+const pomosReferencePath = 'design/theme-targets/pomos-reference.html';
+const pomosReferenceSha256 = 'a46dc956b0664643506b5023836cd02fb2e9f64ca538acff1aca7cc7c34a7af9';
 const bunnyReferencePath = 'design/theme-targets/bunny-reference.html';
 const bunnyReferenceSha256 = 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59';
 
@@ -157,9 +157,9 @@ function createThemeTargetScenario(
 }
 
 export const POM_NEUTRAL_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
-  createThemeTargetScenario('pn-scene-wide', 'Pom Neutral wide Scene', 'pom-neutral', 'pom-neutral-original-reference', neutralReferencePath, neutralReferenceSha256, 'scene', 'wide'),
-  createThemeTargetScenario('pn-scene-compact', 'Pom Neutral compact Scene', 'pom-neutral', 'pom-neutral-original-reference', neutralReferencePath, neutralReferenceSha256, 'scene', 'compact-small'),
-  createThemeTargetScenario('pn-catalog-wide', 'Pom Neutral wide Catalog', 'pom-neutral', 'pom-neutral-original-reference', neutralReferencePath, neutralReferenceSha256, 'catalog', 'wide')
+  createThemeTargetScenario('pn-scene-wide', 'PomOS wide Scene', 'pom-neutral', 'pomos-reference', pomosReferencePath, pomosReferenceSha256, 'scene', 'wide'),
+  createThemeTargetScenario('pn-scene-compact', 'PomOS compact Scene', 'pom-neutral', 'pomos-reference', pomosReferencePath, pomosReferenceSha256, 'scene', 'compact-small'),
+  createThemeTargetScenario('pn-catalog-wide', 'PomOS wide Catalog', 'pom-neutral', 'pomos-reference', pomosReferencePath, pomosReferenceSha256, 'catalog', 'wide')
 ]);
 
 export const BUNNY_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([

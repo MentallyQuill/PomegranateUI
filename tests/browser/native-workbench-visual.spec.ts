@@ -10,9 +10,12 @@ async function fresh(page: Page, width: number, height: number) {
   await page.evaluate(() => document.fonts.ready);
 }
 
-async function selectTheme(page: Page, label: 'Pom Neutral' | 'Bunny') {
+type ThemeLabel = 'Deep Current' | 'PomOS' | 'Bunny';
+
+async function selectTheme(page: Page, label: ThemeLabel) {
   await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: label, exact: true }).click();
-  await expect(page.locator('main')).toHaveAttribute('data-pom-theme', label === 'Pom Neutral' ? 'pom-neutral' : 'bunny');
+  const themeId = label === 'Deep Current' ? 'deep-current' : label === 'PomOS' ? 'pom-neutral' : 'bunny';
+  await expect(page.locator('main')).toHaveAttribute('data-pom-theme', themeId);
   await page.getByRole('tab', { name: 'Scene' }).click();
   await page.evaluate(async () => {
     await document.fonts.ready;
@@ -20,6 +23,25 @@ async function selectTheme(page: Page, label: 'Pom Neutral' | 'Bunny') {
     window.scrollTo(0, 0);
   });
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+}
+
+async function setMaterialControls(page: Page, values: readonly [number, number, number, number]) {
+  const themeLibrary = page.getByRole('article', { name: 'Theme Library' });
+  await themeLibrary.getByText('Material controls', { exact: true }).click();
+  for (const [label, value] of [
+    ['Glass density', values[0]],
+    ['Bar opacity', values[1]],
+    ['Selected strength', values[2]],
+    ['Frost level', values[3]]
+  ] as const) {
+    const control = themeLibrary.getByRole('slider', { name: label });
+    await control.fill(String(value));
+    await expect(control).toHaveValue(String(value));
+  }
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    window.scrollTo(0, 0);
+  });
 }
 
 const shot = (page: Page, name: string) => expect(page).toHaveScreenshot(name, {
@@ -61,7 +83,7 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
 
 test('native workbench exposes the two original visual flexibility targets', async ({ page }) => {
   for (const theme of [
-    { label: 'Pom Neutral' as const, name: 'pom-neutral' },
+    { label: 'PomOS' as const, name: 'pom-neutral' },
     { label: 'Bunny' as const, name: 'bunny' }
   ]) {
     await fresh(page, 1440, 900);
@@ -71,5 +93,25 @@ test('native workbench exposes the two original visual flexibility targets', asy
     await fresh(page, 390, 844);
     await selectTheme(page, theme.label);
     await shot(page, `compact-${theme.name}.png`);
+  }
+});
+
+test('material stress states stay coherent at wide and compact viewports', async ({ page }) => {
+  for (const state of [
+    { label: 'Deep Current' as const, name: 'zero-deep-current', values: [0, 0, 0, 0] as const },
+    { label: 'PomOS' as const, name: 'adjusted-pom-neutral', values: [68, 54, 20, 42] as const },
+    { label: 'Bunny' as const, name: 'full-bunny', values: [100, 100, 100, 100] as const }
+  ]) {
+    await fresh(page, 1440, 900);
+    await selectTheme(page, state.label);
+    await setMaterialControls(page, state.values);
+    await shot(page, `wide-material-${state.name}.png`);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(async () => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      window.scrollTo(0, 0);
+    });
+    await shot(page, `compact-material-${state.name}.png`);
   }
 });

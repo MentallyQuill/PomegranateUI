@@ -3,7 +3,7 @@
 ## Scope
 
 This ledger records adversarial visual review of the shared Workbench Lab tree in
-Deep Current, Pom Neutral, and Bunny. It follows
+Deep Current, PomOS (stable preset ID `pom-neutral`), and Bunny. It follows
 `docs/superpowers/specs/2026-08-28-pom-theme-art-direction-design.md`.
 
 The six stable evidence paths are:
@@ -20,8 +20,9 @@ Every formal round is independently recoverable at those paths:
 - Round 0: rejected baseline commit `49dac42`;
 - Round 1: first complete re-art-direction commit `e128e8b`; and
 - Round 2: promoted image commit `f3dbfc7`; and
-- Round 3: the merge revision containing this ledger, additionally frozen by
-  the SHA-256 values below.
+- Round 3: the merge revision that recovered the live material controls; and
+- Round 4: the merge revision containing the current single-owner glass fix and
+  PomOS reference pass, additionally frozen by the second SHA-256 table below.
 
 Uncommitted working captures are not counted as critic rounds. This preserves a
 complete audit trail without duplicating six binary files per iteration.
@@ -162,10 +163,81 @@ or responsive ambiguity.
 - Bunny's watermark could be more or less prominent without changing target
   clarity, hierarchy, or usability.
 
+## Round 4 — perceptible frost and Tahoe-reference PomOS
+
+Authority: the same shared Workbench tree plus five user-provided macOS Tahoe
+references covering the desktop, Control Center, Messages, Contacts, and
+Shortcuts. The references govern visual qualities rather than copied Apple
+assets or product markup: a blue abstract desktop, quiet borderless menu chrome,
+floating rounded windows, layered translucent materials, restrained hairlines
+and shadows, traffic-light window controls, and one calm sans-serif voice.
+
+The first diagnostic pass did not accept declared CSS values as visual proof.
+It isolated Glass density and Frost level, compared 0 and 100 percent captures,
+and inspected the preserved Atmospheric Workbench structure. The critic found
+that opacity was working, but nested shell, dock, and Widget backdrop roots had
+flattened the wallpaper before the innermost frost sampled it. Low-frequency
+wallpapers and fixed inner-card fills made the remaining blur nearly invisible.
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Blocking | Frost values reached computed styles but produced a negligible visual change on Widget surfaces. | Assign exactly one backdrop-filter owner per nested stack (the preserved Deep Current dock or each PomOS/Bunny Widget), keep the other structural layers transparent, add frost-linked optical haze, and add a Playwright pixel-difference gate across all three targets. |
+| Substantive | Inner rows retained a fixed opaque floor at zero Glass density. | Derive their fill from the live Widget material mixed with transparent so zero is truly transparent and intermediate values remain layered. |
+| Substantive | The first PomOS render was a generic pale-blue dashboard rather than the attached desktop reference language. | Retain the stable `pom-neutral` ID but present PomOS through a blue CSS ribbon wallpaper, edge-to-edge translucent menu bar, 18–24 pixel floating windows, traffic-light chrome, stronger glass edges, and neutral system surfaces. |
+| Substantive | The first PomOS reference iteration still had a smooth generic wallpaper and inherited an industrial monospaced voice. | Add two independent sweeping elliptical contours and move PomOS prose and technical roles to the packaged sans family. |
+| Substantive | Theme control expansion could push the Theme Settings action out of its Widget. | Compact the target cards and control grid while retaining complete labels, values, Reset, and coarse-pointer targets. |
+
+The second reference critic inspected the regenerated PomOS wide, compact, and
+adjusted-material captures at original resolution. The blue ribbon desktop,
+borderless menu chrome, floating glass windows, traffic lights, soft white
+surfaces, system typography, and sparse desktop field now form one coherent
+identity. The remaining differences from Apple's screenshots are required Pom
+product distinctions: Pom branding, Pom's shared Widget inventory, and its
+story-focused layout. They are not unfinished theme defects.
+
+The complete three-theme critic then rechecked the default wide/compact set,
+expanded controls, zero Deep Current, adjusted PomOS, and full Bunny states.
+No target has a blocking or substantive issue in identity, hierarchy, glass,
+typography, containment, control clarity, or cross-theme leakage. The automated
+frost comparison changes more than 15 percent of sampled Widget pixels by at
+least two RGB levels and exceeds a 0.6 mean RGB delta for every target.
+
+The final code critic caught two remaining double-owner stacks outside that
+pixel sample: Deep Current's decorative shelf overlay and the Widget nested in
+the focused dialog. Their inner filters were removed, and Playwright now proves
+the outer/inner ownership at default, zero-frost, and full-frost endpoints for
+all three targets.
+
+| Final surface | Blocking findings | Substantive findings | Result |
+| --- | ---: | ---: | --- |
+| Deep Current default and zero endpoints | 0 | 0 | Pass |
+| PomOS default and adjusted endpoints | 0 | 0 | Pass |
+| Bunny default and full endpoints | 0 | 0 | Pass |
+| All compact equivalents | 0 | 0 | Pass |
+| Expanded material controls | 0 | 0 | Pass |
+| Isolated frost endpoints | 0 | 0 | Pass |
+
+### Round 4 promoted evidence hashes
+
+| Snapshot | SHA-256 |
+| --- | --- |
+| `wide-scene.png` | `b2eb54e076ec36d17145e166d6fade1ed043205f9314801b11d5f46245dcc2a3` |
+| `compact-scene.png` | `29dda9127e85f60e9a014622ea7c09aa09d2a36198b2f096adf85f3d7a2f041c` |
+| `wide-pom-neutral.png` | `31e4c88b28176a45521d76570d45de22bc65da05743c00efcbec45bd745e05d4` |
+| `compact-pom-neutral.png` | `ab18494d50aee2a16d193051cb52babbefaf30e2eb17ddab61dcfa4bb04cd898` |
+| `wide-bunny.png` | `1c221718c4302c8953a0b03bb92bd6ffe4fe76a0994e768fecb0a99cb4b242b5` |
+| `compact-bunny.png` | `126e1a9117058bd4349fc2ebe43632e5af0fac6116bbe647516a9b2ecdee2fd3` |
+| `wide-material-controls.png` | `7918f0993c3515e7f0b6b2de09d2d4cea3cee4cf5dfef1cb12ca52a2d1550232` |
+| `wide-material-zero-deep-current.png` | `88cbfc65035fb896b73caa98ebf3ca227bdf77cf7aabab2b770f96a0c8c07f39` |
+| `compact-material-zero-deep-current.png` | `ef5b10c9382350da69603d83dbf0c99b37ade84f0018241e147d0475138c05c0` |
+| `wide-material-adjusted-pom-neutral.png` | `31835aaf3c0d17ef755d219d9fdf5d96b0671838ca42ddd962f2491ced1bcc46` |
+| `compact-material-adjusted-pom-neutral.png` | `fa9cbc33d12a3568f066c37f2183fbeb65f2fc0c969b5c840f7848a240f561e6` |
+| `wide-material-full-bunny.png` | `4434442221415da2237406971c24511bc01ce8d6d4956f2a73f3f581ed89d92f` |
+| `compact-material-full-bunny.png` | `a421677ffb09f1a3a6b4e670d3acaca5b71b227d22eef4ce32f5c97671ed75ee` |
+
 ## Closure
 
-Round 3 has **zero blocking findings and zero substantive findings** across the
-complete six-image set and expanded-control capture. The preference-only
-observations do not justify more theme-specific code or assets. Final promotion
-still depends on focused browser and accessibility checks, unchanged-tree
-verification, the complete repository gate, code review, CI, and merge.
+Round 4 has **zero blocking findings and zero substantive findings** across the
+complete default, responsive, control, endpoint, and PomOS reference evidence.
+Final promotion still depends on the complete repository gate, code review, CI,
+and merge.

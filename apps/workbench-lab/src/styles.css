@@ -140,7 +140,7 @@ main[data-active-panel="surface-preview"] .surface-contract-facts { display: gri
 .surface-state strong { color: var(--ink); font-size: 11px; }
 .surface-state small { color: var(--muted); line-height: 1.35; }
 .surface-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 0; background: var(--line); }
-.surface-facts > div { display: grid; gap: 3px; min-width: 0; padding: 9px; background: color-mix(in srgb, var(--pom-material-widget) 82%, var(--pom-color-canvas)); }
+.surface-facts > div { display: grid; gap: 3px; min-width: 0; padding: 9px; background: color-mix(in srgb, var(--pom-material-widget) 82%, transparent); }
 .surface-facts dt { color: var(--faint); font: 9px var(--pom-font-technical, monospace); text-transform: uppercase; }
 .surface-facts dd { margin: 0; overflow-wrap: anywhere; color: var(--ink); font-weight: 650; }
 .surface-boundary { display: grid; grid-template-columns: 18px 1fr; gap: 7px; align-items: start; margin: 0; color: var(--faint); line-height: 1.4; }
@@ -169,7 +169,7 @@ main[data-active-panel="surface-preview"] .surface-contract-facts { display: gri
 .surface-inspector summary { min-height: 32px; padding: 8px; color: var(--ink); cursor: pointer; }
 .surface-inspector p { margin: 0; padding: 0 8px 9px; color: var(--faint); }
 .surface-condition, .surface-roster, .surface-providers, .surface-tasks { display: grid; gap: 1px; background: var(--line); }
-.surface-condition > div, .surface-providers > div, .surface-tasks > div, .surface-roster > button { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; align-items: center; padding: 7px; border: 0; border-radius: 0; text-align: left; background: color-mix(in srgb, var(--pom-material-widget) 82%, var(--pom-color-canvas)); }
+.surface-condition > div, .surface-providers > div, .surface-tasks > div, .surface-roster > button { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; align-items: center; padding: 7px; border: 0; border-radius: 0; text-align: left; background: color-mix(in srgb, var(--pom-material-widget) 82%, transparent); }
 .surface-condition strong, .surface-providers strong, .surface-tasks strong, .surface-roster strong { color: var(--ink); }
 .surface-condition small, .surface-providers small, .surface-tasks small, .surface-roster small { grid-column: 2; color: var(--faint); }
 .surface-condition meter { grid-column: 3; grid-row: 1 / 3; width: 58px; accent-color: var(--ember); }
@@ -227,13 +227,16 @@ main[data-active-panel="surface-preview"] .surface-contract-facts { display: gri
 .surface-themes i[data-theme-swatch="pom-neutral"] { background: linear-gradient(145deg, #f8fafc 0 48%, #3979ec 49% 53%, #d8dde4 54%); }
 .surface-themes i[data-theme-swatch="bunny"] { background: linear-gradient(145deg, #fff1f7 0 48%, #ef80b8 49% 53%, #d8cdf0 54%); }
 .surface-themes small { color: var(--faint); }
+.implemented-surface:has(> .surface-theme-materials[open]) .surface-themes button { grid-template-columns: 24px 1fr; align-items: center; min-height: 36px; padding: 4px 7px; }
+.implemented-surface:has(> .surface-theme-materials[open]) .surface-themes i { grid-row: 1; width: 24px; height: 26px; }
+.implemented-surface:has(> .surface-theme-materials[open]) .surface-themes small { display: none; }
 .surface-theme-materials { margin-top: 8px; border: 1px solid var(--line); border-radius: var(--pom-radius-small, 8px); background: color-mix(in srgb, var(--pom-material-field) 76%, transparent); overflow: hidden; }
 .surface-theme-materials > summary { padding: 6px 8px; color: var(--ink); font: 650 9px/1.2 var(--pom-font-technical, monospace); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 .surface-theme-materials[open] > summary { border-bottom: 1px solid var(--line); }
-.surface-material-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; padding: 7px; }
+.surface-material-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 4px; padding: 7px; }
 .surface-material-grid label { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 4px; align-items: center; color: var(--muted); font: 8px/1.15 var(--pom-font-technical, monospace); }
-.surface-material-grid label > span { overflow: hidden; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
-.surface-material-grid output { color: var(--ink); font-variant-numeric: tabular-nums; }
+.surface-material-grid label > span { overflow: hidden; letter-spacing: -.05em; text-overflow: ellipsis; white-space: nowrap; }
+.surface-material-grid output { color: var(--ink); font-size: 7px; font-variant-numeric: tabular-nums; }
 .surface-material-grid input { grid-column: 1 / -1; width: 100%; min-height: 14px; accent-color: var(--pom-color-accent); }
 .surface-theme-materials > footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 7px 7px; }
 .surface-theme-materials > footer small { color: var(--faint); font: 8px/1.35 var(--pom-font-technical, monospace); }

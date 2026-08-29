@@ -163,6 +163,7 @@ test('conformance authorities and viewports expose the independently recorded co
       'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul.html': '043167ad75c07fa5ff8661fbe8a86943a9c0b38eeea9811739309cb866e8a2a5',
       'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html': '79aa122abae1d51dff5d1cf292590efe03a53641b2ff44008e6a165beb3db8b3',
       'design/theme-targets/pom-neutral-reference.html': '6a188907925f0af7157f66017a2015e07dbe599d14413d2a590e390f0d97bd50',
+      'design/theme-targets/pomos-reference.html': 'a46dc956b0664643506b5023836cd02fb2e9f64ca538acff1aca7cc7c34a7af9',
       'design/theme-targets/bunny-reference.html': 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59'
     }
   );
@@ -254,7 +255,7 @@ test('the Deep Current interaction manifest names every approved behavior agains
   assert.equal(validated.scenarios.length, 12);
 });
 
-test('the original target manifest freezes both visual identities across Scene and Catalog states', async () => {
+test('the target manifest freezes both visual identities across Scene and Catalog states', async () => {
   assert.deepEqual(ORIGINAL_THEME_TARGET_SCENARIOS.map(({ id, target, viewport, referenceState }) => ({ id, target, viewport, referenceState })), [
     { id: 'pn-scene-wide', target: 'pom-neutral', viewport: 'wide', referenceState: 'scene' },
     { id: 'pn-scene-compact', target: 'pom-neutral', viewport: 'compact-small', referenceState: 'scene' },
@@ -268,7 +269,7 @@ test('the original target manifest freezes both visual identities across Scene a
     repositoryRoot,
     authorities: new Map(AUTHORITY_RECORDS.map((record) => [record.id, record])),
     viewports: CONFORMANCE_VIEWPORTS,
-    driverIds: new Set(['pom-neutral-original-reference', 'bunny-original-reference', 'workbench-lab']),
+    driverIds: new Set(['pomos-reference', 'bunny-original-reference', 'workbench-lab']),
     measurementProfileIds: new Set(['theme-target']),
     assertionProfileIds: new Set(['theme-target']),
     deviationIds: new Set(),
@@ -277,7 +278,7 @@ test('the original target manifest freezes both visual identities across Scene a
   assert.equal(validated.scenarios.length, 6);
 });
 
-test('the frozen original target ledgers contain no unresolved or waived discrepancy', async () => {
+test('the frozen target ledgers contain no unresolved or waived discrepancy', async () => {
   for (const [filename, scenarios] of [
     ['pom-neutral-ledger.md', POM_NEUTRAL_SCENARIOS],
     ['bunny-ledger.md', BUNNY_SCENARIOS]
@@ -817,7 +818,7 @@ test('the reviewed Deep Current Widget baseline freezes all 49 surfaces and six 
   });
 });
 
-test('the reviewed original theme baseline freezes every target scenario and authority hash', async () => {
+test('the reviewed theme baseline freezes every target scenario and authority hash', async () => {
   const baseline = JSON.parse(await readFile(
     path.join(repositoryRoot, 'tests/conformance/baselines/original-theme-targets.json'),
     'utf8'
@@ -825,8 +826,8 @@ test('the reviewed original theme baseline freezes every target scenario and aut
   assert.equal(baseline.schemaVersion, 'pomegranate.ui.conformance-baseline.v1');
   assert.equal(baseline.measurementProfile, 'theme-target');
   assert.deepEqual(baseline.authorities, {
-    'pom-neutral-original-reference': AUTHORITY_RECORDS[5].sha256,
-    'bunny-original-reference': AUTHORITY_RECORDS[6].sha256
+    'pomos-reference': AUTHORITY_RECORDS.find(({ id }) => id === 'pomos-reference').sha256,
+    'bunny-original-reference': AUTHORITY_RECORDS.find(({ id }) => id === 'bunny-original-reference').sha256
   });
   assert.deepEqual(Object.keys(baseline.scenarios), ORIGINAL_THEME_TARGET_SCENARIOS.map(({ id }) => id));
   for (const scenario of ORIGINAL_THEME_TARGET_SCENARIOS) {
