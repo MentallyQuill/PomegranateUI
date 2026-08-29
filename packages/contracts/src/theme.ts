@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const THEME_SCHEMA_VERSION = 'pomegranate.ui.theme.v1' as const;
+export const THEME_SCHEMA_VERSION_V2 = 'pomegranate.ui.theme.v2' as const;
 
 export const THEME_COLOR_ROLES = [
   'canvas',
@@ -33,6 +34,31 @@ export const THEME_MATERIAL_ROLES = [
   'menu',
   'dialog',
   'floating'
+] as const;
+
+export const THEME_PART_IDS = [
+  'canvas.surface',
+  'chrome.shelf',
+  'chrome.context',
+  'dock.surface',
+  'panel.surface',
+  'group.surface',
+  'widget.surface',
+  'widget.header',
+  'widget.content',
+  'widget.actions',
+  'row.surface',
+  'separator',
+  'field.surface',
+  'button.surface',
+  'button.icon',
+  'menu.surface',
+  'dialog.surface',
+  'floating.surface',
+  'slider.input',
+  'slider.track',
+  'slider.fill',
+  'slider.thumb'
 ] as const;
 
 const nonBlankString = (label: string) => z.string().refine(
@@ -243,6 +269,170 @@ export const ThemeDefinitionSchema = z.object({
   capabilities: ThemeCapabilitiesSchema
 }).strict();
 
+const themeMaterialIdSchema = themeIdSchema;
+const themeShapeIdSchema = themeIdSchema;
+
+export const ThemePartIdSchema = z.enum(THEME_PART_IDS);
+
+export const ThemeShadowV2Schema = z.object({
+  x: boundedNumber(-64, 64),
+  y: boundedNumber(-64, 64),
+  blurPx: boundedNumber(0, 160),
+  spreadPx: boundedNumber(-32, 64),
+  color: ThemeColorRoleSchema,
+  opacity: opacitySchema,
+  inset: z.boolean()
+}).strict();
+
+export const ThemeMaterialV2Schema = z.object({
+  base: ThemeColorRoleSchema,
+  fallback: ThemeColorRoleSchema,
+  opacity: opacitySchema,
+  backdrop: z.object({
+    blurPx: boundedNumber(0, 80),
+    saturation: boundedNumber(0.5, 2),
+    brightness: boundedNumber(0.5, 1.5)
+  }).strict(),
+  contentTone: z.enum(['auto', 'light', 'dark']),
+  border: z.object({
+    color: ThemeColorRoleSchema,
+    widthPx: boundedNumber(0, 4),
+    opacity: opacitySchema
+  }).strict(),
+  rim: z.object({
+    color: ThemeColorRoleSchema,
+    opacity: opacitySchema,
+    angleDeg: boundedNumber(-360, 360)
+  }).strict(),
+  shadows: z.array(ThemeShadowV2Schema).max(4),
+  texture: z.object({
+    assetId: assetIdSchema,
+    opacity: opacitySchema,
+    blend: blendModeSchema
+  }).strict().optional(),
+  reducedTransparency: themeMaterialIdSchema
+}).strict();
+
+export const ThemeShapeV2Schema = z.object({
+  family: z.enum(['none', 'square', 'rounded', 'continuous-rounded', 'pill', 'chamfered']),
+  radiusPx: boundedNumber(0, 999),
+  chamferPx: boundedNumber(0, 32),
+  chamferAngleDeg: boundedNumber(15, 75),
+  joinedEdges: z.array(z.enum(['top', 'right', 'bottom', 'left'])).max(4).refine(
+    (edges) => new Set(edges).size === edges.length,
+    { message: 'Joined edges must be unique.' }
+  )
+}).strict();
+
+const ThemePartStateV2Schema = z.object({
+  material: themeMaterialIdSchema.optional(),
+  opacity: opacitySchema.optional()
+}).strict();
+
+export const ThemePartRecipeV2Schema = z.object({
+  material: themeMaterialIdSchema,
+  shape: themeShapeIdSchema,
+  typography: z.enum(['ui', 'prose', 'technical', 'display']),
+  spacing: z.enum(['xs', 'sm', 'md', 'lg', 'xl']),
+  overflow: z.enum(['visible', 'clip', 'scroll']),
+  separator: z.enum(['none', 'hairline', 'space']),
+  elevation: z.number().int().min(0).max(5),
+  states: z.object({
+    hover: ThemePartStateV2Schema.optional(),
+    pressed: ThemePartStateV2Schema.optional(),
+    selected: ThemePartStateV2Schema.optional(),
+    focus: ThemePartStateV2Schema.optional(),
+    inactive: ThemePartStateV2Schema.optional(),
+    disabledOpacity: opacitySchema
+  }).strict()
+}).strict();
+
+const partRecipesShape = Object.fromEntries(
+  THEME_PART_IDS.map((part) => [part, ThemePartRecipeV2Schema])
+) as Record<(typeof THEME_PART_IDS)[number], typeof ThemePartRecipeV2Schema>;
+
+export const ThemeRecipesV2Schema = z.object({
+  parts: z.object(partRecipesShape).strict(),
+  widgetGrouping: z.enum(['individual', 'unified']),
+  chromePresentation: z.enum(['full', 'compact', 'overlay']),
+  actionPresentation: z.enum(['always', 'compact', 'hover-focus'])
+}).strict();
+
+export const ThemeControlsV2Schema = z.object({
+  slider: z.object({
+    trackPx: boundedNumber(2, 12),
+    thumbPx: boundedNumber(8, 32),
+    hitTargetPx: boundedNumber(44, 64)
+  }).strict()
+}).strict();
+
+export const ThemeDefinitionV2Schema = z.object({
+  schemaVersion: z.literal(THEME_SCHEMA_VERSION_V2),
+  id: themeIdSchema,
+  label: nonBlankString('Theme label'),
+  description: nonBlankString('Theme description').optional(),
+  colors: ThemeSemanticColorsSchema,
+  typography: ThemeTypographySchema,
+  spacing: ThemeSpacingSchema,
+  materials: z.record(themeMaterialIdSchema, ThemeMaterialV2Schema).refine(
+    (materials) => Object.keys(materials).length >= 1 && Object.keys(materials).length <= 32,
+    { message: 'Themes must define between 1 and 32 named materials.' }
+  ),
+  shapes: z.record(themeShapeIdSchema, ThemeShapeV2Schema).refine(
+    (shapes) => Object.keys(shapes).length >= 1 && Object.keys(shapes).length <= 16,
+    { message: 'Themes must define between 1 and 16 named shapes.' }
+  ),
+  recipes: ThemeRecipesV2Schema,
+  controls: ThemeControlsV2Schema,
+  iconPackId: assetIdSchema,
+  assets: z.array(ThemeAssetReferenceSchema).refine(
+    (assets) => new Set(assets.map(({ id }) => id)).size === assets.length,
+    { message: 'Theme asset IDs must be unique.' }
+  ).default([]),
+  canvas: z.array(ThemeCanvasLayerSchema).min(1).max(12),
+  accessibility: ThemeAccessibilitySchema,
+  capabilities: ThemeCapabilitiesSchema
+}).strict().superRefine((theme, context) => {
+  const materialIds = new Set(Object.keys(theme.materials));
+  const shapeIds = new Set(Object.keys(theme.shapes));
+  for (const [materialId, material] of Object.entries(theme.materials)) {
+    if (!materialIds.has(material.reducedTransparency)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['materials', materialId, 'reducedTransparency'],
+        message: `Unknown reduced-transparency material '${material.reducedTransparency}'.`
+      });
+    }
+  }
+  for (const part of THEME_PART_IDS) {
+    const recipe = theme.recipes.parts[part];
+    if (!materialIds.has(recipe.material)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['recipes', 'parts', part, 'material'],
+        message: `Unknown material '${recipe.material}'.`
+      });
+    }
+    if (!shapeIds.has(recipe.shape)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['recipes', 'parts', part, 'shape'],
+        message: `Unknown shape '${recipe.shape}'.`
+      });
+    }
+    for (const state of ['hover', 'pressed', 'selected', 'focus', 'inactive'] as const) {
+      const stateMaterial = recipe.states[state]?.material;
+      if (stateMaterial && !materialIds.has(stateMaterial)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['recipes', 'parts', part, 'states', state, 'material'],
+          message: `Unknown material '${stateMaterial}'.`
+        });
+      }
+    }
+  }
+});
+
 const typographyPatchSchema = z.object({
   ui: ThemeTypographyRoleSchema.partial().optional(),
   prose: ThemeTypographyRoleSchema.partial().optional(),
@@ -306,3 +496,16 @@ export type ThemeAssetReference = z.infer<typeof ThemeAssetReferenceSchema>;
 export type ThemeCanvasLayer = z.infer<typeof ThemeCanvasLayerSchema>;
 export type ThemeDefinition = z.infer<typeof ThemeDefinitionSchema>;
 export type ThemePatch = z.infer<typeof ThemePatchSchema>;
+export type ThemePartId = z.infer<typeof ThemePartIdSchema>;
+export type ThemeShadowV2 = z.infer<typeof ThemeShadowV2Schema>;
+export type ThemeMaterialV2 = z.infer<typeof ThemeMaterialV2Schema>;
+export type ThemeShapeV2 = z.infer<typeof ThemeShapeV2Schema>;
+export type ThemePartRecipeV2 = z.infer<typeof ThemePartRecipeV2Schema>;
+export type ThemeRecipesV2 = z.infer<typeof ThemeRecipesV2Schema>;
+export type ThemeControlsV2 = z.infer<typeof ThemeControlsV2Schema>;
+export type ThemeDefinitionV2 = z.infer<typeof ThemeDefinitionV2Schema>;
+
+export const ThemeDefinitionV1Schema = ThemeDefinitionSchema;
+export type ThemeDefinitionV1 = ThemeDefinition;
+export type ThemeDefinitionInput = ThemeDefinitionV1 | ThemeDefinitionV2;
+export type ThemePartRecipe = ThemePartRecipeV2;

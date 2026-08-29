@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { ThemeDefinitionSchema } from './theme.js';
+import {
+  THEME_PART_IDS,
+  THEME_SCHEMA_VERSION_V2,
+  ThemeDefinitionSchema,
+  ThemeDefinitionV1Schema,
+  ThemeDefinitionV2Schema,
+  type ThemeDefinition,
+  type ThemeDefinitionV1
+} from './theme.js';
 
 const material = (base: string, fallback = base) => ({
   base,
@@ -110,7 +118,151 @@ export const VALID_THEME = {
   }
 } as const;
 
+const v2Material = {
+  base: 'surfaceElevated',
+  fallback: 'surface',
+  opacity: 0.72,
+  backdrop: { blurPx: 24, saturation: 1.2, brightness: 1 },
+  contentTone: 'auto',
+  border: { color: 'border', widthPx: 1, opacity: 0.5 },
+  rim: { color: 'surfaceElevated', opacity: 0.5, angleDeg: 180 },
+  shadows: [{ x: 0, y: 18, blurPx: 48, spreadPx: 0, color: 'shadow', opacity: 0.25, inset: false }],
+  reducedTransparency: 'opaque-surface'
+} as const;
+
+const v2Part = {
+  material: 'window-glass',
+  shape: 'window',
+  typography: 'ui',
+  spacing: 'md',
+  overflow: 'visible',
+  separator: 'none',
+  elevation: 2,
+  states: { disabledOpacity: 0.5 }
+} as const;
+
+const { geometry: _legacyGeometry, ...VALID_THEME_V2_BASE } = VALID_THEME;
+
+export const VALID_THEME_V2 = {
+  ...VALID_THEME_V2_BASE,
+  schemaVersion: 'pomegranate.ui.theme.v2',
+  materials: {
+    'window-glass': v2Material,
+    'opaque-surface': {
+      ...v2Material,
+      opacity: 1,
+      backdrop: { blurPx: 0, saturation: 1, brightness: 1 }
+    }
+  },
+  shapes: {
+    window: {
+      family: 'continuous-rounded',
+      radiusPx: 18,
+      chamferPx: 0,
+      chamferAngleDeg: 45,
+      joinedEdges: []
+    }
+  },
+  recipes: {
+    parts: Object.fromEntries(THEME_PART_IDS.map((part) => [part, v2Part])),
+    widgetGrouping: 'individual',
+    chromePresentation: 'compact',
+    actionPresentation: 'hover-focus'
+  },
+  controls: {
+    slider: { trackPx: 4, thumbPx: 11, hitTargetPx: 44 }
+  }
+} as const;
+
 describe('ThemeDefinitionSchema', () => {
+  it('publishes the exact v2 schema discriminator', () => {
+    expect(THEME_SCHEMA_VERSION_V2).toBe('pomegranate.ui.theme.v2');
+  });
+
+  it('publishes a stable semantic part inventory', () => {
+    expect(THEME_PART_IDS).toEqual([
+      'canvas.surface', 'chrome.shelf', 'chrome.context', 'dock.surface',
+      'panel.surface', 'group.surface', 'widget.surface', 'widget.header',
+      'widget.content', 'widget.actions', 'row.surface', 'separator',
+      'field.surface', 'button.surface', 'button.icon', 'menu.surface',
+      'dialog.surface', 'floating.surface', 'slider.input', 'slider.track',
+      'slider.fill', 'slider.thumb'
+    ]);
+  });
+
+  it('accepts a complete v2 material, shape, and part recipe definition', () => {
+    const parsed = ThemeDefinitionV2Schema.parse(VALID_THEME_V2);
+
+    expect(parsed.schemaVersion).toBe('pomegranate.ui.theme.v2');
+    expect(parsed.recipes.parts['widget.surface']).toMatchObject({
+      material: 'window-glass',
+      shape: 'window'
+    });
+  });
+
+  it('rejects incomplete or unknown semantic recipe anatomy at literal paths', () => {
+    const missingPart = structuredClone(VALID_THEME_V2) as Record<string, any>;
+    delete missingPart.recipes.parts['widget.actions'];
+    const unknownPart = structuredClone(VALID_THEME_V2) as Record<string, any>;
+    unknownPart.recipes.parts['product.special-card'] = v2Part;
+
+    expect(ThemeDefinitionV2Schema.safeParse(missingPart).error?.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: ['recipes', 'parts', 'widget.actions'] })
+    ]));
+    expect(ThemeDefinitionV2Schema.safeParse(unknownPart).error?.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: ['recipes', 'parts'] })
+    ]));
+  });
+
+  it('rejects unresolved material and shape recipe references at literal paths', () => {
+    const unknownMaterial = structuredClone(VALID_THEME_V2) as Record<string, any>;
+    unknownMaterial.recipes.parts['widget.surface'].material = 'missing-material';
+    const unknownShape = structuredClone(VALID_THEME_V2) as Record<string, any>;
+    unknownShape.recipes.parts['widget.surface'].shape = 'missing-shape';
+
+    expect(ThemeDefinitionV2Schema.safeParse(unknownMaterial).error?.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: ['recipes', 'parts', 'widget.surface', 'material'] })
+    ]));
+    expect(ThemeDefinitionV2Schema.safeParse(unknownShape).error?.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: ['recipes', 'parts', 'widget.surface', 'shape'] })
+    ]));
+  });
+
+  it('bounds each material to four composable shadows', () => {
+    const tooManyShadows = structuredClone(VALID_THEME_V2) as Record<string, any>;
+    tooManyShadows.materials['window-glass'].shadows = Array.from({ length: 5 }, () => v2Material.shadows[0]);
+
+    expect(ThemeDefinitionV2Schema.safeParse(tooManyShadows).error?.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: ['materials', 'window-glass', 'shadows'] })
+    ]));
+  });
+
+  it.each(['css', 'selector', 'html', 'script'])('rejects raw %s injection fields', (field) => {
+    const unsafe = structuredClone(VALID_THEME_V2) as Record<string, any>;
+    unsafe.recipes.parts['widget.surface'][field] = '* { display: none }';
+
+    expect(ThemeDefinitionV2Schema.safeParse(unsafe).error?.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: ['recipes', 'parts', 'widget.surface'] })
+    ]));
+  });
+
+  it('rejects remote asset identifiers instead of treating URLs as theme data', () => {
+    const unsafe = structuredClone(VALID_THEME_V2) as Record<string, any>;
+    unsafe.assets[0].id = 'https://example.com/asset.svg';
+
+    expect(ThemeDefinitionV2Schema.safeParse(unsafe).error?.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: ['assets', 0, 'id'] })
+    ]));
+  });
+
+  it('keeps the explicit v1 contract identical to the legacy public alias', () => {
+    const legacy: ThemeDefinition = ThemeDefinitionSchema.parse(VALID_THEME);
+    const explicit: ThemeDefinitionV1 = ThemeDefinitionV1Schema.parse(VALID_THEME);
+
+    expect(explicit).toEqual(legacy);
+    expect(ThemeDefinitionV1Schema).toBe(ThemeDefinitionSchema);
+  });
+
   it('accepts a complete pomegranate.ui.theme.v1 definition', () => {
     const parsed = ThemeDefinitionSchema.parse(VALID_THEME);
     expect(parsed.schemaVersion).toBe('pomegranate.ui.theme.v1');
