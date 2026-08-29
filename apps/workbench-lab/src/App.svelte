@@ -5,7 +5,7 @@
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import type { WidgetFrameProjection } from '@pomegranate-ui/core';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
-  import { POM_SEMANTIC_PART_STYLE_SHEET, type CanvasPresentationLayer, type ThemeAssetRegistry } from '@pomegranate-ui/theme';
+  import { POM_SEMANTIC_PART_STYLE_SHEET, type ThemeAssetRegistry } from '@pomegranate-ui/theme';
 
   import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
   import deepCurrentStage from './assets/deep-current-stage.jpg';
@@ -76,19 +76,19 @@
   });
   const initialThemeSnapshot = themeController.getSnapshot();
   let themeSnapshot = $state(initialThemeSnapshot);
-  let canvasLayers = $state<readonly CanvasPresentationLayer[]>(initialThemeSnapshot.canvasLayers);
 
   function themeInspector(): LabThemeInspector {
+    const theme = themeSnapshot.compiled.theme;
     return {
-      colors: themeSnapshot.resolved.colors,
+      colors: theme.colors,
       typography: [
-        themeSnapshot.resolved.typography.ui.family,
-        themeSnapshot.resolved.typography.prose.family,
-        themeSnapshot.resolved.typography.technical.family
+        theme.typography.ui.family,
+        theme.typography.prose.family,
+        theme.typography.technical.family
       ],
-      geometry: `${themeSnapshot.resolved.shapes.pane?.family ?? 'resolved'} · ${themeSnapshot.resolved.shapes.pane?.radiusPx ?? 0}px`,
-      density: themeSnapshot.resolved.spacing.density,
-      iconPackId: themeSnapshot.resolved.iconPackId
+      geometry: `${theme.shapes.pane?.family ?? 'resolved'} · ${theme.shapes.pane?.radiusPx ?? 0}px`,
+      density: theme.spacing.density,
+      iconPackId: theme.iconPackId
     };
   }
 
@@ -96,7 +96,7 @@
     const result = themeController.activate(id);
     if (result.ok) {
       applyThemeSnapshot(result.snapshot);
-      status = `${result.snapshot.resolved.label} applied without changing Workbench state.`;
+      status = `${result.snapshot.resolved.theme.label} applied without changing Workbench state.`;
     } else {
       status = result.diagnostics[0]?.message ?? 'Theme activation failed.';
     }
@@ -104,7 +104,6 @@
 
   function applyThemeSnapshot(snapshot: typeof initialThemeSnapshot) {
     themeSnapshot = snapshot;
-    canvasLayers = snapshot.canvasLayers;
     hostContext.theme.activeId = snapshot.activeId;
     hostContext.theme.materialControls = snapshot.materialControls;
     hostContext.theme.inspector = themeInspector();
@@ -114,7 +113,7 @@
     const result = themeController.setMaterialControl(id, value);
     if (result.ok) {
       applyThemeSnapshot(result.snapshot);
-      status = `${result.snapshot.resolved.label} material settings updated.`;
+      status = `${result.snapshot.resolved.theme.label} material settings updated.`;
     } else {
       status = result.diagnostics[0]?.message ?? 'Theme material update failed.';
     }
@@ -124,7 +123,7 @@
     const result = themeController.resetMaterialControls();
     if (result.ok) {
       applyThemeSnapshot(result.snapshot);
-      status = `${result.snapshot.resolved.label} material settings reset.`;
+      status = `${result.snapshot.resolved.theme.label} material settings reset.`;
     } else {
       status = result.diagnostics[0]?.message ?? 'Theme material reset failed.';
     }
@@ -132,10 +131,10 @@
 
   let hostContext = $state(createLabHostContext({
     activeId: initialThemeSnapshot.activeId,
-    presets: LAB_THEME_PRESETS.map(({ id, definition }) => ({
+    presets: LAB_THEME_PRESETS.map(({ id, target }) => ({
       id,
-      label: definition.label,
-      description: definition.description ?? definition.label
+      label: target.theme.label,
+      description: target.theme.description ?? target.theme.label
     })),
     inspector: themeInspector(),
     materialControls: initialThemeSnapshot.materialControls,
@@ -255,15 +254,15 @@
   class:left-collapsed={leftCollapsed}
   data-pom-theme={themeSnapshot.activeId}
   data-pom-theme-root
-  data-pom-widget-grouping={themeSnapshot.resolved.recipes.widgetGrouping}
-  data-pom-chrome-presentation={themeSnapshot.resolved.recipes.chromePresentation}
-  data-pom-action-presentation={themeSnapshot.resolved.recipes.actionPresentation}
-  data-pom-density={themeSnapshot.resolved.spacing.density}
+  data-pom-widget-grouping={themeSnapshot.compiled.theme.recipes.widgetGrouping}
+  data-pom-chrome-presentation={themeSnapshot.compiled.theme.recipes.chromePresentation}
+  data-pom-action-presentation={themeSnapshot.compiled.theme.recipes.actionPresentation}
+  data-pom-density={themeSnapshot.compiled.theme.spacing.density}
   data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}
   style={themeSnapshot.cssText}
 >
-  <ThemeCanvas layers={canvasLayers} />
+  <ThemeCanvas layers={themeSnapshot.compiled.canvas} />
   <header class="top-shelf" data-pom-part="chrome.shelf" data-conformance-region="shelf">
     <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
     <PanelTabs {store} class="panel-tabs" />
@@ -286,10 +285,10 @@
         <button
           type="button"
           data-pom-part="button.surface"
-          aria-label={preset.definition.label}
+          aria-label={preset.target.theme.label}
           aria-pressed={themeSnapshot.activeId === preset.id}
           onclick={() => activateTheme(preset.id)}
-        >{preset.definition.label}</button>
+        >{preset.target.theme.label}</button>
       {/each}
     </div>
     <div class="dock-controls">

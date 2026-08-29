@@ -135,4 +135,28 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveValue('Keep this draft through the theme swap.');
     expect(window.localStorage.getItem('pomegranate-ui.workbench-lab.theme.v1')).toBe('bunny');
   });
+
+  it('switches through all four complete targets without remounting the Workbench tree', async () => {
+    const user = userEvent.setup();
+    const { container } = render(App);
+    const root = container.querySelector('main');
+    const composer = screen.getByRole('textbox', { name: /Next action/ });
+    await user.clear(composer);
+    await user.type(composer, 'Atomic target draft.');
+    const identity = {
+      revision: root?.getAttribute('data-workbench-revision'),
+      panels: [...container.querySelectorAll('[data-pomegranate-panel]')].map((node) => node.getAttribute('data-pomegranate-panel')),
+      widgets: [...container.querySelectorAll('[data-pomegranate-widget]')].map((node) => node.getAttribute('data-pomegranate-widget'))
+    };
+    const group = screen.getByRole('group', { name: 'Visual target' });
+
+    for (const [label, id] of [['PomOS', 'pom-neutral'], ['Bunny', 'bunny'], ['Ash & Amber', 'ash-amber'], ['Deep Current', 'deep-current']] as const) {
+      await user.click(within(group).getByRole('button', { name: label }));
+      expect(root).toHaveAttribute('data-pom-theme', id);
+      expect(root).toHaveAttribute('data-workbench-revision', identity.revision);
+      expect([...container.querySelectorAll('[data-pomegranate-panel]')].map((node) => node.getAttribute('data-pomegranate-panel'))).toEqual(identity.panels);
+      expect([...container.querySelectorAll('[data-pomegranate-widget]')].map((node) => node.getAttribute('data-pomegranate-widget'))).toEqual(identity.widgets);
+      expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveValue('Atomic target draft.');
+    }
+  });
 });

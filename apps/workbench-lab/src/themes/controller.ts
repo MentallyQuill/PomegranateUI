@@ -1,10 +1,8 @@
 import {
-  applyThemePolicy,
-  compileCanvasLayers,
-  compileThemeBindings,
-  resolveThemeV2,
-  type CanvasPresentationLayer,
-  type ResolvedThemeV2,
+  compileThemeTarget,
+  resolveThemeTarget,
+  type CompiledThemeTarget,
+  type ResolvedThemeTarget,
   type ThemeAssetRegistry,
   type ThemeDevicePolicy,
   type ThemeDiagnostic
@@ -31,10 +29,10 @@ export interface ThemePreferenceAdapter {
 
 export interface LabThemeSnapshot {
   readonly activeId: LabThemeId;
-  readonly resolved: ResolvedThemeV2;
+  readonly resolved: ResolvedThemeTarget;
+  readonly compiled: CompiledThemeTarget;
   readonly materialControls: LabMaterialControls;
   readonly cssText: string;
-  readonly canvasLayers: readonly CanvasPresentationLayer[];
   readonly diagnostics: readonly ThemeDiagnostic[];
 }
 
@@ -64,17 +62,25 @@ function serializeBindings(bindings: Readonly<Record<string, string>>): string {
     .join(';');
 }
 
-function createSnapshot(id: LabThemeId, theme: ResolvedThemeV2, materialControls: LabMaterialControls): ThemeActivationResult {
-  const canvas = compileCanvasLayers(theme, theme.assets);
-  if (!canvas.ok) return { ok: false, diagnostics: canvas.diagnostics };
+function createSnapshot(
+  id: LabThemeId,
+  target: ResolvedThemeTarget,
+  materialControls: LabMaterialControls,
+  devicePolicy?: ThemeDevicePolicy
+): ThemeActivationResult {
+  const controlsPolicy = materialControlPolicy(materialControls);
+  const compiled = compileThemeTarget(target, {
+    ...controlsPolicy,
+    ...(devicePolicy ? { device: devicePolicy } : {})
+  });
   return {
     ok: true,
     snapshot: Object.freeze({
       activeId: id,
-      resolved: theme,
+      resolved: target,
+      compiled,
       materialControls: Object.freeze({ ...materialControls }),
-      cssText: serializeBindings(compileThemeBindings(theme)),
-      canvasLayers: canvas.layers,
+      cssText: serializeBindings(compiled.bindings),
       diagnostics: Object.freeze([])
     })
   };
@@ -92,21 +98,16 @@ export function createLabThemeController(options: {
   const presets = options.presets ?? LAB_THEME_PRESETS;
   const assetRegistry = options.assetRegistry
     ?? registryFromIds(options.availableAssets ?? new Set(['icons.minimal', 'image.deep-current-stage', 'image.bunny-garden']));
-  const byId = new Map(presets.map((preset) => [preset.id, preset.definition]));
+  const byId = new Map(presets.map((preset) => [preset.id, preset.target]));
   const materialDrafts = new Map<LabThemeId, LabMaterialControls>();
 
   const resolvePreset = (id: string, requestedControls?: LabMaterialControls): ThemeActivationResult => {
     if (!isLabThemeId(id) || !byId.has(id)) return { ok: false, diagnostics: unknownPresetDiagnostic(id) };
-    const definition = byId.get(id);
-    const resolution = resolveThemeV2(definition, assetRegistry);
+    const target = byId.get(id);
+    const resolution = resolveThemeTarget(target, assetRegistry);
     if (!resolution.ok) return resolution;
     const materialControls = requestedControls ?? materialDrafts.get(id) ?? defaultMaterialControls(id);
-    const controlsPolicy = materialControlPolicy(materialControls);
-    const effective = applyThemePolicy(resolution.theme, {
-      ...controlsPolicy,
-      ...(options.devicePolicy ? { device: options.devicePolicy } : {})
-    });
-    return createSnapshot(id, effective, materialControls);
+    return createSnapshot(id, resolution.target, materialControls, options.devicePolicy);
   };
 
   let storedId: string | null = null;

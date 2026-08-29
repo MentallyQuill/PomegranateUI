@@ -297,28 +297,39 @@ test('native workbench POM-PERSIST-28DFDC9A8F POM-PERSIST-D50D69D3C4 restores re
 });
 
 test('native workbench applies complete themes without replacing live Workbench identity', async ({ page }) => {
-  await page.getByRole('tab', { name: 'Settings' }).click();
   const root = page.locator('main');
+  const composer = page.getByRole('textbox', { name: /Next action/ });
+  await composer.fill('Keep this exact live draft across all targets.');
+  await composer.focus();
   const identity = await root.evaluate((node) => ({
     revision: node.getAttribute('data-workbench-revision'),
+    activePanel: node.getAttribute('data-active-panel'),
     panels: [...node.querySelectorAll('[data-pomegranate-panel]')].map((panel) => panel.getAttribute('data-pomegranate-panel')),
-    widgets: [...node.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
+    widgets: [...node.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget')),
+    focusedWidget: document.activeElement?.closest('[data-pomegranate-widget]')?.getAttribute('data-pomegranate-widget') ?? null
   }));
   const themeTargets = page.getByRole('group', { name: 'Visual target' });
-  const neutral = themeTargets.getByRole('button', { name: 'PomOS', exact: true });
-  await neutral.click();
-  await expect(root).toHaveAttribute('data-pom-theme', 'pom-neutral');
-  await expect(neutral).toHaveAttribute('aria-pressed', 'true');
-  const bunny = themeTargets.getByRole('button', { name: 'Bunny', exact: true });
-  await bunny.click();
-  await expect(root).toHaveAttribute('data-pom-theme', 'bunny');
-  await expect(bunny).toBeFocused();
-  await expect(root).toHaveAttribute('data-workbench-revision', identity.revision ?? '');
-  await expect.poll(() => root.evaluate((node) => ({
-    panels: [...node.querySelectorAll('[data-pomegranate-panel]')].map((panel) => panel.getAttribute('data-pomegranate-panel')),
-    widgets: [...node.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
-  }))).toEqual({ panels: identity.panels, widgets: identity.widgets });
-  await expect.poll(() => page.evaluate(() => window.localStorage.getItem('pomegranate-ui.workbench-lab.theme.v1'))).toBe('bunny');
+  for (const theme of [
+    { label: 'PomOS', id: 'pom-neutral' },
+    { label: 'Bunny', id: 'bunny' },
+    { label: 'Ash & Amber', id: 'ash-amber' },
+    { label: 'Deep Current', id: 'deep-current' },
+    { label: 'Ash & Amber', id: 'ash-amber' }
+  ]) {
+    const button = themeTargets.getByRole('button', { name: theme.label, exact: true });
+    await button.click();
+    await expect(root).toHaveAttribute('data-pom-theme', theme.id);
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(root).toHaveAttribute('data-workbench-revision', identity.revision ?? '');
+    await expect(root).toHaveAttribute('data-active-panel', identity.activePanel ?? '');
+    await expect(composer).toHaveValue('Keep this exact live draft across all targets.');
+    await expect.poll(() => root.evaluate((node) => ({
+      panels: [...node.querySelectorAll('[data-pomegranate-panel]')].map((panel) => panel.getAttribute('data-pomegranate-panel')),
+      widgets: [...node.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
+    }))).toEqual({ panels: identity.panels, widgets: identity.widgets });
+  }
+  expect(identity.focusedWidget).toBeTruthy();
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem('pomegranate-ui.workbench-lab.theme.v1'))).toBe('ash-amber');
   await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
   await expect(page.getByRole('complementary', { name: 'Widget Catalog' })).toBeVisible();
 });
@@ -329,7 +340,8 @@ test('all theme targets remain readable, transition-free, and contained at wide 
     for (const theme of [
       { label: 'Deep Current', id: 'deep-current', text: 'rgb(231, 246, 240)' },
       { label: 'PomOS', id: 'pom-neutral', text: 'rgb(16, 24, 32)' },
-      { label: 'Bunny', id: 'bunny', text: 'rgb(69, 54, 77)' }
+      { label: 'Bunny', id: 'bunny', text: 'rgb(69, 54, 77)' },
+      { label: 'Ash & Amber', id: 'ash-amber', text: 'rgb(255, 255, 255)' }
     ]) {
       const button = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: theme.label, exact: true });
       await button.click();
