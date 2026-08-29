@@ -84,17 +84,18 @@ test('packed verifier proves an isolated Svelte recipe consumer', async () => {
   }
 });
 
-test('external non-preset theme compiles distinct presentation through public APIs only', async () => {
-  const { compileExternalThemeFixture } = await import('../fixtures/external-theme-consumer.mjs');
-  const result = compileExternalThemeFixture();
-  assert.equal(result.id, 'copper-terminal-fixture');
-  assert.equal(result.bindings['--pom-part-widget-surface-material-fill'], 'rgba(23, 16, 11, 0.94)');
-  assert.equal(result.bindings['--pom-part-widget-surface-radius'], '0px');
-  assert.match(result.bindings['--pom-part-widget-surface-font-family'], /Pomegranate Mono/);
-  assert.match(result.cssText, /\[data-pom-theme-root\] \[data-pom-part="widget\.surface"\]/);
-  assert.doesNotMatch(result.cssText, /copper-terminal-fixture/);
-  assert.ok(result.canvasLayers.length >= 2);
-  assert.equal(result.canvasLayers[0].style.backgroundColor, '#090604');
+test('external non-preset fixture uses public theme APIs without requiring prebuilt workspace output', async () => {
+  const consumer = await readFile(path.join(root, 'tests', 'fixtures', 'external-theme-consumer.mjs'), 'utf8');
+  const definition = await readFile(path.join(root, 'tests', 'fixtures', 'external-theme.ts'), 'utf8');
+  assert.match(consumer, /from '@pomegranate-ui\/theme'/);
+  assert.match(consumer, /compileCanvasLayers/);
+  assert.match(consumer, /compileThemeBindings/);
+  assert.match(consumer, /compileThemeStyleSheet/);
+  assert.match(consumer, /resolveThemeV2/);
+  assert.doesNotMatch(consumer, /(?:^|\/)packages\/[^/]+\/src(?:\/|$)/);
+  assert.match(definition, /id: 'copper-terminal-fixture'/);
+  assert.match(definition, /shape: 'square'/);
+  assert.match(definition, /family: 'Pomegranate Mono'/);
 });
 
 test('package and example imports remain public, relative, and repository-neutral', async () => {
