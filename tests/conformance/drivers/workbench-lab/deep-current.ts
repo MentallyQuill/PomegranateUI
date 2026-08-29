@@ -25,6 +25,33 @@ async function settle(locator: Locator): Promise<void> {
   });
 }
 
+async function applyPreservedMaterialState(page: Page, root: Locator): Promise<void> {
+  for (const [name, value] of [
+    ['Glass density', '20'],
+    ['Bar opacity', '60'],
+    ['Selected strength', '6'],
+    ['Frost level', '50']
+  ] as const) {
+    await page.getByRole('slider', { name, includeHidden: true }).evaluate((input, nextValue) => {
+      if (!(input instanceof HTMLInputElement)) throw new Error(`${nextValue} material control is not an input.`);
+      input.value = nextValue;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }, value);
+  }
+  const materialState = await root.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      glass: style.getPropertyValue('--pom-glass-density').trim(),
+      bars: style.getPropertyValue('--pom-bar-opacity').trim(),
+      selected: style.getPropertyValue('--pom-selected-strength').trim(),
+      frost: style.getPropertyValue('--pom-frost-blur').trim()
+    };
+  });
+  if (JSON.stringify(materialState) !== JSON.stringify({ glass: '20%', bars: '60%', selected: '6%', frost: '12px' })) {
+    throw new Error(`Preserved Deep Current material setup did not apply: ${JSON.stringify(materialState)}.`);
+  }
+}
+
 export async function prepareDeepCurrentState(page: Page, labOrigin: string): Promise<void> {
   try {
     await page.goto(labOrigin, { waitUntil: 'load' });
@@ -35,6 +62,7 @@ export async function prepareDeepCurrentState(page: Page, labOrigin: string): Pr
     await page.reload({ waitUntil: 'load' });
     const root = page.locator('main[data-pom-theme="deep-current"]');
     await root.waitFor({ state: 'visible' });
+    await applyPreservedMaterialState(page, root);
     await settle(root);
     for (const selector of Object.values(regionSelectors)) {
       await page.locator(selector).waitFor({ state: 'attached' });

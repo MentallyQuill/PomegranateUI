@@ -6,6 +6,7 @@
   import type { WidgetFrameProjection } from '@pomegranate-ui/core';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
 
+  import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
   import deepCurrentStage from './assets/deep-current-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
   import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
@@ -18,6 +19,7 @@
   import WorkbenchSurface from './recipes/WorkbenchSurface.svelte';
   import { createLocalLayoutStorage, LAB_LAYOUT_KEY } from './storage.js';
   import { createLabThemeController } from './themes/controller.js';
+  import type { LabMaterialControlId } from './themes/material-controls.js';
   import { LAB_THEME_PRESETS } from './themes/presets.js';
   import { createLocalThemePreference } from './themes/theme-storage.js';
 
@@ -54,9 +56,12 @@
   const catalogState = toSvelteCatalogStore(catalog);
   const themeController = createLabThemeController({
     preference: createLocalThemePreference(window.localStorage),
-    availableAssets: new Set(['icons.minimal', 'image.deep-current-stage'])
+    availableAssets: new Set(['icons.minimal', 'image.deep-current-stage', 'image.bunny-garden'])
   });
-  const themeAssetBindings = `--pom-asset-image-deep-current-stage:url("${deepCurrentStage}")`;
+  const themeAssetBindings = [
+    `--pom-asset-image-deep-current-stage:url("${deepCurrentStage}")`,
+    `--pom-asset-image-bunny-garden:url("${bunnyGardenCanvas}")`
+  ].join(';');
   const initialThemeSnapshot = themeController.getSnapshot();
   let themeSnapshot = $state(initialThemeSnapshot);
 
@@ -77,12 +82,37 @@
   function activateTheme(id: string) {
     const result = themeController.activate(id);
     if (result.ok) {
-      themeSnapshot = result.snapshot;
-      hostContext.theme.activeId = result.snapshot.activeId;
-      hostContext.theme.inspector = themeInspector();
+      applyThemeSnapshot(result.snapshot);
       status = `${result.snapshot.resolved.label} applied without changing Workbench state.`;
     } else {
       status = result.diagnostics[0]?.message ?? 'Theme activation failed.';
+    }
+  }
+
+  function applyThemeSnapshot(snapshot: typeof initialThemeSnapshot) {
+    themeSnapshot = snapshot;
+    hostContext.theme.activeId = snapshot.activeId;
+    hostContext.theme.materialControls = snapshot.materialControls;
+    hostContext.theme.inspector = themeInspector();
+  }
+
+  function setMaterialControl(id: LabMaterialControlId, value: number) {
+    const result = themeController.setMaterialControl(id, value);
+    if (result.ok) {
+      applyThemeSnapshot(result.snapshot);
+      status = `${result.snapshot.resolved.label} material settings updated.`;
+    } else {
+      status = result.diagnostics[0]?.message ?? 'Theme material update failed.';
+    }
+  }
+
+  function resetMaterialControls() {
+    const result = themeController.resetMaterialControls();
+    if (result.ok) {
+      applyThemeSnapshot(result.snapshot);
+      status = `${result.snapshot.resolved.label} material settings reset.`;
+    } else {
+      status = result.diagnostics[0]?.message ?? 'Theme material reset failed.';
     }
   }
 
@@ -94,7 +124,10 @@
       description: definition.description ?? definition.label
     })),
     inspector: themeInspector(),
-    activate: activateTheme
+    materialControls: initialThemeSnapshot.materialControls,
+    activate: activateTheme,
+    setMaterialControl,
+    resetMaterialControls
   }, initialSurfaceState));
   setWorkbenchContext({ store, catalog, rendererRegistry, hostContext });
 

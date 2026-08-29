@@ -19,8 +19,9 @@ Every formal round is independently recoverable at those paths:
 
 - Round 0: rejected baseline commit `49dac42`;
 - Round 1: first complete re-art-direction commit `e128e8b`; and
-- Round 2: promoted image commit `f3dbfc7`, additionally frozen by the SHA-256
-  values below.
+- Round 2: promoted image commit `f3dbfc7`; and
+- Round 3: the merge revision containing this ledger, additionally frozen by
+  the SHA-256 values below.
 
 Uncommitted working captures are not counted as critic rounds. This preserves a
 complete audit trail without duplicating six binary files per iteration.
@@ -77,7 +78,7 @@ overlay-radius hardening does not change those six scene pixels.
 The reviewer was asked to assume the implementation was wrong and check the
 preserved authorities, accessibility contract, material coverage, evidence
 quality, and responsive behavior rather than accept the screenshots at face
-value. That pass found substantive contract issues even though Round 3 looked
+value. That pass found substantive contract issues even though Round 2 looked
 coherent. All were corrected before this new complete render:
 
 | Severity | Finding | Resolution |
@@ -106,16 +107,52 @@ corrective defects.
 | Bunny wide | 0 | 0 | Pass |
 | Bunny compact | 0 | 0 | Pass |
 
+## Round 3 — recovered live material controls
+
+Image source: the merge revision containing this ledger at the same six paths,
+plus `wide-material-controls.png` as auxiliary evidence for the expanded Theme
+Library surface.
+
+The recovered Widget Overhaul controls were tested against the public page and
+then reviewed as a separate visual change. That review identified contract
+gaps beyond merely exposing four sliders; all were corrected before this render:
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Blocking | Changing Deep Current's public defaults would make its frozen Atmospheric Workbench comparison fail even though the controls themselves were correct. | Drive the preserved oracle comparison through its original `20/60/6/50` material state while keeping the user-facing Deep Current default at `30/60/6/30`. All five macro layouts pass. |
+| Substantive | Bar opacity and selected strength initially changed variables without owning every corresponding visible consumer. | Bind Widget and dialog bars to bar opacity; preserve the recovered handle rule (`glass + 24%`); and bind tabs, pressed controls, progress, archive, tree, generator, Catalog, and theme selections to selected strength. Playwright checks independent endpoints. |
+| Substantive | Decorative gradients left a faint tint at a true zero-percent glass endpoint. | Scale every shared highlight and accent decoration with glass or bar opacity and make the fallback surface genuinely transparent at zero. |
+| Substantive | The expanded control group did not inherit the 44-pixel coarse-pointer contract. | Give its disclosure, range inputs, and Reset action explicit coarse-pointer targets and cover them in Playwright. |
+| Substantive | Bunny's milky glass lacked a pictorial layer and an initial PNG added unreasonable repository weight. | Add a text-generated pastel Japanese garden canvas, convert it to reviewed WebP, and document provenance, rights evidence, dimensions, digest, and the 94.1-percent reduction. |
+
+The final critic inspected all six regenerated scenes and the expanded-control
+capture at original resolution. The lower-opacity materials remain legible,
+the image canvases visibly support the frost, bar and selection strengths read
+as separate controls, and the Theme Library remains fully contained. No target
+has cross-theme leakage, broken hierarchy, ineffective glass, clipped controls,
+or responsive ambiguity.
+
+| Final surface | Blocking findings | Substantive findings | Result |
+| --- | ---: | ---: | --- |
+| Deep Current wide | 0 | 0 | Pass |
+| Deep Current compact | 0 | 0 | Pass |
+| Pom Neutral wide | 0 | 0 | Pass |
+| Pom Neutral compact | 0 | 0 | Pass |
+| Bunny wide | 0 | 0 | Pass |
+| Bunny compact | 0 | 0 | Pass |
+| Expanded material controls | 0 | 0 | Pass |
+
 ### Promoted evidence hashes
 
 | Snapshot | SHA-256 |
 | --- | --- |
-| `wide-scene.png` | `c46e4b6f5f1128d29a41ffa045ed6510fc082454c44b14bdf2eb921a6e471e61` |
-| `compact-scene.png` | `0958bf62e3b6f1a235043831b37137e856c0548ebe809143c6580d76c9d674e1` |
-| `wide-pom-neutral.png` | `e33a8c6450c13b9e54e76e3e9a94321a2cbe43fd6e0178452de3cef24e71b269` |
-| `compact-pom-neutral.png` | `64ced35159c7b579d6ff4a23fdfbb4e6a663229bcf3c62534b5e66c047c49536` |
-| `wide-bunny.png` | `b6b879fdce99da451b70a933433e148a2e443a3ac26ec3a7d7d410454dfbcd08` |
-| `compact-bunny.png` | `742b1f53a332235c706c5266e3a45c6b41a708115654fb03e587dea76ca72a6f` |
+| `wide-scene.png` | `569ac36ae54e6eef8ac6818ad2e53084431379f1bda0890c7b80b46414f2bc7a` |
+| `compact-scene.png` | `d2043d755b16ed63c97b03951d10d25d54f4a2498c621936b7e902fda4dac2e0` |
+| `wide-pom-neutral.png` | `3e44fe4854b18682306e396fd395e99fd34b59ee0b20fac5c787b2872f08c1a3` |
+| `compact-pom-neutral.png` | `6bba60572c6667c1d92a193060444a2697bca5c36656cd6778e7a6d3a92c57d3` |
+| `wide-bunny.png` | `201ca6819e18302798e18dd08f8adb649cb99c091f5e444ad38b9602ead75036` |
+| `compact-bunny.png` | `df3af36a35ce398a97c8aadb296a2b14e937500150ffe0a31c530c06c224277b` |
+| `wide-material-controls.png` | `f94460705e1df5a767704bcec41c8ba1f74d51b0d2ecc9205d38236f42b5e663` |
 
 ### Preference-only observations
 
@@ -127,8 +164,8 @@ corrective defects.
 
 ## Closure
 
-Round 2 has **zero blocking findings and zero substantive findings** across the
-complete six-image set. The preference-only observations do not justify more
-theme-specific code or assets. Final promotion still depends on focused browser
-and accessibility checks, unchanged-tree verification, the complete repository
-gate, code review, CI, and merge.
+Round 3 has **zero blocking findings and zero substantive findings** across the
+complete six-image set and expanded-control capture. The preference-only
+observations do not justify more theme-specific code or assets. Final promotion
+still depends on focused browser and accessibility checks, unchanged-tree
+verification, the complete repository gate, code review, CI, and merge.

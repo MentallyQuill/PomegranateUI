@@ -34,3 +34,13 @@ The tranche adds no third-party runtime dependency: the Lab consumes the new
 workspace-owned `@pomegranate-ui/theme` package, which depends only on
 `@pomegranate-ui/contracts`. The PNG files added under `tests/browser` are
 test-only visual regression evidence and are not emitted into `dist`.
+
+## Theme art-direction follow-up
+
+The later Bunny art-direction pass adds one runtime image. The generated source
+PNG was 2,229,603 bytes; it was converted to a visually reviewed 131,562-byte
+WebP for the repository and static build, a reduction of 2,098,041 bytes
+(94.1%). The current build therefore emits 233,610 raw image bytes across the
+existing 102,048-byte Deep Current JPEG and the Bunny WebP. Full provenance,
+hashes, and redistribution evidence are recorded in
+`docs/theme-art-direction-assets.md`.

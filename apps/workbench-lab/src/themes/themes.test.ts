@@ -77,7 +77,7 @@ describe('Workbench Lab theme conformance', () => {
     expect(cssText).toContain('--pom-color-text:#45364d');
     expect(cssText).toContain('--pom-radius-widget:17px');
     expect(cssText).toContain('--pom-canvas:');
-    expect(cssText).not.toContain('bunny');
+    expect(cssText).not.toContain('data-pom-theme');
     expect(cssText).not.toContain('transition');
   });
 
@@ -93,6 +93,20 @@ describe('Workbench Lab theme conformance', () => {
       fit: 'cover'
     });
     expect(DEEP_CURRENT_THEME.capabilities.localImages).toBe(true);
+  });
+
+  it('declares the Bunny garden canvas as a local semantic theme asset', () => {
+    expect(BUNNY_THEME.assets).toContainEqual({
+      id: 'image.bunny-garden',
+      kind: 'image',
+      required: true
+    });
+    expect(BUNNY_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({
+      kind: 'image',
+      assetId: 'image.bunny-garden',
+      fit: 'cover'
+    });
+    expect(BUNNY_THEME.capabilities.localImages).toBe(true);
   });
 
   it('expresses the preserved Deep Current shell materials through theme tokens', () => {
@@ -130,7 +144,7 @@ describe('Workbench Lab theme conformance', () => {
       colors: { canvas: '#faeef6', surfaceElevated: '#fffdfb', accent: '#ed75aa', focus: '#6951a1' },
       geometry: { cornerFamily: 'rounded', cornerMd: 17, cornerLg: 26, cornerPill: 999 },
       spacing: { density: 'roomy' },
-      capabilities: { localImages: false, textures: false, translucency: true }
+      capabilities: { localImages: true, textures: false, translucency: true }
     });
     expect(BUNNY_THEME.canvas.some((layer) => layer.kind === 'four-corner')).toBe(true);
   });
@@ -146,6 +160,82 @@ describe('Workbench Lab theme conformance', () => {
     expect(controller.getSnapshot().activeId).toBe('bunny');
     expect(controller.getSnapshot().cssText).not.toBe(before.cssText);
     expect(writes).toEqual(['bunny']);
+  });
+
+  it('projects the recovered material controls onto the active theme', () => {
+    const controller = createLabThemeController({
+      availableAssets: new Set(['icons.minimal', 'image.deep-current-stage', 'image.bunny-garden'])
+    });
+
+    expect(controller.getSnapshot().materialControls).toEqual({
+      glassDensity: 30,
+      barOpacity: 60,
+      selectedStrength: 6,
+      frostLevel: 30
+    });
+    expect(controller.getSnapshot().resolved.materials.widget.opacity).toBe(0.3);
+    expect(controller.getSnapshot().resolved.materials.shelf.opacity).toBe(0.6);
+    expect(controller.getSnapshot().resolved.materials.widget.blurPx).toBe(7.2);
+    expect(controller.getSnapshot().cssText).toContain('--pom-selected-strength:6%');
+    expect(controller.getSnapshot().cssText).toContain('--pom-glass-density:30%');
+    expect(controller.getSnapshot().cssText).toContain('--pom-bar-opacity:60%');
+    expect(controller.getSnapshot().cssText).toContain('--pom-handle-density:54%');
+    expect(controller.getSnapshot().cssText).toContain('--pom-frost-level:30%');
+    expect(controller.getSnapshot().cssText).toContain('--pom-frost-blur:7.2px');
+
+    const bunny = controller.activate('bunny');
+    expect(bunny.ok).toBe(true);
+    expect(controller.getSnapshot().materialControls).toEqual({
+      glassDensity: 20,
+      barOpacity: 60,
+      selectedStrength: 6,
+      frostLevel: 20
+    });
+    expect(controller.getSnapshot().resolved.materials.widget.opacity).toBe(0.2);
+    expect(controller.getSnapshot().resolved.materials.widget.blurPx).toBe(4.8);
+  });
+
+  it('compiles true transparent and opaque endpoints for every recovered material layer', () => {
+    const controller = createLabThemeController();
+    for (const id of ['glassDensity', 'barOpacity', 'selectedStrength', 'frostLevel'] as const) {
+      expect(controller.setMaterialControl(id, 0).ok).toBe(true);
+    }
+    expect(controller.getSnapshot().cssText).toContain('--pom-material-glass-highlight:rgb(255 255 255 / 0)');
+    expect(controller.getSnapshot().cssText).toContain('--pom-material-bar-highlight:rgb(255 255 255 / 0)');
+    expect(controller.getSnapshot().cssText).toContain('--pom-material-panel-fallback-surface:rgb(4 7 8 / 0)');
+    expect(controller.getSnapshot().cssText).toContain('--pom-handle-density:24%');
+
+    for (const id of ['glassDensity', 'barOpacity', 'selectedStrength', 'frostLevel'] as const) {
+      expect(controller.setMaterialControl(id, 100).ok).toBe(true);
+    }
+    expect(controller.getSnapshot().cssText).toContain('--pom-glass-density:100%');
+    expect(controller.getSnapshot().cssText).toContain('--pom-bar-opacity:100%');
+    expect(controller.getSnapshot().cssText).toContain('--pom-handle-density:100%');
+    expect(controller.getSnapshot().cssText).toContain('--pom-frost-blur:24px');
+  });
+
+  it('retains independent material drafts while switching and resets only the active theme', () => {
+    const controller = createLabThemeController({
+      availableAssets: new Set(['icons.minimal', 'image.deep-current-stage', 'image.bunny-garden'])
+    });
+    expect(controller.activate('bunny').ok).toBe(true);
+    expect(controller.setMaterialControl('glassDensity', 38).ok).toBe(true);
+    expect(controller.setMaterialControl('frostLevel', 45).ok).toBe(true);
+    expect(controller.getSnapshot().resolved.materials.dialog).toMatchObject({ opacity: 0.38, blurPx: 10.8 });
+
+    expect(controller.activate('deep-current').ok).toBe(true);
+    expect(controller.setMaterialControl('barOpacity', 44).ok).toBe(true);
+    expect(controller.getSnapshot().resolved.materials.shelf.opacity).toBe(0.44);
+
+    expect(controller.activate('bunny').ok).toBe(true);
+    expect(controller.getSnapshot().materialControls).toMatchObject({ glassDensity: 38, frostLevel: 45 });
+    expect(controller.resetMaterialControls().ok).toBe(true);
+    expect(controller.getSnapshot().materialControls).toEqual({
+      glassDensity: 20,
+      barOpacity: 60,
+      selectedStrength: 6,
+      frostLevel: 20
+    });
   });
 
   it('retains the last valid snapshot for an invalid preset', () => {

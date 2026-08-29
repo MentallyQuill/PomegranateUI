@@ -14,6 +14,12 @@
 
   let draft = $state('Ask Mara what the bell means.');
   let selectedVariant = $state(2);
+  const materialControls = [
+    { id: 'glassDensity', label: 'Glass density' },
+    { id: 'barOpacity', label: 'Bar opacity' },
+    { id: 'selectedStrength', label: 'Selected strength' },
+    { id: 'frostLevel', label: 'Frost level' }
+  ] as const;
   const retainsContent = $derived(!['empty', 'unavailable', 'access-denied'].includes(surfaceState));
   const initials = (label: string) => label.split(/\s|→/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 </script>
@@ -137,6 +143,29 @@
           <div class="surface-themes">
             {#each hostContext.theme.presets as preset (preset.id)}<button type="button" aria-pressed={hostContext.theme.activeId === preset.id} onclick={() => hostContext.theme.activate(preset.id)}><i data-theme-swatch={preset.id}></i><strong>{preset.label}</strong><small>{preset.description}</small></button>{/each}
           </div>
+          <details class="surface-theme-materials">
+            <summary>Material controls</summary>
+            <div class="surface-material-grid">
+              {#each materialControls as control (control.id)}
+                <label>
+                  <span>{control.label}</span>
+                  <output>{hostContext.theme.materialControls[control.id]}%</output>
+                  <input
+                    aria-label={control.label}
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={hostContext.theme.materialControls[control.id]}
+                    oninput={(event) => hostContext.theme.setMaterialControl(control.id, Number(event.currentTarget.value))}
+                  />
+                </label>
+              {/each}
+            </div>
+            <footer>
+              <small>Frost maps from 0–100% to 0–24px.</small>
+              <button type="button" aria-label="Reset material controls" onclick={hostContext.theme.resetMaterialControls}>Reset</button>
+            </footer>
+          </details>
         {:else if fixture.presentation === 'accessibility'}
           <div class="surface-accessibility">
             <label>Text scale <input type="range" min="80" max="160" value="100" /><output>100%</output></label>
