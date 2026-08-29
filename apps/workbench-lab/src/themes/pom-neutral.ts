@@ -26,7 +26,7 @@ export const POM_NEUTRAL_THEME: ThemeDefinitionV2 = {
     shelf: material({ base: 'chrome', fallback: 'surface', opacity: 0.3, blurPx: 30, saturation: 1.24, brightness: 1.04, border: 'surfaceElevated', borderOpacity: 0.68, rimOpacity: 0.68, shadowOpacity: 0.16, shadowBlurPx: 36, shadowY: 12 }),
     context: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.2, blurPx: 24, saturation: 1.18, brightness: 1.03, border: 'surfaceElevated', borderOpacity: 0.56, rimOpacity: 0.5, shadowOpacity: 0.1, shadowBlurPx: 24, shadowY: 8 }),
     panel: material({ base: 'surface', opacity: 0, blurPx: 0, borderWidthPx: 0, rimOpacity: 0, reducedTransparency: 'panel' }),
-    window: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.42, blurPx: 30, saturation: 1.22, brightness: 1.03, border: 'surfaceElevated', borderOpacity: 0.74, rimOpacity: 0.72, shadowOpacity: 0.22, shadowBlurPx: 52, shadowY: 20 }),
+    pane: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.42, blurPx: 30, saturation: 1.22, brightness: 1.03, border: 'surfaceElevated', borderOpacity: 0.74, rimOpacity: 0.72, shadowOpacity: 0.22, shadowBlurPx: 52, shadowY: 20 }),
     header: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.13, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),
     content: material({ base: 'surface', fallback: 'surface', opacity: 0.12, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),
     row: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.2, blurPx: 0, border: 'surfaceElevated', borderOpacity: 0.28, rimOpacity: 0.18 }),

@@ -26,7 +26,7 @@ export const BUNNY_THEME: ThemeDefinitionV2 = {
     shelf: material({ base: 'chrome', fallback: 'surface', opacity: 0.28, blurPx: 24, saturation: 1.14, brightness: 1.05, border: 'surfaceElevated', borderOpacity: 0.78, rimOpacity: 0.78, shadowOpacity: 0.16, shadowBlurPx: 42, shadowY: 14 }),
     context: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.2, blurPx: 20, saturation: 1.12, brightness: 1.04, border: 'surfaceElevated', borderOpacity: 0.66, rimOpacity: 0.64, shadowOpacity: 0.1, shadowBlurPx: 24, shadowY: 8 }),
     panel: material({ base: 'surfaceElevated', opacity: 0, blurPx: 0, borderWidthPx: 0, rimOpacity: 0, reducedTransparency: 'panel' }),
-    window: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.24, blurPx: 22, saturation: 1.16, brightness: 1.04, border: 'surfaceElevated', borderOpacity: 0.84, rimOpacity: 0.82, shadowOpacity: 0.18, shadowBlurPx: 46, shadowY: 18 }),
+    pane: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.24, blurPx: 22, saturation: 1.16, brightness: 1.04, border: 'surfaceElevated', borderOpacity: 0.84, rimOpacity: 0.82, shadowOpacity: 0.18, shadowBlurPx: 46, shadowY: 18 }),
     header: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.16, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),
     content: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.1, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),
     row: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.2, blurPx: 0, border: 'surfaceElevated', borderOpacity: 0.5, rimOpacity: 0.42 }),

@@ -1019,7 +1019,6 @@ main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] {
 
 @media (max-width: 1180px) {
   main[data-pom-theme-root] .context-rail { grid-template-columns: auto auto minmax(0, 1fr); }
-  main[data-pom-theme-root] .persistence-actions { display: none; }
 }
 
 @media (max-width: 860px) {
@@ -1034,10 +1033,21 @@ main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] {
 }
 
 @media (max-width: 680px) {
-  main[data-pom-theme-root] .context-rail { min-height: 84px; }
+  main[data-pom-theme-root] .context-rail {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(3, 42px);
+    min-height: 126px;
+  }
+  main[data-pom-theme-root] .theme-targets,
   main[data-pom-theme-root] .dock-controls {
-    display: flex;
-    grid-column: 1 / -1;
+    grid-column: auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  main[data-pom-theme-root] .persistence-actions {
+    grid-column: auto;
+    justify-self: stretch;
     min-width: 0;
     overflow-x: auto;
     scrollbar-width: none;
@@ -1063,9 +1073,11 @@ main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] {
   main[data-pom-theme-root] .panel-tabs [role="tab"],
   main[data-pom-theme-root] .shelf-actions button,
   main[data-pom-theme-root] .context-rail button,
+  main[data-pom-theme-root] .widget-frame nav button,
   main[data-pom-theme-root] .composer button,
   main[data-pom-theme-root] dialog button {
     min-width: 44px;
     min-height: 44px;
   }
+  main[data-pom-theme-root] .widget-frame nav button { width: 44px; }
 }

@@ -26,7 +26,7 @@ export const DEEP_CURRENT_THEME: ThemeDefinitionV2 = {
     shelf: material({ base: 'chrome', opacity: 0.62, blurPx: 24, saturation: 0.9, border: 'borderStrong', borderOpacity: 0.3, rimOpacity: 0.09, shadowOpacity: 0.34, shadowBlurPx: 44 }),
     context: material({ base: 'surfaceElevated', opacity: 0.34, blurPx: 18, saturation: 0.92, border: 'borderStrong', borderOpacity: 0.24, rimOpacity: 0.05, shadowOpacity: 0.18, shadowBlurPx: 24 }),
     panel: material({ base: 'surfaceInset', opacity: 0, blurPx: 0, borderWidthPx: 0, rimOpacity: 0, reducedTransparency: 'panel' }),
-    window: material({ base: 'surfaceElevated', fallback: 'surfaceInset', opacity: 0.74, blurPx: 18, saturation: 1.04, border: 'borderStrong', borderOpacity: 0.34, rimOpacity: 0.08, shadowOpacity: 0.3, shadowBlurPx: 38 }),
+    pane: material({ base: 'surfaceElevated', fallback: 'surfaceInset', opacity: 0.74, blurPx: 18, saturation: 1.04, border: 'borderStrong', borderOpacity: 0.34, rimOpacity: 0.08, shadowOpacity: 0.3, shadowBlurPx: 38 }),
     header: material({ base: 'chrome', fallback: 'surfaceInset', opacity: 0.34, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),
     content: material({ base: 'surface', fallback: 'surfaceInset', opacity: 0.24, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),
     row: material({ base: 'surfaceElevated', fallback: 'surfaceInset', opacity: 0.3, blurPx: 0, border: 'border', borderOpacity: 0.18, rimOpacity: 0.03 }),

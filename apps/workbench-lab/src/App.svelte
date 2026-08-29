@@ -61,13 +61,17 @@
     'image.deep-current-stage': { kind: 'image', source: deepCurrentStage },
     'image.bunny-garden': { kind: 'image', source: bunnyGardenCanvas }
   });
+  const mediaMatches = (query: string) => typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
+  const backdropFilterSupported = typeof CSS === 'undefined' || typeof CSS.supports !== 'function'
+    ? true
+    : CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)');
   const themeController = createLabThemeController({
     preference: createLocalThemePreference(window.localStorage),
     assetRegistry: themeAssetRegistry,
     devicePolicy: {
-      reducedTransparency: window.matchMedia('(prefers-reduced-transparency: reduce)').matches,
-      coarsePointer: window.matchMedia('(pointer: coarse)').matches,
-      backdropFilterSupported: CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)')
+      reducedTransparency: mediaMatches('(prefers-reduced-transparency: reduce)'),
+      coarsePointer: mediaMatches('(pointer: coarse)'),
+      backdropFilterSupported
     }
   });
   const initialThemeSnapshot = themeController.getSnapshot();
@@ -87,7 +91,7 @@
         themeSnapshot.resolved.typography.prose.family,
         themeSnapshot.resolved.typography.technical.family
       ],
-      geometry: `${themeSnapshot.resolved.shapes.window?.family ?? 'resolved'} · ${themeSnapshot.resolved.shapes.window?.radiusPx ?? 0}px`,
+      geometry: `${themeSnapshot.resolved.shapes.pane?.family ?? 'resolved'} · ${themeSnapshot.resolved.shapes.pane?.radiusPx ?? 0}px`,
       density: themeSnapshot.resolved.spacing.density,
       iconPackId: themeSnapshot.resolved.iconPackId
     };

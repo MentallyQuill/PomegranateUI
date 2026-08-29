@@ -131,8 +131,8 @@ const v2Material = {
 } as const;
 
 const v2Part = {
-  material: 'window-glass',
-  shape: 'window',
+  material: 'adaptive-glass',
+  shape: 'adaptive-pane',
   typography: 'ui',
   spacing: 'md',
   overflow: 'visible',
@@ -147,7 +147,7 @@ export const VALID_THEME_V2 = {
   ...VALID_THEME_V2_BASE,
   schemaVersion: 'pomegranate.ui.theme.v2',
   materials: {
-    'window-glass': v2Material,
+    'adaptive-glass': v2Material,
     'opaque-surface': {
       ...v2Material,
       opacity: 1,
@@ -155,7 +155,7 @@ export const VALID_THEME_V2 = {
     }
   },
   shapes: {
-    window: {
+    'adaptive-pane': {
       family: 'continuous-rounded',
       radiusPx: 18,
       chamferPx: 0,
@@ -195,8 +195,8 @@ describe('ThemeDefinitionSchema', () => {
 
     expect(parsed.schemaVersion).toBe('pomegranate.ui.theme.v2');
     expect(parsed.recipes.parts['widget.surface']).toMatchObject({
-      material: 'window-glass',
-      shape: 'window'
+      material: 'adaptive-glass',
+      shape: 'adaptive-pane'
     });
   });
 
@@ -230,10 +230,10 @@ describe('ThemeDefinitionSchema', () => {
 
   it('bounds each material to four composable shadows', () => {
     const tooManyShadows = structuredClone(VALID_THEME_V2) as Record<string, any>;
-    tooManyShadows.materials['window-glass'].shadows = Array.from({ length: 5 }, () => v2Material.shadows[0]);
+    tooManyShadows.materials['adaptive-glass'].shadows = Array.from({ length: 5 }, () => v2Material.shadows[0]);
 
     expect(ThemeDefinitionV2Schema.safeParse(tooManyShadows).error?.issues).toEqual(expect.arrayContaining([
-      expect.objectContaining({ path: ['materials', 'window-glass', 'shadows'] })
+      expect.objectContaining({ path: ['materials', 'adaptive-glass', 'shadows'] })
     ]));
   });
 

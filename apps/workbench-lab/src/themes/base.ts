@@ -9,7 +9,7 @@ import {
 } from '@pomegranate-ui/contracts';
 
 export const LAB_MATERIAL_IDS = [
-  'canvas', 'shelf', 'context', 'panel', 'window', 'header', 'content', 'row', 'field',
+  'canvas', 'shelf', 'context', 'panel', 'pane', 'header', 'content', 'row', 'field',
   'button', 'selected', 'menu', 'dialog', 'floating', 'track', 'fill', 'thumb', 'opaque'
 ] as const;
 export type LabMaterialId = (typeof LAB_MATERIAL_IDS)[number];
@@ -89,7 +89,7 @@ export function shapePalette(options: {
   return {
     none: shape(0, [], 'none'),
     chrome: shape(options.large),
-    window: shape(options.medium),
+    pane: shape(options.medium),
     header: shape(options.medium, ['bottom']),
     content: shape(options.medium, ['top']),
     group: shape(options.medium),
@@ -107,7 +107,7 @@ const PART_MATERIALS: Readonly<Record<ThemePartId, LabMaterialId>> = {
   'dock.surface': 'panel',
   'panel.surface': 'panel',
   'group.surface': 'panel',
-  'widget.surface': 'window',
+  'widget.surface': 'pane',
   'widget.header': 'header',
   'widget.content': 'content',
   'widget.actions': 'header',
@@ -132,7 +132,7 @@ const PART_SHAPES: Readonly<Record<ThemePartId, string>> = {
   'dock.surface': 'none',
   'panel.surface': 'none',
   'group.surface': 'group',
-  'widget.surface': 'window',
+  'widget.surface': 'pane',
   'widget.header': 'header',
   'widget.content': 'content',
   'widget.actions': 'content',
@@ -141,9 +141,9 @@ const PART_SHAPES: Readonly<Record<ThemePartId, string>> = {
   'field.surface': 'field',
   'button.surface': 'button',
   'button.icon': 'pill',
-  'menu.surface': 'window',
-  'dialog.surface': 'window',
-  'floating.surface': 'window',
+  'menu.surface': 'pane',
+  'dialog.surface': 'pane',
+  'floating.surface': 'pane',
   'slider.input': 'pill',
   'slider.track': 'pill',
   'slider.fill': 'pill',

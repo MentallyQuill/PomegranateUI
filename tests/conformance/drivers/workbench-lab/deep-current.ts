@@ -41,13 +41,18 @@ async function applyPreservedMaterialState(page: Page, root: Locator): Promise<v
   const materialState = await root.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
-      glass: style.getPropertyValue('--pom-glass-density').trim(),
-      bars: style.getPropertyValue('--pom-bar-opacity').trim(),
-      selected: style.getPropertyValue('--pom-selected-strength').trim(),
-      frost: style.getPropertyValue('--pom-frost-blur').trim()
+      glass: style.getPropertyValue('--pom-material-widget').trim(),
+      bars: style.getPropertyValue('--pom-material-shelf').trim(),
+      selected: style.getPropertyValue('--pom-part-button-surface-state-selected-fill').trim(),
+      frost: style.getPropertyValue('--pom-material-widget-blur').trim()
     };
   });
-  if (JSON.stringify(materialState) !== JSON.stringify({ glass: '20%', bars: '60%', selected: '6%', frost: '12px' })) {
+  if (JSON.stringify(materialState) !== JSON.stringify({
+    glass: 'rgba(16, 25, 26, 0.2)',
+    bars: 'rgba(11, 18, 19, 0.6)',
+    selected: 'rgba(36, 76, 74, 0.06)',
+    frost: '20px'
+  })) {
     throw new Error(`Preserved Deep Current material setup did not apply: ${JSON.stringify(materialState)}.`);
   }
 }
@@ -71,10 +76,11 @@ export async function prepareDeepCurrentState(page: Page, labOrigin: string): Pr
       await page.locator(regionSelectors[id]).waitFor({ state: 'visible' });
     }
   } catch (cause) {
+    const causeMessage = cause instanceof Error ? cause.message : String(cause);
     throw new ConformanceError(
       'IMPLEMENTATION_SETUP_FAILED',
-      'The Workbench Lab did not reach its Deep Current scene-ready state.',
-      { cause: cause instanceof Error ? cause.message : String(cause) }
+      `The Workbench Lab did not reach its Deep Current scene-ready state: ${causeMessage}`,
+      { cause: causeMessage }
     );
   }
 }

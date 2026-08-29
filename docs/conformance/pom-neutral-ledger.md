@@ -61,6 +61,10 @@ application.
 | Wide, compact, phone, and coarse-pointer composition | 0 | 0 | Pass |
 
 The executable `pn-scene-wide`, `pn-scene-compact`, and `pn-catalog-wide`
-authority scenarios remain green. The promoted visual paths are
-`wide-pom-neutral.png`, `compact-pom-neutral.png`, and the PomOS material stress
-captures under `tests/browser/__screenshots__/native-workbench-visual.spec.ts-snapshots`.
+authority scenarios retain the historical reference for identity, structure,
+accessibility, and evidence capture. They deliberately do not freeze the
+superseded reference's literal colors or radii; the v2 computed-style contracts
+and promoted snapshots own current art-direction regression. The promoted
+visual paths are `wide-pom-neutral.png`, `compact-pom-neutral.png`, and the PomOS
+material stress captures under
+`tests/browser/__screenshots__/native-workbench-visual.spec.ts-snapshots`.

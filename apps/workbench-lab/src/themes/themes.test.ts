@@ -31,11 +31,11 @@ describe('Workbench Lab theme conformance', () => {
     { theme: POM_NEUTRAL_THEME, family: 'continuous-rounded', density: 'balanced', grouping: 'individual' },
     { theme: BUNNY_THEME, family: 'continuous-rounded', density: 'roomy', grouping: 'individual' }
   ] as const)('gives $theme.id a distinct material, shape, and composition identity', ({ theme, family, density, grouping }) => {
-    expect(theme.shapes.window?.family).toBe(family);
+    expect(theme.shapes.pane?.family).toBe(family);
     expect(theme.spacing.density).toBe(density);
     expect(theme.recipes.widgetGrouping).toBe(grouping);
-    expect(theme.materials.window?.backdrop.blurPx).toBeGreaterThan(0);
-    expect(theme.materials.window?.opacity).toBeLessThan(0.9);
+    expect(theme.materials.pane?.backdrop.blurPx).toBeGreaterThan(0);
+    expect(theme.materials.pane?.opacity).toBeLessThan(0.9);
     expect(theme.canvas.some((layer) => layer.kind !== 'solid')).toBe(true);
   });
 
@@ -53,11 +53,11 @@ describe('Workbench Lab theme conformance', () => {
     expect(POM_NEUTRAL_THEME).toMatchObject({
       schemaVersion: 'pomegranate.ui.theme.v2', id: 'pom-neutral', label: 'PomOS',
       colors: { canvas: '#167fdc', surfaceElevated: '#ffffff', accent: '#0868c4' },
-      shapes: { window: { family: 'continuous-rounded', radiusPx: 18 } },
+      shapes: { pane: { family: 'continuous-rounded', radiusPx: 18 } },
       controls: { slider: { trackPx: 4, thumbPx: 11, hitTargetPx: 44 } }
     });
     expect(POM_NEUTRAL_THEME.materials.panel).toMatchObject({ opacity: 0, backdrop: { blurPx: 0 }, shadows: [] });
-    expect(POM_NEUTRAL_THEME.materials.window).toMatchObject({ opacity: 0.42, backdrop: { blurPx: 30 } });
+    expect(POM_NEUTRAL_THEME.materials.pane).toMatchObject({ opacity: 0.42, backdrop: { blurPx: 30 } });
     expect(POM_NEUTRAL_THEME.materials.header?.backdrop.blurPx).toBe(0);
     expect(POM_NEUTRAL_THEME.materials.content?.backdrop.blurPx).toBe(0);
     expect(POM_NEUTRAL_THEME.canvas.every((layer) => layer.kind !== 'image')).toBe(true);
@@ -104,14 +104,14 @@ describe('Workbench Lab theme conformance', () => {
   it('projects recovered controls through bounded public theme policy', () => {
     const controller = createLabThemeController();
     expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 30, barOpacity: 60, selectedStrength: 6, frostLevel: 30 });
-    expect(controller.getSnapshot().resolved.materials.window?.opacity).toBe(0.3);
+    expect(controller.getSnapshot().resolved.materials.pane?.opacity).toBe(0.3);
     expect(controller.getSnapshot().resolved.materials.shelf?.opacity).toBe(0.6);
-    expect(controller.getSnapshot().resolved.materials.window?.backdrop.blurPx).toBe(12);
+    expect(controller.getSnapshot().resolved.materials.pane?.backdrop.blurPx).toBe(12);
 
     expect(controller.activate('bunny').ok).toBe(true);
     expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 24, barOpacity: 28, selectedStrength: 62, frostLevel: 54 });
-    expect(controller.getSnapshot().resolved.materials.window?.opacity).toBe(0.24);
-    expect(controller.getSnapshot().resolved.materials.window?.backdrop.blurPx).toBe(21.6);
+    expect(controller.getSnapshot().resolved.materials.pane?.opacity).toBe(0.24);
+    expect(controller.getSnapshot().resolved.materials.pane?.backdrop.blurPx).toBe(21.6);
   });
 
   it('applies the host device policy before compiling a snapshot', () => {
@@ -127,10 +127,10 @@ describe('Workbench Lab theme conformance', () => {
   it('compiles true transparent and opaque endpoints for controlled materials', () => {
     const controller = createLabThemeController();
     for (const id of ['glassDensity', 'barOpacity', 'selectedStrength', 'frostLevel'] as const) expect(controller.setMaterialControl(id, 0).ok).toBe(true);
-    expect(controller.getSnapshot().resolved.materials.window).toMatchObject({ opacity: 0, backdrop: { blurPx: 0 } });
+    expect(controller.getSnapshot().resolved.materials.pane).toMatchObject({ opacity: 0, backdrop: { blurPx: 0 } });
     expect(controller.getSnapshot().resolved.materials.shelf).toMatchObject({ opacity: 0, backdrop: { blurPx: 0 } });
     for (const id of ['glassDensity', 'barOpacity', 'selectedStrength', 'frostLevel'] as const) expect(controller.setMaterialControl(id, 100).ok).toBe(true);
-    expect(controller.getSnapshot().resolved.materials.window).toMatchObject({ opacity: 1, backdrop: { blurPx: 40 } });
+    expect(controller.getSnapshot().resolved.materials.pane).toMatchObject({ opacity: 1, backdrop: { blurPx: 40 } });
     expect(controller.getSnapshot().resolved.materials.selected?.opacity).toBe(1);
   });
 

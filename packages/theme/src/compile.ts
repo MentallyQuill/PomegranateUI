@@ -133,12 +133,12 @@ export function compileThemeBindings(theme: ResolvedThemeV2): ThemeBindings {
   for (const [step, size] of Object.entries(theme.typography.scale)) bindings[`--pom-type-${step}`] = `${formatNumber(size)}px`;
   for (const step of ['xs', 'sm', 'md', 'lg', 'xl'] as const) bindings[`--pom-space-${step}`] = `${formatNumber(theme.spacing[step])}px`;
   bindings['--pom-chrome-height'] = `${formatNumber(theme.spacing.chromeHeight)}px`;
-  const fallbackShape = theme.shapes.window ?? Object.values(theme.shapes)[0]!;
+  const fallbackShape = theme.shapes.pane ?? Object.values(theme.shapes)[0]!;
   bindings['--pom-radius-small'] = compileRadius(theme.shapes.row ?? theme.shapes.button ?? fallbackShape);
-  bindings['--pom-radius-widget'] = compileRadius(theme.shapes.window ?? fallbackShape);
-  bindings['--pom-radius-large'] = compileRadius(theme.shapes.chrome ?? theme.shapes.window ?? fallbackShape);
+  bindings['--pom-radius-widget'] = compileRadius(theme.shapes.pane ?? fallbackShape);
+  bindings['--pom-radius-large'] = compileRadius(theme.shapes.chrome ?? theme.shapes.pane ?? fallbackShape);
   bindings['--pom-radius-pill'] = compileRadius(theme.shapes.pill ?? fallbackShape);
-  bindings['--pom-border-width'] = `${formatNumber(theme.materials.window?.border.widthPx ?? 1)}px`;
+  bindings['--pom-border-width'] = `${formatNumber(theme.materials.pane?.border.widthPx ?? 1)}px`;
   const solid = theme.canvas.find((layer) => layer.kind === 'solid');
   bindings['--pom-canvas-color'] = solid?.kind === 'solid' ? solid.color : theme.colors.canvas;
   bindings['--pom-canvas'] = 'none';
@@ -146,7 +146,7 @@ export function compileThemeBindings(theme: ResolvedThemeV2): ThemeBindings {
   bindings['--pom-atmosphere-two'] = theme.colors.success;
   bindings['--pom-atmosphere-three'] = theme.colors.accent;
   const compatibilityMaterials = {
-    shelf: 'shelf', panel: 'panel', widget: 'window', field: 'field',
+    shelf: 'shelf', panel: 'panel', widget: 'pane', field: 'field',
     button: 'button', menu: 'menu', dialog: 'dialog', floating: 'floating'
   } as const;
   const firstMaterial = Object.values(theme.materials)[0]!;

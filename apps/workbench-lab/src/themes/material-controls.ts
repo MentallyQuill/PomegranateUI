@@ -24,7 +24,7 @@ const DEFAULTS: Readonly<Record<LabThemeId, LabMaterialControls>> = Object.freez
   bunny: Object.freeze({ glassDensity: 24, barOpacity: 28, selectedStrength: 62, frostLevel: 54 })
 });
 
-const GLASS_MATERIALS = ['window', 'menu', 'dialog', 'floating'] as const;
+const GLASS_MATERIALS = ['pane', 'menu', 'dialog', 'floating'] as const;
 const BAR_MATERIALS = ['shelf', 'context'] as const;
 const FROSTED_MATERIALS = [...GLASS_MATERIALS, ...BAR_MATERIALS] as const;
 

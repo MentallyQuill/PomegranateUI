@@ -317,6 +317,29 @@ cross-theme leakage, or ambiguous target identity.
 | `wide-pom-neutral.png` | `1d9ea4c8fa3723a0a4538b21ac295d5597e3128b02b197a6c191f92a6ff544b3` |
 | `wide-scene.png` | `71768361a143811aac284df57662e8e76ecb675e615f3ebd3b5cc6caef078f6e` |
 
+### Round 6 responsive action correction
+
+The delivery gate exposed a functional defect that the visual-only critic had
+missed: persistence actions disappeared at the 1024px breakpoint. Restoring
+them in place also required an explicit compact composition rather than
+letting one control group displace another. The final compact chrome now uses
+three restrained rows for theme choice, Panel controls, and persistence. Every
+real action remains visible, the document remains viewport-contained, and the
+result reads as a compact control-center stack in PomOS rather than a clipped
+toolbar. The Deep Current and Bunny variants retain the same functional
+composition in their own material language. No substantive responsive,
+hierarchy, clipping, or affordance criticism remains after visual inspection.
+
+| Changed snapshot | SHA-256 |
+| --- | --- |
+| `compact-bunny.png` | `b55c6778351083a40ac09ce4b75265d233dd01599b27110418cac3d1b3456ee0` |
+| `compact-material-adjusted-pom-neutral.png` | `9bbed5a322b956c0dab3c437b15def615eaf12571ca73ee0ad85cf0420f35489` |
+| `compact-material-full-bunny.png` | `6ff0ac2fad7cd79af2be5d350ab6628e8fa62e9e77de8b1821b36aad9d6bd09b` |
+| `compact-material-zero-deep-current.png` | `54ce612106601b936a3453310271263ecb89b0f24bd9f80cd24143068724ecae` |
+| `compact-pom-neutral.png` | `6966ee0366307f5a056ea730408dc93e2753633b6aa28447416a76255c30348b` |
+| `compact-scene.png` | `802ba844a9e2fcc5b61e7f08cd0bf32229e73758c423e3b0aed28336349e8512` |
+| `compact-settings.png` | `e917c7c0488056fc9225710181a7bae1fc36b573a630f140cf4367b78dbc1fe6` |
+
 ### Preference-only observations
 
 - PomOS could move its blue canvas warmer or cooler without correcting a

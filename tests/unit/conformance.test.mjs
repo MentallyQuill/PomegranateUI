@@ -198,8 +198,8 @@ test('the initial Deep Current macro manifest validates against exact repository
     authorities: new Map(AUTHORITY_RECORDS.map((record) => [record.id, record])),
     viewports: CONFORMANCE_VIEWPORTS,
     driverIds: new Set(['atmospheric-workbench', 'workbench-lab']),
-    measurementProfileIds: new Set(['deep-current-shell']),
-    assertionProfileIds: new Set(['deep-current-shell']),
+    measurementProfileIds: new Set(['deep-current-shell-behavior']),
+    assertionProfileIds: new Set(['deep-current-shell-behavior']),
     deviationIds: new Set(),
     hashFile: hashAuthorityFile
   });
@@ -270,8 +270,8 @@ test('the target manifest freezes both visual identities across Scene and Catalo
     authorities: new Map(AUTHORITY_RECORDS.map((record) => [record.id, record])),
     viewports: CONFORMANCE_VIEWPORTS,
     driverIds: new Set(['pomos-reference', 'bunny-original-reference', 'workbench-lab']),
-    measurementProfileIds: new Set(['theme-target']),
-    assertionProfileIds: new Set(['theme-target']),
+    measurementProfileIds: new Set(['theme-target-behavior']),
+    assertionProfileIds: new Set(['theme-target-behavior']),
     deviationIds: new Set(),
     hashFile: hashAuthorityFile
   });
@@ -525,8 +525,24 @@ test('the Deep Current shell profile names each structural measurement and toler
   ]);
 });
 
-test('the original target profile compares identity, accessibility, theme tokens, and material shape', () => {
-  const profile = MEASUREMENT_PROFILES.get('theme-target');
+test('the v2 Deep Current migration profile preserves structure without claiming layout fidelity', () => {
+  assert.deepEqual(MEASUREMENT_PROFILES.get('deep-current-shell-behavior')?.map(({ path }) => path), [
+    'document',
+    'regions.composer.overflow.x',
+    'regions.composer.styles.borderTopColor',
+    'regions.composer.visible',
+    'regions.left.visible',
+    'regions.right.visible',
+    'regions.shelf.overflow.x',
+    'regions.shelf.styles.backgroundColor',
+    'regions.shelf.visible',
+    'regions.stage.overflow.x',
+    'regions.stage.visible'
+  ]);
+});
+
+test('the original target profile compares identity and accessibility without freezing superseded art direction', () => {
+  const profile = MEASUREMENT_PROFILES.get('theme-target-behavior');
   assert.ok(profile);
   assert.deepEqual(profile.map(({ path }) => path), [
     'functional.targetApplied',
@@ -536,22 +552,15 @@ test('the original target profile compares identity, accessibility, theme tokens
     'functional.keyboardAccessible',
     'functional.scenarioStateReached',
     'structure.panelTabs',
-    'structure.anchorWidgets',
-    'visual.canvas',
-    'visual.accent',
-    'visual.text',
-    'visual.shellRadius',
-    'visual.widgetRadius',
-    'visual.buttonRadius'
+    'structure.anchorWidgets'
   ]);
 });
 
-test('Widget and Catalog profiles gate rendered visual qualities and every lifecycle stage', () => {
-  assert.deepEqual(MEASUREMENT_PROFILES.get('deep-current-widget-surface')?.map(({ path }) => path).slice(-4), [
+test('Widget and Catalog profiles gate stable rendered qualities and every lifecycle stage', () => {
+  assert.deepEqual(MEASUREMENT_PROFILES.get('deep-current-widget-surface')?.map(({ path }) => path).slice(-3), [
     'visual.darkSurface',
     'visual.visibleBorder',
-    'visual.compactCorners',
-    'visual.headerSeparated'
+    'visual.compactCorners'
   ]);
   assert.deepEqual(MEASUREMENT_PROFILES.get('deep-current-catalog')?.map(({ path }) => path).slice(-4), [
     'lifecycle.placed',
@@ -824,7 +833,7 @@ test('the reviewed theme baseline freezes every target scenario and authority ha
     'utf8'
   ));
   assert.equal(baseline.schemaVersion, 'pomegranate.ui.conformance-baseline.v1');
-  assert.equal(baseline.measurementProfile, 'theme-target');
+  assert.equal(baseline.measurementProfile, 'theme-target-behavior');
   assert.deepEqual(baseline.authorities, {
     'pomos-reference': AUTHORITY_RECORDS.find(({ id }) => id === 'pomos-reference').sha256,
     'bunny-original-reference': AUTHORITY_RECORDS.find(({ id }) => id === 'bunny-original-reference').sha256

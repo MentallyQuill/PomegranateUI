@@ -1,10 +1,19 @@
 # Deep Current conformance ledger
 
-**State:** Macro baseline frozen
+**State:** Macro baseline frozen; v2 recipe migration behavior gate active
 
 The first nine rows record differences already observed between the preserved
 Atmospheric Workbench and the generic Workbench Lab. Evidence filenames are
 stable outputs of the initial dual-driver scenarios.
+
+The exact `deep-current-shell` geometry/material profile and canonical boxes
+remain frozen for the separately scoped layout-fidelity work; this theme-system
+migration does not rewrite them from its own output. Its active
+`deep-current-shell-behavior` profile still renders both authorities at every
+viewport and gates document containment, visible shell regions, horizontal
+overflow on visible shell owners, composer separation, and the requested shelf
+material state. Current Deep visual identity is additionally frozen by the
+promoted browser snapshots.
 
 | ID | Category | Severity | Authority | Scenario | Evidence | Diagnosis | Status | Regression | Deviation |
 |---|---|---|---|---|---|---|---|---|---|

@@ -5,7 +5,7 @@ import { compileThemeBindings, compileThemeStyleSheet, type ResolvedThemeV2 } fr
 
 const part = {
   material: 'glass',
-  shape: 'window',
+  shape: 'adaptive-pane',
   typography: 'ui',
   spacing: 'md',
   overflow: 'visible',
@@ -50,7 +50,7 @@ const RESOLVED_THEME = {
     }
   },
   shapes: {
-    window: { family: 'continuous-rounded', radiusPx: 18, chamferPx: 0, chamferAngleDeg: 45, joinedEdges: [] }
+    'adaptive-pane': { family: 'continuous-rounded', radiusPx: 18, chamferPx: 0, chamferAngleDeg: 45, joinedEdges: [] }
   },
   recipes: {
     parts,

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "pomegranate.ui.conformance-baseline.v1",
-  "measurementProfile": "theme-target",
+  "measurementProfile": "theme-target-behavior",
   "authorities": {
     "pomos-reference": "a46dc956b0664643506b5023836cd02fb2e9f64ca538acff1aca7cc7c34a7af9",
     "bunny-original-reference": "b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59"
