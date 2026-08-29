@@ -11,8 +11,7 @@ async function fresh(page: Page, width: number, height: number) {
 }
 
 async function selectTheme(page: Page, label: 'Pom Neutral' | 'Bunny') {
-  await page.getByRole('tab', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: label, exact: true }).click();
+  await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: label, exact: true }).click();
   await expect(page.locator('main')).toHaveAttribute('data-pom-theme', label === 'Pom Neutral' ? 'pom-neutral' : 'bunny');
   await page.getByRole('tab', { name: 'Scene' }).click();
   await page.evaluate(async () => {

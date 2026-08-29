@@ -25,25 +25,25 @@ export const DEEP_CURRENT_THEME: ThemeDefinition = {
   schemaVersion: 'pomegranate.ui.theme.v1',
   id: 'deep-current',
   label: 'Deep Current',
-  description: 'Industrial dark-tech glass, ember light, and technical geometry derived from the preserved Sonder mockup direction.',
+  description: 'Industrial dark-tech glass, cold signal light, and technical geometry derived from the preserved Sonder mockup direction.',
   colors: {
-    canvas: '#111014',
-    surface: '#1f1c22',
-    surfaceElevated: '#2c272d',
-    surfaceInset: '#18161b',
-    chrome: '#141217',
-    text: '#eee8de',
-    textMuted: '#a9a0a0',
-    textFaint: '#756c70',
-    textOnAccent: '#111014',
-    accent: '#e2a069',
-    selection: '#ffc38d',
-    focus: '#ffc38d',
-    success: '#769885',
-    warning: '#e2a069',
-    danger: '#f0b0a2',
-    border: '#353139',
-    borderStrong: '#665044',
+    canvas: '#080c0d',
+    surface: '#0b1213',
+    surfaceElevated: '#10191a',
+    surfaceInset: '#040708',
+    chrome: '#0b1213',
+    text: '#e7f6f0',
+    textMuted: '#a7b8b2',
+    textFaint: '#71827d',
+    textOnAccent: '#071011',
+    accent: '#94d9d0',
+    selection: '#94d9d0',
+    focus: '#bfeee8',
+    success: '#86d89a',
+    warning: '#d2b57a',
+    danger: '#df7b70',
+    border: '#17201f',
+    borderStrong: '#5f807b',
     shadow: '#000000'
   },
   typography: {
@@ -69,8 +69,8 @@ export const DEEP_CURRENT_THEME: ThemeDefinition = {
   spacing: { density: 'compact', xs: 4, sm: 6, md: 12, lg: 16, xl: 24, chromeHeight: 44 },
   materials: {
     canvas: material('canvas', 'canvas', { opacity: 1, blurPx: 0, saturation: 1, shadowOpacity: 0, shadowBlurPx: 0 }),
-    shelf: material('surface'),
-    panel: material('surfaceInset', 'surfaceInset', { opacity: 0.28, blurPx: 0, saturation: 1, shadowOpacity: 0, shadowBlurPx: 0 }),
+    shelf: material('chrome', 'chrome', { opacity: 0.6, blurPx: 12, saturation: 0.82, shadowOpacity: 0, shadowBlurPx: 0 }),
+    panel: material('surfaceInset', 'surfaceInset', { opacity: 0.2, blurPx: 12, saturation: 0.82, shadowOpacity: 0, shadowBlurPx: 0 }),
     widget: material('surfaceElevated', 'surfaceInset', { opacity: 0.88, blurPx: 0, saturation: 1, shadowOpacity: 0.16, shadowBlurPx: 34 }),
     field: material('shadow', 'surfaceInset', { opacity: 0.18, blurPx: 0, saturation: 1, shadowOpacity: 0, shadowBlurPx: 0 }),
     button: material('text', 'surfaceElevated', { opacity: 0.04, blurPx: 0, saturation: 1, shadowOpacity: 0, shadowBlurPx: 0 }),
@@ -79,13 +79,16 @@ export const DEEP_CURRENT_THEME: ThemeDefinition = {
     floating: material('surfaceElevated', 'surfaceInset', { opacity: 0.94, blurPx: 0, saturation: 1, shadowOpacity: 0.48, shadowBlurPx: 60 })
   },
   iconPackId: 'icons.minimal',
-  assets: [{ id: 'icons.minimal', kind: 'icon-pack', required: true }],
+  assets: [
+    { id: 'icons.minimal', kind: 'icon-pack', required: true },
+    { id: 'image.deep-current-stage', kind: 'image', required: true }
+  ],
   canvas: [
-    { kind: 'linear-gradient', angle: 145, stops: [{ color: '#100f1394', position: 0 }, { color: '#20171cc7', position: 1 }] },
-    { kind: 'radial-gradient', shape: 'circle', x: 0.18, y: 0.2, stops: [{ color: '#893d483b', position: 0 }, { color: '#11101400', position: 1 }] },
-    { kind: 'radial-gradient', shape: 'circle', x: 0.82, y: 0.76, stops: [{ color: '#2f5b5b2e', position: 0 }, { color: '#11101400', position: 1 }] },
-    { kind: 'solid', color: '#111014' }
+    { kind: 'linear-gradient', angle: 90, stops: [{ color: '#020506e0', position: 0 }, { color: '#07101238', position: 0.54 }, { color: '#020506b8', position: 1 }] },
+    { kind: 'radial-gradient', shape: 'ellipse', x: 0.68, y: 0.38, stops: [{ color: '#94d9d02e', position: 0 }, { color: '#07101200', position: 0.58 }] },
+    { kind: 'image', assetId: 'image.deep-current-stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 0.82, blend: 'normal' },
+    { kind: 'solid', color: '#080c0d' }
   ],
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
-  capabilities: { translucency: true, textures: false, localImages: false }
+  capabilities: { translucency: true, textures: false, localImages: true }
 };

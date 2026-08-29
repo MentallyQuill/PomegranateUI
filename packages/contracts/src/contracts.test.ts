@@ -204,6 +204,18 @@ describe('public contracts', () => {
       instanceId: widgetId,
       placement: { kind: 'floating', panelId, x: 0, y: 0, width: 0, height: 10, z: 0 }
     }).success).toBe(false);
+
+    const grouped = WorkbenchCommandSchema.parse({
+      type: 'widget.place',
+      instanceId: widgetId,
+      placement: {
+        ...state.placements[widgetId],
+        group: { id: 'reading-stack', order: 0, active: true }
+      }
+    });
+    expect(grouped.type === 'widget.place' && grouped.placement.kind === 'docked'
+      ? grouped.placement.group
+      : null).toEqual({ id: 'reading-stack', order: 0, active: true });
   });
 
   it('parses every command in the first-slice protocol', () => {
@@ -211,8 +223,12 @@ describe('public contracts', () => {
       { type: 'panel.create', panel: { id: asPanelId('library'), name: 'Library', templateId: 'standard', order: 1 } },
       { type: 'panel.activate', panelId },
       { type: 'panel.reorder', panelId, toIndex: 0 },
+      { type: 'panel.resize-dock', panelId, edge: 'left', width: 320 },
       { type: 'widget.create', instance: state.widgets[widgetId]!, placement: state.placements[widgetId]! },
       { type: 'widget.place', instanceId: widgetId, placement: state.placements[widgetId]! },
+      { type: 'widget.group', instanceId: widgetId, targetInstanceId: widgetId, groupId: 'reading-stack' },
+      { type: 'widget.group.activate', instanceId: widgetId },
+      { type: 'widget.group.reorder', instanceId: widgetId, toIndex: 0 },
       { type: 'widget.remove', instanceId: widgetId },
       { type: 'layout.hydrate', state }
     ] satisfies readonly WorkbenchCommand[];
@@ -221,11 +237,33 @@ describe('public contracts', () => {
       'panel.create',
       'panel.activate',
       'panel.reorder',
+      'panel.resize-dock',
       'widget.create',
       'widget.place',
+      'widget.group',
+      'widget.group.activate',
+      'widget.group.reorder',
       'widget.remove',
       'layout.hydrate'
     ]);
+  });
+
+  it('rejects dock widths outside the preserved 200 to 420 pixel contract', () => {
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'panel.resize-dock', panelId, edge: 'left', width: 200
+    }).success).toBe(true);
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'panel.resize-dock', panelId, edge: 'right', width: 420
+    }).success).toBe(true);
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'panel.resize-dock', panelId, edge: 'main', width: 300
+    }).success).toBe(false);
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'panel.resize-dock', panelId, edge: 'left', width: 199
+    }).success).toBe(false);
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'panel.resize-dock', panelId, edge: 'right', width: 421
+    }).success).toBe(false);
   });
 
   it('supports asynchronous adopter-owned storage round trips', async () => {

@@ -38,6 +38,8 @@ test('browser server exposes and closes the configured Lab listener without buil
       includeLab: true,
       labRoot: path.join(root, 'apps/workbench-lab')
     });
+    assert.match(running.preservationOrigin, /^http:\/\/127\.0\.0\.1:\d+$/);
+    assert.equal(running.labOrigin, running.labUrl);
     assert.match(running.labUrl, /^http:\/\/127\.0\.0\.1:\d+$/);
     const response = await fetch(running.labUrl);
     assert.equal(response.status, 200);

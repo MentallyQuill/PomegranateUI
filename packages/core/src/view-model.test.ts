@@ -202,6 +202,39 @@ describe('framework-neutral view projections', () => {
     });
   });
 
+  it('groups a docked Widget with its previous shelf sibling', () => {
+    const registry = createWidgetRegistry();
+    registry.register({
+      type: asWidgetType('story.summary'),
+      version: '1.0.0',
+      title: 'Story Summary',
+      capabilities: [],
+      defaultConfiguration: {},
+      defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+    });
+    const firstId = asWidgetInstanceId('first');
+    const secondId = asWidgetInstanceId('second');
+    const store = createWorkbenchStore({
+      registry,
+      initialState: {
+        ...state(),
+        widgets: {
+          [firstId]: { id: firstId, type: asWidgetType('story.summary'), manifestVersion: '1.0.0', configuration: {} },
+          [secondId]: { id: secondId, type: asWidgetType('story.summary'), manifestVersion: '1.0.0', configuration: {} }
+        },
+        placements: {
+          [firstId]: { kind: 'docked', panelId: scenePanel, edge: 'left', shelfId: 'primary', order: 0 },
+          [secondId]: { kind: 'docked', panelId: scenePanel, edge: 'left', shelfId: 'primary', order: 1 }
+        }
+      }
+    });
+
+    const result = createWidgetActions(store, secondId).groupWithPrevious();
+    expect(result.ok).toBe(true);
+    expect(store.getState().placements[firstId]).toMatchObject({ group: { id: 'group-first', order: 0, active: false } });
+    expect(store.getState().placements[secondId]).toMatchObject({ group: { id: 'group-first', order: 1, active: true } });
+  });
+
   it('removes the owned Widget through the public store', () => {
     const registry = createWidgetRegistry();
     registry.register({

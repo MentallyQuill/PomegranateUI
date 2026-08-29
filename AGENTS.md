@@ -29,6 +29,7 @@ PomegranateUI is a developer toolkit for teams building AI roleplaying applicati
 ## Local Workbench Lab
 
 - The Atmospheric Workbench owns macro layout/material/responsive mockup authority; the Widget Overhaul owns Widget inventory/geometry/state authority.
+- Theme switching is immediate and atomic; keep one mounted Panel/Widget tree and do not branch recipes on theme IDs.
 - Use `npm.cmd run dev:lab` for `http://127.0.0.1:5173/`.
 - Use `npm.cmd run build` then `npm.cmd run preview:lab` for `http://127.0.0.1:4174/`.
 - `apps/workbench-lab/dist` is the static relative-base artifact boundary. Do not add SvelteKit, hosting, package publication, Sonder server imports, or a Sonder cutover in this tranche.
@@ -46,6 +47,10 @@ npm.cmd run check:extraction
 npm.cmd run report
 npm.cmd run test:pack
 npm.cmd run test:browser
+npm.cmd run test:conformance:unit
+npm.cmd run test:conformance:deep-current
+npm.cmd run test:conformance
+npm.cmd run inspect:conformance -- --scenario dc-shell-wide
 npm.cmd run check
 ```
 

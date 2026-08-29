@@ -13,12 +13,16 @@ import {
 
 import {
   activatePanel,
+  activateWidgetGroup,
   createInitialWorkbenchState,
   createPanel,
   createWidget,
+  mergeWidgetGroup,
   placeWidget,
   removeWidget,
-  reorderPanel
+  reorderWidgetGroup,
+  reorderPanel,
+  resizePanelDock
 } from './index.js';
 
 const sceneId = asPanelId('scene');
@@ -139,6 +143,64 @@ describe('atomic layout operations', () => {
     expect(result.state.placements[notesId]).toMatchObject({ edge: 'left', order: 1 });
   });
 
+  it('inserts at a requested shelf order and keeps orders contiguous', () => {
+    const thirdId = asWidgetInstanceId('third');
+    const withThird = createWidget(
+      populatedState(),
+      instance(thirdId, 'story.third'),
+      dock(sceneId, 'left', 1)
+    );
+    expect(withThird.ok).toBe(true);
+
+    const inserted = placeWidget(withThird.state, notesId, dock(sceneId, 'left', 1));
+    expect(inserted.ok).toBe(true);
+    expect([summaryId, notesId, thirdId].map((id) => inserted.state.placements[id])).toMatchObject([
+      { order: 0 }, { order: 1 }, { order: 2 }
+    ]);
+  });
+
+  it('resizes one Panel dock within the preserved bounds', () => {
+    const before = populatedState();
+    const resized = resizePanelDock(before, sceneId, 'left', 320);
+    expect(resized.ok).toBe(true);
+    expect(resized.state.panels[0]?.configuration).toEqual({ dockWidths: { left: 320 } });
+
+    const rejected = resizePanelDock(resized.state, sceneId, 'right', 421);
+    expect(rejected.ok).toBe(false);
+    expect(rejected.state).toBe(resized.state);
+  });
+
+  it('merges, activates, and reorders a same-Panel Widget tab group', () => {
+    const grouped = mergeWidgetGroup(populatedState(), notesId, summaryId, 'reading-stack');
+    expect(grouped.ok).toBe(true);
+    expect(grouped.state.placements[summaryId]).toMatchObject({
+      edge: 'left', shelfId: 'primary', group: { id: 'reading-stack', order: 0, active: false }
+    });
+    expect(grouped.state.placements[notesId]).toMatchObject({
+      edge: 'left', shelfId: 'primary', group: { id: 'reading-stack', order: 1, active: true }
+    });
+
+    const activated = activateWidgetGroup(grouped.state, summaryId);
+    expect(activated.ok).toBe(true);
+    expect(activated.state.placements[summaryId]).toMatchObject({ group: { active: true } });
+    expect(activated.state.placements[notesId]).toMatchObject({ group: { active: false } });
+
+    const reordered = reorderWidgetGroup(activated.state, notesId, 0);
+    expect(reordered.ok).toBe(true);
+    expect(reordered.state.placements[notesId]).toMatchObject({ group: { order: 0 } });
+    expect(reordered.state.placements[summaryId]).toMatchObject({ group: { order: 1 } });
+  });
+
+  it('rejects invalid grouping without changing state identity', () => {
+    const before = populatedState();
+    const crossPanel = placeWidget(before, notesId, dock(libraryId, 'right', 0));
+    expect(crossPanel.ok).toBe(true);
+
+    const rejected = mergeWidgetGroup(crossPanel.state, notesId, summaryId, 'reading-stack');
+    expect(rejected.ok).toBe(false);
+    expect(rejected.state).toBe(crossPanel.state);
+  });
+
   it('retains accepted floating geometry exactly', () => {
     const placement: WidgetPlacement = {
       kind: 'floating',
@@ -159,6 +221,24 @@ describe('atomic layout operations', () => {
     expect(result.ok).toBe(true);
     expect(result.state.widgets[summaryId]).toBeUndefined();
     expect(result.state.placements[summaryId]).toBeUndefined();
+  });
+
+  it('dissolves a tab group when removal leaves one member', () => {
+    const grouped = mergeWidgetGroup(populatedState(), notesId, summaryId, 'reading-stack');
+    expect(grouped.ok).toBe(true);
+    const removed = removeWidget(grouped.state, notesId);
+    expect(removed.ok).toBe(true);
+    expect(removed.state.placements[summaryId]).toMatchObject({ kind: 'docked', edge: 'left' });
+    expect(removed.state.placements[summaryId]).not.toHaveProperty('group');
+  });
+
+  it('dissolves the origin group when a member is placed elsewhere', () => {
+    const grouped = mergeWidgetGroup(populatedState(), notesId, summaryId, 'reading-stack');
+    expect(grouped.ok).toBe(true);
+    const moved = placeWidget(grouped.state, notesId, dock(sceneId, 'right', 0));
+    expect(moved.ok).toBe(true);
+    expect(moved.state.placements[summaryId]).not.toHaveProperty('group');
+    expect(moved.state.placements[notesId]).not.toHaveProperty('group');
   });
 
   it('rejects an invalid move without changing state identity', () => {

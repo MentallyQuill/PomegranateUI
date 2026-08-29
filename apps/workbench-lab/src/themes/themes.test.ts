@@ -4,7 +4,9 @@ import { contrastRatio, resolveTheme } from '@pomegranate-ui/theme';
 import { BUNNY_THEME } from './bunny.js';
 import { compileThemeBindings } from './bindings.js';
 import { createLabThemeController } from './controller.js';
+import { DEEP_CURRENT_THEME } from './deep-current.js';
 import { LAB_THEME_IDS, LAB_THEME_PRESETS } from './presets.js';
+import { POM_NEUTRAL_THEME } from './pom-neutral.js';
 import { createLocalThemePreference, LAB_THEME_KEY } from './theme-storage.js';
 
 describe('Workbench Lab theme conformance', () => {
@@ -52,11 +54,65 @@ describe('Workbench Lab theme conformance', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const cssText = compileThemeBindings(result.theme);
-    expect(cssText).toContain('--pom-color-text:#403747');
+    expect(cssText).toContain('--pom-color-text:#45364d');
     expect(cssText).toContain('--pom-radius-widget:18px');
     expect(cssText).toContain('--pom-canvas:');
     expect(cssText).not.toContain('bunny');
     expect(cssText).not.toContain('transition');
+  });
+
+  it('declares the Deep Current stage image as a local semantic theme asset', () => {
+    expect(DEEP_CURRENT_THEME.assets).toContainEqual({
+      id: 'image.deep-current-stage',
+      kind: 'image',
+      required: true
+    });
+    expect(DEEP_CURRENT_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({
+      kind: 'image',
+      assetId: 'image.deep-current-stage',
+      fit: 'cover'
+    });
+    expect(DEEP_CURRENT_THEME.capabilities.localImages).toBe(true);
+  });
+
+  it('expresses the preserved Deep Current shell materials through theme tokens', () => {
+    expect(DEEP_CURRENT_THEME.colors).toMatchObject({
+      canvas: '#080c0d',
+      surfaceInset: '#040708',
+      chrome: '#0b1213',
+      accent: '#94d9d0'
+    });
+    expect(DEEP_CURRENT_THEME.materials.shelf).toMatchObject({
+      base: 'chrome',
+      opacity: 0.6,
+      blurPx: 12,
+      saturation: 0.82
+    });
+    expect(DEEP_CURRENT_THEME.materials.panel).toMatchObject({
+      base: 'surfaceInset',
+      opacity: 0.2,
+      blurPx: 12,
+      saturation: 0.82
+    });
+  });
+
+  it('pins the original Neutral and Bunny visual target contracts', () => {
+    expect(POM_NEUTRAL_THEME).toMatchObject({
+      id: 'pom-neutral',
+      colors: { canvas: '#dfe7f1', surfaceElevated: '#ffffff', accent: '#2f68cc', focus: '#1f5fc4' },
+      geometry: { cornerFamily: 'rounded', cornerMd: 12, cornerLg: 18 },
+      spacing: { density: 'balanced' },
+      capabilities: { localImages: false, textures: false, translucency: true }
+    });
+    expect(POM_NEUTRAL_THEME.canvas.every((layer) => layer.kind !== 'image')).toBe(true);
+    expect(BUNNY_THEME).toMatchObject({
+      id: 'bunny',
+      colors: { canvas: '#faeef6', surfaceElevated: '#ffffff', accent: '#ed75aa', focus: '#7552bd' },
+      geometry: { cornerFamily: 'pill', cornerMd: 18, cornerLg: 26 },
+      spacing: { density: 'roomy' },
+      capabilities: { localImages: false, textures: false, translucency: true }
+    });
+    expect(BUNNY_THEME.canvas[0]).toMatchObject({ kind: 'four-corner' });
   });
 
   it('switches one complete binding and persists only after validation succeeds', () => {
@@ -95,7 +151,10 @@ describe('Workbench Lab theme conformance', () => {
           }
         }
       : preset);
-    const controller = createLabThemeController({ presets, availableAssets: new Set(['icons.minimal']) });
+    const controller = createLabThemeController({
+      presets,
+      availableAssets: new Set(['icons.minimal', 'image.deep-current-stage'])
+    });
     const before = controller.getSnapshot();
     const result = controller.activate('bunny');
     expect(result.ok).toBe(false);

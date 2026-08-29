@@ -89,6 +89,17 @@ npm.cmd run preview:lab
 
 The Atmospheric Workbench is the preserved authority for macro layout, material, and responsive staging. The Widget Overhaul is the preserved authority for Widget inventory, geometry, and state coverage. Both remain executable evidence oracles; production authority belongs to the packages and the Lab's owned recipe copies.
 
+The frozen Deep Current macro loop compares those preserved authorities with the maintained Lab through independent Playwright drivers. Theme switching remains immediate and atomic; the component tree and Workbench identity do not change. Inspect one scenario without changing its baseline with:
+
+```powershell
+npm.cmd run test:conformance:unit
+npm.cmd run test:conformance:deep-current
+npm.cmd run test:conformance
+npm.cmd run inspect:conformance -- --scenario dc-shell-wide
+```
+
+Reviewed structured baselines live under `tests/conformance/baselines`; generated evidence stays under ignored `test-results/conformance`. The hostable artifact remains `apps/workbench-lab/dist`. This conformance lane does not publish packages or cut Sonder over.
+
 ## Documentation
 
 - [Documentation index](docs/README.md)
@@ -130,6 +141,10 @@ npm.cmd run check:recipes
 npm.cmd run report
 npm.cmd run test:pack
 npm.cmd run test:browser
+npm.cmd run test:conformance:unit
+npm.cmd run test:conformance:deep-current
+npm.cmd run test:conformance
+npm.cmd run inspect:conformance -- --scenario dc-shell-wide
 npm.cmd run check
 ```
 

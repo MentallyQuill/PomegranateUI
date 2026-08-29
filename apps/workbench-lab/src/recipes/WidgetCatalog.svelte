@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { WidgetManifest } from '@pomegranate-ui/contracts';
   import type { CatalogController, CatalogState } from '@pomegranate-ui/core';
+  import { IMPLEMENTED_SURFACE_TYPES } from '../mockup/implemented-surfaces.js';
+  import { getSurfaceFixture } from '../mockup/surface-fixtures.js';
 
   let {
     catalog,
@@ -53,9 +55,25 @@
     </nav>
     <ul aria-live="polite">
       {#each state.results as manifest (manifest.type)}
-        <li>
-          <span>{manifest.title}</span>
-          <span>{manifest.catalog?.purpose}</span>
+        <li
+          data-widget-type={manifest.type}
+          data-renderer-status={IMPLEMENTED_SURFACE_TYPES.has(manifest.type) ? 'implemented' : 'unavailable'}
+        >
+          <span class="catalog-result-title">{manifest.title}</span>
+          <span class="catalog-result-purpose">{manifest.catalog?.purpose}</span>
+          {#if state.resultMode === 'visual'}
+            {@const fixture = getSurfaceFixture(manifest.type)}
+            <div class="catalog-miniature" data-miniature-presentation={fixture?.presentation ?? 'unavailable'} aria-label={`${manifest.title} preview`}>
+              <header><i aria-hidden="true"></i><strong>{manifest.title}</strong><small>{manifest.catalog?.shape}</small></header>
+              {#if fixture}
+                <p>{fixture.scope}</p>
+                <dl>{#each fixture.rows.slice(0, 3) as row (row[0])}<div><dt>{row[0]}</dt><dd>{row[1]}</dd></div>{/each}</dl>
+              {:else}
+                <p>Renderer unavailable</p>
+                <small>Manifest, preview, and placement remain available.</small>
+              {/if}
+            </div>
+          {/if}
           <button type="button" onclick={() => oncreate(manifest)}>Add {manifest.title}</button>
         </li>
       {/each}

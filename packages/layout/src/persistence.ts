@@ -15,7 +15,7 @@ import {
 } from '@pomegranate-ui/contracts';
 
 import { acceptLayout, rejectLayout, type LayoutResult } from './errors.js';
-import { normalizeDockOrders, normalizePanels } from './state.js';
+import { normalizeDockOrders, normalizePanels, normalizeTabGroups } from './state.js';
 
 export type LayoutEncodeResult =
   | { readonly ok: true; readonly state: WorkbenchState; readonly value: string }
@@ -53,12 +53,23 @@ function canonicalWidget(instance: WidgetInstance): WidgetInstance {
 
 function canonicalPlacement(placement: WidgetPlacement): WidgetPlacement {
   return placement.kind === 'docked'
-    ? {
+    ? placement.group === undefined ? {
         kind: 'docked',
         panelId: placement.panelId,
         edge: placement.edge,
         shelfId: placement.shelfId,
         order: placement.order
+      } : {
+        kind: 'docked',
+        panelId: placement.panelId,
+        edge: placement.edge,
+        shelfId: placement.shelfId,
+        order: placement.order,
+        group: {
+          id: placement.group.id,
+          order: placement.group.order,
+          active: placement.group.active
+        }
       }
     : {
         kind: 'floating',
@@ -128,7 +139,7 @@ function normalizeSnapshot(
     placementEntries.map(([key, value]) => [key, canonicalPlacement(value)] as const)
   );
   const placements = nullRecord(
-    Object.entries(normalizeDockOrders(rawPlacements))
+    Object.entries(normalizeTabGroups(normalizeDockOrders(rawPlacements)))
       .sort(([left], [right]) => left.localeCompare(right))
   );
   const normalized: WorkbenchState = {

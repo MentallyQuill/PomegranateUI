@@ -1,13 +1,18 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
-  import { asPanelId, asWidgetInstanceId, type WidgetManifest, type WorkbenchState } from '@pomegranate-ui/contracts';
+  import { onDestroy, onMount, tick } from 'svelte';
+  import { asPanelId, asWidgetInstanceId, asWidgetType, type WidgetManifest, type WorkbenchState } from '@pomegranate-ui/contracts';
   import { loadLayout, saveLayout } from '@pomegranate-ui/layout';
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
+  import type { WidgetFrameProjection } from '@pomegranate-ui/core';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
 
+  import deepCurrentStage from './assets/deep-current-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
+  import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
+  import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
+  import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
   import WorkbenchSurface from './recipes/WorkbenchSurface.svelte';
@@ -19,8 +24,39 @@
   const runtime = createLabRuntime();
   const storage = createLocalLayoutStorage();
   const { store, catalog, rendererRegistry } = runtime;
+  const requestedSurface = new URLSearchParams(window.location.search).get('surface');
+  const requestedSurfaceState = new URLSearchParams(window.location.search).get('surfaceState');
+  const requestedType = requestedSurface ? asWidgetType(requestedSurface) : null;
+  const requestedDefinition = requestedType ? IMPLEMENTED_SURFACES.find(({ type }) => type === requestedType) : undefined;
+  const requestedFixture = requestedType && IMPLEMENTED_SURFACE_TYPES.has(requestedType) ? getSurfaceFixture(requestedType) : undefined;
+  const initialSurfaceState = requestedFixture ? resolveSurfaceState(requestedSurfaceState, requestedFixture) : 'ready';
+  if (requestedSurface) {
+    if (requestedType && IMPLEMENTED_SURFACE_TYPES.has(requestedType)) {
+      const panelId = asPanelId('surface-preview');
+      store.dispatch({
+        type: 'panel.create',
+        panel: { id: panelId, name: 'Surface Preview', templateId: 'focus-support.v1', order: 3, configuration: { columns: 1 } }
+      });
+      store.dispatch({ type: 'panel.activate', panelId });
+      store.dispatch({
+        type: 'widget.create',
+        instance: { id: asWidgetInstanceId('surface-preview-widget'), type: requestedType, manifestVersion: '1.0.0', configuration: {} },
+        placement: {
+          kind: 'docked',
+          panelId,
+          edge: requestedDefinition?.family === 'systems' ? 'right' : requestedDefinition?.family === 'story' ? 'main' : 'left',
+          shelfId: 'primary',
+          order: 0
+        }
+      });
+    }
+  }
   const catalogState = toSvelteCatalogStore(catalog);
-  const themeController = createLabThemeController({ preference: createLocalThemePreference(window.localStorage) });
+  const themeController = createLabThemeController({
+    preference: createLocalThemePreference(window.localStorage),
+    availableAssets: new Set(['icons.minimal', 'image.deep-current-stage'])
+  });
+  const themeAssetBindings = `--pom-asset-image-deep-current-stage:url("${deepCurrentStage}")`;
   const initialThemeSnapshot = themeController.getSnapshot();
   let themeSnapshot = $state(initialThemeSnapshot);
 
@@ -59,11 +95,13 @@
     })),
     inspector: themeInspector(),
     activate: activateTheme
-  }));
+  }, initialSurfaceState));
   setWorkbenchContext({ store, catalog, rendererRegistry, hostContext });
 
   let workbench: WorkbenchState = $state(store.getState());
   let focusMode = $state(false);
+  let focusedFrame = $state<WidgetFrameProjection | null>(null);
+  let focusReturnId: string | null = null;
   let leftCollapsed = $state(false);
   let panelDialog: HTMLDialogElement;
   let panelName = $state('New Panel');
@@ -142,6 +180,22 @@
   function openPanelDialog() {
     panelDialog.showModal();
   }
+
+  function focusWidget(frame: WidgetFrameProjection) {
+    focusReturnId = frame.instanceId;
+    focusedFrame = frame;
+  }
+
+  async function returnFromFocusedWidget() {
+    const returnId = focusReturnId;
+    focusedFrame = null;
+    focusReturnId = null;
+    await tick();
+    if (!returnId) return;
+    const selector = `[data-focus-widget-for="${CSS.escape(returnId)}"]`;
+    const control = document.querySelector<HTMLElement>(selector);
+    control?.focus();
+  }
 </script>
 
 <svelte:head><title>PomegranateUI Workbench Lab</title></svelte:head>
@@ -150,11 +204,12 @@
   class:focus-mode={focusMode}
   class:left-collapsed={leftCollapsed}
   data-pom-theme={themeSnapshot.activeId}
+  data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}
-  style={themeSnapshot.cssText}
+  style={`${themeSnapshot.cssText};${themeAssetBindings}`}
 >
   <div class="atmosphere" aria-hidden="true"><i></i><i></i><i></i></div>
-  <header class="top-shelf">
+  <header class="top-shelf" data-conformance-region="shelf">
     <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
     <PanelTabs {store} class="panel-tabs" />
     <div class="story-lockup">
@@ -171,7 +226,28 @@
 
   <section class="context-rail" aria-label="Workbench context">
     <p><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
+    <div class="theme-targets" role="group" aria-label="Visual target">
+      {#each LAB_THEME_PRESETS as preset (preset.id)}
+        <button
+          type="button"
+          aria-label={preset.definition.label}
+          aria-pressed={themeSnapshot.activeId === preset.id}
+          onclick={() => activateTheme(preset.id)}
+        >{preset.definition.label}</button>
+      {/each}
+    </div>
     <div class="dock-controls">
+      {#if requestedFixture}
+        <label class="surface-preview-control">State
+          <select
+            aria-label="Surface preview state"
+            value={hostContext.surfaceState}
+            onchange={(event) => { hostContext.surfaceState = event.currentTarget.value; }}
+          >
+            {#each requestedFixture.states as fixtureState}<option value={fixtureState}>{fixtureState}</option>{/each}
+          </select>
+        </label>
+      {/if}
       <button type="button" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
       <button type="button" onclick={openPanelDialog}>Create Panel</button>
     </div>
@@ -185,14 +261,32 @@
   <section id="workbench" class="workbench-shell" aria-label="Active Workbench">
     <WorkbenchSurface {store} class="workbench-surface">
       {#snippet renderWidget(frame)}
-        <div class:widget-float={frame.placement.kind === 'floating'} style={floatingStyle(frame)}>
-          <WidgetFrame
-            {frame}
-            {store}
-            {rendererRegistry}
-            {hostContext}
-            class="widget-frame"
-          />
+        <div
+          class:widget-float={frame.placement.kind === 'floating'}
+          data-widget-type={frame.instance.type}
+          data-widget-shape={frame.manifest?.catalog?.shape}
+          data-pomegranate-placement={frame.placement.kind}
+          data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.edge : undefined}
+          data-pomegranate-shelf={frame.placement.kind === 'docked' ? frame.placement.shelfId : undefined}
+          data-pomegranate-order={frame.placement.kind === 'docked' ? frame.placement.order : undefined}
+          style={floatingStyle(frame)}
+        >
+          {#if focusedFrame?.instanceId === frame.instanceId}
+            <div
+              class="focused-widget-placeholder"
+              data-focused-widget-placeholder={frame.instanceId}
+              role="status"
+            >{frame.title} is open in Focus.</div>
+          {:else}
+            <WidgetFrame
+              {frame}
+              {store}
+              {rendererRegistry}
+              {hostContext}
+              onfocuswidget={focusWidget}
+              class="widget-frame"
+            />
+          {/if}
         </div>
       {/snippet}
     </WorkbenchSurface>
@@ -205,6 +299,16 @@
   </footer>
 
   <WidgetCatalog {catalog} oncreate={addFromCatalog} class="widget-catalog" />
+
+  {#if focusedFrame}
+    <FocusedWidget
+      frame={focusedFrame}
+      {store}
+      {rendererRegistry}
+      {hostContext}
+      onreturn={() => void returnFromFocusedWidget()}
+    />
+  {/if}
 
   <dialog bind:this={panelDialog} aria-labelledby="panel-dialog-title">
     <form onsubmit={createPanel}>

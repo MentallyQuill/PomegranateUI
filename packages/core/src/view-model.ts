@@ -43,6 +43,7 @@ export interface PanelSurfaceProjection {
 export interface WidgetActions {
   dock(edge: PanelEdge): CommandResult;
   float(): CommandResult;
+  groupWithPrevious(): CommandResult;
   remove(): CommandResult;
 }
 
@@ -175,6 +176,37 @@ export function createWidgetActions(
           height: defaults.height,
           z: nextZ
         }
+      });
+    },
+    groupWithPrevious(): CommandResult {
+      const state = store.getState();
+      const current = state.placements[instanceId];
+      if (current?.kind !== 'docked') {
+        return store.dispatch({ type: 'widget.group', instanceId, targetInstanceId: instanceId, groupId: '' });
+      }
+      const previous = Object.entries(state.placements)
+        .filter(([id, placement]) => id !== instanceId
+          && placement.kind === 'docked'
+          && placement.panelId === current.panelId
+          && placement.edge === current.edge
+          && placement.shelfId === current.shelfId
+          && placement.order < current.order)
+        .sort(([, left], [, right]) => (
+          left.kind === 'docked' && right.kind === 'docked' ? right.order - left.order : 0
+        ))[0];
+      const target = previous ? state.widgets[previous[0]] : undefined;
+      if (!target) {
+        return store.dispatch({ type: 'widget.group', instanceId, targetInstanceId: instanceId, groupId: '' });
+      }
+      const targetPlacement = state.placements[target.id];
+      const groupId = targetPlacement?.kind === 'docked' && targetPlacement.group
+        ? targetPlacement.group.id
+        : `group-${target.id}`;
+      return store.dispatch({
+        type: 'widget.group',
+        instanceId,
+        targetInstanceId: target.id,
+        groupId
       });
     },
     remove(): CommandResult {

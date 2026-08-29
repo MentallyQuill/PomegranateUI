@@ -63,7 +63,7 @@ export function createLabThemeController(options: {
   readonly availableAssets?: ReadonlySet<string>;
 } = {}) {
   const presets = options.presets ?? LAB_THEME_PRESETS;
-  const availableAssets = options.availableAssets ?? new Set(['icons.minimal']);
+  const availableAssets = options.availableAssets ?? new Set(['icons.minimal', 'image.deep-current-stage']);
   const byId = new Map(presets.map((preset) => [preset.id, preset.definition]));
 
   const resolvePreset = (id: string): ThemeActivationResult => {
