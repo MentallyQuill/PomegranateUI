@@ -5,5 +5,7 @@ export * from './canvas.js';
 export * from './compile.js';
 export * from './conformance.js';
 export * from './migrate.js';
+export * from './migrate-target.js';
 export * from './policy.js';
 export * from './resolve.js';
+export * from './resolve-target.js';
