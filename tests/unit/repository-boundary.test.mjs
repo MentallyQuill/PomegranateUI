@@ -207,6 +207,19 @@ test('framework-neutral packages do not import a view framework or DOM', async (
   }
 });
 
+test('implemented Lab surfaces are source-owned and never import preserved prototype runtime', async () => {
+  for (const relativePath of [
+    'apps/workbench-lab/src/mockup/implemented-surfaces.ts',
+    'apps/workbench-lab/src/mockup/surface-fixtures.ts',
+    'apps/workbench-lab/src/mockup/renderers/ImplementedWidget.svelte',
+    'apps/workbench-lab/src/recipes/WidgetAnatomy.svelte',
+    'apps/workbench-lab/src/recipes/WidgetStateSurface.svelte'
+  ]) {
+    const source = await readFile(path.join(root, relativePath), 'utf8');
+    assert.doesNotMatch(source, /prototypes\/sonder-baseline|design\/widget-specifications|READY_BLUEPRINT/, relativePath);
+  }
+});
+
 test('active-source scans exclude generated package output', async () => {
   const files = await walk(path.join(root, 'packages'));
   assert.equal(files.some((file) => file.split(path.sep).includes('dist')), false);

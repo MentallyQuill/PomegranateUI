@@ -77,7 +77,8 @@ test.describe('Deep Current interaction conformance', () => {
 
       const context = await browser.newContext({
         viewport,
-        hasTouch: scenario.id === 'dc-int-coarse-targets'
+        hasTouch: scenario.id === 'dc-int-coarse-targets',
+        isMobile: scenario.id === 'dc-int-coarse-targets'
       });
       try {
         const page = await context.newPage();

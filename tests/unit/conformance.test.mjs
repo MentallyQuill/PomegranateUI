@@ -11,7 +11,7 @@ import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../conformance/compare.ts';
 import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, writeMeasurementEvidence } from '../conformance/evidence.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
-import { DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
+import { DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
 import { assertScenarioResolution } from '../conformance/runner.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
@@ -585,6 +585,20 @@ test('Widget Overhaul and Lab interaction drivers keep selectors and imports ind
   assert.doesNotMatch(labDriver, /#results|\.pass|drivers\/reference|widget-overhaul/);
 });
 
+test('Widget and Catalog conformance drivers keep preserved and Lab selectors independent', async () => {
+  const [referenceSurfaces, labSurfaces, referenceCatalog, labCatalog] = await Promise.all([
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/reference/widget-overhaul-surfaces.ts'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/workbench-lab/widget-surfaces.ts'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/reference/widget-overhaul-catalog.ts'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/workbench-lab/catalog.ts'), 'utf8')
+  ]);
+
+  assert.doesNotMatch(referenceSurfaces, /data-surface-|implemented-widget|workbench-lab/);
+  assert.doesNotMatch(referenceCatalog, /catalog-miniature|data-renderer-status|workbench-lab/);
+  assert.doesNotMatch(labSurfaces, /\.sonder-|SonderWidgetMockup|\.\.\/reference/);
+  assert.doesNotMatch(labCatalog, /\.sonder-|SonderWidgetMockup|widget-overhaul|\.\.\/reference/);
+});
+
 test('Lab readiness permits responsive docks to remain intentionally hidden', () => {
   assert.deepEqual(VISIBLE_IMPLEMENTATION_REGION_IDS, ['shelf', 'stage', 'composer']);
 });
@@ -633,6 +647,30 @@ test('the reviewed Deep Current interaction baseline freezes every approved beha
       persistenceVerified: true,
       keyboardAccessible: true
     });
+  }
+});
+
+test('the reviewed Deep Current Widget baseline freezes all 49 surfaces and six Catalog scenarios', async () => {
+  const baseline = JSON.parse(await readFile(
+    path.join(repositoryRoot, 'tests/conformance/baselines/deep-current-widgets.json'),
+    'utf8'
+  ));
+  const scenarios = [...DEEP_CURRENT_WIDGET_SCENARIOS, ...DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS];
+  assert.equal(baseline.schemaVersion, 'pomegranate.ui.conformance-baseline.v1');
+  assert.equal(baseline.authority, 'widget-overhaul');
+  assert.equal(baseline.authoritySha256, AUTHORITY_RECORDS[3].sha256);
+  assert.deepEqual(baseline.measurementProfiles, {
+    surface: 'deep-current-widget-surface',
+    catalog: 'deep-current-catalog'
+  });
+  assert.deepEqual(Object.keys(baseline.scenarios), scenarios.map(({ id }) => id));
+  assert.equal(DEEP_CURRENT_WIDGET_SCENARIOS.length, 49);
+  assert.equal(DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS.length, 6);
+  for (const scenario of DEEP_CURRENT_WIDGET_SCENARIOS) {
+    assert.deepEqual(baseline.scenarios[scenario.id], { pass: true, profile: 'surface' });
+  }
+  for (const scenario of DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS) {
+    assert.deepEqual(baseline.scenarios[scenario.id], { pass: true, profile: 'catalog' });
   }
 });
 

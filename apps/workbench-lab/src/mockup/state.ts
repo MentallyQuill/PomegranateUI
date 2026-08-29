@@ -23,13 +23,13 @@ export const LAB_WIDGET_TYPES = Object.freeze({
   composer: asWidgetType('story.composer'),
   worldState: asWidgetType('systems.world-state'),
   ambience: asWidgetType('story.room-ambience'),
-  promiseLedger: asWidgetType('systems.promise-ledger'),
+  characterRelationships: asWidgetType('systems.character-relationships'),
   library: asWidgetType('library.workspace'),
   characterCard: asWidgetType('library.character-card'),
   loreEntries: asWidgetType('library.lore-entries'),
   themeLibrary: asWidgetType('settings.theme'),
-  themeSettings: asWidgetType('settings.custom-theme'),
-  readingLayout: asWidgetType('settings.reading-layout')
+  accessibility: asWidgetType('settings.accessibility'),
+  promptEditor: asWidgetType('settings.prompt-editor')
 });
 
 function requireState(result: LayoutResult): WorkbenchState {
@@ -47,17 +47,17 @@ export function createLabState(): WorkbenchState {
 
   const fixtures = [
     ['scene-characters', LAB_WIDGET_TYPES.characters, LAB_PANEL_IDS.scene, 'left', 0, {}],
-    ['scene-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.scene, 'left', 1, {}],
+    ['scene-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.scene, 'left', 1, {}],
     ['scene-transcript', LAB_WIDGET_TYPES.transcript, LAB_PANEL_IDS.scene, 'main', 0, {}],
     ['scene-composer', LAB_WIDGET_TYPES.composer, LAB_PANEL_IDS.scene, 'main', 1, {}],
     ['scene-world', LAB_WIDGET_TYPES.worldState, LAB_PANEL_IDS.scene, 'right', 0, {}],
     ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 1, {}],
-    ['scene-promises', LAB_WIDGET_TYPES.promiseLedger, LAB_PANEL_IDS.scene, 'right', 2, {}],
+    ['scene-relationships', LAB_WIDGET_TYPES.characterRelationships, LAB_PANEL_IDS.scene, 'right', 2, {}],
     ['library-main', LAB_WIDGET_TYPES.library, LAB_PANEL_IDS.library, 'main', 0, {}],
     ['library-character', LAB_WIDGET_TYPES.characterCard, LAB_PANEL_IDS.library, 'right', 0, { fixtureMode: 'failure' }],
     ['library-lore', LAB_WIDGET_TYPES.loreEntries, LAB_PANEL_IDS.library, 'right', 1, {}],
     ['settings-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.settings, 'left', 0, {}],
-    ['settings-reading', LAB_WIDGET_TYPES.readingLayout, LAB_PANEL_IDS.settings, 'main', 0, {}]
+    ['settings-accessibility', LAB_WIDGET_TYPES.accessibility, LAB_PANEL_IDS.settings, 'main', 0, {}]
   ] as const;
   for (const [id, type, panelId, edge, order, configuration] of fixtures) {
     state = requireState(createWidget(state, {
@@ -70,8 +70,8 @@ export function createLabState(): WorkbenchState {
     }));
   }
   state = requireState(createWidget(state, {
-    id: asWidgetInstanceId('settings-theme-settings'),
-    type: LAB_WIDGET_TYPES.themeSettings,
+    id: asWidgetInstanceId('settings-prompt-editor'),
+    type: LAB_WIDGET_TYPES.promptEditor,
     manifestVersion: '1.0.0',
     configuration: {}
   }, {

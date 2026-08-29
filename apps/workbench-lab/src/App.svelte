@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
-  import { asPanelId, asWidgetInstanceId, type WidgetManifest, type WorkbenchState } from '@pomegranate-ui/contracts';
+  import { asPanelId, asWidgetInstanceId, asWidgetType, type WidgetManifest, type WorkbenchState } from '@pomegranate-ui/contracts';
   import { loadLayout, saveLayout } from '@pomegranate-ui/layout';
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import type { WidgetFrameProjection } from '@pomegranate-ui/core';
@@ -8,6 +8,8 @@
 
   import deepCurrentStage from './assets/deep-current-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
+  import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
+  import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
   import FocusedWidget from './recipes/FocusedWidget.svelte';
@@ -22,6 +24,33 @@
   const runtime = createLabRuntime();
   const storage = createLocalLayoutStorage();
   const { store, catalog, rendererRegistry } = runtime;
+  const requestedSurface = new URLSearchParams(window.location.search).get('surface');
+  const requestedSurfaceState = new URLSearchParams(window.location.search).get('surfaceState');
+  const requestedType = requestedSurface ? asWidgetType(requestedSurface) : null;
+  const requestedDefinition = requestedType ? IMPLEMENTED_SURFACES.find(({ type }) => type === requestedType) : undefined;
+  const requestedFixture = requestedType && IMPLEMENTED_SURFACE_TYPES.has(requestedType) ? getSurfaceFixture(requestedType) : undefined;
+  const initialSurfaceState = requestedFixture ? resolveSurfaceState(requestedSurfaceState, requestedFixture) : 'ready';
+  if (requestedSurface) {
+    if (requestedType && IMPLEMENTED_SURFACE_TYPES.has(requestedType)) {
+      const panelId = asPanelId('surface-preview');
+      store.dispatch({
+        type: 'panel.create',
+        panel: { id: panelId, name: 'Surface Preview', templateId: 'focus-support.v1', order: 3, configuration: { columns: 1 } }
+      });
+      store.dispatch({ type: 'panel.activate', panelId });
+      store.dispatch({
+        type: 'widget.create',
+        instance: { id: asWidgetInstanceId('surface-preview-widget'), type: requestedType, manifestVersion: '1.0.0', configuration: {} },
+        placement: {
+          kind: 'docked',
+          panelId,
+          edge: requestedDefinition?.family === 'systems' ? 'right' : requestedDefinition?.family === 'story' ? 'main' : 'left',
+          shelfId: 'primary',
+          order: 0
+        }
+      });
+    }
+  }
   const catalogState = toSvelteCatalogStore(catalog);
   const themeController = createLabThemeController({
     preference: createLocalThemePreference(window.localStorage),
@@ -66,7 +95,7 @@
     })),
     inspector: themeInspector(),
     activate: activateTheme
-  }));
+  }, initialSurfaceState));
   setWorkbenchContext({ store, catalog, rendererRegistry, hostContext });
 
   let workbench: WorkbenchState = $state(store.getState());
@@ -175,6 +204,7 @@
   class:focus-mode={focusMode}
   class:left-collapsed={leftCollapsed}
   data-pom-theme={themeSnapshot.activeId}
+  data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}
   style={`${themeSnapshot.cssText};${themeAssetBindings}`}
 >
@@ -207,6 +237,17 @@
       {/each}
     </div>
     <div class="dock-controls">
+      {#if requestedFixture}
+        <label class="surface-preview-control">State
+          <select
+            aria-label="Surface preview state"
+            value={hostContext.surfaceState}
+            onchange={(event) => { hostContext.surfaceState = event.currentTarget.value; }}
+          >
+            {#each requestedFixture.states as fixtureState}<option value={fixtureState}>{fixtureState}</option>{/each}
+          </select>
+        </label>
+      {/if}
       <button type="button" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
       <button type="button" onclick={openPanelDialog}>Create Panel</button>
     </div>

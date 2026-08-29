@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import { IMPLEMENTED_SURFACES } from '../../apps/workbench-lab/src/mockup/implemented-surfaces.ts';
+import { SURFACE_FIXTURES } from '../../apps/workbench-lab/src/mockup/surface-fixtures.ts';
 
 async function dragTo(
   page: import('@playwright/test').Page,
@@ -27,7 +29,7 @@ test('native workbench POM-PANEL-07856BFE9A POM-PANEL-DF4EC7C581 activates a Pan
   await expect(page.getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
   await expect(story).toContainText('story-lab-reservoir');
   await expect(page.getByRole('alert', { name: 'Character Card renderer failed' })).toBeVisible();
-  await expect(page.getByRole('status', { name: 'Library renderer unavailable' })).toBeVisible();
+  await expect(page.locator('[data-surface-type="library.workspace"]')).toBeVisible();
 });
 
 test('native workbench POM-PANEL-0C32491298 POM-PANEL-E6D6A0E64B appends menu docking to an occupied edge', async ({ page }) => {
@@ -37,7 +39,7 @@ test('native workbench POM-PANEL-0C32491298 POM-PANEL-E6D6A0E64B appends menu do
   await world.getByRole('button', { name: 'Dock left' }).click();
   await expect(leftDock.getByRole('article')).toHaveCount(3);
   await expect(leftDock.getByRole('article').nth(0)).toHaveAttribute('aria-label', 'Characters (Story)');
-  await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Theme Settings');
+  await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Theme Library');
   await expect(leftDock.getByRole('article').nth(2)).toHaveAttribute('aria-label', 'World State');
 });
 
@@ -221,7 +223,7 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
     x: sceneSeam.x + sceneSeam.width / 2,
     y: sceneSeam.y + sceneSeam.height / 2
   });
-  await page.getByRole('article', { name: 'Promise Ledger' }).getByRole('button', { name: 'Float' }).click();
+  await page.getByRole('article', { name: 'Character Relationships' }).getByRole('button', { name: 'Float' }).click();
 
   await page.getByRole('tab', { name: 'Library' }).click();
   const libraryLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
@@ -250,7 +252,7 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   await page.getByRole('tab', { name: 'Scene' }).click();
   await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '420');
   await expect(page.locator('[data-widget-type="systems.world-state"]')).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
-  await expect(page.locator('[data-widget-type="systems.promise-ledger"]')).toHaveAttribute('data-pomegranate-placement', 'floating');
+  await expect(page.locator('[data-widget-type="systems.character-relationships"]')).toHaveAttribute('data-pomegranate-placement', 'floating');
 });
 
 test('native workbench POM-PERSIST-842D422EB3 POM-PERSIST-9FA69F9FC1 restores a user Panel template and order', async ({ page }) => {
@@ -357,4 +359,103 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
   } finally {
     await context.close();
   }
+});
+
+test('all 49 reviewed Widget surfaces expose exact ready, state, focus, and responsive contracts', async ({ page }) => {
+  test.setTimeout(120_000);
+  for (const surface of IMPLEMENTED_SURFACES) {
+    const fixture = SURFACE_FIXTURES.get(surface.type);
+    if (!fixture) throw new Error(`Missing fixture for ${surface.type}.`);
+    await page.goto(`http://127.0.0.1:4174/?surface=${encodeURIComponent(surface.type)}`);
+    await page.evaluate(() => document.fonts.ready);
+    const article = page.getByRole('article', { name: surface.title });
+    const implemented = article.locator(`[data-surface-type="${surface.type}"]`);
+    await expect(implemented).toHaveAttribute('data-surface-state', 'ready');
+    await expect(implemented).toHaveAttribute('data-surface-scope', fixture.scope);
+
+    const containment = await article.evaluate((root) => {
+      const elements = [root, ...root.querySelectorAll<HTMLElement>('*')];
+      return {
+        horizontalOverflow: root.scrollWidth - root.clientWidth,
+        scrollOwners: elements.filter((node) => (
+          !['TEXTAREA', 'INPUT', 'SELECT'].includes(node.tagName)
+            && ['auto', 'scroll'].includes(getComputedStyle(node).overflowY)
+            && node.scrollHeight > node.clientHeight + 1
+        )).length,
+        unnamedButtons: elements.filter((node) => node instanceof HTMLButtonElement && !(node.getAttribute('aria-label') ?? node.textContent ?? '').trim()).length
+      };
+    });
+    expect(containment.horizontalOverflow, `${surface.type} horizontal overflow`).toBeLessThanOrEqual(1);
+    expect(containment.scrollOwners, `${surface.type} scroll owners`).toBeLessThanOrEqual(1);
+    expect(containment.unnamedButtons, `${surface.type} unnamed buttons`).toBe(0);
+
+    const statePicker = page.getByRole('combobox', { name: 'Surface preview state' });
+    for (const fixtureState of fixture.states) {
+      await statePicker.selectOption(fixtureState);
+      await expect(implemented).toHaveAttribute('data-surface-state', fixtureState);
+    }
+    await statePicker.selectOption('ready');
+
+    if (surface.family !== 'story') {
+      const side = surface.family === 'systems' ? 'right' : 'left';
+      const separator = page.getByRole('separator', { name: `Resize ${side} toolbar` });
+      await separator.press('Home');
+      expect((await article.boundingBox())?.width, `${surface.type} compact width`).toBeLessThanOrEqual(202);
+      expect(await article.evaluate((root) => root.scrollWidth - root.clientWidth), `${surface.type} compact overflow`).toBeLessThanOrEqual(1);
+      await separator.press('End');
+      expect((await article.boundingBox())?.width, `${surface.type} wide width`).toBeLessThanOrEqual(422);
+      expect(await article.evaluate((root) => root.scrollWidth - root.clientWidth), `${surface.type} wide overflow`).toBeLessThanOrEqual(1);
+    }
+
+    await article.getByRole('button', { name: 'Focus Widget' }).click();
+    const dialog = page.getByRole('dialog', { name: `Focused ${surface.title}` });
+    await expect(dialog.locator(`[data-surface-type="${surface.type}"]`)).toHaveCount(1);
+    await dialog.getByRole('button', { name: 'Back to Workbench' }).click();
+    await expect(article.getByRole('button', { name: 'Focus Widget' })).toBeFocused();
+  }
+});
+
+test('Catalog preserves all 94 identities, honest previews, search, and placement', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.getByRole('button', { name: 'Create Panel' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
+  await dialog.getByRole('textbox', { name: 'Panel name' }).fill('Catalog Proof');
+  await dialog.getByRole('button', { name: 'Create Panel' }).click();
+  await expect(page.getByRole('tab', { name: 'Catalog Proof' })).toHaveAttribute('aria-selected', 'true');
+
+  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
+  const results = catalog.getByRole('listitem');
+  await expect(results).toHaveCount(94);
+  await expect(catalog.locator('.catalog-miniature')).toHaveCount(94);
+  await expect(catalog.locator('[data-renderer-status="implemented"]')).toHaveCount(49);
+  await expect(catalog.locator('[data-renderer-status="unavailable"]')).toHaveCount(45);
+
+  for (const [category, total] of [['story', 12], ['library', 19], ['systems', 21], ['settings', 39], ['extensions', 3]] as const) {
+    await catalog.getByRole('button', { name: category, exact: true }).click();
+    await expect(results, `${category} Catalog total`).toHaveCount(total);
+  }
+  await catalog.getByRole('button', { name: 'All', exact: true }).click();
+  const search = catalog.getByRole('searchbox', { name: 'Search Widgets' });
+  await search.fill('character relationships');
+  await expect(results).toHaveCount(1);
+  await expect(results.first()).toContainText('Character Relationships');
+  await search.fill('');
+
+  await catalog.getByRole('button', { name: 'Compact', exact: true }).click();
+  await expect(catalog.locator('.catalog-miniature')).toHaveCount(0);
+  await expect(results).toHaveCount(94);
+  await catalog.getByRole('button', { name: 'Visual', exact: true }).click();
+  await expect(catalog.locator('.catalog-miniature')).toHaveCount(94);
+
+  await catalog.getByRole('button', { name: /^Add / }).evaluateAll((buttons) => {
+    for (const button of buttons) (button as HTMLButtonElement).click();
+  });
+  await catalog.getByRole('button', { name: 'Close Catalog' }).click();
+  const activePanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
+  await expect(activePanel.getByRole('article')).toHaveCount(94);
+  await expect(activePanel.locator('.implemented-widget')).toHaveCount(49);
+  await expect(activePanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(45);
+  const identities = await activePanel.locator('[data-widget-type]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-widget-type')));
+  expect(new Set(identities).size).toBe(94);
 });

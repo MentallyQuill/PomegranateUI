@@ -26,6 +26,7 @@ export interface LabHostContext {
   readonly location: string;
   readonly timeLabel: string;
   readonly systemStatus: string;
+  surfaceState: string;
   readonly theme: LabThemeHostContext;
 }
 
@@ -38,6 +39,6 @@ const LAB_STORY_CONTEXT = Object.freeze({
   systemStatus: 'Local fixture ready'
 });
 
-export function createLabHostContext(theme: LabThemeHostContext): LabHostContext {
-  return { ...LAB_STORY_CONTEXT, theme };
+export function createLabHostContext(theme: LabThemeHostContext, surfaceState = 'ready'): LabHostContext {
+  return { ...LAB_STORY_CONTEXT, surfaceState, theme };
 }

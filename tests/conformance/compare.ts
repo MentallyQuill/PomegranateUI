@@ -90,9 +90,37 @@ const interactionProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('functional.keyboardAccessible')
 ]);
 
+const widgetSurfaceProfile: readonly ComparisonDefinition[] = Object.freeze([
+  exact('functional.authorityCasePassed'),
+  exact('functional.rendered'),
+  exact('functional.named'),
+  exact('functional.ready'),
+  exact('functional.noHorizontalOverflow'),
+  exact('functional.oneScrollOwner'),
+  exact('functional.keyboardAccessible'),
+  exact('content.scope'),
+  exact('content.boundary'),
+  exact('content.rowLabels'),
+  exact('content.actions')
+]);
+
+const catalogProfile: readonly ComparisonDefinition[] = Object.freeze([
+  exact('functional.authorityCasePassed'),
+  exact('functional.outcomeReached'),
+  exact('functional.keyboardAccessible'),
+  exact('inventory.total'),
+  exact('inventory.story'),
+  exact('inventory.library'),
+  exact('inventory.systems'),
+  exact('inventory.settings'),
+  exact('inventory.extensions')
+]);
+
 export const MEASUREMENT_PROFILES: ReadonlyMap<string, readonly ComparisonDefinition[]> = new Map([
   ['deep-current-shell', shellProfile],
-  ['deep-current-interaction', interactionProfile]
+  ['deep-current-interaction', interactionProfile],
+  ['deep-current-widget-surface', widgetSurfaceProfile],
+  ['deep-current-catalog', catalogProfile]
 ]);
 
 function valueAtPath(root: NormalizedValue, evidencePath: string): NormalizedValue {

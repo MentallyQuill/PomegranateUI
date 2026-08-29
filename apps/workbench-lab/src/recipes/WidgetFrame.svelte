@@ -40,6 +40,7 @@
   aria-label={frame.title}
   data-pomegranate-widget={frame.instanceIdAttribute}
   data-pomegranate-placement={frame.placement.kind}
+  data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.edge : 'floating'}
 >
   <header class:is-dragging={dragging}>
     <h2>{frame.title}</h2>

@@ -1,11 +1,18 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS } from '../../tests/conformance/manifest.ts';
+import {
+  DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS,
+  DEEP_CURRENT_INTERACTION_SCENARIOS,
+  DEEP_CURRENT_MACRO_SCENARIOS,
+  DEEP_CURRENT_WIDGET_SCENARIOS
+} from '../../tests/conformance/manifest.ts';
 
 const DEEP_CURRENT_SCENARIOS = Object.freeze([
   ...DEEP_CURRENT_MACRO_SCENARIOS,
-  ...DEEP_CURRENT_INTERACTION_SCENARIOS
+  ...DEEP_CURRENT_INTERACTION_SCENARIOS,
+  ...DEEP_CURRENT_WIDGET_SCENARIOS,
+  ...DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS
 ]);
 
 export function parseInspectionArguments(argv, scenarios = DEEP_CURRENT_SCENARIOS) {

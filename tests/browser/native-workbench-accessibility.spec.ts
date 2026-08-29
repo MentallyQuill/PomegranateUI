@@ -35,7 +35,7 @@ test('native workbench Catalog supports keyboard placement and stable attributes
   await add.focus();
   await add.press('Enter');
   await expect(page.getByRole('article', { name: 'Accessibility' })).toHaveAttribute('data-pomegranate-placement', 'docked');
-  await expect(page.getByRole('status', { name: 'Accessibility renderer unavailable' })).toBeVisible();
+  await expect(page.locator('[data-surface-type="settings.accessibility"]')).toHaveAttribute('data-surface-state', 'ready');
 });
 
 for (const viewport of [

@@ -19,7 +19,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByText('The Reservoir at Blue Hour')).toBeVisible();
     expect(screen.getByLabelText('Active story identity')).toHaveTextContent('story-lab-reservoir');
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Library', 'Settings']);
-    for (const title of ['Characters (Story)', 'Theme Settings', 'Transcript', 'Composer', 'World State', 'Room Ambience', 'Promise Ledger']) {
+    for (const title of ['Characters (Story)', 'Theme Library', 'Transcript', 'Composer', 'World State', 'Room Ambience', 'Character Relationships']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();
     }
     expect([...container.querySelectorAll('[data-conformance-region]')].map((region) => region.getAttribute('data-conformance-region'))).toEqual([
@@ -65,13 +65,13 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(dialog).not.toHaveAttribute('open');
   });
 
-  it('contains unavailable and failed renderers without disabling siblings', async () => {
+  it('contains one failed implemented renderer without disabling its implemented siblings', async () => {
     const user = userEvent.setup();
     render(App);
     await user.click(screen.getByRole('tab', { name: 'Library' }));
-    expect(screen.getByRole('status', { name: 'Library renderer unavailable' })).toBeVisible();
+    expect(screen.getByText('Global Library · all material')).toBeVisible();
     expect(screen.getByRole('alert', { name: 'Character Card renderer failed' })).toBeVisible();
-    expect(screen.getByRole('status', { name: 'Lore Entry Tree renderer unavailable' })).toBeVisible();
+    expect(screen.getByText('Drowned Observatory · entry tree')).toBeVisible();
   });
 
   it('routes Panel reorder, docking, and floating through the public store', async () => {

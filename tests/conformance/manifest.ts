@@ -8,6 +8,7 @@ import {
   type ManifestValidationOptions,
   type ValidatedConformanceManifest
 } from './types.ts';
+import { DEEP_CURRENT_CATALOG_SCENARIOS, DEEP_CURRENT_WIDGET_SURFACES } from './widget-manifest.ts';
 
 const atmosphericPath = 'prototypes/sonder-baseline/atmospheric-workbench/sonder-workbench-calibration.html';
 const atmosphericSha256 = '38878d2cf8a86f5e879faba4b41a214e4293f22ed755975023e02c962d61b913';
@@ -82,6 +83,44 @@ export const DEEP_CURRENT_INTERACTION_SCENARIOS: readonly ConformanceScenario[] 
   createInteractionScenario('dc-int-catalog-place', 'Place a Catalog Widget with the keyboard', 'catalog-keyboard-placement', ['keyboard'], 'widget-standard'),
   createInteractionScenario('dc-int-coarse-targets', 'Expose coarse-pointer interaction targets', 'scene-coarse-pointer', ['coarse-pointer'])
 ]);
+
+export const DEEP_CURRENT_WIDGET_SCENARIOS: readonly ConformanceScenario[] = Object.freeze(
+  DEEP_CURRENT_WIDGET_SURFACES.map((surfaceCase) => Object.freeze({
+    id: surfaceCase.scenarioId,
+    title: surfaceCase.title,
+    target: 'deep-current' as const,
+    authority: 'widget-overhaul',
+    authorityPath: widgetOverhaulPath,
+    authoritySha256: widgetOverhaulSha256,
+    viewport: 'standard',
+    inputModes: Object.freeze(['fine-pointer', 'keyboard'] as const),
+    referenceState: `${surfaceCase.type}:ready`,
+    implementationState: `${surfaceCase.type}:ready`,
+    capture: Object.freeze({ kind: 'viewport' as const }),
+    measurementProfile: 'deep-current-widget-surface',
+    assertionProfile: 'deep-current-widget-surface',
+    allowedDeviationIds: Object.freeze([])
+  }))
+);
+
+export const DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS: readonly ConformanceScenario[] = Object.freeze(
+  DEEP_CURRENT_CATALOG_SCENARIOS.map((catalogCase) => Object.freeze({
+    id: catalogCase.scenarioId,
+    title: catalogCase.title,
+    target: 'deep-current' as const,
+    authority: 'widget-overhaul',
+    authorityPath: widgetOverhaulPath,
+    authoritySha256: widgetOverhaulSha256,
+    viewport: 'standard',
+    inputModes: Object.freeze(['fine-pointer', 'coarse-pointer', 'keyboard'] as const),
+    referenceState: catalogCase.scenarioId,
+    implementationState: catalogCase.scenarioId,
+    capture: Object.freeze({ kind: 'viewport' as const }),
+    measurementProfile: 'deep-current-catalog',
+    assertionProfile: 'deep-current-catalog',
+    allowedDeviationIds: Object.freeze([])
+  }))
+);
 
 export async function hashAuthorityFile(absolutePath: string): Promise<string> {
   return createHash('sha256').update(await readFile(absolutePath)).digest('hex');
