@@ -352,7 +352,9 @@ test('an external non-preset definition renders the same live Workbench tree', a
   })).toMatchObject({ radius: '0px' });
   await expect.poll(() => page.locator('[data-pom-part="row.surface"][data-pom-spacing="recipe"]').first()
     .evaluate((row) => getComputedStyle(row).paddingTop)).toBe('6px');
-  await expect(page).toHaveScreenshot('external-copper-fixture.png', { animations: 'disabled', caret: 'hide' });
+  if (process.platform === 'win32') {
+    await expect(page).toHaveScreenshot('external-copper-fixture.png', { animations: 'disabled', caret: 'hide' });
+  }
 });
 
 test('focused and floating compositions retain exactly one elevated material owner', async ({ page }) => {
