@@ -10,11 +10,14 @@ async function fresh(page: Page, width: number, height: number) {
   await page.evaluate(() => document.fonts.ready);
 }
 
-type ThemeLabel = 'Deep Current' | 'PomOS' | 'Bunny';
+type ThemeLabel = 'Deep Current' | 'PomOS' | 'Bunny' | 'Ash & Amber';
 
 async function selectTheme(page: Page, label: ThemeLabel) {
   await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: label, exact: true }).click();
-  const themeId = label === 'Deep Current' ? 'deep-current' : label === 'PomOS' ? 'pom-neutral' : 'bunny';
+  const themeId = label === 'Deep Current' ? 'deep-current'
+    : label === 'PomOS' ? 'pom-neutral'
+      : label === 'Bunny' ? 'bunny'
+        : 'ash-amber';
   await expect(page.locator('main')).toHaveAttribute('data-pom-theme', themeId);
   await page.getByRole('tab', { name: 'Scene' }).click();
   await page.evaluate(async () => {
@@ -94,6 +97,21 @@ test('native workbench exposes the two original visual flexibility targets', asy
     await selectTheme(page, theme.label);
     await shot(page, `compact-${theme.name}.png`);
   }
+});
+
+test('Ash and Amber freezes the reviewed wide, compact, and Catalog target states', async ({ page }) => {
+  await fresh(page, 1920, 1280);
+  await selectTheme(page, 'Ash & Amber');
+  await shot(page, 'wide-ash-amber.png');
+
+  await fresh(page, 390, 844);
+  await selectTheme(page, 'Ash & Amber');
+  await shot(page, 'compact-ash-amber.png');
+
+  await fresh(page, 1440, 900);
+  await selectTheme(page, 'Ash & Amber');
+  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  await shot(page, 'wide-catalog-ash-amber.png');
 });
 
 test('material stress states stay coherent at wide and compact viewports', async ({ page }) => {

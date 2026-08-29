@@ -1,6 +1,7 @@
 import type { ViewportDefinition } from './types.ts';
 
 export const CONFORMANCE_VIEWPORTS: ReadonlyMap<string, ViewportDefinition> = new Map<string, ViewportDefinition>([
+  ['recording-wide', Object.freeze({ width: 1920, height: 1280 })],
   ['wide', Object.freeze({ width: 1600, height: 900 })],
   ['standard', Object.freeze({ width: 1440, height: 900 })],
   ['medium', Object.freeze({ width: 1180, height: 800 })],

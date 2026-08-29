@@ -42,6 +42,11 @@ export const AUTHORITY_RECORDS: readonly AuthorityRecord[] = Object.freeze([
     id: 'bunny-original-reference',
     path: 'design/theme-targets/bunny-reference.html',
     sha256: 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59'
+  }),
+  Object.freeze({
+    id: 'ash-amber-recording-frame',
+    path: 'design/theme-targets/ash-amber/sonderui-rw2-1-t80.png',
+    sha256: '6403a7bcfd8f43195fa42c5d9715cc79964c8b7569f47c22fdeefd1b89804997'
   })
 ]);
 

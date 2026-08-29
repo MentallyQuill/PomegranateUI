@@ -25,7 +25,7 @@ export class ConformanceError extends Error {
   }
 }
 
-export type ThemeTarget = 'deep-current' | 'pom-neutral' | 'bunny';
+export type ThemeTarget = 'deep-current' | 'pom-neutral' | 'bunny' | 'ash-amber';
 export type InputMode = 'fine-pointer' | 'coarse-pointer' | 'keyboard';
 
 export interface AuthorityRecord {

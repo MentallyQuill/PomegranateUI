@@ -164,10 +164,12 @@ test('conformance authorities and viewports expose the independently recorded co
       'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html': '79aa122abae1d51dff5d1cf292590efe03a53641b2ff44008e6a165beb3db8b3',
       'design/theme-targets/pom-neutral-reference.html': '6a188907925f0af7157f66017a2015e07dbe599d14413d2a590e390f0d97bd50',
       'design/theme-targets/pomos-reference.html': 'a46dc956b0664643506b5023836cd02fb2e9f64ca538acff1aca7cc7c34a7af9',
-      'design/theme-targets/bunny-reference.html': 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59'
+      'design/theme-targets/bunny-reference.html': 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59',
+      'design/theme-targets/ash-amber/sonderui-rw2-1-t80.png': '6403a7bcfd8f43195fa42c5d9715cc79964c8b7569f47c22fdeefd1b89804997'
     }
   );
   assert.deepEqual(Object.fromEntries(CONFORMANCE_VIEWPORTS), {
+    'recording-wide': { width: 1920, height: 1280 },
     wide: { width: 1600, height: 900 },
     standard: { width: 1440, height: 900 },
     medium: { width: 1180, height: 800 },
@@ -854,6 +856,7 @@ test('inspection requires one exact known scenario without permitting update mod
   assert.equal(parseInspectionArguments(['--scenario', 'dc-int-tab-merge']).id, 'dc-int-tab-merge');
   assert.equal(parseInspectionArguments(['--scenario', 'pn-scene-compact']).id, 'pn-scene-compact');
   assert.equal(parseInspectionArguments(['--scenario', 'bn-catalog-wide']).id, 'bn-catalog-wide');
+  assert.equal(parseInspectionArguments(['--scenario', 'aa-scene-wide']).id, 'aa-scene-wide');
   assert.throws(() => parseInspectionArguments([]), /--scenario <id> is required/);
   assert.throws(() => parseInspectionArguments(['--scenario', 'unknown']), /Unknown conformance scenario/);
   assert.throws(() => parseInspectionArguments(['--scenario', 'dc-shell-wide', '--update-snapshots']), /Unexpected inspection argument/);

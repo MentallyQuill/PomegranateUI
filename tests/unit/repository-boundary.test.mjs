@@ -52,7 +52,7 @@ test('root check composes every native and preservation gate in the approved ord
 
 test('repository exposes the frozen conformance command contract', async () => {
   const rootPackage = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
-  assert.equal(rootPackage.scripts['test:conformance:unit'], 'node --test tests/unit/conformance.test.mjs');
+  assert.equal(rootPackage.scripts['test:conformance:unit'], 'node --test tests/unit/conformance.test.mjs tests/unit/ash-amber-conformance.test.mjs');
   assert.equal(rootPackage.scripts['test:conformance:deep-current'], 'playwright test --config playwright.conformance.config.mjs');
   assert.equal(rootPackage.scripts['test:conformance'], 'npm run test:conformance:unit && npm run test:conformance:deep-current');
   assert.equal(rootPackage.scripts['inspect:conformance'], 'node scripts/conformance/inspect.mjs');

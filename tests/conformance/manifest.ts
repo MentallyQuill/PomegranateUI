@@ -18,6 +18,8 @@ const pomosReferencePath = 'design/theme-targets/pomos-reference.html';
 const pomosReferenceSha256 = 'a46dc956b0664643506b5023836cd02fb2e9f64ca538acff1aca7cc7c34a7af9';
 const bunnyReferencePath = 'design/theme-targets/bunny-reference.html';
 const bunnyReferenceSha256 = 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59';
+const ashAmberReferencePath = 'design/theme-targets/ash-amber/sonderui-rw2-1-t80.png';
+const ashAmberReferenceSha256 = '6403a7bcfd8f43195fa42c5d9715cc79964c8b7569f47c22fdeefd1b89804997';
 
 function createMacroScenario(id: string, title: string, viewport: string): ConformanceScenario {
   return Object.freeze({
@@ -166,6 +168,38 @@ export const BUNNY_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
   createThemeTargetScenario('bn-scene-wide', 'Bunny wide Scene', 'bunny', 'bunny-original-reference', bunnyReferencePath, bunnyReferenceSha256, 'scene', 'wide'),
   createThemeTargetScenario('bn-scene-compact', 'Bunny compact Scene', 'bunny', 'bunny-original-reference', bunnyReferencePath, bunnyReferenceSha256, 'scene', 'compact-small'),
   createThemeTargetScenario('bn-catalog-wide', 'Bunny wide Catalog', 'bunny', 'bunny-original-reference', bunnyReferencePath, bunnyReferenceSha256, 'catalog', 'wide')
+]);
+
+function createAshAmberScenario(
+  id: string,
+  title: string,
+  state: 'scene' | 'catalog',
+  viewport: 'recording-wide' | 'compact-small' | 'standard'
+): ConformanceScenario {
+  return Object.freeze({
+    id,
+    title,
+    target: 'ash-amber',
+    authority: 'ash-amber-recording-frame',
+    authorityPath: ashAmberReferencePath,
+    authoritySha256: ashAmberReferenceSha256,
+    viewport,
+    inputModes: Object.freeze(viewport === 'compact-small'
+      ? ['coarse-pointer', 'keyboard'] as const
+      : ['fine-pointer', 'keyboard'] as const),
+    referenceState: state,
+    implementationState: state,
+    capture: Object.freeze({ kind: 'viewport' as const }),
+    measurementProfile: 'theme-target-behavior',
+    assertionProfile: 'theme-target-behavior',
+    allowedDeviationIds: Object.freeze([])
+  });
+}
+
+export const ASH_AMBER_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
+  createAshAmberScenario('aa-scene-wide', 'Ash & Amber recording-frame Scene', 'scene', 'recording-wide'),
+  createAshAmberScenario('aa-scene-compact', 'Ash & Amber compact Scene', 'scene', 'compact-small'),
+  createAshAmberScenario('aa-catalog-wide', 'Ash & Amber wide Catalog', 'catalog', 'standard')
 ]);
 
 export const ORIGINAL_THEME_TARGET_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([

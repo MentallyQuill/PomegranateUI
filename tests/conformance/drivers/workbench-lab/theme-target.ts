@@ -14,7 +14,10 @@ export async function renderLabThemeTarget(
     await page.reload({ waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
     const beforeIds = await widgetIds(page);
-    const label = scenario.target === 'pom-neutral' ? 'PomOS' : 'Bunny';
+    const label = scenario.target === 'pom-neutral' ? 'PomOS'
+      : scenario.target === 'bunny' ? 'Bunny'
+        : scenario.target === 'ash-amber' ? 'Ash & Amber'
+          : 'Deep Current';
     await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: label, exact: true }).click();
     if (scenario.implementationState === 'catalog') await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
