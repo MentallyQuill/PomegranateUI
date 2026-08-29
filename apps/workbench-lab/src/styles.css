@@ -215,8 +215,10 @@ main[data-active-panel="surface-preview"] .surface-contract-facts { display: gri
 .surface-plan { padding: 7px; border: 1px solid var(--line); color: var(--faint); text-align: center; }
 .surface-plan.is-current { border-color: var(--ember); color: var(--ink); background: color-mix(in srgb, var(--ember) 12%, transparent); }
 .surface-assignments { display: grid; gap: 5px; }
+.surface-assignments, .surface-assignments label, .surface-assignments label > span { min-width: 0; }
 .surface-assignments label { display: grid; grid-template-columns: 1fr minmax(100px, 1fr); gap: 8px; align-items: center; padding: 6px; border: 1px solid var(--line); }
 .surface-assignments label > span { display: grid; color: var(--ink); }
+.surface-assignments select { min-width: 0; max-width: 100%; }
 .surface-assignments small { color: var(--faint); }
 .surface-themes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .surface-themes button { display: grid; grid-template-columns: 28px 1fr; gap: 2px 7px; text-align: left; }
