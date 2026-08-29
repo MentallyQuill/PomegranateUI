@@ -199,8 +199,11 @@ describe('resolveTheme', () => {
       ...source.recipes.parts['widget.surface'],
       states: {
         ...source.recipes.parts['widget.surface'].states,
+        pressed: { material: 'button', opacity: 0.58 },
         selected: { material: 'button' },
-        focus: { material: 'field' }
+        focus: { material: 'field' },
+        inactive: { material: 'field', opacity: 0.42 },
+        disabledOpacity: 0.24
       }
     };
     const resolved = resolveThemeV2(source, {
@@ -214,8 +217,11 @@ describe('resolveTheme', () => {
     expect(effective.recipes.parts['widget.surface']).toMatchObject({
       material: 'widget-opaque',
       states: {
+        pressed: { material: 'button-opaque', opacity: 1 },
         selected: { material: 'button-opaque' },
-        focus: { material: 'field-opaque' }
+        focus: { material: 'field-opaque' },
+        inactive: { material: 'field-opaque', opacity: 1 },
+        disabledOpacity: 1
       }
     });
     for (const id of ['widget-opaque', 'button-opaque', 'field-opaque']) {

@@ -267,6 +267,36 @@ test('reduced transparency selects an opaque no-blur semantic fallback', async (
     const alpha = style.backgroundColor.match(/[\d.]+/g)?.map(Number)[3] ?? 1;
     return { focusVisible: button.matches(':focus-visible'), alpha, backdrop: style.backdropFilter };
   })).toEqual({ focusVisible: true, alpha: 1, backdrop: 'none' });
+
+  await page.locator('main').evaluate((root) => {
+    for (const state of ['pressed', 'inactive', 'disabled']) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.pomPart = 'button.surface';
+      button.dataset.reducedTransparencyState = state;
+      button.textContent = state;
+      if (state === 'inactive') button.dataset.pomInactive = 'true';
+      if (state === 'disabled') button.disabled = true;
+      root.append(button);
+    }
+  });
+  const stateSample = async (state: string) => page.locator(`[data-reduced-transparency-state="${state}"]`).evaluate((button) => {
+    const style = getComputedStyle(button);
+    return {
+      opacity: Number(style.opacity),
+      alpha: style.backgroundColor.match(/[\d.]+/g)?.map(Number)[3] ?? 1,
+      backdrop: style.backdropFilter
+    };
+  });
+  expect(await stateSample('inactive')).toEqual({ opacity: 1, alpha: 1, backdrop: 'none' });
+  expect(await stateSample('disabled')).toEqual({ opacity: 1, alpha: 1, backdrop: 'none' });
+  const pressed = page.locator('[data-reduced-transparency-state="pressed"]');
+  const box = await pressed.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  expect(await stateSample('pressed')).toEqual({ opacity: 1, alpha: 1, backdrop: 'none' });
+  await page.mouse.up();
 });
 
 test('an external non-preset definition renders the same live Workbench tree', async ({ page }) => {

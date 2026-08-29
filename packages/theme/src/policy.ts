@@ -90,9 +90,17 @@ export function applyThemePolicy(theme: ResolvedThemeV2, policy: ThemePolicy = {
       const states: ThemePartRecipeV2['states'] = { ...recipe.states };
       for (const state of ['hover', 'pressed', 'selected', 'focus', 'inactive'] as const) {
         const stateRecipe = states[state];
-        if (stateRecipe?.material) states[state] = { ...stateRecipe, material: opaqueMaterial(stateRecipe.material) };
+        if (stateRecipe) states[state] = {
+          ...stateRecipe,
+          ...(stateRecipe.material ? { material: opaqueMaterial(stateRecipe.material) } : {}),
+          opacity: 1
+        };
       }
-      parts[partId] = { ...recipe, material: opaqueMaterial(recipe.material), states };
+      parts[partId] = {
+        ...recipe,
+        material: opaqueMaterial(recipe.material),
+        states: { ...states, disabledOpacity: 1 }
+      };
     }
   }
 
