@@ -175,13 +175,17 @@ async function exerciseScenario(page: Page, scenarioId: string, trace: string[])
       return;
     case 'dc-int-coarse-targets': {
       const controls = [
-        page.getByRole('tab', { name: 'Scene' }),
-        page.getByRole('button', { name: 'Open Widget Catalog' }),
-        page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Drag Widget' })
+        { label: 'Scene tab', locator: page.getByRole('tab', { name: 'Scene' }) },
+        { label: 'Catalog launcher', locator: page.getByRole('button', { name: 'Open Widget Catalog' }) },
+        { label: 'World State drag handle', locator: page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Drag Widget' }) }
       ];
-      for (const control of controls) {
-        const box = await control.boundingBox();
-        requireOutcome(box && box.width >= 44 && box.height >= 44, 'A coarse-pointer control is below 44 CSS pixels.');
+      for (const { label, locator } of controls) {
+        const box = await locator.boundingBox();
+        const subpixelTolerance = 0.01;
+        requireOutcome(
+          box && box.width >= 44 - subpixelTolerance && box.height >= 44 - subpixelTolerance,
+          `${label} is below 44 CSS pixels (${box ? `${box.width}x${box.height}` : 'missing geometry'}).`
+        );
       }
       trace.push('coarse-pointer controls meet 44px targets');
       await saveAndReload(page);

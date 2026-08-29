@@ -631,8 +631,9 @@ main {
 [data-widget-type="story.composer"][data-pomegranate-placement] .widget-frame > header { display: none; }
 main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"],
 main[data-active-panel="surface-preview"] [data-widget-type="story.composer"] { position: static; width: auto; height: auto; transform: none; }
+main[data-active-panel="surface-preview"] .widget-frame { border-width: 0; }
 main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"] .widget-frame,
-main[data-active-panel="surface-preview"] [data-widget-type="story.composer"] .widget-frame { height: auto; margin: 0; overflow: hidden; border: 1px solid var(--line); background: var(--pom-material-widget); }
+main[data-active-panel="surface-preview"] [data-widget-type="story.composer"] .widget-frame { height: auto; margin: 0; overflow: hidden; border: 0; background: var(--pom-material-widget); }
 main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"] .widget-frame > header,
 main[data-active-panel="surface-preview"] [data-widget-type="story.composer"] .widget-frame > header { display: flex; }
 main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"] .surface-anatomy > .surface-scope,
@@ -644,6 +645,13 @@ main[data-active-panel="surface-preview"] [data-widget-type="story.composer"] .s
 main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"] .surface-anatomy > .surface-actions { display: flex; }
 main[data-active-panel="surface-preview"] .transcript { max-width: 760px; padding: 24px; }
 main[data-active-panel="surface-preview"] .composer { min-height: 88px; }
+main[data-active-panel="surface-preview"] :is(
+  [data-widget-type="systems.living-world"],
+  [data-widget-type="systems.institutions-charter"],
+  [data-widget-type="systems.institution-diagnostics"],
+  [data-widget-type="systems.background-life"],
+  [data-widget-type="systems.character-relationships"]
+) .widget-frame > header { border-bottom-width: 0; }
 .composer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
