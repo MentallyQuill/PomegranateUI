@@ -34,7 +34,7 @@ export const DEEP_CURRENT_THEME: ThemeDefinition = {
     chrome: '#0b1213',
     text: '#e7f6f0',
     textMuted: '#a7b8b2',
-    textFaint: '#71827d',
+    textFaint: '#748580',
     textOnAccent: '#071011',
     accent: '#94d9d0',
     selection: '#94d9d0',
@@ -69,14 +69,14 @@ export const DEEP_CURRENT_THEME: ThemeDefinition = {
   spacing: { density: 'compact', xs: 4, sm: 6, md: 12, lg: 16, xl: 24, chromeHeight: 44 },
   materials: {
     canvas: material('canvas', 'canvas', { opacity: 1, blurPx: 0, saturation: 1, shadowOpacity: 0, shadowBlurPx: 0 }),
-    shelf: material('chrome', 'chrome', { opacity: 0.6, blurPx: 12, saturation: 0.82, shadowOpacity: 0, shadowBlurPx: 0 }),
-    panel: material('surfaceInset', 'surfaceInset', { opacity: 0.2, blurPx: 12, saturation: 0.82, shadowOpacity: 0, shadowBlurPx: 0 }),
-    widget: material('surfaceElevated', 'surfaceInset', { opacity: 0.88, blurPx: 0, saturation: 1, shadowOpacity: 0.16, shadowBlurPx: 34 }),
-    field: material('shadow', 'surfaceInset', { opacity: 0.18, blurPx: 0, saturation: 1, shadowOpacity: 0, shadowBlurPx: 0 }),
-    button: material('text', 'surfaceElevated', { opacity: 0.04, blurPx: 0, saturation: 1, shadowOpacity: 0, shadowBlurPx: 0 }),
-    menu: material('chrome', 'chrome', { opacity: 0.94, blurPx: 28, saturation: 1.25, shadowOpacity: 0.58, shadowBlurPx: 100 }),
-    dialog: material('chrome', 'chrome', { opacity: 0.94, blurPx: 28, saturation: 1.25 }),
-    floating: material('surfaceElevated', 'surfaceInset', { opacity: 0.94, blurPx: 0, saturation: 1, shadowOpacity: 0.48, shadowBlurPx: 60 })
+    shelf: material('chrome', 'chrome', { opacity: 0.62, blurPx: 24, saturation: 0.9, shadowOpacity: 0.34, shadowBlurPx: 44, insetHighlight: 0.09 }),
+    panel: material('surfaceInset', 'surfaceInset', { opacity: 0.48, blurPx: 20, saturation: 0.92, shadowOpacity: 0.22, shadowBlurPx: 34, insetHighlight: 0.06 }),
+    widget: material('surfaceElevated', 'surfaceInset', { opacity: 0.74, blurPx: 18, saturation: 1.04, shadowOpacity: 0.28, shadowBlurPx: 38, insetHighlight: 0.08 }),
+    field: material('shadow', 'surfaceInset', { opacity: 0.32, blurPx: 16, saturation: 0.96, shadowOpacity: 0.12, shadowBlurPx: 18, insetHighlight: 0.04 }),
+    button: material('text', 'surfaceElevated', { opacity: 0.08, blurPx: 16, saturation: 1, shadowOpacity: 0.12, shadowBlurPx: 16, insetHighlight: 0.08 }),
+    menu: material('chrome', 'chrome', { opacity: 0.88, blurPx: 32, saturation: 1.2, shadowOpacity: 0.62, shadowBlurPx: 100, insetHighlight: 0.1 }),
+    dialog: material('chrome', 'chrome', { opacity: 0.9, blurPx: 32, saturation: 1.18, insetHighlight: 0.1 }),
+    floating: material('surfaceElevated', 'surfaceInset', { opacity: 0.88, blurPx: 24, saturation: 1.08, shadowOpacity: 0.54, shadowBlurPx: 64, insetHighlight: 0.1 })
   },
   iconPackId: 'icons.minimal',
   assets: [
