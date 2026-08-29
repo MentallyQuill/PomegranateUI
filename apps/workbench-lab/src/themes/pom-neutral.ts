@@ -1,6 +1,6 @@
 import type { ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
 
-import { material, shapePalette, themeRecipes } from './base.js';
+import { material, shapePalette, themeRecipes, themeTarget } from './base.js';
 
 export const POM_NEUTRAL_THEME: ThemeDefinitionV2 = {
   schemaVersion: 'pomegranate.ui.theme.v2',
@@ -57,3 +57,10 @@ export const POM_NEUTRAL_THEME: ThemeDefinitionV2 = {
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
   capabilities: { translucency: true, textures: false, localImages: false }
 };
+
+export const POM_NEUTRAL_TARGET = themeTarget(POM_NEUTRAL_THEME, {
+  colorRole: 'accent',
+  position: { x: 0.82, y: 0.16 },
+  radius: 0.52,
+  power: 0.16
+});

@@ -1,6 +1,6 @@
 import type { ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
 
-import { material, shapePalette, themeRecipes } from './base.js';
+import { material, shapePalette, themeRecipes, themeTarget } from './base.js';
 
 export const BUNNY_THEME: ThemeDefinitionV2 = {
   schemaVersion: 'pomegranate.ui.theme.v2',
@@ -59,3 +59,10 @@ export const BUNNY_THEME: ThemeDefinitionV2 = {
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 46, reducedTransparencySurface: 'surface' },
   capabilities: { translucency: true, textures: false, localImages: true }
 };
+
+export const BUNNY_TARGET = themeTarget(BUNNY_THEME, {
+  colorRole: 'selection',
+  position: { x: 0.5, y: 0.16 },
+  radius: 0.48,
+  power: 0.12
+});

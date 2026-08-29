@@ -1,11 +1,18 @@
 import {
+  AMBIENT_SCHEMA_VERSION,
+  CANVAS_SCHEMA_VERSION,
   THEME_PART_IDS,
+  THEME_SCHEMA_VERSION_V3,
+  THEME_TARGET_SCHEMA_VERSION,
+  ThemeTargetBundleSchema,
+  type AmbientProfile,
   type ThemeColorRole,
   type ThemeDefinitionV2,
   type ThemeMaterialV2,
   type ThemePartId,
   type ThemePartRecipeV2,
-  type ThemeShapeV2
+  type ThemeShapeV2,
+  type ThemeTargetBundle
 } from '@pomegranate-ui/contracts';
 
 export const LAB_MATERIAL_IDS = [
@@ -13,6 +20,29 @@ export const LAB_MATERIAL_IDS = [
   'button', 'selected', 'menu', 'dialog', 'floating', 'track', 'fill', 'thumb', 'opaque'
 ] as const;
 export type LabMaterialId = (typeof LAB_MATERIAL_IDS)[number];
+
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const nested of Object.values(value)) deepFreeze(nested);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+export function themeTarget(
+  themeInput: ThemeDefinitionV2,
+  ambient: Omit<AmbientProfile, 'schemaVersion' | 'id'>
+): ThemeTargetBundle {
+  const theme = structuredClone(themeInput);
+  const { schemaVersion: _themeVersion, canvas, ...themeWithoutCanvas } = theme;
+  return deepFreeze(ThemeTargetBundleSchema.parse({
+    schemaVersion: THEME_TARGET_SCHEMA_VERSION,
+    id: theme.id,
+    theme: { ...themeWithoutCanvas, schemaVersion: THEME_SCHEMA_VERSION_V3 },
+    canvas: { schemaVersion: CANVAS_SCHEMA_VERSION, id: theme.id, layers: canvas },
+    ambient: { ...ambient, schemaVersion: AMBIENT_SCHEMA_VERSION, id: theme.id }
+  }));
+}
 
 export interface MaterialOptions {
   readonly base: ThemeColorRole;

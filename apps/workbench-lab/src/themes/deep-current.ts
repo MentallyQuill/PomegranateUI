@@ -1,6 +1,6 @@
 import type { ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
 
-import { material, shapePalette, themeRecipes } from './base.js';
+import { material, shapePalette, themeRecipes, themeTarget } from './base.js';
 
 export const DEEP_CURRENT_THEME: ThemeDefinitionV2 = {
   schemaVersion: 'pomegranate.ui.theme.v2',
@@ -58,3 +58,10 @@ export const DEEP_CURRENT_THEME: ThemeDefinitionV2 = {
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
   capabilities: { translucency: true, textures: false, localImages: true }
 };
+
+export const DEEP_CURRENT_TARGET = themeTarget(DEEP_CURRENT_THEME, {
+  colorRole: 'accent',
+  position: { x: 0.68, y: 0.38 },
+  radius: 0.44,
+  power: 0.18
+});

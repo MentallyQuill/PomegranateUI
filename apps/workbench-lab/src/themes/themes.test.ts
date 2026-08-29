@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { THEME_PART_IDS } from '@pomegranate-ui/contracts';
-import { compileThemeBindings, contrastRatio, resolveThemeV2 } from '@pomegranate-ui/theme';
+import { compileThemeBindings, contrastRatio, resolveThemeTarget, resolveThemeV2 } from '@pomegranate-ui/theme';
 import { BUNNY_THEME } from './bunny.js';
 import { createLabThemeController } from './controller.js';
 import { DEEP_CURRENT_THEME } from './deep-current.js';
-import { LAB_THEME_IDS, LAB_THEME_PRESETS } from './presets.js';
+import { defaultMaterialControls } from './material-controls.js';
+import { LAB_THEME_IDS, LAB_THEME_PRESETS, LAB_THEME_TARGETS } from './presets.js';
 import { POM_NEUTRAL_THEME } from './pom-neutral.js';
 import { createLocalThemePreference, LAB_THEME_KEY } from './theme-storage.js';
 
@@ -16,6 +17,62 @@ const assetRegistry = {
 };
 
 describe('Workbench Lab theme conformance', () => {
+  it('declares exactly four complete local target bundles including Ash & Amber', () => {
+    expect(LAB_THEME_TARGETS.map(({ id }) => id)).toEqual(['deep-current', 'pom-neutral', 'bunny', 'ash-amber']);
+    expect(new Set(LAB_THEME_TARGETS.map(({ id }) => id)).size).toBe(4);
+    expect(LAB_THEME_TARGETS.map(({ target }) => target.theme.label)).toEqual(['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']);
+
+    for (const { id, target } of LAB_THEME_TARGETS) {
+      expect(target).toMatchObject({
+        schemaVersion: 'pomegranate.ui.theme-target.v1',
+        id,
+        theme: { schemaVersion: 'pomegranate.ui.theme.v3', id },
+        canvas: { schemaVersion: 'pomegranate.ui.canvas.v1', id },
+        ambient: { schemaVersion: 'pomegranate.ui.ambient.v1', id }
+      });
+      expect(target.theme).not.toHaveProperty('canvas');
+      expect(target.canvas).not.toHaveProperty('materials');
+      expect(JSON.stringify(target)).not.toMatch(/https?:\/\//);
+      const resolution = resolveThemeTarget(target, assetRegistry);
+      expect(resolution.ok, resolution.ok ? undefined : JSON.stringify(resolution.diagnostics)).toBe(true);
+    }
+  });
+
+  it('pins Ash & Amber to the approved palette, material defaults, and ambient profile', () => {
+    const ash = LAB_THEME_TARGETS.find(({ id }) => id === 'ash-amber')?.target;
+
+    expect(ash?.theme).toMatchObject({
+      label: 'Ash & Amber',
+      colors: {
+        canvas: '#2C2938',
+        surface: '#382D31',
+        chrome: '#716667',
+        accent: '#84008E',
+        text: '#FFFFFF',
+        warning: '#D2B57A'
+      }
+    });
+    expect(ash?.ambient).toEqual({
+      schemaVersion: 'pomegranate.ui.ambient.v1',
+      id: 'ash-amber',
+      colorRole: 'accent',
+      position: { x: 0.57, y: 0.97 },
+      radius: 0.6,
+      power: 0.56
+    });
+    expect(defaultMaterialControls('ash-amber')).toEqual({
+      glassDensity: 20,
+      barOpacity: 60,
+      selectedStrength: 6,
+      frostLevel: 50
+    });
+    expect(ash?.theme.materials.header).toMatchObject({ base: 'chrome', fallback: 'chrome' });
+    expect(ash?.canvas.layers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'image', assetId: 'image.deep-current-stage' }),
+      expect.objectContaining({ kind: 'veil', mode: 'reading' })
+    ]));
+  });
+
   it.each(LAB_THEME_IDS)('authors and resolves %s directly as a complete v2 theme', (id) => {
     const preset = LAB_THEME_PRESETS.find((candidate) => candidate.id === id);
     expect(preset?.definition.schemaVersion).toBe('pomegranate.ui.theme.v2');
