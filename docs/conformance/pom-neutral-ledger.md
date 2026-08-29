@@ -1,7 +1,8 @@
-# Pom Neutral conformance ledger
+# PomOS conformance ledger
 
-**State:** Frozen against the byte-hashed original reference frame with all
-three scenarios passing and no reviewed deviations.
+**State:** Frozen against the byte-hashed PomOS successor reference with all
+three scenarios passing and no reviewed deviations. The prior byte-hashed Pom
+Neutral reference remains preserved in the authority registry for history.
 
 | ID | Category | Severity | Authority | Scenario | Evidence | Diagnosis | Status | Regression | Deviation |
 |---|---|---|---|---|---|---|---|---|---|

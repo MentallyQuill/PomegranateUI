@@ -54,6 +54,26 @@ describe('Workbench Lab theme conformance', () => {
     }
   });
 
+  it('keeps the stable neutral id while presenting the target as blue-glass PomOS', () => {
+    expect(POM_NEUTRAL_THEME).toMatchObject({
+      id: 'pom-neutral',
+      label: 'PomOS',
+      colors: { canvas: '#1687ed', accent: '#0868c4' },
+      geometry: { cornerSm: 10, cornerMd: 18, cornerLg: 24 },
+      spacing: { chromeHeight: 36 },
+      typography: {
+        prose: { family: 'Pomegranate Sans' },
+        technical: { family: 'Pomegranate Sans' }
+      }
+    });
+    expect(POM_NEUTRAL_THEME.canvas).toContainEqual(expect.objectContaining({
+      kind: 'four-corner',
+      topLeft: '#8bd6ff',
+      topRight: '#1687ed'
+    }));
+    expect(POM_NEUTRAL_THEME.canvas.filter((layer) => layer.kind === 'radial-gradient')).toHaveLength(3);
+  });
+
   it.each(LAB_THEME_IDS)('keeps rendered text and interaction colors readable in %s', (id) => {
     const preset = LAB_THEME_PRESETS.find((candidate) => candidate.id === id);
     const result = resolveTheme(preset?.definition);
@@ -130,11 +150,12 @@ describe('Workbench Lab theme conformance', () => {
     });
   });
 
-  it('pins the original Neutral and Bunny visual target contracts', () => {
+  it('pins the PomOS and Bunny visual target contracts', () => {
     expect(POM_NEUTRAL_THEME).toMatchObject({
       id: 'pom-neutral',
-      colors: { canvas: '#dfe7f1', surfaceElevated: '#fbfdff', accent: '#2f68cc', focus: '#0758b7' },
-      geometry: { cornerFamily: 'rounded', cornerMd: 10, cornerLg: 18 },
+      label: 'PomOS',
+      colors: { canvas: '#1687ed', surfaceElevated: '#ffffff', accent: '#0868c4', focus: '#071d38' },
+      geometry: { cornerFamily: 'rounded', cornerMd: 18, cornerLg: 24 },
       spacing: { density: 'balanced' },
       capabilities: { localImages: false, textures: false, translucency: true }
     });
@@ -201,6 +222,8 @@ describe('Workbench Lab theme conformance', () => {
       expect(controller.setMaterialControl(id, 0).ok).toBe(true);
     }
     expect(controller.getSnapshot().cssText).toContain('--pom-material-glass-highlight:rgb(255 255 255 / 0)');
+    expect(controller.getSnapshot().cssText).toContain('--pom-material-frost-haze:rgb(255 255 255 / 0)');
+    expect(controller.getSnapshot().cssText).toContain('--pom-material-frost-accent:rgb(148 217 208 / 0)');
     expect(controller.getSnapshot().cssText).toContain('--pom-material-bar-highlight:rgb(255 255 255 / 0)');
     expect(controller.getSnapshot().cssText).toContain('--pom-material-panel-fallback-surface:rgb(4 7 8 / 0)');
     expect(controller.getSnapshot().cssText).toContain('--pom-handle-density:24%');
@@ -212,6 +235,8 @@ describe('Workbench Lab theme conformance', () => {
     expect(controller.getSnapshot().cssText).toContain('--pom-bar-opacity:100%');
     expect(controller.getSnapshot().cssText).toContain('--pom-handle-density:100%');
     expect(controller.getSnapshot().cssText).toContain('--pom-frost-blur:24px');
+    expect(controller.getSnapshot().cssText).toContain('--pom-material-frost-haze:rgb(255 255 255 / 0.2)');
+    expect(controller.getSnapshot().cssText).toContain('--pom-material-frost-accent:rgb(148 217 208 / 0.06)');
   });
 
   it('retains independent material drafts while switching and resets only the active theme', () => {

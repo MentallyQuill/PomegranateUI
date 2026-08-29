@@ -305,7 +305,7 @@ test('native workbench applies complete themes without replacing live Workbench 
     widgets: [...node.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
   }));
   const themeTargets = page.getByRole('group', { name: 'Visual target' });
-  const neutral = themeTargets.getByRole('button', { name: 'Pom Neutral', exact: true });
+  const neutral = themeTargets.getByRole('button', { name: 'PomOS', exact: true });
   await neutral.click();
   await expect(root).toHaveAttribute('data-pom-theme', 'pom-neutral');
   await expect(neutral).toHaveAttribute('aria-pressed', 'true');
@@ -328,7 +328,7 @@ test('all theme targets remain readable, transition-free, and contained at wide 
     await page.setViewportSize(viewport);
     for (const theme of [
       { label: 'Deep Current', id: 'deep-current', text: 'rgb(231, 246, 240)' },
-      { label: 'Pom Neutral', id: 'pom-neutral', text: 'rgb(24, 33, 45)' },
+      { label: 'PomOS', id: 'pom-neutral', text: 'rgb(19, 26, 35)' },
       { label: 'Bunny', id: 'bunny', text: 'rgb(69, 54, 77)' }
     ]) {
       const button = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: theme.label, exact: true });

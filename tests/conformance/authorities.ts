@@ -34,6 +34,11 @@ export const AUTHORITY_RECORDS: readonly AuthorityRecord[] = Object.freeze([
     sha256: '6a188907925f0af7157f66017a2015e07dbe599d14413d2a590e390f0d97bd50'
   }),
   Object.freeze({
+    id: 'pomos-reference',
+    path: 'design/theme-targets/pomos-reference.html',
+    sha256: 'a46dc956b0664643506b5023836cd02fb2e9f64ca538acff1aca7cc7c34a7af9'
+  }),
+  Object.freeze({
     id: 'bunny-original-reference',
     path: 'design/theme-targets/bunny-reference.html',
     sha256: 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59'

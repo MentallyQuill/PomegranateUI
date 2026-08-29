@@ -20,7 +20,7 @@ const outputDirectory = path.join(repositoryRoot, 'test-results', 'conformance')
 const preservationOrigin = 'http://127.0.0.1:4173';
 const labOrigin = 'http://127.0.0.1:4174';
 
-test.describe('Original visual target conformance', () => {
+test.describe('Visual target conformance', () => {
   test.describe.configure({ mode: 'serial' });
 
   test.beforeAll(async () => {
@@ -28,7 +28,7 @@ test.describe('Original visual target conformance', () => {
       repositoryRoot,
       authorities: AUTHORITY_BY_ID,
       viewports: CONFORMANCE_VIEWPORTS,
-      driverIds: new Set(['pom-neutral-original-reference', 'bunny-original-reference', 'workbench-lab']),
+      driverIds: new Set(['pomos-reference', 'bunny-original-reference', 'workbench-lab']),
       measurementProfileIds: new Set(MEASUREMENT_PROFILES.keys()),
       assertionProfileIds: new Set(MEASUREMENT_PROFILES.keys()),
       deviationIds: new Set(),
@@ -61,7 +61,7 @@ test.describe('Original visual target conformance', () => {
         const comparison = compareMeasurements(reference, implementation, profile);
         const diagnosticImages = await createDiagnosticImages(paths.referencePng, paths.actualPng, paths);
         const discrepancyIds = ledger.filter((entry) => entry.scenario === scenario.id).map((entry) => entry.id);
-        const authorityCase = `${scenario.target} original ${scenario.referenceState} reference`;
+        const authorityCase = `${scenario.target} ${scenario.referenceState} reference`;
         await writeComparisonReport(paths, { authorityCase, comparison, diagnosticImages, discrepancyIds, scenarioId: scenario.id, trace: implementation.trace });
         await Promise.all([
           testInfo.attach('reference', { path: paths.referencePng, contentType: 'image/png' }),
