@@ -16,9 +16,11 @@ The six stable evidence paths are:
 - `tests/browser/__screenshots__/native-workbench-visual.spec.ts-snapshots/compact-bunny.png`
 
 Earlier rounds were generated into those Playwright snapshot paths and reviewed
-before being superseded. They are not duplicated as extra binary artifacts. The
-rejected starting state remains recoverable from commit `49dac42` at the same
-paths; the final round is the checked-in state on this branch.
+before being superseded. They were transient working evidence and are retained
+as process notes below, not represented as independently recoverable image
+artifacts. The rejected starting state remains recoverable from commit
+`49dac42`. The promoted round is independently recoverable through the stable
+paths and SHA-256 values recorded below without duplicating six binary files.
 
 ## Severity contract
 
@@ -71,7 +73,7 @@ Capture: complete six-image Playwright run after the Round 1 corrections.
 No functional, focus, identity, or page-overflow regression was found in this
 round.
 
-## Round 3 — final adversarial pass
+## Round 3 — first zero-substantive visual pass
 
 Capture: the six stable evidence paths listed above, inspected at original
 resolution after fonts loaded and animation was disabled.
@@ -85,6 +87,42 @@ resolution after fonts loaded and animation was disabled.
 | Bunny wide | Premium stationery/character-goods identity is immediate and no longer monochrome pink. | Milk-paper stage, pastel instrument accents, story card, and restrained watermark have clear roles. | Milky glass, soft shadows, and edge highlights are visible without washing out text. | Selective rounding and adult-quality spacing avoid novelty-page styling. | Shared Widgets, controls, and states remain intact. | Pass |
 | Bunny compact | Bunny signature, multi-family pastels, and paper grid survive at narrow width. | Watermark stays away from dense text; story and composer remain dominant. | Frost and paper layers remain distinct. | No pill-everything regression or text collision. | No page overflow; full utility names remain accessible. | Pass |
 
+## Round 4 — independent-review hardening and final critic pass
+
+The reviewer was asked to assume the implementation was wrong and check the
+preserved authorities, accessibility contract, material coverage, evidence
+quality, and responsive behavior rather than accept the screenshots at face
+value. That pass found substantive contract issues even though Round 3 looked
+coherent. All were corrected before this new complete render:
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Blocking | Deep Current's stronger shelf treatment had moved the authority-owned shelf from 40 to 50 pixels and changed the measured 12-pixel material. | Restore the exact Atmospheric shell geometry and measured shelf/dock/composer materials; place stronger 24-pixel frost in an overlay and child surfaces that do not falsify the preserved frame. |
+| Blocking | Pom Neutral and Bunny had drifted from the byte-hashed target bindings for canvas, accent, text, and core radii. | Restore every bound value while retaining the new gradients, composition, selective geometry, and presentation recipes. All six target conformance cases pass again. |
+| Substantive | Reduced-transparency coverage omitted Catalog, ordinary dialog, focused dialog, and higher-specificity Widget frames. | Make every named glass surface opaque, image-free, and blur-free under the media preference; add browser coverage. |
+| Substantive | Faint Neutral text missed the declared 4.5 contrast floor, and the matrix did not check the faint role. | Darken all three faint roles where necessary and cover normal, muted, and faint text against every structural background. |
+| Substantive | Computed-style evidence omitted docks, transcript, composer, Catalog, dialog, focused, and floating surfaces. | Add table-driven material assertions for every named surface, plus the Deep Current shelf overlay. |
+| Evidence | Intermediate image rounds were not independently recoverable. | Mark them honestly as transient process evidence and freeze the promoted six-image round by stable path and SHA-256 below. |
+
+The final visual critic then inspected the regenerated six images at original
+resolution without consulting implementation intent. It found no cross-theme
+leakage, incoherent hierarchy, ineffective material, unfinished spacing,
+illegible state, responsive breakage, or target ambiguity. Deep Current remains
+deliberately dense and subdued; Pom Neutral keeps a large quiet wallpaper field;
+and Bunny keeps a sparse mascot field. Those are coherent target choices, not
+corrective defects.
+
+### Promoted evidence hashes
+
+| Snapshot | SHA-256 |
+| --- | --- |
+| `wide-scene.png` | `c46e4b6f5f1128d29a41ffa045ed6510fc082454c44b14bdf2eb921a6e471e61` |
+| `compact-scene.png` | `0958bf62e3b6f1a235043831b37137e856c0548ebe809143c6580d76c9d674e1` |
+| `wide-pom-neutral.png` | `e33a8c6450c13b9e54e76e3e9a94321a2cbe43fd6e0178452de3cef24e71b269` |
+| `compact-pom-neutral.png` | `64ced35159c7b579d6ff4a23fdfbb4e6a663229bcf3c62534b5e66c047c49536` |
+| `wide-bunny.png` | `b6b879fdce99da451b70a933433e148a2e443a3ac26ec3a7d7d410454dfbcd08` |
+| `compact-bunny.png` | `742b1f53a332235c706c5266e3a45c6b41a708115654fb03e587dea76ca72a6f` |
+
 ### Preference-only observations
 
 - Deep Current's technical density could be made looser for a different adopter;
@@ -95,7 +133,7 @@ resolution after fonts loaded and animation was disabled.
 
 ## Closure
 
-Round 3 has **zero blocking findings and zero substantive findings** across the
+Round 4 has **zero blocking findings and zero substantive findings** across the
 complete six-image set. The preference-only observations do not justify more
 theme-specific code or assets. Final promotion still depends on focused browser
 and accessibility checks, unchanged-tree verification, the complete repository

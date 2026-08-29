@@ -34,7 +34,7 @@ export const DEEP_CURRENT_THEME: ThemeDefinition = {
     chrome: '#0b1213',
     text: '#e7f6f0',
     textMuted: '#a7b8b2',
-    textFaint: '#71827d',
+    textFaint: '#748580',
     textOnAccent: '#071011',
     accent: '#94d9d0',
     selection: '#94d9d0',

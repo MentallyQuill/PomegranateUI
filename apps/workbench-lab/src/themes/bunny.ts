@@ -7,8 +7,8 @@ export const BUNNY_THEME = mergeTheme(DEEP_CURRENT_THEME, {
   label: 'Bunny',
   description: 'A polished Japanese stationery theme with milky glass, balanced pastels, and one restrained bunny signature.',
   colors: {
-    canvas: '#f3ebe5', surface: '#fff9f5', surfaceElevated: '#fffdfb', surfaceInset: '#eeeaf5', chrome: '#fff7f3',
-    text: '#493e50', textMuted: '#665a6d', textFaint: '#796d80', textOnAccent: '#382430', accent: '#df739d',
+    canvas: '#faeef6', surface: '#fff9f5', surfaceElevated: '#fffdfb', surfaceInset: '#eeeaf5', chrome: '#fff7f3',
+    text: '#45364d', textMuted: '#665a6d', textFaint: '#716477', textOnAccent: '#382430', accent: '#ed75aa',
     selection: '#f8cddd', focus: '#6951a1', success: '#397a69', warning: '#825b00', danger: '#a84567',
     border: '#dfcbd8', borderStrong: '#b989a5', shadow: '#735d72'
   },
@@ -20,7 +20,7 @@ export const BUNNY_THEME = mergeTheme(DEEP_CURRENT_THEME, {
     scale: { xs: 11, sm: 13, md: 15, lg: 19, xl: 26 }
   },
   geometry: {
-    cornerFamily: 'rounded', cornerSm: 10, cornerMd: 16, cornerLg: 24, cornerPill: 999, chamfer: 0, borderWidth: 1, sharedEdge: 'none', focusWidth: 3, focusOffset: 3
+    cornerFamily: 'rounded', cornerSm: 10, cornerMd: 17, cornerLg: 26, cornerPill: 999, chamfer: 0, borderWidth: 1, sharedEdge: 'none', focusWidth: 3, focusOffset: 3
   },
   spacing: { density: 'roomy', xs: 6, sm: 9, md: 14, lg: 21, xl: 32, chromeHeight: 52 },
   materials: {
@@ -35,10 +35,10 @@ export const BUNNY_THEME = mergeTheme(DEEP_CURRENT_THEME, {
     floating: { base: 'surfaceElevated', fallback: 'surfaceElevated', opacity: 0.98, blurPx: 16, saturation: 1.1, border: 'borderStrong', shadow: 'shadow', shadowOpacity: 0.22, shadowBlurPx: 56, insetHighlight: 0.7, bloom: 0.08 }
   },
   canvas: [
-    { kind: 'radial-gradient', shape: 'ellipse', x: 0.5, y: 0.18, stops: [{ color: '#fffdfbf2', position: 0 }, { color: '#f3ebe500', position: 0.58 }] },
+    { kind: 'radial-gradient', shape: 'ellipse', x: 0.5, y: 0.18, stops: [{ color: '#fffdfbf2', position: 0 }, { color: '#faeef600', position: 0.58 }] },
     { kind: 'four-corner', topLeft: '#f6cedd', topRight: '#d9d2f1', bottomLeft: '#d5ece5', bottomRight: '#f1deb9' },
-    { kind: 'conic-gradient', angle: 16, x: 0.52, y: 0.45, stops: [{ color: '#ffffff24', position: 0 }, { color: '#df739d18', position: 0.32 }, { color: '#7ec7b71f', position: 0.66 }, { color: '#ffffff24', position: 1 }] },
-    { kind: 'solid', color: '#f3ebe5' }
+    { kind: 'conic-gradient', angle: 16, x: 0.52, y: 0.45, stops: [{ color: '#ffffff24', position: 0 }, { color: '#ed75aa18', position: 0.32 }, { color: '#7ec7b71f', position: 0.66 }, { color: '#ffffff24', position: 1 }] },
+    { kind: 'solid', color: '#faeef6' }
   ],
   capabilities: { translucency: true, textures: false, localImages: false }
 });

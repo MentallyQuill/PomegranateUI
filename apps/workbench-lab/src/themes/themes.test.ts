@@ -63,6 +63,7 @@ describe('Workbench Lab theme conformance', () => {
     for (const background of [colors.canvas, colors.surface, colors.surfaceElevated, colors.surfaceInset]) {
       expect(contrastRatio(colors.text, background)).toBeGreaterThanOrEqual(accessibility.minimumContrast);
       expect(contrastRatio(colors.textMuted, background)).toBeGreaterThanOrEqual(accessibility.minimumContrast);
+      expect(contrastRatio(colors.textFaint, background), `${id}: faint text on ${background}`).toBeGreaterThanOrEqual(accessibility.minimumContrast);
     }
     expect(contrastRatio(colors.textOnAccent, colors.accent)).toBeGreaterThanOrEqual(accessibility.minimumContrast);
     expect(contrastRatio(colors.focus, colors.canvas)).toBeGreaterThanOrEqual(accessibility.minimumContrast);
@@ -73,8 +74,8 @@ describe('Workbench Lab theme conformance', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const cssText = compileThemeBindings(result.theme);
-    expect(cssText).toContain('--pom-color-text:#493e50');
-    expect(cssText).toContain('--pom-radius-widget:16px');
+    expect(cssText).toContain('--pom-color-text:#45364d');
+    expect(cssText).toContain('--pom-radius-widget:17px');
     expect(cssText).toContain('--pom-canvas:');
     expect(cssText).not.toContain('bunny');
     expect(cssText).not.toContain('transition');
@@ -118,16 +119,16 @@ describe('Workbench Lab theme conformance', () => {
   it('pins the original Neutral and Bunny visual target contracts', () => {
     expect(POM_NEUTRAL_THEME).toMatchObject({
       id: 'pom-neutral',
-      colors: { canvas: '#cfd9e8', surfaceElevated: '#fbfdff', accent: '#1768ce', focus: '#0758b7' },
-      geometry: { cornerFamily: 'rounded', cornerMd: 12, cornerLg: 18 },
+      colors: { canvas: '#dfe7f1', surfaceElevated: '#fbfdff', accent: '#2f68cc', focus: '#0758b7' },
+      geometry: { cornerFamily: 'rounded', cornerMd: 10, cornerLg: 18 },
       spacing: { density: 'balanced' },
       capabilities: { localImages: false, textures: false, translucency: true }
     });
     expect(POM_NEUTRAL_THEME.canvas.every((layer) => layer.kind !== 'image')).toBe(true);
     expect(BUNNY_THEME).toMatchObject({
       id: 'bunny',
-      colors: { canvas: '#f3ebe5', surfaceElevated: '#fffdfb', accent: '#df739d', focus: '#6951a1' },
-      geometry: { cornerFamily: 'rounded', cornerMd: 16, cornerLg: 24 },
+      colors: { canvas: '#faeef6', surfaceElevated: '#fffdfb', accent: '#ed75aa', focus: '#6951a1' },
+      geometry: { cornerFamily: 'rounded', cornerMd: 17, cornerLg: 26, cornerPill: 999 },
       spacing: { density: 'roomy' },
       capabilities: { localImages: false, textures: false, translucency: true }
     });

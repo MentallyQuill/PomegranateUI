@@ -7,8 +7,8 @@ export const POM_NEUTRAL_THEME = mergeTheme(DEEP_CURRENT_THEME, {
   label: 'Pom Neutral',
   description: 'An original modern desktop workspace with dimensional wallpaper, luminous frost, and quiet system chrome.',
   colors: {
-    canvas: '#cfd9e8', surface: '#edf3fa', surfaceElevated: '#fbfdff', surfaceInset: '#dce6f1', chrome: '#f3f7fc',
-    text: '#172234', textMuted: '#46566c', textFaint: '#68778b', textOnAccent: '#ffffff', accent: '#1768ce',
+    canvas: '#dfe7f1', surface: '#edf3fa', surfaceElevated: '#fbfdff', surfaceInset: '#dce6f1', chrome: '#f3f7fc',
+    text: '#18212d', textMuted: '#46566c', textFaint: '#566579', textOnAccent: '#ffffff', accent: '#2f68cc',
     selection: '#cfe1fb', focus: '#0758b7', success: '#247253', warning: '#805b00', danger: '#a83e55',
     border: '#b9c8da', borderStrong: '#8295ad', shadow: '#263b56'
   },
@@ -19,7 +19,7 @@ export const POM_NEUTRAL_THEME = mergeTheme(DEEP_CURRENT_THEME, {
     display: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 560, strongWeight: 680, lineHeight: 1.15, trackingEm: -0.01 }
   },
   geometry: {
-    cornerFamily: 'rounded', cornerSm: 7, cornerMd: 12, cornerLg: 18, chamfer: 0, borderWidth: 1, sharedEdge: 'hairline', focusWidth: 2, focusOffset: 2
+    cornerFamily: 'rounded', cornerSm: 7, cornerMd: 10, cornerLg: 18, chamfer: 0, borderWidth: 1, sharedEdge: 'hairline', focusWidth: 2, focusOffset: 2
   },
   spacing: { density: 'balanced', xs: 5, sm: 8, md: 12, lg: 18, xl: 28, chromeHeight: 48 },
   materials: {
@@ -37,7 +37,7 @@ export const POM_NEUTRAL_THEME = mergeTheme(DEEP_CURRENT_THEME, {
     { kind: 'radial-gradient', shape: 'ellipse', x: 0.18, y: 0.12, stops: [{ color: '#f8fbff', position: 0 }, { color: '#dce7f500', position: 0.48 }] },
     { kind: 'four-corner', topLeft: '#e2edfb', topRight: '#9fb4d2', bottomLeft: '#7898a8', bottomRight: '#d4ae99' },
     { kind: 'linear-gradient', angle: 132, stops: [{ color: '#ffffff4d', position: 0 }, { color: '#8da2bd26', position: 0.5 }, { color: '#51698338', position: 1 }] },
-    { kind: 'solid', color: '#cfd9e8' }
+    { kind: 'solid', color: '#dfe7f1' }
   ],
   capabilities: { translucency: true, textures: false, localImages: false }
 });
