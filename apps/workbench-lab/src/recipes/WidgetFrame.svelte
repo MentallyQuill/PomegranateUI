@@ -14,6 +14,7 @@
     rendererRegistry,
     hostContext,
     onfocuswidget,
+    surfacePart = 'widget.surface',
     class: className = ''
   }: {
     frame: WidgetFrameProjection;
@@ -21,6 +22,7 @@
     rendererRegistry: WidgetRendererRegistry<THostContext>;
     hostContext: THostContext;
     onfocuswidget?: (frame: WidgetFrameProjection) => void;
+    surfacePart?: 'widget.surface' | 'floating.surface' | null;
     class?: string;
   } = $props();
 
@@ -39,7 +41,7 @@
   class={className}
   aria-label={frame.title}
   data-pomegranate-widget={frame.instanceIdAttribute}
-  data-pom-part="widget.surface"
+  data-pom-part={surfacePart ?? undefined}
   data-pomegranate-placement={frame.placement.kind}
   data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.edge : 'floating'}
 >

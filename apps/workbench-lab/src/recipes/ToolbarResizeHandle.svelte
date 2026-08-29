@@ -66,7 +66,6 @@
   class="toolbar-resize-handle"
   class:is-dragging={dragging}
   data-dock-resizer={edge}
-  data-pom-part="separator"
   role="separator"
   aria-label={`Resize ${edge} toolbar`}
   aria-orientation="vertical"
@@ -78,4 +77,4 @@
   onpointerup={pointerFinish}
   onpointercancel={pointerFinish}
   onkeydown={keyDown}
-><span aria-hidden="true"></span></button>
+><span data-pom-part="separator" aria-hidden="true"></span></button>

@@ -20,7 +20,9 @@
   .pom-theme-canvas {
     position: fixed;
     inset: 0;
-    z-index: -1;
+    /* The semantic recipe exposes elevation for ordinary surfaces. The canvas is
+       structural and must remain below every painted Workbench layer. */
+    z-index: -1 !important;
     overflow: hidden;
     pointer-events: none;
   }

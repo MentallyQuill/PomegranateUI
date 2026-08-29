@@ -114,6 +114,16 @@ describe('Workbench Lab theme conformance', () => {
     expect(controller.getSnapshot().resolved.materials.window?.backdrop.blurPx).toBe(21.6);
   });
 
+  it('applies the host device policy before compiling a snapshot', () => {
+    const controller = createLabThemeController({
+      initialId: 'pom-neutral',
+      devicePolicy: { reducedTransparency: true, coarsePointer: true }
+    });
+    expect(controller.getSnapshot().resolved.recipes.parts['widget.surface'].material).toBe('opaque');
+    expect(controller.getSnapshot().resolved.materials.opaque).toMatchObject({ opacity: 1, backdrop: { blurPx: 0 } });
+    expect(controller.getSnapshot().resolved.controls.slider.hitTargetPx).toBeGreaterThanOrEqual(44);
+  });
+
   it('compiles true transparent and opaque endpoints for controlled materials', () => {
     const controller = createLabThemeController();
     for (const id of ['glassDensity', 'barOpacity', 'selectedStrength', 'frostLevel'] as const) expect(controller.setMaterialControl(id, 0).ok).toBe(true);

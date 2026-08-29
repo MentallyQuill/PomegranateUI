@@ -5,3 +5,10 @@ Headless Svelte 5 integration for the PomegranateUI public contracts. The packag
 It does not own product branding, application information architecture, backend access, authentication, persistence, domain semantics, or a turnkey frontend. Editable UI recipes live in the repository registry and are copied into an adopter's source tree.
 
 Svelte is a peer dependency. SvelteKit is not required or imported.
+
+Theme resolution stays framework-neutral. Maintained and copied recipes opt in
+through stable `data-pom-part` annotations, while the adopter mounts compiled
+root bindings, the constant part stylesheet, and canvas descriptors. Recipes
+must not branch on a concrete theme ID. See
+[theme authoring](../../docs/theme-authoring.md) and the Workbench Lab's
+`ThemeCanvas.svelte` for the reference integration.

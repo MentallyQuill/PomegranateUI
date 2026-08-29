@@ -28,3 +28,8 @@ how preferences persist.
 The Workbench Lab's Pom Neutral, Deep Current, and Bunny definitions are
 application-owned conformance fixtures. They do not make those visual targets
 mandatory for adopters.
+
+See [Authoring PomegranateUI themes](../../docs/theme-authoring.md) for the v2
+data model, semantic-part inventory, real compiler and canvas examples, asset
+registration, policy order, migration guidance, external-theme proof, and the
+bounded no-custom-CSS promise.

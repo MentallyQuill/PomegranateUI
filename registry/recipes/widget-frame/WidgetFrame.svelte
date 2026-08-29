@@ -12,12 +12,14 @@
     store,
     rendererRegistry,
     hostContext,
+    surfacePart = 'widget.surface',
     class: className = ''
   }: {
     frame: WidgetFrameProjection;
     store: WorkbenchStore;
     rendererRegistry: WidgetRendererRegistry<THostContext>;
     hostContext: THostContext;
+    surfacePart?: 'widget.surface' | 'floating.surface' | null;
     class?: string;
   } = $props();
 
@@ -30,7 +32,7 @@
   class={className}
   aria-label={frame.title}
   data-pomegranate-widget={frame.instanceIdAttribute}
-  data-pom-part="widget.surface"
+  data-pom-part={surfacePart ?? undefined}
   data-pomegranate-placement={frame.placement.kind}
 >
   <header data-pom-part="widget.header">

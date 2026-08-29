@@ -85,7 +85,7 @@
         {:else if fixture.presentation === 'condition'}
           <div class="surface-condition">
             {#each fixture.rows as row, index (row[0])}
-              <div><span class="surface-avatar">{initials(row[0])}</span><strong>{row[0]}</strong><small>{row[1]}</small><meter min="0" max="4" value={4 - index}>Condition {4 - index} of 4</meter></div>
+              <div data-pom-part="row.surface"><span class="surface-avatar">{initials(row[0])}</span><strong>{row[0]}</strong><small>{row[1]}</small><meter min="0" max="4" value={4 - index}>Condition {4 - index} of 4</meter></div>
             {/each}
           </div>
         {:else if fixture.presentation === 'ambience'}
@@ -99,7 +99,7 @@
         {:else if fixture.presentation === 'tasks' || fixture.presentation === 'maintenance'}
           <div class="surface-tasks">
             {#each fixture.rows as row, index (row[0])}
-              <div><span aria-hidden="true" class:is-running={row[1].includes('Running')}></span><strong>{row[0]}</strong><small>{row[1]}</small>{#if index === 1}<progress max="100" value="64">64%</progress>{/if}</div>
+              <div data-pom-part="row.surface"><span aria-hidden="true" class:is-running={row[1].includes('Running')}></span><strong>{row[0]}</strong><small>{row[1]}</small>{#if index === 1}<progress max="100" value="64">64%</progress>{/if}</div>
             {/each}
           </div>
         {:else if fixture.presentation === 'archive'}
@@ -107,7 +107,7 @@
             <nav aria-label="Library selection">
               {#each fixture.rows as row, index (row[0])}<button type="button" data-pom-part="button.surface" aria-current={index === 0 ? 'true' : undefined}>{row[0]}<small>{row[1]}</small></button>{/each}
             </nav>
-            <section><span class="surface-avatar large">{initials(fixture.rows[0]?.[0] ?? 'Library')}</span><strong>{fixture.rows[0]?.[1]}</strong><p>Selected record · saved owner projection</p></section>
+            <section data-pom-part="group.surface"><span class="surface-avatar large">{initials(fixture.rows[0]?.[0] ?? 'Library')}</span><strong>{fixture.rows[0]?.[1]}</strong><p>Selected record · saved owner projection</p></section>
           </div>
         {:else if fixture.presentation === 'roster'}
           <div class="surface-roster">
@@ -126,18 +126,18 @@
           <div class="surface-tree"><button type="button" data-pom-part="button.surface" aria-expanded="true">▾ Drowned Observatory</button><button type="button" data-pom-part="button.surface" aria-expanded="true">　▾ Thresholds</button><button class="is-selected" type="button" data-pom-part="button.surface">　　 The pale threshold</button><button type="button" data-pom-part="button.surface">　 Floodgate history</button></div>
         {:else if fixture.presentation === 'relationships'}
           <div class="surface-relationships">
-            {#each fixture.rows as row (row[0])}<div><strong>{row[0]}</strong><span aria-hidden="true">→</span><small>{row[1]}</small></div>{/each}
+            {#each fixture.rows as row (row[0])}<div data-pom-part="row.surface"><strong>{row[0]}</strong><span aria-hidden="true">→</span><small>{row[1]}</small></div>{/each}
           </div>
         {:else if fixture.presentation === 'generator'}
-          <div class="surface-generator"><div class="surface-plan">Plan</div><div class="surface-plan is-current">Review</div><div class="surface-plan">Apply</div></div>
-          <dl class="surface-facts">{#each fixture.rows as row (row[0])}<div><dt>{row[0]}</dt><dd>{row[1]}</dd></div>{/each}</dl>
+          <div class="surface-generator"><div class="surface-plan" data-pom-part="row.surface">Plan</div><div class="surface-plan is-current" data-pom-part="row.surface">Review</div><div class="surface-plan" data-pom-part="row.surface">Apply</div></div>
+          <dl class="surface-facts">{#each fixture.rows as row (row[0])}<div data-pom-part="row.surface"><dt>{row[0]}</dt><dd>{row[1]}</dd></div>{/each}</dl>
         {:else if fixture.presentation === 'credentials'}
           <div class="surface-providers">
             {#each fixture.rows as row, index (row[0])}<div data-pom-part="row.surface"><span class="surface-avatar">{row[0].slice(0, 2).toUpperCase()}</span><strong>{row[0]}</strong><small>{row[1]}</small><button type="button" data-pom-part="button.surface">{index === 1 ? 'Configure' : 'Test'}</button></div>{/each}
           </div>
         {:else if fixture.presentation === 'assignments'}
           <div class="surface-assignments">
-            {#each fixture.rows as row (row[0])}<label><span>{row[0]}<small>{row[1]}</small></span><select data-pom-part="field.surface" aria-label={`${row[0]} assignment`}><option>{row[1]}</option><option>Follow Default</option></select></label>{/each}
+            {#each fixture.rows as row (row[0])}<label data-pom-part="row.surface"><span>{row[0]}<small>{row[1]}</small></span><select data-pom-part="field.surface" aria-label={`${row[0]} assignment`}><option>{row[1]}</option><option>Follow Default</option></select></label>{/each}
           </div>
         {:else if fixture.presentation === 'theme'}
           <div class="surface-themes">
@@ -177,7 +177,7 @@
           <div class="surface-prompt"><nav aria-label="Prompt sheets"><button data-pom-part="button.surface" aria-current="page">Narration</button><button data-pom-part="button.surface">Director</button><button data-pom-part="button.surface">Characters</button><button data-pom-part="button.surface">Memory</button></nav><label>Prompt sheet<textarea data-pom-part="field.surface" readonly>You are the narrator. Preserve established facts, subjective knowledge, and player agency.</textarea></label></div>
         {:else}
           <dl class="surface-facts">
-            {#each fixture.rows as row (row[0])}<div><dt>{row[0]}</dt><dd>{row[1]}</dd></div>{/each}
+            {#each fixture.rows as row (row[0])}<div data-pom-part="row.surface"><dt>{row[0]}</dt><dd>{row[1]}</dd></div>{/each}
           </dl>
         {/if}
 

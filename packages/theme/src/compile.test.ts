@@ -75,6 +75,9 @@ describe('theme compiler', () => {
     expect(second).toBe(first);
     expect(first).toContain('[data-pom-theme-root] [data-pom-part="widget.surface"]');
     expect(first).not.toContain('compiler-fixture');
+    expect(first).toContain('background-color: var(--pom-part-widget-surface-material-fill)');
+    expect(first).toContain('[data-pom-part="button.surface"][aria-pressed="true"]');
+    expect(first).not.toMatch(/\[data-pom-part="button\.icon"\][^{]*\{[^}]*\bbackground:/s);
     expect(bindings['--pom-part-widget-surface-material-fill']).toBe('rgba(255, 255, 255, 0.38)');
   });
 

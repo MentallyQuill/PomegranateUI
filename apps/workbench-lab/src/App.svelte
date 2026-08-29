@@ -63,7 +63,12 @@
   });
   const themeController = createLabThemeController({
     preference: createLocalThemePreference(window.localStorage),
-    assetRegistry: themeAssetRegistry
+    assetRegistry: themeAssetRegistry,
+    devicePolicy: {
+      reducedTransparency: window.matchMedia('(prefers-reduced-transparency: reduce)').matches,
+      coarsePointer: window.matchMedia('(pointer: coarse)').matches,
+      backdropFilterSupported: CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)')
+    }
   });
   const initialThemeSnapshot = themeController.getSnapshot();
   let themeSnapshot = $state(initialThemeSnapshot);
@@ -251,6 +256,10 @@
   class:left-collapsed={leftCollapsed}
   data-pom-theme={themeSnapshot.activeId}
   data-pom-theme-root
+  data-pom-widget-grouping={themeSnapshot.resolved.recipes.widgetGrouping}
+  data-pom-chrome-presentation={themeSnapshot.resolved.recipes.chromePresentation}
+  data-pom-action-presentation={themeSnapshot.resolved.recipes.actionPresentation}
+  data-pom-density={themeSnapshot.resolved.spacing.density}
   data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}
   style={themeSnapshot.cssText}
@@ -333,6 +342,7 @@
               {rendererRegistry}
               {hostContext}
               onfocuswidget={focusWidget}
+              surfacePart={frame.placement.kind === 'floating' ? 'floating.surface' : 'widget.surface'}
               class="widget-frame"
             />
           {/if}

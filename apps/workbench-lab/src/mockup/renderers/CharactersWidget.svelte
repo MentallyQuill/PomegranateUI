@@ -12,6 +12,6 @@
 <div class="widget-content character-list">
   <p class="widget-kicker">{hostContext.frameLabel}</p>
   {#each characters as character}
-    <div class="character-row"><span>{character.mark}</span><strong>{character.name}</strong><small>{character.note}</small></div>
+    <div class="character-row" data-pom-part="row.surface"><span>{character.mark}</span><strong>{character.name}</strong><small>{character.note}</small></div>
   {/each}
 </div>

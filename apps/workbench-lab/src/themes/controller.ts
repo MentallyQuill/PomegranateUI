@@ -4,6 +4,7 @@ import {
   resolveThemeV2,
   type ResolvedThemeV2,
   type ThemeAssetRegistry,
+  type ThemeDevicePolicy,
   type ThemeDiagnostic
 } from '@pomegranate-ui/theme';
 
@@ -75,6 +76,7 @@ export function createLabThemeController(options: {
   readonly initialId?: string | null;
   readonly preference?: ThemePreferenceAdapter;
   readonly assetRegistry?: ThemeAssetRegistry;
+  readonly devicePolicy?: ThemeDevicePolicy;
   /** @deprecated Use assetRegistry when exact host sources are available. */
   readonly availableAssets?: ReadonlySet<string>;
 } = {}) {
@@ -90,7 +92,11 @@ export function createLabThemeController(options: {
     const resolution = resolveThemeV2(definition, assetRegistry);
     if (!resolution.ok) return resolution;
     const materialControls = requestedControls ?? materialDrafts.get(id) ?? defaultMaterialControls(id);
-    const effective = applyThemePolicy(resolution.theme, materialControlPolicy(materialControls));
+    const controlsPolicy = materialControlPolicy(materialControls);
+    const effective = applyThemePolicy(resolution.theme, {
+      ...controlsPolicy,
+      ...(options.devicePolicy ? { device: options.devicePolicy } : {})
+    });
     return { ok: true, snapshot: createSnapshot(id, effective, materialControls) };
   };
 

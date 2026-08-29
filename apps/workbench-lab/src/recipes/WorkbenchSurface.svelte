@@ -93,7 +93,7 @@
     <div data-shelf-insertion="right" aria-hidden="true"></div>
     <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
     <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />
-    <div data-pomegranate-floating-layer data-pom-part="floating.surface">
+    <div data-pomegranate-floating-layer>
       {#each surface.floating as frame (frame.instanceId)}
         {@render renderWidget(frame)}
       {/each}

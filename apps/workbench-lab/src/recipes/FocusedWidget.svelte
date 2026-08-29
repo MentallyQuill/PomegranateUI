@@ -43,6 +43,6 @@
     <button bind:this={backButton} type="button" data-pom-part="button.surface" onclick={() => dialog.close()}>Back to Workbench</button>
   </header>
   <div class="focused-widget-surface" data-pom-part="widget.content">
-    <WidgetFrame {frame} {store} {rendererRegistry} {hostContext} class="widget-frame" />
+    <WidgetFrame {frame} {store} {rendererRegistry} {hostContext} surfacePart={null} class="widget-frame" />
   </div>
 </dialog>

@@ -13,6 +13,8 @@ Pom is a modular UI toolkit for teams building AI roleplay frontends. These docu
 - [Svelte integration](../packages/svelte/README.md) — headless Svelte stores, context, renderers, and actions.
 - [Source-owned recipes](../registry/recipes/README.md) — editable Svelte components that become adopter-owned source.
 - [Contracts](../packages/contracts/README.md) — JSON-safe public contracts and runtime validation.
+- [Theme authoring](theme-authoring.md) — v2 materials, shapes, semantic parts, canvas, policy, assets, and v1 migration.
+- [Theme engine](../packages/theme/README.md) — framework-neutral resolution and compilation boundary.
 - [Layout](../packages/layout/README.md) — framework-neutral Panel and Widget transitions.
 - [Core](../packages/core/README.md) — registration, command dispatch, and subscriptions.
 - [Testkit](../packages/testkit/README.md) — public conformance fixtures and drivers.

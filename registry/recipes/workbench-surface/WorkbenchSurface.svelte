@@ -43,7 +43,7 @@
         {/each}
       </section>
     {/each}
-    <div data-pomegranate-floating-layer data-pom-part="floating.surface">
+    <div data-pomegranate-floating-layer>
       {#each surface.floating as frame (frame.instanceId)}
         {@render renderWidget(frame)}
       {/each}

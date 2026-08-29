@@ -180,7 +180,7 @@ function partRule(part: ThemePartId): string {
   return `${selector} {
   color: var(--pom-color-text);
   background-color: var(${prefix}-material-fallback);
-  background: var(${prefix}-material-fill);
+  background-color: var(${prefix}-material-fill);
   border: var(${prefix}-material-border);
   border-radius: var(${prefix}-radius);
   -webkit-backdrop-filter: var(${prefix}-material-backdrop);
@@ -192,11 +192,11 @@ function partRule(part: ThemePartId): string {
   overflow: var(${prefix}-overflow);
   z-index: var(${prefix}-elevation);
 }
-${selector}:hover { background: var(${prefix}-state-hover-fill); opacity: var(${prefix}-state-hover-opacity); }
-${selector}:active { background: var(${prefix}-state-pressed-fill); opacity: var(${prefix}-state-pressed-opacity); }
-${selector}[aria-selected="true"], ${selector}[data-pom-selected="true"] { background: var(${prefix}-state-selected-fill); opacity: var(${prefix}-state-selected-opacity); }
-${selector}:focus-visible { background: var(${prefix}-state-focus-fill); opacity: var(${prefix}-state-focus-opacity); outline: var(--pom-focus-width) solid var(--pom-color-focus); outline-offset: var(--pom-focus-offset); }
-${selector}[inert], ${selector}[data-pom-inactive="true"] { background: var(${prefix}-state-inactive-fill); opacity: var(${prefix}-state-inactive-opacity); }
+${selector}:hover { background-color: var(${prefix}-state-hover-fill); opacity: var(${prefix}-state-hover-opacity); }
+${selector}:active { background-color: var(${prefix}-state-pressed-fill); opacity: var(${prefix}-state-pressed-opacity); }
+${selector}[aria-selected="true"], ${selector}[aria-pressed="true"], ${selector}[aria-current], ${selector}[data-pom-selected="true"] { background-color: var(${prefix}-state-selected-fill); opacity: var(${prefix}-state-selected-opacity); }
+${selector}:focus-visible { background-color: var(${prefix}-state-focus-fill); opacity: var(${prefix}-state-focus-opacity); outline: var(--pom-focus-width) solid var(--pom-color-focus); outline-offset: var(--pom-focus-offset); }
+${selector}[inert], ${selector}[data-pom-inactive="true"] { background-color: var(${prefix}-state-inactive-fill); opacity: var(${prefix}-state-inactive-opacity); }
 ${selector}:disabled, ${selector}[aria-disabled="true"] { opacity: var(${prefix}-disabled-opacity); }`;
 }
 
