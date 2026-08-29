@@ -41,6 +41,7 @@ export async function renderWidgetOverhaulCatalog(
     await catalog.waitFor({ state: 'visible' });
 
     let outcomeReached = false;
+    let lifecycle = { placed: 0, persisted: 0, rendered: 0, removed: 0 };
     switch (catalogCase.scenarioId) {
       case 'dc-catalog-inventory':
         outcomeReached = await catalog.locator('[data-catalog-result]').count() === 94;
@@ -60,15 +61,23 @@ export async function renderWidgetOverhaulCatalog(
         outcomeReached = await catalog.locator('[data-catalog-result]').count() === 94
           && await catalog.locator('.sonder-widget-miniature').count() === 0;
         break;
-      case 'dc-catalog-placement-all':
-        outcomeReached = await page.evaluate((types) => {
+      case 'dc-catalog-placement-all': {
+        const results = await page.evaluate((types) => {
           const api = (window as unknown as {
             SonderWidgetMockup?: { exerciseDefinitionPlacement: (type: string) => Record<string, boolean> }
           }).SonderWidgetMockup;
-          if (!api) return false;
-          return types.every((type) => Object.values(api.exerciseDefinitionPlacement(type)).every(Boolean));
+          if (!api) throw new Error('Widget Overhaul placement API missing.');
+          return types.map((type) => api.exerciseDefinitionPlacement(type));
         }, definitions.map(({ type }) => type));
+        lifecycle = {
+          placed: results.filter(({ placed }) => placed).length,
+          persisted: results.filter(({ persisted }) => persisted).length,
+          rendered: results.filter(({ rendered }) => rendered).length,
+          removed: results.filter(({ removed }) => removed).length
+        };
+        outcomeReached = Object.values(lifecycle).every((count) => count === 94);
         break;
+      }
       case 'dc-catalog-fallback-46':
         outcomeReached = await page.evaluate(() => {
           const api = (window as unknown as {
@@ -88,6 +97,7 @@ export async function renderWidgetOverhaulCatalog(
     return Object.freeze({
       functional: Object.freeze({ authorityCasePassed: true, outcomeReached: true, keyboardAccessible: true }),
       inventory: Object.freeze(inventory),
+      lifecycle: Object.freeze(lifecycle),
       trace: Object.freeze([`opened preserved Catalog for ${catalogCase.scenarioId}`, catalogCase.harnessCaseFragment])
     });
   } catch (cause) {

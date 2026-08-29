@@ -60,7 +60,7 @@
     "dc-catalog-search": { "pass": true, "profile": "catalog" },
     "dc-catalog-visual-preview": { "pass": true, "profile": "catalog" },
     "dc-catalog-compact-preview": { "pass": true, "profile": "catalog" },
-    "dc-catalog-placement-all": { "pass": true, "profile": "catalog" },
+    "dc-catalog-placement-all": { "pass": true, "profile": "catalog", "lifecycle": { "placed": 94, "persisted": 94, "rendered": 94, "removed": 94 } },
     "dc-catalog-fallback-46": { "pass": true, "profile": "catalog" }
   }
 }

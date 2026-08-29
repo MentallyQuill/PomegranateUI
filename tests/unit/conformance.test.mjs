@@ -226,6 +226,20 @@ test('the Deep Current interaction manifest names every approved behavior agains
     scenario.authority === 'widget-overhaul'
       && scenario.measurementProfile === 'deep-current-interaction'
   )), true);
+  assert.deepEqual(Object.fromEntries(DEEP_CURRENT_INTERACTION_SCENARIOS.map(({ id, inputModes }) => [id, inputModes])), {
+    'dc-int-resize-left': ['keyboard'],
+    'dc-int-resize-right': ['keyboard'],
+    'dc-int-shelf-insert': ['fine-pointer'],
+    'dc-int-tab-merge': ['fine-pointer'],
+    'dc-int-tab-reorder': ['keyboard'],
+    'dc-int-float': ['fine-pointer'],
+    'dc-int-invalid-restore': ['fine-pointer'],
+    'dc-int-cancel-restore': ['coarse-pointer'],
+    'dc-int-focus-back': ['fine-pointer'],
+    'dc-int-panel-persist': ['keyboard'],
+    'dc-int-catalog-place': ['keyboard'],
+    'dc-int-coarse-targets': ['coarse-pointer']
+  });
 
   const validated = await validateConformanceManifest(DEEP_CURRENT_INTERACTION_SCENARIOS, {
     repositoryRoot,
@@ -531,6 +545,21 @@ test('the original target profile compares identity, accessibility, theme tokens
   ]);
 });
 
+test('Widget and Catalog profiles gate rendered visual qualities and every lifecycle stage', () => {
+  assert.deepEqual(MEASUREMENT_PROFILES.get('deep-current-widget-surface')?.map(({ path }) => path).slice(-4), [
+    'visual.darkSurface',
+    'visual.visibleBorder',
+    'visual.compactCorners',
+    'visual.headerSeparated'
+  ]);
+  assert.deepEqual(MEASUREMENT_PROFILES.get('deep-current-catalog')?.map(({ path }) => path).slice(-4), [
+    'lifecycle.placed',
+    'lifecycle.persisted',
+    'lifecycle.rendered',
+    'lifecycle.removed'
+  ]);
+});
+
 test('evidence paths reject unsafe scenario identities before constructing files', () => {
   assert.throws(
     () => createEvidencePaths(path.join(repositoryRoot, 'test-results', 'conformance'), '../escape'),
@@ -653,6 +682,7 @@ test('Widget and Catalog conformance drivers keep preserved and Lab selectors in
   assert.doesNotMatch(referenceSurfaces, /data-surface-|implemented-widget|workbench-lab/);
   assert.doesNotMatch(referenceCatalog, /catalog-miniature|data-renderer-status|workbench-lab/);
   assert.doesNotMatch(labSurfaces, /\.sonder-|SonderWidgetMockup|\.\.\/reference/);
+  assert.doesNotMatch(labSurfaces, /data-surface-(?:row-labels|actions)/);
   assert.doesNotMatch(labCatalog, /\.sonder-|SonderWidgetMockup|widget-overhaul|\.\.\/reference/);
 });
 
@@ -737,8 +767,15 @@ test('the reviewed Deep Current Widget baseline freezes all 49 surfaces and six 
     assert.deepEqual(baseline.scenarios[scenario.id], { pass: true, profile: 'surface' });
   }
   for (const scenario of DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS) {
-    assert.deepEqual(baseline.scenarios[scenario.id], { pass: true, profile: 'catalog' });
+    assert.equal(baseline.scenarios[scenario.id].pass, true);
+    assert.equal(baseline.scenarios[scenario.id].profile, 'catalog');
   }
+  assert.deepEqual(baseline.scenarios['dc-catalog-placement-all'].lifecycle, {
+    placed: 94,
+    persisted: 94,
+    rendered: 94,
+    removed: 94
+  });
 });
 
 test('the reviewed original theme baseline freezes every target scenario and authority hash', async () => {

@@ -101,7 +101,11 @@ const widgetSurfaceProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('content.scope'),
   exact('content.boundary'),
   exact('content.rowLabels'),
-  exact('content.actions')
+  exact('content.actions'),
+  exact('visual.darkSurface', 'visual'),
+  exact('visual.visibleBorder', 'visual'),
+  exact('visual.compactCorners', 'visual'),
+  exact('visual.headerSeparated', 'visual')
 ]);
 
 const catalogProfile: readonly ComparisonDefinition[] = Object.freeze([
@@ -113,7 +117,11 @@ const catalogProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('inventory.library'),
   exact('inventory.systems'),
   exact('inventory.settings'),
-  exact('inventory.extensions')
+  exact('inventory.extensions'),
+  exact('lifecycle.placed'),
+  exact('lifecycle.persisted'),
+  exact('lifecycle.rendered'),
+  exact('lifecycle.removed')
 ]);
 
 const themeTargetProfile: readonly ComparisonDefinition[] = Object.freeze([

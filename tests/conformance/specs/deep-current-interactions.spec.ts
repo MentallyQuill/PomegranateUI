@@ -75,10 +75,11 @@ test.describe('Deep Current interaction conformance', () => {
       await referenceRow.scrollIntoViewIfNeeded();
       await referencePage.screenshot({ path: paths.referencePng, animations: 'disabled', caret: 'hide' });
 
+      const coarsePointer = scenario.inputModes.includes('coarse-pointer');
       const context = await browser.newContext({
         viewport,
-        hasTouch: scenario.id === 'dc-int-coarse-targets',
-        isMobile: scenario.id === 'dc-int-coarse-targets'
+        hasTouch: coarsePointer,
+        isMobile: coarsePointer
       });
       try {
         const page = await context.newPage();

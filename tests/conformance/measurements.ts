@@ -14,6 +14,12 @@ export interface WidgetSurfaceMeasurement {
     readonly rowLabels: readonly string[];
     readonly actions: readonly string[];
   };
+  readonly visual: {
+    readonly darkSurface: boolean;
+    readonly visibleBorder: boolean;
+    readonly compactCorners: boolean;
+    readonly headerSeparated: boolean;
+  };
   readonly trace: readonly string[];
 }
 
@@ -30,6 +36,12 @@ export interface CatalogMeasurement {
     readonly systems: number;
     readonly settings: number;
     readonly extensions: number;
+  };
+  readonly lifecycle: {
+    readonly placed: number;
+    readonly persisted: number;
+    readonly rendered: number;
+    readonly removed: number;
   };
   readonly trace: readonly string[];
 }

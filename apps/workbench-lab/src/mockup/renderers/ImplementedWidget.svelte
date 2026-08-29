@@ -21,10 +21,6 @@
     class="implemented-widget"
     data-surface-type={fixture.type}
     data-surface-state={state}
-    data-surface-scope={fixture.scope}
-    data-surface-boundary={fixture.boundary}
-    data-surface-row-labels={JSON.stringify(fixture.rows.map(([label]) => label))}
-    data-surface-actions={JSON.stringify(fixture.actions)}
     data-surface-owner="lab-fixture"
   >
     <WidgetStateSurface {state} />

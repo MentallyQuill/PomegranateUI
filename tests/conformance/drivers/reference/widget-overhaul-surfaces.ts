@@ -81,6 +81,9 @@ export async function renderWidgetOverhaulSurface(
           && ['auto', 'scroll'].includes(getComputedStyle(node).overflowY)
           && node.scrollHeight > node.clientHeight + 1
       ));
+      const widgetStyle = getComputedStyle(widget);
+      const header = widget.querySelector<HTMLElement>(':scope > .sonder-module-head');
+      const background = effectiveBackground(widget);
       return {
         functional: {
           authorityCasePassed: true as const,
@@ -96,8 +99,32 @@ export async function renderWidgetOverhaulSurface(
           boundary: blueprint.boundary,
           rowLabels: blueprint.rows.map(([label]) => label),
           actions: [...blueprint.actions]
+        },
+        visual: {
+          darkSurface: relativeLuminance(background) < 0.45,
+          visibleBorder: parseFloat(widgetStyle.borderTopWidth) >= 1 && widgetStyle.borderTopStyle !== 'none',
+          compactCorners: parseFloat(widgetStyle.borderTopLeftRadius) <= 10,
+          headerSeparated: Boolean(header && parseFloat(getComputedStyle(header).borderBottomWidth) >= 1)
         }
       };
+
+      function effectiveBackground(node: HTMLElement): readonly number[] {
+        let current: HTMLElement | null = node;
+        while (current) {
+          const match = getComputedStyle(current).backgroundColor.match(/[\d.]+/g)?.map(Number) ?? [];
+          if (match.length >= 3 && (match.length < 4 || (match[3] ?? 1) > 0.2)) return match;
+          current = current.parentElement;
+        }
+        return [255, 255, 255];
+      }
+
+      function relativeLuminance(channels: readonly number[]): number {
+        const linear = channels.slice(0, 3).map((channel) => {
+          const value = channel / 255;
+          return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        });
+        return (linear[0] ?? 1) * 0.2126 + (linear[1] ?? 1) * 0.7152 + (linear[2] ?? 1) * 0.0722;
+      }
     }, surfaceCase.type);
     const failedChecks = Object.entries(measurement.functional)
       .filter(([, passed]) => !passed)
@@ -110,6 +137,7 @@ export async function renderWidgetOverhaulSurface(
         rowLabels: Object.freeze(measurement.content.rowLabels),
         actions: Object.freeze(measurement.content.actions)
       }),
+      visual: Object.freeze(measurement.visual),
       trace: Object.freeze([`renderWidgetReady(${surfaceCase.type})`, 'passed harness case required'])
     });
   } catch (cause) {

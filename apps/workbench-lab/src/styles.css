@@ -123,6 +123,14 @@ main {
 .implemented-widget { height: 100%; min-height: 0; overflow: auto; scrollbar-color: var(--line-strong) transparent; scrollbar-width: thin; }
 .implemented-surface { display: grid; gap: 10px; padding: 10px; color: var(--muted); font-size: 11px; }
 .surface-scope { margin: 0; color: var(--faint); font: 9px/1.35 var(--pom-font-technical, monospace); letter-spacing: .05em; text-transform: uppercase; }
+.surface-anatomy > .surface-scope { margin: 10px 10px 0; }
+.surface-contract-facts { display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 0 10px; background: var(--line); }
+.surface-contract-facts > div { min-width: 0; padding: 6px 8px; background: color-mix(in srgb, var(--pom-material-widget) 88%, var(--pom-color-canvas)); }
+.surface-contract-facts dt { overflow: hidden; color: var(--faint); font: 8px/1.3 var(--pom-font-technical, monospace); text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.surface-contract-facts dd { margin: 2px 0 0; overflow: hidden; color: var(--ink); font-size: 9px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.surface-anatomy > .surface-boundary, .surface-anatomy > .surface-actions { margin: 0 10px 10px; }
+.surface-anatomy > .surface-boundary { font-size: 11px; }
+main[data-active-panel="surface-preview"] .surface-contract-facts { display: grid; }
 .widget-frame .surface-state { display: grid; grid-template-columns: 7px 1fr; gap: 9px; align-items: start; margin: 8px 10px 0; padding: 8px 9px; border-style: solid; background: color-mix(in srgb, var(--pom-color-selection) 26%, transparent); }
 .surface-state > span { width: 7px; height: 7px; margin-top: 3px; border-radius: 50%; background: var(--pom-color-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pom-color-success) 18%, transparent); }
 .surface-state.is-busy > span { background: var(--pom-color-focus); }
@@ -590,6 +598,13 @@ main {
   backdrop-filter: none;
 }
 [data-widget-type="story.transcript"][data-pomegranate-placement] .widget-frame > header { display: none; }
+[data-widget-type="story.transcript"][data-pomegranate-placement] .surface-anatomy > .surface-scope,
+[data-widget-type="story.transcript"][data-pomegranate-placement] .surface-anatomy > .surface-contract-facts,
+[data-widget-type="story.transcript"][data-pomegranate-placement] .surface-anatomy > .surface-boundary,
+[data-widget-type="story.transcript"][data-pomegranate-placement] .surface-anatomy > .surface-actions,
+[data-widget-type="story.composer"][data-pomegranate-placement] .surface-anatomy > .surface-scope,
+[data-widget-type="story.composer"][data-pomegranate-placement] .surface-anatomy > .surface-contract-facts,
+[data-widget-type="story.composer"][data-pomegranate-placement] .surface-anatomy > .surface-boundary { display: none; }
 .transcript { max-width: 650px; margin: 0; padding: 0; font-size: 15px; line-height: 1.62; text-shadow: 0 2px 16px rgb(0 0 0 / 72%); }
 .transcript .widget-kicker { margin-bottom: 9px; font-size: 9px; }
 .transcript p { margin: 0 0 12px; color: color-mix(in srgb, var(--ink) 78%, transparent); }
@@ -620,6 +635,13 @@ main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"] 
 main[data-active-panel="surface-preview"] [data-widget-type="story.composer"] .widget-frame { height: auto; margin: 0; overflow: hidden; border: 1px solid var(--line); background: var(--pom-material-widget); }
 main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"] .widget-frame > header,
 main[data-active-panel="surface-preview"] [data-widget-type="story.composer"] .widget-frame > header { display: flex; }
+main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"] .surface-anatomy > .surface-scope,
+main[data-active-panel="surface-preview"] [data-widget-type="story.composer"] .surface-anatomy > .surface-scope { display: block; }
+main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"] .surface-anatomy > .surface-contract-facts,
+main[data-active-panel="surface-preview"] [data-widget-type="story.composer"] .surface-anatomy > .surface-contract-facts { display: grid; }
+main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"] .surface-anatomy > .surface-boundary,
+main[data-active-panel="surface-preview"] [data-widget-type="story.composer"] .surface-anatomy > .surface-boundary { display: grid; }
+main[data-active-panel="surface-preview"] [data-widget-type="story.transcript"] .surface-anatomy > .surface-actions { display: flex; }
 main[data-active-panel="surface-preview"] .transcript { max-width: 760px; padding: 24px; }
 main[data-active-panel="surface-preview"] .composer { min-height: 88px; }
 .composer {

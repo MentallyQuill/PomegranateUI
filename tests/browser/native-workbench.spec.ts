@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { IMPLEMENTED_SURFACES } from '../../apps/workbench-lab/src/mockup/implemented-surfaces.ts';
-import { SURFACE_FIXTURES } from '../../apps/workbench-lab/src/mockup/surface-fixtures.ts';
+import { SURFACE_FIXTURES, SURFACE_STATE_COPY } from '../../apps/workbench-lab/src/mockup/surface-fixtures.ts';
 
 async function dragTo(
   page: import('@playwright/test').Page,
@@ -371,7 +371,9 @@ test('all 49 reviewed Widget surfaces expose exact ready, state, focus, and resp
     const article = page.getByRole('article', { name: surface.title });
     const implemented = article.locator(`[data-surface-type="${surface.type}"]`);
     await expect(implemented).toHaveAttribute('data-surface-state', 'ready');
-    await expect(implemented).toHaveAttribute('data-surface-scope', fixture.scope);
+    await expect(implemented.locator('.surface-scope')).toHaveText(fixture.scope);
+    await expect(implemented.locator('.surface-contract-facts dt')).toHaveText(fixture.rows.map(([label]) => label));
+    await expect(implemented.locator('.surface-actions button, .widget-content.composer > button')).toHaveText(fixture.actions);
 
     const containment = await article.evaluate((root) => {
       const elements = [root, ...root.querySelectorAll<HTMLElement>('*')];
@@ -393,8 +395,14 @@ test('all 49 reviewed Widget surfaces expose exact ready, state, focus, and resp
     for (const fixtureState of fixture.states) {
       await statePicker.selectOption(fixtureState);
       await expect(implemented).toHaveAttribute('data-surface-state', fixtureState);
+      if (fixtureState !== 'ready') {
+        const stateCopy = SURFACE_STATE_COPY[fixtureState];
+        await expect(implemented.locator('.surface-state')).toContainText(stateCopy[0]);
+        await expect(implemented.locator('.surface-state')).toContainText(stateCopy[1]);
+      }
     }
     await statePicker.selectOption('ready');
+    await expect(implemented.locator('.surface-state')).toHaveCount(0);
 
     if (surface.family !== 'story') {
       const side = surface.family === 'systems' ? 'right' : 'left';
@@ -458,4 +466,18 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
   await expect(activePanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(45);
   const identities = await activePanel.locator('[data-widget-type]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-widget-type')));
   expect(new Set(identities).size).toBe(94);
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  await page.reload();
+  const restoredPanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
+  await expect(restoredPanel.locator('[data-widget-type]')).toHaveCount(94);
+  await expect(restoredPanel.locator('.implemented-widget')).toHaveCount(49);
+  await expect(restoredPanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(45);
+  await expect(restoredPanel.locator('button.action-remove')).toHaveCount(94);
+  await restoredPanel.locator('button.action-remove').evaluateAll((buttons) => {
+    for (const button of buttons) (button as HTMLButtonElement).click();
+  });
+  await expect(restoredPanel.locator('[data-widget-type]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  await page.reload();
+  await expect(page.getByRole('tabpanel', { name: 'Catalog Proof' }).locator('[data-widget-type]')).toHaveCount(0);
 });

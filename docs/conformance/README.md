@@ -11,6 +11,13 @@ Widget tree; only theme-owned tokens and presentation change.
 Current Lab screenshots are implementation evidence. They are not reference
 authority and cannot be refreshed to close a discrepancy.
 
+Pixel overlays remain diagnostic because the independent authority and Lab DOM
+trees are not pixel-aligned. Visually governed lanes fail on explicit material,
+color, geometry, overflow, and theme-token comparisons; reviewed Windows
+screenshots separately freeze exact implementation pixels. Interaction-only and
+Catalog lifecycle cases use screenshots as trace evidence rather than claiming
+that a preserved harness result row is a visual rendering oracle.
+
 ## Ledger lifecycle
 
 Every failing structured comparison has one stable target-prefixed row. The

@@ -74,15 +74,15 @@ function createInteractionScenario(
 }
 
 export const DEEP_CURRENT_INTERACTION_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
-  createInteractionScenario('dc-int-resize-left', 'Resize the left toolbar', 'scene-left-toolbar-resized', ['fine-pointer', 'keyboard']),
-  createInteractionScenario('dc-int-resize-right', 'Resize the right toolbar', 'scene-right-toolbar-resized', ['fine-pointer', 'keyboard']),
-  createInteractionScenario('dc-int-shelf-insert', 'Insert a Widget shelf', 'scene-toolbar-new-shelf', ['fine-pointer', 'keyboard', 'coarse-pointer']),
-  createInteractionScenario('dc-int-tab-merge', 'Merge Widgets as tabs', 'scene-group-tab-merge', ['fine-pointer', 'keyboard', 'coarse-pointer']),
-  createInteractionScenario('dc-int-tab-reorder', 'Reorder grouped Widget tabs', 'scene-group-tab-reordered', ['fine-pointer', 'keyboard']),
-  createInteractionScenario('dc-int-float', 'Float and move a Widget', 'scene-widget-floating', ['fine-pointer', 'keyboard', 'coarse-pointer']),
-  createInteractionScenario('dc-int-invalid-restore', 'Restore an invalid Widget drop', 'scene-invalid-drop-restored', ['fine-pointer', 'coarse-pointer']),
-  createInteractionScenario('dc-int-cancel-restore', 'Restore a cancelled Widget drag', 'scene-pointer-cancel-restored', ['fine-pointer', 'coarse-pointer']),
-  createInteractionScenario('dc-int-focus-back', 'Focus and return one Widget', 'scene-widget-focused', ['fine-pointer', 'keyboard']),
+  createInteractionScenario('dc-int-resize-left', 'Resize the left toolbar', 'scene-left-toolbar-resized', ['keyboard']),
+  createInteractionScenario('dc-int-resize-right', 'Resize the right toolbar', 'scene-right-toolbar-resized', ['keyboard']),
+  createInteractionScenario('dc-int-shelf-insert', 'Insert a Widget shelf', 'scene-toolbar-new-shelf', ['fine-pointer']),
+  createInteractionScenario('dc-int-tab-merge', 'Merge Widgets as tabs', 'scene-group-tab-merge', ['fine-pointer']),
+  createInteractionScenario('dc-int-tab-reorder', 'Reorder grouped Widget tabs', 'scene-group-tab-reordered', ['keyboard']),
+  createInteractionScenario('dc-int-float', 'Float and move a Widget', 'scene-widget-floating', ['fine-pointer']),
+  createInteractionScenario('dc-int-invalid-restore', 'Restore an invalid Widget drop', 'scene-invalid-drop-restored', ['fine-pointer']),
+  createInteractionScenario('dc-int-cancel-restore', 'Restore a cancelled Widget drag', 'scene-pointer-cancel-restored', ['coarse-pointer']),
+  createInteractionScenario('dc-int-focus-back', 'Focus and return one Widget', 'scene-widget-focused', ['fine-pointer']),
   createInteractionScenario('dc-int-panel-persist', 'Restore independent Panel layouts', 'panel-layout-restored', ['keyboard']),
   createInteractionScenario('dc-int-catalog-place', 'Place a Catalog Widget with the keyboard', 'catalog-keyboard-placement', ['keyboard'], 'widget-standard'),
   createInteractionScenario('dc-int-coarse-targets', 'Expose coarse-pointer interaction targets', 'scene-coarse-pointer', ['coarse-pointer'])

@@ -20,6 +20,14 @@
 
 {#if retainsContent}
   <div class="surface-anatomy" data-surface-presentation={fixture.presentation}>
+    {#if fixture.presentation === 'reader' || fixture.presentation === 'composer'}
+      <p class="surface-scope">{fixture.scope}</p>
+    {/if}
+    <dl class="surface-contract-facts" aria-label="Visible surface contract">
+      {#each fixture.rows as row (row[0])}
+        <div><dt>{row[0]}</dt><dd>{row[1]}</dd></div>
+      {/each}
+    </dl>
     {#if fixture.presentation === 'reader'}
       <div class="widget-content transcript">
         <p class="widget-kicker">{hostContext.location} · {hostContext.timeLabel}</p>
@@ -39,7 +47,6 @@
     {:else}
       <div class="implemented-surface">
         <p class="surface-scope">{fixture.scope}</p>
-
         {#if fixture.presentation === 'progress'}
           <ol class="surface-steps" aria-label="Current stages">
             {#each fixture.rows as row, index (row[0])}
@@ -149,6 +156,12 @@
           <footer class="surface-actions">{#each fixture.actions as action (action)}<button type="button">{action}</button>{/each}</footer>
         {/if}
       </div>
+    {/if}
+    {#if fixture.presentation === 'reader' || fixture.presentation === 'composer'}
+      <p class="surface-boundary"><span aria-hidden="true">i</span>{fixture.boundary}</p>
+      {#if fixture.actions.length && fixture.presentation !== 'composer'}
+        <footer class="surface-actions">{#each fixture.actions as action (action)}<button type="button">{action}</button>{/each}</footer>
+      {/if}
     {/if}
   </div>
 {/if}
