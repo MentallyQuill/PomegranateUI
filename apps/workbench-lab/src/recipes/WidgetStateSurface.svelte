@@ -11,6 +11,7 @@
     class:is-busy={state === 'loading' || state === 'saving' || state === 'running'}
     class:is-warning={state === 'stale' || state === 'dirty' || state === 'review' || state === 'partial'}
     class:is-danger={state === 'failure' || state === 'conflict' || state === 'refused'}
+    data-pom-part="row.surface"
     aria-live="polite"
     aria-busy={state === 'loading' || state === 'saving' || state === 'running'}
     role={state === 'failure' || state === 'conflict' ? 'alert' : 'status'}

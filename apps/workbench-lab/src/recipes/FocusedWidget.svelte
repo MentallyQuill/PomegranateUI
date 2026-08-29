@@ -31,17 +31,18 @@
 <dialog
   bind:this={dialog}
   class="focused-widget-dialog"
+  data-pom-part="dialog.surface"
   aria-labelledby={`focused-widget-title-${frame.instanceId}`}
   onclose={onreturn}
 >
-  <header>
+  <header data-pom-part="widget.header">
     <div>
       <span>Focused Widget</span>
       <h2 id={`focused-widget-title-${frame.instanceId}`}>Focused {frame.title}</h2>
     </div>
-    <button bind:this={backButton} type="button" onclick={() => dialog.close()}>Back to Workbench</button>
+    <button bind:this={backButton} type="button" data-pom-part="button.surface" onclick={() => dialog.close()}>Back to Workbench</button>
   </header>
-  <div class="focused-widget-surface">
-    <WidgetFrame {frame} {store} {rendererRegistry} {hostContext} class="widget-frame" />
+  <div class="focused-widget-surface" data-pom-part="widget.content">
+    <WidgetFrame {frame} {store} {rendererRegistry} {hostContext} surfacePart={null} class="widget-frame" />
   </div>
 </dialog>

@@ -5,6 +5,7 @@
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import type { WidgetFrameProjection } from '@pomegranate-ui/core';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
+  import { POM_SEMANTIC_PART_STYLE_SHEET, type CanvasPresentationLayer, type ThemeAssetRegistry } from '@pomegranate-ui/theme';
 
   import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
   import deepCurrentStage from './assets/deep-current-stage.jpg';
@@ -13,6 +14,7 @@
   import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
+  import ThemeCanvas from './recipes/ThemeCanvas.svelte';
   import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
@@ -54,16 +56,27 @@
     }
   }
   const catalogState = toSvelteCatalogStore(catalog);
+  const themeAssetRegistry: ThemeAssetRegistry = Object.freeze({
+    'icons.minimal': { kind: 'icon-pack', source: 'icons.minimal' },
+    'image.deep-current-stage': { kind: 'image', source: deepCurrentStage },
+    'image.bunny-garden': { kind: 'image', source: bunnyGardenCanvas }
+  });
+  const mediaMatches = (query: string) => typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
+  const backdropFilterSupported = typeof CSS === 'undefined' || typeof CSS.supports !== 'function'
+    ? true
+    : CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)');
   const themeController = createLabThemeController({
     preference: createLocalThemePreference(window.localStorage),
-    availableAssets: new Set(['icons.minimal', 'image.deep-current-stage', 'image.bunny-garden'])
+    assetRegistry: themeAssetRegistry,
+    devicePolicy: {
+      reducedTransparency: mediaMatches('(prefers-reduced-transparency: reduce)'),
+      coarsePointer: mediaMatches('(pointer: coarse)'),
+      backdropFilterSupported
+    }
   });
-  const themeAssetBindings = [
-    `--pom-asset-image-deep-current-stage:url("${deepCurrentStage}")`,
-    `--pom-asset-image-bunny-garden:url("${bunnyGardenCanvas}")`
-  ].join(';');
   const initialThemeSnapshot = themeController.getSnapshot();
   let themeSnapshot = $state(initialThemeSnapshot);
+  let canvasLayers = $state<readonly CanvasPresentationLayer[]>(initialThemeSnapshot.canvasLayers);
 
   function themeInspector(): LabThemeInspector {
     return {
@@ -73,7 +86,7 @@
         themeSnapshot.resolved.typography.prose.family,
         themeSnapshot.resolved.typography.technical.family
       ],
-      geometry: `${themeSnapshot.resolved.geometry.cornerFamily} · ${themeSnapshot.resolved.geometry.cornerMd}px`,
+      geometry: `${themeSnapshot.resolved.shapes.pane?.family ?? 'resolved'} · ${themeSnapshot.resolved.shapes.pane?.radiusPx ?? 0}px`,
       density: themeSnapshot.resolved.spacing.density,
       iconPackId: themeSnapshot.resolved.iconPackId
     };
@@ -91,6 +104,7 @@
 
   function applyThemeSnapshot(snapshot: typeof initialThemeSnapshot) {
     themeSnapshot = snapshot;
+    canvasLayers = snapshot.canvasLayers;
     hostContext.theme.activeId = snapshot.activeId;
     hostContext.theme.materialControls = snapshot.materialControls;
     hostContext.theme.inspector = themeInspector();
@@ -231,18 +245,26 @@
   }
 </script>
 
-<svelte:head><title>PomegranateUI Workbench Lab</title></svelte:head>
+<svelte:head>
+  <title>PomegranateUI Workbench Lab</title>
+  {@html `<style data-pom-semantic-parts>${POM_SEMANTIC_PART_STYLE_SHEET}</style>`}
+</svelte:head>
 
 <main
   class:focus-mode={focusMode}
   class:left-collapsed={leftCollapsed}
   data-pom-theme={themeSnapshot.activeId}
+  data-pom-theme-root
+  data-pom-widget-grouping={themeSnapshot.resolved.recipes.widgetGrouping}
+  data-pom-chrome-presentation={themeSnapshot.resolved.recipes.chromePresentation}
+  data-pom-action-presentation={themeSnapshot.resolved.recipes.actionPresentation}
+  data-pom-density={themeSnapshot.resolved.spacing.density}
   data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}
-  style={`${themeSnapshot.cssText};${themeAssetBindings}`}
+  style={themeSnapshot.cssText}
 >
-  <div class="atmosphere" aria-hidden="true"><i></i><i></i><i></i></div>
-  <header class="top-shelf" data-conformance-region="shelf">
+  <ThemeCanvas layers={canvasLayers} />
+  <header class="top-shelf" data-pom-part="chrome.shelf" data-conformance-region="shelf">
     <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
     <PanelTabs {store} class="panel-tabs" />
     <div class="story-lockup">
@@ -251,18 +273,19 @@
       <small aria-label="Active story identity">{hostContext.storyId} · {hostContext.frameLabel}</small>
     </div>
     <div class="shelf-actions">
-      <button type="button" aria-label="Open Widget Catalog" aria-expanded={$catalogState.open} onclick={() => catalog.open('drawer')}>Widgets</button>
-      <button type="button" aria-pressed={focusMode} onclick={() => { focusMode = !focusMode; }}>Focus reading</button>
+      <button type="button" data-pom-part="button.surface" aria-label="Open Widget Catalog" aria-expanded={$catalogState.open} onclick={() => catalog.open('drawer')}>Widgets</button>
+      <button type="button" data-pom-part="button.surface" aria-pressed={focusMode} onclick={() => { focusMode = !focusMode; }}>Focus reading</button>
       <span class="runtime-status"><i></i>{hostContext.systemStatus}</span>
     </div>
   </header>
 
-  <section class="context-rail" aria-label="Workbench context">
+  <section class="context-rail" data-pom-part="chrome.context" aria-label="Workbench context">
     <p><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
     <div class="theme-targets" role="group" aria-label="Visual target">
       {#each LAB_THEME_PRESETS as preset (preset.id)}
         <button
           type="button"
+          data-pom-part="button.surface"
           aria-label={preset.definition.label}
           aria-pressed={themeSnapshot.activeId === preset.id}
           onclick={() => activateTheme(preset.id)}
@@ -273,6 +296,7 @@
       {#if requestedFixture}
         <label class="surface-preview-control">State
           <select
+            data-pom-part="field.surface"
             aria-label="Surface preview state"
             value={hostContext.surfaceState}
             onchange={(event) => { hostContext.surfaceState = event.currentTarget.value; }}
@@ -281,17 +305,17 @@
           </select>
         </label>
       {/if}
-      <button type="button" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
-      <button type="button" onclick={openPanelDialog}>Create Panel</button>
+      <button type="button" data-pom-part="button.surface" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
+      <button type="button" data-pom-part="button.surface" onclick={openPanelDialog}>Create Panel</button>
     </div>
     <div class="persistence-actions">
-      <button type="button" onclick={() => void save()}>Save layout</button>
-      <button type="button" onclick={() => void reload()}>Reload saved layout</button>
-      <button type="button" onclick={() => void clear()}>Clear saved layout</button>
+      <button type="button" data-pom-part="button.surface" onclick={() => void save()}>Save layout</button>
+      <button type="button" data-pom-part="button.surface" onclick={() => void reload()}>Reload saved layout</button>
+      <button type="button" data-pom-part="button.surface" onclick={() => void clear()}>Clear saved layout</button>
     </div>
   </section>
 
-  <section id="workbench" class="workbench-shell" aria-label="Active Workbench">
+  <section id="workbench" class="workbench-shell" data-pom-part="panel.surface" aria-label="Active Workbench">
     <WorkbenchSurface {store} class="workbench-surface">
       {#snippet renderWidget(frame)}
         <div
@@ -317,6 +341,7 @@
               {rendererRegistry}
               {hostContext}
               onfocuswidget={focusWidget}
+              surfacePart={frame.placement.kind === 'floating' ? 'floating.surface' : 'widget.surface'}
               class="widget-frame"
             />
           {/if}
@@ -325,7 +350,7 @@
     </WorkbenchSurface>
   </section>
 
-  <footer class="lab-footer">
+  <footer class="lab-footer" data-pom-part="chrome.context">
     <p role="status" aria-live="polite">{status}</p>
     <details><summary>Event log</summary><ol>{#each eventLog as entry}<li>{entry}</li>{/each}</ol></details>
     <details><summary>Native contract evidence</summary><ul>{#each FIRST_SLICE_CONTRACT_IDS as id}<li>{id}</li>{/each}</ul></details>
@@ -343,12 +368,12 @@
     />
   {/if}
 
-  <dialog bind:this={panelDialog} aria-labelledby="panel-dialog-title">
+  <dialog bind:this={panelDialog} data-pom-part="dialog.surface" aria-labelledby="panel-dialog-title">
     <form onsubmit={createPanel}>
       <h2 id="panel-dialog-title">Create a Panel</h2>
-      <label>Panel name<input bind:value={panelName} /></label>
+      <label>Panel name<input data-pom-part="field.surface" bind:value={panelName} /></label>
       <p>Starts as an adopter-owned two-column layout.</p>
-      <div><button type="button" onclick={() => panelDialog.close()}>Cancel</button><button type="submit">Create Panel</button></div>
+      <div><button type="button" data-pom-part="button.surface" onclick={() => panelDialog.close()}>Cancel</button><button type="submit" data-pom-part="button.surface">Create Panel</button></div>
     </form>
   </dialog>
 </main>

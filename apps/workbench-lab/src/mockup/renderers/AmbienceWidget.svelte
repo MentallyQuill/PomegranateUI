@@ -6,7 +6,7 @@
 </script>
 
 <div class="widget-content ambience">
-  <button type="button" aria-pressed={playing} onclick={() => { playing = !playing; }}>{playing ? 'Pause' : 'Play'}</button>
+  <button type="button" data-pom-part="button.surface" aria-pressed={playing} onclick={() => { playing = !playing; }}>{playing ? 'Pause' : 'Play'}</button>
   <span class="sound-wave" aria-hidden="true">▂▄▆▃▅▇▄</span>
   <p>Reservoir rain · distant machinery</p>
   <small>{hostContext.location}</small>

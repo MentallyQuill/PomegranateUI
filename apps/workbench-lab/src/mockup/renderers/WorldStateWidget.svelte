@@ -5,8 +5,8 @@
 </script>
 
 <div class="widget-content fact-grid">
-  <span>Location<strong>{hostContext.location}</strong></span>
-  <span>Weather<strong>Rain easing</strong></span>
-  <span>Light<strong>Blue relay glow</strong></span>
-  <span>Frame<strong>Present · 42</strong></span>
+  <span data-pom-part="row.surface">Location<strong>{hostContext.location}</strong></span>
+  <span data-pom-part="row.surface">Weather<strong>Rain easing</strong></span>
+  <span data-pom-part="row.surface">Light<strong>Blue relay glow</strong></span>
+  <span data-pom-part="row.surface">Frame<strong>Present · 42</strong></span>
 </div>

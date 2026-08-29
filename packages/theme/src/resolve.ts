@@ -3,14 +3,26 @@ import {
   ThemeDefinitionSchema,
   ThemePatchSchema,
   type ThemeDefinition,
+  type ThemeDefinitionV2,
+  type ThemeMaterialV2,
   type ThemeMaterialRole,
   type ThemePatch
 } from '@pomegranate-ui/contracts';
+import { resolveThemeAssets, type ThemeAssetRegistry } from './assets.js';
+import { resolveMaterialContentColors } from './conformance.js';
+import { migrateTheme } from './migrate.js';
 
 export type ThemeDiagnosticCode =
   | 'THEME_SCHEMA_INVALID'
   | 'THEME_UNKNOWN_PRESET'
   | 'THEME_ASSET_MISSING'
+  | 'THEME_ASSET_KIND_MISMATCH'
+  | 'THEME_ICON_PACK_MISSING'
+  | 'THEME_CANVAS_ASSET_MISSING'
+  | 'THEME_CANVAS_ASSET_KIND_MISMATCH'
+  | 'THEME_MIGRATION_INPUT_INVALID'
+  | 'THEME_MIGRATION_VERSION_UNSUPPORTED'
+  | 'THEME_MIGRATION_OUTPUT_INVALID'
   | 'THEME_CONTRAST_UNSAFE';
 
 export interface ThemeDiagnostic {
@@ -40,6 +52,23 @@ export interface ResolvedTheme extends Omit<ThemeDefinition, 'materials'> {
 
 export type ThemeResolution =
   | { readonly ok: true; readonly theme: ResolvedTheme; readonly diagnostics: readonly [] }
+  | { readonly ok: false; readonly diagnostics: readonly ThemeDiagnostic[] };
+
+export interface ResolvedMaterialV2 extends Omit<ThemeMaterialV2, 'base' | 'fallback' | 'border' | 'rim' | 'shadows'> {
+  readonly base: string;
+  readonly fallback: string;
+  readonly border: Omit<ThemeMaterialV2['border'], 'color'> & { readonly color: string };
+  readonly rim: Omit<ThemeMaterialV2['rim'], 'color'> & { readonly color: string };
+  readonly shadows: readonly (Omit<ThemeMaterialV2['shadows'][number], 'color'> & { readonly color: string })[];
+}
+
+export interface ResolvedThemeV2 extends Omit<ThemeDefinitionV2, 'materials' | 'assets'> {
+  readonly materials: Readonly<Record<string, ResolvedMaterialV2>>;
+  readonly assets: ThemeAssetRegistry;
+}
+
+export type ThemeResolutionV2 =
+  | { readonly ok: true; readonly theme: ResolvedThemeV2; readonly diagnostics: readonly [] }
   | { readonly ok: false; readonly diagnostics: readonly ThemeDiagnostic[] };
 
 function diagnosticPath(path: readonly PropertyKey[]): readonly (string | number)[] {
@@ -103,6 +132,58 @@ export function resolveTheme(input: unknown): ThemeResolution {
   return {
     ok: true,
     theme: deepFreeze({ ...theme, materials }),
+    diagnostics: []
+  };
+}
+
+export function resolveThemeV2(input: unknown, registry: ThemeAssetRegistry = {}): ThemeResolutionV2 {
+  const migrated = migrateTheme(input);
+  if (!migrated.ok) return { ok: false, diagnostics: migrated.diagnostics };
+
+  const theme = migrated.theme;
+  const resolvedAssets = resolveThemeAssets(theme, registry);
+  if (!resolvedAssets.ok) return { ok: false, diagnostics: resolvedAssets.diagnostics };
+
+  const materials = Object.fromEntries(Object.entries(theme.materials).map(([id, material]) => [id, {
+    ...material,
+    base: theme.colors[material.base],
+    fallback: theme.colors[material.fallback],
+    border: { ...material.border, color: theme.colors[material.border.color] },
+    rim: { ...material.rim, color: theme.colors[material.rim.color] },
+    shadows: material.shadows.map((shadow) => ({ ...shadow, color: theme.colors[shadow.color] }))
+  } satisfies ResolvedMaterialV2])) as Record<string, ResolvedMaterialV2>;
+
+  const contrastDiagnostics: ThemeDiagnostic[] = [];
+  const nonTextParts = new Set(['canvas.surface', 'separator', 'slider.input', 'slider.track', 'slider.fill', 'slider.thumb']);
+  const textMaterialIds = new Set<string>();
+  for (const [partId, recipe] of Object.entries(theme.recipes.parts)) {
+    if (nonTextParts.has(partId)) continue;
+    textMaterialIds.add(recipe.material);
+    for (const state of ['hover', 'pressed', 'selected', 'focus', 'inactive'] as const) {
+      if (recipe.states[state]?.material) textMaterialIds.add(recipe.states[state]!.material!);
+    }
+  }
+  for (const id of textMaterialIds) {
+    const material = materials[id]!;
+    const content = resolveMaterialContentColors({ colors: theme.colors, accessibility: theme.accessibility }, material);
+    if (content.normalContrast < theme.accessibility.minimumContrast
+      || content.largeContrast < theme.accessibility.largeTextContrast) {
+      contrastDiagnostics.push({
+        code: 'THEME_CONTRAST_UNSAFE',
+        path: ['materials', id, 'contentTone'],
+        message: `Material '${id}' content tone does not meet the ${theme.accessibility.minimumContrast}:1 normal and ${theme.accessibility.largeTextContrast}:1 large-text contrast floors against its fallback.`
+      });
+    }
+  }
+  if (contrastDiagnostics.length > 0) return { ok: false, diagnostics: contrastDiagnostics };
+
+  return {
+    ok: true,
+    theme: deepFreeze({
+      ...theme,
+      materials,
+      assets: resolvedAssets.assets
+    }),
     diagnostics: []
   };
 }

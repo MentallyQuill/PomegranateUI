@@ -1,4 +1,4 @@
-import type { ThemeDefinition } from '@pomegranate-ui/contracts';
+import type { ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
 
 import { BUNNY_THEME } from './bunny.js';
 import { DEEP_CURRENT_THEME } from './deep-current.js';
@@ -9,7 +9,7 @@ export type LabThemeId = (typeof LAB_THEME_IDS)[number];
 
 export interface LabThemePreset {
   readonly id: LabThemeId;
-  readonly definition: ThemeDefinition;
+  readonly definition: ThemeDefinitionV2;
 }
 
 export interface LabThemePresetInput {

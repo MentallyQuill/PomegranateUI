@@ -13,6 +13,24 @@ afterEach(() => {
 });
 
 describe('Svelte Workbench Lab mockup', () => {
+  it('renders one pointer-transparent theme canvas below the Workbench without stage wallpaper ownership', () => {
+    const { container } = render(App);
+    const root = container.querySelector('main');
+    const canvas = container.querySelector('[data-pom-canvas-root]');
+
+    expect(root).toHaveAttribute('data-pom-theme-root');
+    expect(canvas).not.toBeNull();
+    expect(canvas).toHaveAttribute('data-pom-part', 'canvas.surface');
+    expect(container.querySelectorAll('[data-pom-canvas-root]')).toHaveLength(1);
+    expect(canvas?.querySelectorAll('[data-pom-canvas-layer]').length).toBeGreaterThan(0);
+    for (const layer of canvas?.querySelectorAll<HTMLElement>('[data-pom-canvas-layer]') ?? []) {
+      expect(layer.style.pointerEvents).toBe('none');
+    }
+    const stage = container.querySelector('[data-conformance-region="stage"]');
+    expect(stage?.querySelector('[data-pom-canvas-root]')).toBeNull();
+    expect([...stage?.querySelectorAll<HTMLElement>('*') ?? []].some((node) => node.style.backgroundImage !== '')).toBe(false);
+  });
+
   it('renders the atmospheric shell, story lockup, Panels, and seven seeded Scene Widgets', () => {
     const { container } = render(App);
     expect(screen.getByText('PomegranateUI')).toBeVisible();

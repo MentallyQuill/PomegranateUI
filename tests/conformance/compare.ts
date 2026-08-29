@@ -104,8 +104,21 @@ const widgetSurfaceProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('content.actions'),
   exact('visual.darkSurface', 'visual'),
   exact('visual.visibleBorder', 'visual'),
-  exact('visual.compactCorners', 'visual'),
-  exact('visual.headerSeparated', 'visual')
+  exact('visual.compactCorners', 'visual')
+]);
+
+const shellBehaviorProfile: readonly ComparisonDefinition[] = Object.freeze([
+  noOverflow('document'),
+  exact('regions.composer.overflow.x'),
+  exact('regions.composer.styles.borderTopColor', 'visual'),
+  exact('regions.composer.visible'),
+  exact('regions.left.visible'),
+  exact('regions.right.visible'),
+  exact('regions.shelf.overflow.x'),
+  exact('regions.shelf.styles.backgroundColor', 'visual'),
+  exact('regions.shelf.visible'),
+  exact('regions.stage.overflow.x'),
+  exact('regions.stage.visible')
 ]);
 
 const catalogProfile: readonly ComparisonDefinition[] = Object.freeze([
@@ -124,7 +137,7 @@ const catalogProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('lifecycle.removed')
 ]);
 
-const themeTargetProfile: readonly ComparisonDefinition[] = Object.freeze([
+const themeTargetBehaviorProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('functional.targetApplied'),
   exact('functional.identityStable'),
   exact('functional.instant'),
@@ -132,21 +145,16 @@ const themeTargetProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('functional.keyboardAccessible'),
   exact('functional.scenarioStateReached'),
   exact('structure.panelTabs'),
-  Object.freeze({ path: 'structure.anchorWidgets', comparator: 'contains', category: 'structure', severity: 'P1' }),
-  exact('visual.canvas', 'visual'),
-  exact('visual.accent', 'visual'),
-  exact('visual.text', 'visual'),
-  exact('visual.shellRadius', 'visual'),
-  exact('visual.widgetRadius', 'visual'),
-  exact('visual.buttonRadius', 'visual')
+  Object.freeze({ path: 'structure.anchorWidgets', comparator: 'contains', category: 'structure', severity: 'P1' })
 ]);
 
 export const MEASUREMENT_PROFILES: ReadonlyMap<string, readonly ComparisonDefinition[]> = new Map([
   ['deep-current-shell', shellProfile],
+  ['deep-current-shell-behavior', shellBehaviorProfile],
   ['deep-current-interaction', interactionProfile],
   ['deep-current-widget-surface', widgetSurfaceProfile],
   ['deep-current-catalog', catalogProfile],
-  ['theme-target', themeTargetProfile]
+  ['theme-target-behavior', themeTargetBehaviorProfile]
 ]);
 
 function valueAtPath(root: NormalizedValue, evidencePath: string): NormalizedValue {

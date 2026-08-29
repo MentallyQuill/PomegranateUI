@@ -84,6 +84,20 @@ test('packed verifier proves an isolated Svelte recipe consumer', async () => {
   }
 });
 
+test('external non-preset fixture uses public theme APIs without requiring prebuilt workspace output', async () => {
+  const consumer = await readFile(path.join(root, 'tests', 'fixtures', 'external-theme-consumer.mjs'), 'utf8');
+  const definition = await readFile(path.join(root, 'tests', 'fixtures', 'external-theme.ts'), 'utf8');
+  assert.match(consumer, /from '@pomegranate-ui\/theme'/);
+  assert.match(consumer, /compileCanvasLayers/);
+  assert.match(consumer, /compileThemeBindings/);
+  assert.match(consumer, /compileThemeStyleSheet/);
+  assert.match(consumer, /resolveThemeV2/);
+  assert.doesNotMatch(consumer, /(?:^|\/)packages\/[^/]+\/src(?:\/|$)/);
+  assert.match(definition, /id: 'copper-terminal-fixture'/);
+  assert.match(definition, /shape: 'square'/);
+  assert.match(definition, /family: 'Pomegranate Mono'/);
+});
+
 test('package and example imports remain public, relative, and repository-neutral', async () => {
   for (const area of ['packages', 'examples']) {
     const files = (await walk(path.join(root, area))).filter((file) => /\.(?:mjs|ts|tsx)$/.test(file));

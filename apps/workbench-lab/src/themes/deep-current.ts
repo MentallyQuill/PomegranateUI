@@ -1,50 +1,17 @@
-import type { ThemeColorRole, ThemeDefinition, ThemeMaterial } from '@pomegranate-ui/contracts';
+import type { ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
 
-function material(
-  base: ThemeColorRole,
-  fallback: ThemeColorRole = base,
-  overrides: Partial<ThemeMaterial> = {}
-): ThemeMaterial {
-  return {
-    base,
-    fallback,
-    opacity: 0.78,
-    blurPx: 22,
-    saturation: 1.18,
-    border: 'border',
-    shadow: 'shadow',
-    shadowOpacity: 0.38,
-    shadowBlurPx: 70,
-    insetHighlight: 0.05,
-    bloom: 0,
-    ...overrides
-  };
-}
+import { material, shapePalette, themeRecipes } from './base.js';
 
-export const DEEP_CURRENT_THEME: ThemeDefinition = {
-  schemaVersion: 'pomegranate.ui.theme.v1',
+export const DEEP_CURRENT_THEME: ThemeDefinitionV2 = {
+  schemaVersion: 'pomegranate.ui.theme.v2',
   id: 'deep-current',
   label: 'Deep Current',
-  description: 'Industrial dark-tech glass, cold signal light, and technical geometry derived from the preserved Sonder mockup direction.',
+  description: 'Industrial dark-tech glass, cold signal light, and compact technical geometry derived from the preserved Sonder direction.',
   colors: {
-    canvas: '#080c0d',
-    surface: '#0b1213',
-    surfaceElevated: '#10191a',
-    surfaceInset: '#040708',
-    chrome: '#0b1213',
-    text: '#e7f6f0',
-    textMuted: '#a7b8b2',
-    textFaint: '#748580',
-    textOnAccent: '#071011',
-    accent: '#94d9d0',
-    selection: '#94d9d0',
-    focus: '#bfeee8',
-    success: '#86d89a',
-    warning: '#d2b57a',
-    danger: '#df7b70',
-    border: '#17201f',
-    borderStrong: '#5f807b',
-    shadow: '#000000'
+    canvas: '#080c0d', surface: '#0b1213', surfaceElevated: '#10191a', surfaceInset: '#040708', chrome: '#0b1213',
+    text: '#e7f6f0', textMuted: '#a7b8b2', textFaint: '#748580', textOnAccent: '#071011', accent: '#94d9d0',
+    selection: '#244c4a', focus: '#bfeee8', success: '#86d89a', warning: '#d2b57a', danger: '#df7b70',
+    border: '#28413f', borderStrong: '#5f807b', shadow: '#000000'
   },
   typography: {
     ui: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 450, strongWeight: 650, lineHeight: 1.35, trackingEm: 0 },
@@ -53,41 +20,40 @@ export const DEEP_CURRENT_THEME: ThemeDefinition = {
     display: { family: 'Pomegranate Serif', fallbacks: ['ui-serif', 'serif'], weight: 520, strongWeight: 680, lineHeight: 1.15, trackingEm: 0.02 },
     scale: { xs: 11, sm: 12, md: 14, lg: 18, xl: 24 }
   },
-  geometry: {
-    cornerFamily: 'chamfered',
-    cornerSm: 6.4,
-    cornerMd: 8.8,
-    cornerLg: 13.6,
-    cornerPill: 999,
-    chamfer: 6,
-    chamferAngle: 45,
-    borderWidth: 1,
-    sharedEdge: 'hairline',
-    focusWidth: 2,
-    focusOffset: 2
-  },
-  spacing: { density: 'compact', xs: 4, sm: 6, md: 12, lg: 16, xl: 24, chromeHeight: 44 },
+  spacing: { density: 'compact', xs: 4, sm: 6, md: 10, lg: 16, xl: 24, chromeHeight: 44 },
   materials: {
-    canvas: material('canvas', 'canvas', { opacity: 1, blurPx: 0, saturation: 1, shadowOpacity: 0, shadowBlurPx: 0 }),
-    shelf: material('chrome', 'chrome', { opacity: 0.62, blurPx: 24, saturation: 0.9, shadowOpacity: 0.34, shadowBlurPx: 44, insetHighlight: 0.09 }),
-    panel: material('surfaceInset', 'surfaceInset', { opacity: 0.48, blurPx: 20, saturation: 0.92, shadowOpacity: 0.22, shadowBlurPx: 34, insetHighlight: 0.06 }),
-    widget: material('surfaceElevated', 'surfaceInset', { opacity: 0.74, blurPx: 18, saturation: 1.04, shadowOpacity: 0.28, shadowBlurPx: 38, insetHighlight: 0.08 }),
-    field: material('shadow', 'surfaceInset', { opacity: 0.32, blurPx: 16, saturation: 0.96, shadowOpacity: 0.12, shadowBlurPx: 18, insetHighlight: 0.04 }),
-    button: material('text', 'surfaceElevated', { opacity: 0.08, blurPx: 16, saturation: 1, shadowOpacity: 0.12, shadowBlurPx: 16, insetHighlight: 0.08 }),
-    menu: material('chrome', 'chrome', { opacity: 0.88, blurPx: 32, saturation: 1.2, shadowOpacity: 0.62, shadowBlurPx: 100, insetHighlight: 0.1 }),
-    dialog: material('chrome', 'chrome', { opacity: 0.9, blurPx: 32, saturation: 1.18, insetHighlight: 0.1 }),
-    floating: material('surfaceElevated', 'surfaceInset', { opacity: 0.88, blurPx: 24, saturation: 1.08, shadowOpacity: 0.54, shadowBlurPx: 64, insetHighlight: 0.1 })
+    canvas: material({ base: 'canvas', opacity: 0, blurPx: 0, borderWidthPx: 0, reducedTransparency: 'canvas' }),
+    shelf: material({ base: 'chrome', opacity: 0.62, blurPx: 24, saturation: 0.9, border: 'borderStrong', borderOpacity: 0.3, rimOpacity: 0.09, shadowOpacity: 0.34, shadowBlurPx: 44 }),
+    context: material({ base: 'surfaceElevated', opacity: 0.34, blurPx: 18, saturation: 0.92, border: 'borderStrong', borderOpacity: 0.24, rimOpacity: 0.05, shadowOpacity: 0.18, shadowBlurPx: 24 }),
+    panel: material({ base: 'surfaceInset', opacity: 0, blurPx: 0, borderWidthPx: 0, rimOpacity: 0, reducedTransparency: 'panel' }),
+    pane: material({ base: 'surfaceElevated', fallback: 'surfaceInset', opacity: 0.74, blurPx: 18, saturation: 1.04, border: 'borderStrong', borderOpacity: 0.34, rimOpacity: 0.08, shadowOpacity: 0.3, shadowBlurPx: 38 }),
+    header: material({ base: 'chrome', fallback: 'surfaceInset', opacity: 0.34, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),
+    content: material({ base: 'surface', fallback: 'surfaceInset', opacity: 0.24, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),
+    row: material({ base: 'surfaceElevated', fallback: 'surfaceInset', opacity: 0.3, blurPx: 0, border: 'border', borderOpacity: 0.18, rimOpacity: 0.03 }),
+    field: material({ base: 'surfaceInset', opacity: 0.74, blurPx: 0, border: 'borderStrong', borderOpacity: 0.3, rimOpacity: 0.04 }),
+    button: material({ base: 'surfaceElevated', opacity: 0.2, blurPx: 0, border: 'borderStrong', borderOpacity: 0.34, rimOpacity: 0.06 }),
+    selected: material({ base: 'selection', fallback: 'surfaceElevated', opacity: 0.42, blurPx: 0, border: 'focus', borderOpacity: 0.5, rimOpacity: 0.08 }),
+    menu: material({ base: 'chrome', opacity: 0.9, blurPx: 30, saturation: 1.15, border: 'borderStrong', borderOpacity: 0.5, rimOpacity: 0.1, shadowOpacity: 0.58, shadowBlurPx: 90 }),
+    dialog: material({ base: 'chrome', opacity: 0.92, blurPx: 32, saturation: 1.12, border: 'borderStrong', borderOpacity: 0.5, rimOpacity: 0.1, shadowOpacity: 0.62, shadowBlurPx: 96 }),
+    floating: material({ base: 'surfaceElevated', fallback: 'surfaceInset', opacity: 0.88, blurPx: 24, border: 'borderStrong', borderOpacity: 0.44, rimOpacity: 0.1, shadowOpacity: 0.54, shadowBlurPx: 64 }),
+    track: material({ base: 'surfaceInset', opacity: 0.9, blurPx: 0, border: 'border', borderOpacity: 0.32, rimOpacity: 0 }),
+    fill: material({ base: 'accent', opacity: 0.82, blurPx: 0, border: 'accent', borderOpacity: 0.5, rimOpacity: 0 }),
+    thumb: material({ base: 'text', fallback: 'surfaceElevated', opacity: 0.92, blurPx: 0, border: 'borderStrong', borderOpacity: 0.56, rimOpacity: 0.12, shadowOpacity: 0.24, shadowBlurPx: 12, shadowY: 3, shadowSpreadPx: 0 }),
+    opaque: material({ base: 'surface', opacity: 1, blurPx: 0, border: 'borderStrong', borderOpacity: 0.42, rimOpacity: 0, reducedTransparency: 'opaque' })
   },
+  shapes: shapePalette({ family: 'chamfered', small: 4, medium: 7, large: 10, chamferPx: 5 }),
+  recipes: themeRecipes({ widgetGrouping: 'unified', chromePresentation: 'compact', actionPresentation: 'compact' }),
+  controls: { slider: { trackPx: 3, thumbPx: 10, hitTargetPx: 44 } },
   iconPackId: 'icons.minimal',
   assets: [
     { id: 'icons.minimal', kind: 'icon-pack', required: true },
     { id: 'image.deep-current-stage', kind: 'image', required: true }
   ],
   canvas: [
-    { kind: 'linear-gradient', angle: 90, stops: [{ color: '#020506e0', position: 0 }, { color: '#07101238', position: 0.54 }, { color: '#020506b8', position: 1 }] },
-    { kind: 'radial-gradient', shape: 'ellipse', x: 0.68, y: 0.38, stops: [{ color: '#94d9d02e', position: 0 }, { color: '#07101200', position: 0.58 }] },
+    { kind: 'solid', color: '#080c0d' },
     { kind: 'image', assetId: 'image.deep-current-stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 0.82, blend: 'normal' },
-    { kind: 'solid', color: '#080c0d' }
+    { kind: 'linear-gradient', angle: 90, stops: [{ color: '#020506e0', position: 0 }, { color: '#07101238', position: 0.54 }, { color: '#020506b8', position: 1 }] },
+    { kind: 'radial-gradient', shape: 'ellipse', x: 0.68, y: 0.38, stops: [{ color: '#94d9d02e', position: 0 }, { color: '#07101200', position: 0.58 }] }
   ],
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
   capabilities: { translucency: true, textures: false, localImages: true }

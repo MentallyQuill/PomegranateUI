@@ -328,7 +328,7 @@ test('all theme targets remain readable, transition-free, and contained at wide 
     await page.setViewportSize(viewport);
     for (const theme of [
       { label: 'Deep Current', id: 'deep-current', text: 'rgb(231, 246, 240)' },
-      { label: 'PomOS', id: 'pom-neutral', text: 'rgb(19, 26, 35)' },
+      { label: 'PomOS', id: 'pom-neutral', text: 'rgb(16, 24, 32)' },
       { label: 'Bunny', id: 'bunny', text: 'rgb(69, 54, 77)' }
     ]) {
       const button = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: theme.label, exact: true });

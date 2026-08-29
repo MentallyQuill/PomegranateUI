@@ -10,5 +10,13 @@ surfaces and six Catalog scenarios. The historical `dc-catalog-fallback-46`
 scenario ID is retained for continuity; the complete 94-entry manifest now has
 49 implemented renderers and 45 honest unavailable-renderer fallbacks.
 
+The Widget oracle continues to gate content, behavior, accessibility, dark
+surface treatment, outer-border intent, and compact geometry. Literal header
+separator presence is retained in captured evidence but is no longer compared:
+the v2 semantic recipe deliberately owns one consistent tonal header treatment,
+while the preserved Widget prototype varies that detail between surfaces.
+Current header consistency and artifact prevention are gated by the recipe
+browser suite instead.
+
 | ID | Category | Severity | Authority | Scenario | Evidence | Diagnosis | Status | Regression | Deviation |
 |---|---|---|---|---|---|---|---|---|---|

@@ -20,6 +20,7 @@
     "examples/**/*.test.ts",
     "tests/browser/**/*.ts",
     "tests/conformance/**/*.ts",
+    "tests/fixtures/**/*.ts",
     "tests/native/**/*.ts",
     "vitest.config.ts"
   ]

@@ -77,4 +77,4 @@
   onpointerup={pointerFinish}
   onpointercancel={pointerFinish}
   onkeydown={keyDown}
-><span aria-hidden="true"></span></button>
+><span data-pom-part="separator" aria-hidden="true"></span></button>

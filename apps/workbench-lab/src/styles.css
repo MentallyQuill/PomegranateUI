@@ -19,14 +19,9 @@ main {
   --glass: var(--pom-material-shelf, rgb(31 28 34 / 78%)); --glass-deep: var(--pom-material-menu, rgb(20 18 23 / 94%));
   --ember: var(--pom-color-accent, #e2a069); --ember-bright: var(--pom-color-focus, #ffc38d); --moss: var(--pom-color-success, #769885);
   --shadow: var(--pom-material-shelf-shadow, 0 22px 70px rgb(0 0 0 / 38%));
-  color: var(--ink); background-color: var(--pom-canvas-color, #111014); background-image: var(--pom-canvas, none);
+  color: var(--ink); background-color: transparent; background-image: none;
   font-family: var(--pom-font-ui, "Pomegranate Sans", ui-sans-serif, system-ui, sans-serif);
 }
-.atmosphere { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.atmosphere i { position: absolute; width: 38rem; height: 38rem; border-radius: 50%; filter: blur(90px); opacity: .16; }
-.atmosphere i:nth-child(1) { top: -18rem; left: -8rem; background: var(--pom-atmosphere-one, #a63e59); }
-.atmosphere i:nth-child(2) { right: -14rem; bottom: -18rem; background: var(--pom-atmosphere-two, #377779); }
-.atmosphere i:nth-child(3) { top: 34%; left: 42%; width: 22rem; height: 22rem; background: var(--pom-atmosphere-three, #b56f45); opacity: .08; }
 .top-shelf, .context-rail, .workbench-shell, .lab-footer { border: var(--pom-border-width, 1px) solid var(--line); background: var(--glass); box-shadow: var(--shadow), var(--pom-material-shelf-inset, none); backdrop-filter: blur(var(--pom-material-shelf-blur, 22px)) saturate(var(--pom-material-shelf-saturation, 1.18)); }
 
 .top-shelf { display: grid; grid-template-columns: auto minmax(17rem, 1fr) minmax(15rem, auto) auto; align-items: center; gap: .9rem; min-height: 4.4rem; padding: .55rem .7rem; border-radius: var(--pom-radius-large, .85rem) var(--pom-radius-large, .85rem) var(--pom-radius-small, .4rem) var(--pom-radius-small, .4rem); }
@@ -354,7 +349,7 @@ dialog form > div { display: flex; justify-content: flex-end; gap: .4rem; }
 @media (min-width: 1280px) { .widget-catalog[data-presentation="expanded"] ul { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: no-preference) { .widget-frame, .widget-catalog { animation: surface-in 180ms ease-out; } @keyframes surface-in { from { opacity: 0; transform: translateY(4px); } } }
 
-/* Atmospheric shell composition. Theme identity remains entirely token-driven. */
+/* Workbench shell composition. Theme identity remains entirely token-driven. */
 html, body { height: 100%; overflow: hidden; }
 main {
   display: flex;
@@ -369,7 +364,6 @@ main {
   --pom-side-width: min(286px, 18.1856%);
   --pom-showcase-height: 43px;
 }
-.atmosphere { display: none; }
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -508,19 +502,8 @@ main {
 [data-conformance-region="stage"] {
   isolation: isolate;
   display: block;
-  background-color: var(--pom-canvas-color, #080c0d);
-  background-image: var(--pom-canvas, none);
-  background-position: center;
-  background-size: cover;
+  background: transparent;
   backdrop-filter: none;
-}
-[data-conformance-region="stage"]::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  background: linear-gradient(90deg, rgb(0 0 0 / 54%), transparent 42%, rgb(0 0 0 / 12%));
-  pointer-events: none;
 }
 [data-pomegranate-floating-layer] { z-index: 10; }
 .left-collapsed .workbench-surface { --pom-left-width: 0px !important; }
@@ -798,4 +781,303 @@ main[data-active-panel="surface-preview"] :is(
     .top-shelf { grid-template-columns: 74px minmax(0, 1fr) 44px; }
     .shelf-actions button:first-child { width: 44px; }
   }
+}
+
+/* Theme recipe v2 composition. These selectors respond only to public recipe
+   values and semantic parts; no concrete theme identity is encoded here. */
+main[data-pom-theme-root] {
+  gap: var(--pom-space-sm, 8px);
+  padding: clamp(8px, var(--pom-space-md, 12px), 18px);
+  background: transparent;
+}
+
+main[data-pom-theme-root] .context-rail {
+  order: -1;
+  flex: 0 0 auto;
+  grid-template-columns: minmax(170px, 1fr) auto auto auto;
+  gap: var(--pom-space-sm, 8px);
+  min-height: var(--pom-chrome-height, 44px);
+  padding: 5px 10px;
+  color: var(--ink);
+  color-scheme: normal;
+}
+main[data-pom-theme-root] .context-rail p span,
+main[data-pom-theme-root] .context-rail p strong { color: inherit; }
+main[data-pom-theme-root] .context-rail button {
+  min-height: 30px;
+  padding: 4px 10px;
+  color: var(--ink);
+  font: 11px var(--pom-font-ui, sans-serif);
+  letter-spacing: 0;
+  text-transform: none;
+}
+main[data-pom-theme-root] .context-rail button[aria-pressed="true"] {
+  color: var(--ink);
+}
+main[data-pom-theme-root] .theme-targets::before {
+  color: var(--faint);
+  font-family: var(--pom-font-technical, monospace);
+}
+
+main[data-pom-theme-root] .top-shelf {
+  flex: 0 0 var(--pom-chrome-height, 44px);
+  grid-template-columns: 188px minmax(270px, auto) minmax(0, 1fr) auto;
+  min-height: var(--pom-chrome-height, 44px);
+  padding: 5px 7px;
+  overflow: visible;
+}
+main[data-pom-theme-root] .wordmark {
+  grid-template-columns: 34px minmax(0, 1fr);
+  padding: 0 8px 0 2px;
+  border: 0;
+}
+main[data-pom-theme-root] .wordmark > span {
+  width: 27px;
+  height: 27px;
+  border-radius: var(--pom-radius-small, 10px);
+  transform: none;
+}
+main[data-pom-theme-root] .panel-tabs { gap: 4px; overflow: visible; }
+main[data-pom-theme-root] .panel-tabs > div { height: auto; }
+main[data-pom-theme-root] .panel-tabs button,
+main[data-pom-theme-root] .panel-tabs [role="tab"] {
+  min-width: auto;
+  min-height: 32px;
+  padding: 4px 12px;
+}
+main[data-pom-theme-root] .panel-tabs button[aria-label^="Move"] {
+  width: 28px;
+  min-height: 32px;
+}
+main[data-pom-theme-root] .story-lockup { border: 0; }
+main[data-pom-theme-root] .shelf-actions { gap: 4px; }
+main[data-pom-theme-root] .shelf-actions button {
+  min-height: 32px;
+  padding: 4px 11px;
+}
+main[data-pom-theme-root] .runtime-status { border: 0; }
+
+main[data-pom-theme-root] .workbench-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+main[data-pom-theme-root] .workbench-surface,
+main[data-pom-theme-root].left-collapsed .workbench-surface {
+  grid-template-columns: var(--pom-left-width, var(--pom-side-width)) minmax(0, 1fr) var(--pom-right-width, var(--pom-side-width));
+  gap: var(--pom-space-sm, 8px);
+  height: 100%;
+  padding: 0;
+}
+main[data-pom-theme-root] [data-pomegranate-dock] {
+  z-index: auto;
+  min-height: 0;
+}
+main[data-pom-theme-root] [data-conformance-region="left"],
+main[data-pom-theme-root] [data-conformance-region="right"] {
+  display: grid;
+  gap: var(--pom-space-sm, 8px);
+  border: 0;
+}
+main[data-pom-theme-root] [data-conformance-region="left"] { grid-template-rows: minmax(0, 2fr) minmax(0, 3fr); }
+main[data-pom-theme-root] [data-conformance-region="right"] { grid-template-rows: minmax(0, 3fr) minmax(0, 4.2fr) minmax(0, 2.8fr); }
+main[data-pom-theme-root] [data-conformance-region="left"] > div,
+main[data-pom-theme-root] [data-conformance-region="right"] > div {
+  padding: 0;
+  overflow: visible;
+}
+main[data-pom-theme-root] [data-conformance-region="left"] .widget-frame,
+main[data-pom-theme-root] [data-conformance-region="right"] .widget-frame {
+  height: 100%;
+  margin: 0;
+}
+
+main[data-pom-theme-root] .widget-frame > header {
+  min-height: 38px;
+  padding: 5px 9px 5px 12px;
+}
+main[data-pom-theme-root] .widget-frame h2 { font-size: 11px; }
+main[data-pom-theme-root] .widget-frame nav { gap: 2px; }
+main[data-pom-theme-root] .widget-frame nav button {
+  width: 28px;
+  min-height: 28px;
+  background-position: center;
+  background-size: 12px;
+}
+main[data-pom-action-presentation="hover-focus"] .widget-frame nav,
+main[data-pom-action-presentation="compact"] .widget-frame nav {
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+main[data-pom-action-presentation="hover-focus"] .widget-frame:is(:hover, :focus-within) nav,
+main[data-pom-action-presentation="compact"] .widget-frame:is(:hover, :focus-within) nav {
+  opacity: 1;
+  transform: none;
+}
+
+main[data-pom-widget-grouping="individual"] [data-conformance-region="left"],
+main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] {
+  grid-template-rows: none;
+  grid-auto-rows: max-content;
+  align-content: start;
+  padding: 2px;
+}
+main[data-pom-widget-grouping="individual"] [data-conformance-region="left"] .widget-frame,
+main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] .widget-frame { height: auto; }
+main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] .surface-anatomy > .surface-scope {
+  margin: 8px 8px 0;
+}
+main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] .implemented-surface {
+  gap: 6px;
+  padding: 8px;
+}
+main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] .surface-anatomy > :is(.surface-boundary, .surface-actions) {
+  margin: 0 8px 8px;
+}
+main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] .surface-mixer {
+  gap: 4px;
+}
+main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] .surface-relationships {
+  gap: 3px;
+}
+main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] .surface-relationships > div {
+  gap: 4px;
+  padding: 5px;
+}
+main[data-pom-widget-grouping="unified"] .workbench-surface { gap: 0; }
+main[data-pom-widget-grouping="unified"] [data-conformance-region="left"],
+main[data-pom-widget-grouping="unified"] [data-conformance-region="right"] { gap: 0; }
+main[data-pom-widget-grouping="unified"] [data-conformance-region="left"] .widget-frame,
+main[data-pom-widget-grouping="unified"] [data-conformance-region="right"] .widget-frame {
+  border-radius: 0;
+  clip-path: none;
+}
+
+main[data-pom-widget-grouping="individual"] [data-widget-type="story.transcript"][data-pomegranate-placement] {
+  right: clamp(18px, 5vw, 72px);
+  bottom: 126px;
+  left: clamp(18px, 5vw, 72px);
+}
+main[data-pom-widget-grouping="individual"] [data-widget-type="story.transcript"] .widget-frame,
+main[data-pom-widget-grouping="individual"] [data-widget-type="story.composer"] .widget-frame {
+  overflow: clip;
+  border: var(--pom-part-widget-surface-material-border);
+  border-radius: var(--pom-part-widget-surface-radius);
+  background-color: var(--pom-part-widget-surface-material-fill);
+  box-shadow: var(--pom-part-widget-surface-material-shadow);
+  -webkit-backdrop-filter: var(--pom-part-widget-surface-material-backdrop);
+  backdrop-filter: var(--pom-part-widget-surface-material-backdrop);
+}
+main[data-pom-widget-grouping="individual"] [data-widget-type="story.transcript"] .widget-frame > header {
+  display: flex;
+}
+main[data-pom-widget-grouping="individual"] .transcript {
+  max-width: none;
+  padding: 18px 22px 20px;
+  text-shadow: none;
+}
+main[data-pom-widget-grouping="individual"] [data-widget-type="story.composer"][data-pomegranate-placement] {
+  bottom: 18px;
+  width: min(680px, calc(100% - 44px));
+  height: 88px;
+}
+main[data-pom-widget-grouping="individual"] [data-widget-type="story.composer"] .widget-frame > header {
+  display: none;
+}
+main[data-pom-widget-grouping="individual"] .composer {
+  border: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+main[data-pom-theme-root] .focused-widget-surface > .widget-frame {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+main[data-pom-chrome-presentation="compact"] {
+  gap: 0;
+  padding: 0;
+}
+main[data-pom-chrome-presentation="compact"] .context-rail { border-radius: 0; }
+main[data-pom-chrome-presentation="compact"] .top-shelf { border-radius: 0; }
+main[data-pom-chrome-presentation="overlay"] { padding: 12px; }
+main[data-pom-chrome-presentation="full"] { padding: 16px; }
+
+main[data-pom-density="compact"] [data-conformance-region="left"],
+main[data-pom-density="compact"] [data-conformance-region="right"] { gap: 0; }
+main[data-pom-density="roomy"] [data-conformance-region="left"],
+main[data-pom-density="roomy"] [data-conformance-region="right"] { gap: var(--pom-space-md, 14px); }
+main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] {
+  gap: max(3px, calc(var(--pom-space-xs, 5px) - 1px));
+}
+
+@media (max-width: 1180px) {
+  main[data-pom-theme-root] .context-rail { grid-template-columns: auto auto minmax(0, 1fr); }
+}
+
+@media (max-width: 860px) {
+  main[data-pom-theme-root] { padding: 8px; }
+  main[data-pom-theme-root] .context-rail {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+  }
+  main[data-pom-theme-root] .theme-targets { grid-column: 1 / -1; }
+  main[data-pom-theme-root] .top-shelf { grid-template-columns: 130px minmax(0, 1fr) auto; }
+  main[data-pom-theme-root] .story-lockup { display: none; }
+}
+
+@media (max-width: 680px) {
+  main[data-pom-theme-root] .context-rail {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(3, 42px);
+    min-height: 126px;
+  }
+  main[data-pom-theme-root] .theme-targets,
+  main[data-pom-theme-root] .dock-controls {
+    grid-column: auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  main[data-pom-theme-root] .persistence-actions {
+    grid-column: auto;
+    justify-self: stretch;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  main[data-pom-theme-root] .top-shelf { grid-template-columns: 50px minmax(0, 1fr) 44px; }
+  main[data-pom-theme-root] .wordmark { grid-template-columns: 34px; }
+  main[data-pom-theme-root] .panel-tabs [role="tab"] { min-width: 64px; padding-inline: 7px; }
+  main[data-pom-widget-grouping="individual"] [data-widget-type="story.transcript"][data-pomegranate-placement] {
+    right: 10px;
+    bottom: 124px;
+    left: 10px;
+  }
+  main[data-pom-widget-grouping="individual"] [data-widget-type="story.composer"][data-pomegranate-placement] {
+    right: 10px;
+    bottom: 12px;
+    left: 10px;
+    width: auto;
+  }
+}
+
+@media (pointer: coarse) {
+  main[data-pom-theme-root] .panel-tabs button,
+  main[data-pom-theme-root] .panel-tabs [role="tab"],
+  main[data-pom-theme-root] .shelf-actions button,
+  main[data-pom-theme-root] .context-rail button,
+  main[data-pom-theme-root] .widget-frame nav button,
+  main[data-pom-theme-root] .composer button,
+  main[data-pom-theme-root] dialog button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  main[data-pom-theme-root] .widget-frame nav button { width: 44px; }
 }

@@ -22,7 +22,11 @@ Every formal round is independently recoverable at those paths:
 - Round 2: promoted image commit `f3dbfc7`; and
 - Round 3: the merge revision that recovered the live material controls; and
 - Round 4: the merge revision containing the current single-owner glass fix and
-  PomOS reference pass, additionally frozen by the second SHA-256 table below.
+  PomOS reference pass, additionally frozen by the second SHA-256 table below;
+- Round 5: semantic recipe renderer checkpoint `6fb1ff2`;
+- Round 6: the responsive delivery correction frozen by its hash table; and
+- Round 7: the final PR revision, including a separately promoted external
+  fourth-theme render.
 
 Uncommitted working captures are not counted as critic rounds. This preserves a
 complete audit trail without duplicating six binary files per iteration.
@@ -235,9 +239,169 @@ all three targets.
 | `wide-material-full-bunny.png` | `4434442221415da2237406971c24511bc01ce8d6d4956f2a73f3f581ed89d92f` |
 | `compact-material-full-bunny.png` | `a421677ffb09f1a3a6b4e670d3acaca5b71b227d22eef4ce32f5c97671ed75ee` |
 
+## Round 5 — semantic recipe renderer and live-verdict closure
+
+Round 5 deliberately reopened the prior visual acceptance after live testing
+showed that a coherent screenshot could still conceal architectural and
+functional defects. The implementation moved all three targets to complete v2
+material, shape, state, canvas, and semantic-part data; removed the Lab theme
+compiler and every target-ID selector; and reran the critic from the rendered
+pages before consulting source.
+
+### First independent pass
+
+| Severity | Surface | Finding | Resolution |
+| --- | --- | --- | --- |
+| Blocking | All targets | A full-screen floating structure carried `floating.surface`, so it could paint above every Widget and intercept the intended glass hierarchy. | Keep the structural layer unpainted and assign the part only to the actual floating Widget frame. |
+| Blocking | All targets | Canvas part rules could override the intended negative stacking order. | Make the maintained canvas recipe explicitly pointer-transparent and below every interactive surface. |
+| Substantive | All targets | The compiler's `background` shorthand erased semantic icon images, leaving fake circular chrome that resembled nonfunctional stoplights. | Compile `background-color`; remove header pseudo-decoration; retain only registered functional icons. |
+| Substantive | All targets | Docks and panels remained secondary material owners, producing seams and flattened frost. | Make structural dock/panel materials transparent and borderless and enforce one glass owner per Widget/dialog/floating stack. |
+| Substantive | PomOS and Bunny | Proportional side rows created large empty windows that looked like unfinished panels. | Let individual compositions size windows to their content with recipe-driven spacing. |
+| Blocking | PomOS and Bunny | Intrinsic right-side windows could extend below the visible dock. | Compact the generic individual-rail rhythm and add a bounds gate for every individual target. |
+| Blocking | Deep Current | The unified rail spent 44 percent on mostly empty World State space and clipped the functional Pause ambience action. | Rebalance the generic unified rail to 30/42/28 so content and action remain visible without changing Widget markup. |
+| Substantive | Focus/floating | An elevated outer surface and nested Widget could both blur the same canvas. | Make focused inner Widgets transparent and dynamically select the actual floating surface owner. |
+| Blocking | Reduced transparency | Runtime material controls could supersede the device fallback. | Apply theme defaults, runtime, user, then device veto; browser policy now forces opaque no-blur materials when requested or unsupported. |
+| Substantive | Coarse pointer | A compact visible slider/control face did not reliably preserve the 44px touch contract. | Separate visual range geometry from hit geometry and strengthen coarse-pointer selectors without changing desktop faces. |
+
+### Final image-only critic
+
+The critic inspected the regenerated 1440x900 and 640x900 default scenes plus
+material, Catalog, dialog, focus, floating, and error states at original
+resolution. A 390x844 browser lane separately proved phone containment and
+coarse-pointer reachability.
+
+- Deep Current now reads as one restrained industrial instrument: the dark
+  image canvas dominates, compact chamfered controls form a consistent frame,
+  every right-rail control and action fits, and no pale PomOS/Bunny treatment
+  leaks into the target.
+- PomOS uses one original blue dimensional canvas, two quiet glass chrome
+  bands, continuous-rounded independent windows, consistent near-white/blue
+  materials, thin range faces, and only functional semantic icons. It remains
+  Tahoe-informed rather than a fake macOS desktop.
+- Bunny is no longer a pink PomOS recolor. The local pastel garden and bunny
+  illustration, milky translucent windows, warm paper center, pink/lavender
+  accents, rounded roomy geometry, and literary typography form a distinct
+  polished character-goods identity.
+
+The first final render exposed the right-stack and unified-rail defects above;
+the second complete render after their fixes has no clipped Widget, concealed
+action, empty structural panel, mixed bevel, duplicate backdrop owner,
+cross-theme leakage, or ambiguous target identity.
+
+| Final surface | Blocking findings | Substantive findings | Result |
+| --- | ---: | ---: | --- |
+| Deep Current wide/compact/phone | 0 | 0 | Pass |
+| PomOS wide/compact/phone | 0 | 0 | Pass |
+| Bunny wide/compact/phone | 0 | 0 | Pass |
+| Material endpoints and reduced transparency | 0 | 0 | Pass |
+| Catalog, dialogs, focused, floating, error | 0 | 0 | Pass |
+| External copper-terminal fixture | 0 | 0 | Pass |
+
+### Round 5 promoted evidence hashes
+
+| Snapshot | SHA-256 |
+| --- | --- |
+| `compact-bunny.png` | `1e040b5a340ee1406f25a8b1a8af313228aa21ab1416a12de5a5ee4042ec6b15` |
+| `compact-material-adjusted-pom-neutral.png` | `45936c8ad07440062a94a2077d84c515b01a2dfebb172bf398682efd3a5ce2db` |
+| `compact-material-full-bunny.png` | `dfc77479655abf5536b0019bbb62afd4f0820e3fcbab17c9c6e0289b547bcb65` |
+| `compact-material-zero-deep-current.png` | `b6375c0b107e9e36f11dce836feaf42d135a364e3d649d3dda19348ea341b155` |
+| `compact-pom-neutral.png` | `5ba3eba51424e1d1cf74f485a0bfaec7b376e6dcc7c86e8f1080aee314728c1e` |
+| `compact-scene.png` | `c2a5756e65a949477785432665e4025515f0e303691d408b9c60fc5582f87628` |
+| `compact-settings.png` | `8a19eb6f1f60f3296ac2f9ebfd6fc4f16b29d7723575869451b86f879c083538` |
+| `floating-widget.png` | `cc578fac5ef09a59043a9e4ef3691c432261a9bce7066721f1f3b7855a3e8094` |
+| `focus-transcript.png` | `90b8f1356f1212abf918fe502a96850c67508076e91d75ac5443197fd507a729` |
+| `renderer-error.png` | `dad925df4d467a18cfd7b856655c6bbdb36cdf0c65d2215be3fc1701c4677481` |
+| `wide-bunny.png` | `25149618887c4539b012289ea4f6eedc2d1619978795cae9160f3c9344eff878` |
+| `wide-catalog-drawer.png` | `1b596cf2466c755c43d942aacd9f99d0a30d109972c24525b1d884fbb1694927` |
+| `wide-catalog-expanded.png` | `c4c3d797e26f6d31e599d18137a1724e6a3d651cf4449f6a42a1327ee2926c9e` |
+| `wide-material-adjusted-pom-neutral.png` | `5ad09220eb37d621b67ce89a498ad96eeef230a4e10f259a8852a9497c093fcb` |
+| `wide-material-controls.png` | `a98b866e77a72c038e0b6713ab23546e81798996efb46e9f881c7057c8f6dfad` |
+| `wide-material-full-bunny.png` | `aa883ce34ff33b4824c444d1bfddbdccd17cb218499193a70383fda5501a9861` |
+| `wide-material-zero-deep-current.png` | `1a3de7cfabbf991fe8c038c46cd0466bf54c76ffe44d501bd55416c5d41008d1` |
+| `wide-pom-neutral.png` | `1d9ea4c8fa3723a0a4538b21ac295d5597e3128b02b197a6c191f92a6ff544b3` |
+| `wide-scene.png` | `71768361a143811aac284df57662e8e76ecb675e615f3ebd3b5cc6caef078f6e` |
+
+### Round 6 responsive action correction
+
+The delivery gate exposed a functional defect that the visual-only critic had
+missed: persistence actions disappeared at the 1024px breakpoint. Restoring
+them in place also required an explicit compact composition rather than
+letting one control group displace another. The final compact chrome now uses
+three restrained rows for theme choice, Panel controls, and persistence. Every
+real action remains visible, the document remains viewport-contained, and the
+result reads as a compact control-center stack in PomOS rather than a clipped
+toolbar. The Deep Current and Bunny variants retain the same functional
+composition in their own material language. No substantive responsive,
+hierarchy, clipping, or affordance criticism remains after visual inspection.
+
+| Changed snapshot | SHA-256 |
+| --- | --- |
+| `compact-bunny.png` | `b55c6778351083a40ac09ce4b75265d233dd01599b27110418cac3d1b3456ee0` |
+| `compact-material-adjusted-pom-neutral.png` | `9bbed5a322b956c0dab3c437b15def615eaf12571ca73ee0ad85cf0420f35489` |
+| `compact-material-full-bunny.png` | `6ff0ac2fad7cd79af2be5d350ab6628e8fa62e9e77de8b1821b36aad9d6bd09b` |
+| `compact-material-zero-deep-current.png` | `54ce612106601b936a3453310271263ecb89b0f24bd9f80cd24143068724ecae` |
+| `compact-pom-neutral.png` | `6966ee0366307f5a056ea730408dc93e2753633b6aa28447416a76255c30348b` |
+| `compact-scene.png` | `802ba844a9e2fcc5b61e7f08cd0bf32229e73758c423e3b0aed28336349e8512` |
+| `compact-settings.png` | `e917c7c0488056fc9225710181a7bae1fc36b573a630f140cf4367b78dbc1fe6` |
+
+## Round 7 — delivery-review contract closure
+
+An independent delivery reviewer treated the v2 contract and the rendered
+evidence as hostile inputs. The review found no critical defect, but it found
+eight important gaps that made several authored dimensions less truthful than
+the visual result implied. Promotion was reopened until all eight had a failing
+test, an implementation correction, and browser or unit proof.
+
+| Finding | Resolution and proof |
+| --- | --- |
+| Invalid v2 input could fall through v1 migration. | Dispatch strictly on the literal version; preserve v2 diagnostic paths and return an explicit unsupported-version diagnostic. |
+| Asset kinds, fallbacks, icon packs, and candidate canvas activation were not fully transactional. | Validate declared uses and same-kind fallback chains; treat active references as required; compile canvas before activation and retain the complete previous snapshot on failure. |
+| `minimumContrast`, `largeTextContrast`, and `contentTone` were inert. | Resolve safe normal/large foreground bindings for every text-bearing base and state material and reject unsafe authored combinations. |
+| Chamfer angle, joined edges, separator spacing, recipe spacing, and texture dimensions were incomplete. | Compile every dimension; keep spacing an explicit `data-pom-spacing="recipe"` opt-in so theme data cannot seize adopter layout ownership. |
+| Reduced transparency rewrote only default materials, then preserved authored pressed/inactive/disabled opacity. | Rewrite every base and interaction-state material through its own opaque fallback, normalize every state/disabled opacity to one under the veto, and prove pressed, selected, focus, inactive, and disabled surfaces are opaque and blur-free. |
+| Chromium/WebKit sliders lacked active fill. | Add value-driven progress bindings while preserving thin visual track/thumb geometry and the separate 44-pixel coarse-pointer target. |
+| `aria-current="false"` looked selected. | Restrict the selected selector to current values other than the literal false state. |
+| The external fourth-theme claim had compile proof but no promoted render. | Apply the copper fixture through public bindings and canvas compilation to the same live tree, derive presentation metadata from its recipe, inspect the result, and freeze a dedicated Playwright image. |
+
+The final image critic inspected the regenerated Deep Current, PomOS, Bunny,
+overlay/control states, and external Copper Terminal fixture at original
+resolution. The slider fill is now visible without a bulky face, PomOS retains
+one coherent rounded blue-glass language, Bunny remains a distinct milky
+pastel illustration system, Deep Current remains internally consistent, and
+the external fixture reads as square copper technical chrome without leaked
+Lab action controls. No blocking or substantive visual criticism remains.
+
+### Round 7 promoted evidence hashes
+
+| Snapshot | SHA-256 |
+| --- | --- |
+| `wide-scene.png` | `28a5e6b3db056f72c80115a4addf3a56593b0cb0b158dc843ba20cdc1d19e918` |
+| `wide-pom-neutral.png` | `ef2fd191a026b9940a14d1e953ee842b9938c0db3aa1744451894abc620e78c5` |
+| `wide-bunny.png` | `a02ca9c5cfd5b9890537dfbc3462cb4c8297a884b9babfec0cbc3a3b3499662e` |
+| `wide-material-controls.png` | `6e8a474ab980afc9826b5196e6a6369a917e309df48c6124421f0168214d12db` |
+| `wide-material-zero-deep-current.png` | `d1179a67c32f093f5bc04d6c01cafb045f48af034f224d29634195689d5f4d44` |
+| `wide-material-adjusted-pom-neutral.png` | `e8925d8955cd7e2c7b732fc911e837963970eb2b0955ffdad003dca12f943e47` |
+| `wide-material-full-bunny.png` | `b055eba5e33a57730db3979e5cbf622553fec51173f32c61dfb2a76b34f8aba9` |
+| `wide-catalog-drawer.png` | `a94c66c3b5745978aed63be4e79df3c87744601e9f923bb95b176be067cb7c15` |
+| `wide-catalog-expanded.png` | `574f07ff4adfb7f27a862cc7ca13ee40a773d3914444853f8f7d9d1b98d085a4` |
+| `compact-settings.png` | `971b5ee64bda0ee0372b54031af1cd0b97234568ef347890e48ce5ac639c63c5` |
+| `focus-transcript.png` | `d480263513dc5dc832fd38869d92a14fadfd465d325b1025b1244755f63b5200` |
+| `floating-widget.png` | `211b875b513c4b813a536c7e101c5f98939607694cc32d2612726f30e76f73e9` |
+| `external-copper-fixture.png` | `36c636ca50d3c4d6e59f8debb90d0f8a899af74cac7ceb09ac263e2cd5243be0` |
+
+### Preference-only observations
+
+- PomOS could move its blue canvas warmer or cooler without correcting a
+  hierarchy, material, or identity defect.
+- Bunny could use a different original background illustration without
+  changing the proven milky-glass recipe.
+- Deep Current intentionally prioritizes information density over spaciousness;
+  an adopter can choose a different density through theme data.
+
 ## Closure
 
-Round 4 has **zero blocking findings and zero substantive findings** across the
-complete default, responsive, control, endpoint, and PomOS reference evidence.
-Final promotion still depends on the complete repository gate, code review, CI,
-and merge.
+Round 7 has **zero blocking findings and zero substantive findings** across the
+complete default, responsive, control, endpoint, overlay, external-theme, and
+PomOS reference evidence. Promotion depends on the complete repository gate,
+follow-up code review, CI, merge, and applicable Pages proof named by the active
+goal.

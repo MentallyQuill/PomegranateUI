@@ -1,21 +1,41 @@
 # @pomegranate-ui/theme
 
-`@pomegranate-ui/theme` is PomegranateUI's framework-neutral resolver for
+`@pomegranate-ui/theme` is PomegranateUI's framework-neutral engine for
 versioned, declarative theme definitions from `@pomegranate-ui/contracts`.
-It validates untrusted input, resolves semantic material roles, merges typed
-overrides deterministically, reports literal diagnostics, and exposes
-conformance helpers without importing a view framework or DOM API.
+It validates untrusted input, migrates v1 definitions to complete v2 recipes,
+resolves semantic materials and local host assets, enforces authored contrast,
+applies bounded accessibility policy, and compiles deterministic bindings for
+stable `data-pom-part` anatomy.
+It imports neither a view framework nor a DOM API.
 
-Resolution is deliberately side-effect free: the package does not apply CSS,
-load assets, write preferences, or retain the last valid theme. A host can use
-the returned diagnostics to reject an invalid candidate and keep its current
-resolved value, as the Workbench Lab does for immediate atomic switching.
+Resolution and compilation are deliberately side-effect free: the package does
+not apply CSS, load assets, write preferences, or retain the last valid theme.
+A host registers trusted local asset IDs, rejects an invalid candidate from the
+literal diagnostics, and atomically applies `compileThemeBindings()` or the
+complete fixed-selector output from `compileThemeStyleSheet()`.
+
+`compileCanvasLayers()` participates in the same activation transaction, and
+`compileSliderProgress()` supplies the value-driven Chromium/WebKit range fill.
+Reduced-transparency policy rewrites base and interaction-state materials, not
+only the default surface.
+
+V2 themes declare bounded material and shape palettes plus every required
+semantic part. Theme data never contains CSS, selectors, HTML, scripts, URLs,
+or component markup. `applyThemePolicy()` applies runtime controls, user
+preferences, and device vetoes in that order; reduced transparency switches
+parts to declared opaque materials and disables their blur.
 
 The package does not bundle a branded preset, component shell, font, icon
 library, storage adapter, asset loader, or network client. An adopter owns the
-theme definitions used by its application, maps resolved values into its own
-markup and CSS, resolves local assets, and decides how preferences persist.
+theme definitions used by its application, annotates compatible markup with
+the documented semantic parts, registers local assets and icons, and decides
+how preferences persist.
 
 The Workbench Lab's Pom Neutral, Deep Current, and Bunny definitions are
 application-owned conformance fixtures. They do not make those visual targets
 mandatory for adopters.
+
+See [Authoring PomegranateUI themes](../../docs/theme-authoring.md) for the v2
+data model, semantic-part inventory, real compiler and canvas examples, asset
+registration, policy order, migration guidance, external-theme proof, and the
+bounded no-custom-CSS promise.

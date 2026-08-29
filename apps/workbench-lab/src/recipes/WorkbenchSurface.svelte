@@ -70,11 +70,13 @@
     role="tabpanel"
     aria-labelledby={surface.tabId}
     data-pomegranate-panel={surface.panelId}
+    data-pom-part="panel.surface"
     style={`--pom-left-width:${leftCssWidth};--pom-right-width:${rightCssWidth}`}
   >
     {#each edges as edge}
       <section
         data-pomegranate-dock={edge}
+        data-pom-part="dock.surface"
         data-conformance-region={edge === 'main' ? 'stage' : edge}
         aria-label={`${edge} dock`}
       >
@@ -98,7 +100,7 @@
     </div>
   </div>
 {:else}
-  <section data-pomegranate-empty-workbench aria-label="Empty Workbench">
+  <section data-pomegranate-empty-workbench data-pom-part="panel.surface" aria-label="Empty Workbench">
     <p>Create or activate a Panel to begin.</p>
   </section>
 {/if}

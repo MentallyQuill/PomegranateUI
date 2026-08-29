@@ -34,8 +34,8 @@ function createMacroScenario(id: string, title: string, viewport: string): Confo
     referenceState: 'scene-ready',
     implementationState: 'scene-ready',
     capture: Object.freeze({ kind: 'viewport' as const }),
-    measurementProfile: 'deep-current-shell',
-    assertionProfile: 'deep-current-shell',
+    measurementProfile: 'deep-current-shell-behavior',
+    assertionProfile: 'deep-current-shell-behavior',
     allowedDeviationIds: Object.freeze([])
   });
 }
@@ -150,8 +150,8 @@ function createThemeTargetScenario(
     referenceState: state,
     implementationState: state,
     capture: Object.freeze({ kind: 'viewport' as const }),
-    measurementProfile: 'theme-target',
-    assertionProfile: 'theme-target',
+    measurementProfile: 'theme-target-behavior',
+    assertionProfile: 'theme-target-behavior',
     allowedDeviationIds: Object.freeze([])
   });
 }

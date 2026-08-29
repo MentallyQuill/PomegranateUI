@@ -38,6 +38,43 @@ test('native workbench Catalog supports keyboard placement and stable attributes
   await expect(page.locator('[data-surface-type="settings.accessibility"]')).toHaveAttribute('data-surface-state', 'ready');
 });
 
+test('native workbench keeps persistence actions reachable at the medium breakpoint', async ({ page }) => {
+  await openFresh(page, 1024, 768);
+
+  for (const name of ['Save layout', 'Reload saved layout', 'Clear saved layout']) {
+    await expect(page.getByRole('button', { name })).toBeVisible();
+  }
+});
+
+test('compact Panel changes keep chrome anchored and the document contained', async ({ page }) => {
+  await openFresh(page, 390, 844);
+  await page.screenshot({ animations: 'disabled', caret: 'hide' });
+  await page.getByRole('tab', { name: 'Settings' }).click();
+
+  const evidence = await page.evaluate(() => {
+    function rect(selector: string) {
+      const element = document.querySelector(selector);
+      if (!(element instanceof HTMLElement)) throw new Error(`Missing ${selector}.`);
+      const box = element.getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom, height: box.height };
+    }
+    return {
+      scrollY: window.scrollY,
+      mainScrollTop: document.querySelector('main')?.scrollTop ?? -1,
+      documentHeight: document.documentElement.scrollHeight,
+      viewportHeight: window.innerHeight,
+      context: rect('.context-rail'),
+      shelf: rect('.top-shelf')
+    };
+  });
+  expect(evidence.scrollY).toBe(0);
+  expect(evidence.mainScrollTop).toBe(0);
+  expect(evidence.documentHeight).toBe(evidence.viewportHeight);
+  expect(evidence.context.top).toBeGreaterThanOrEqual(0);
+  expect(evidence.context.height).toBeGreaterThanOrEqual(126);
+  expect(evidence.shelf.top).toBeGreaterThanOrEqual(evidence.context.bottom);
+});
+
 for (const viewport of [
   { name: 'wide', width: 1440, height: 900 },
   { name: 'medium', width: 1024, height: 768 },

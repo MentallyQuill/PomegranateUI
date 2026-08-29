@@ -12,12 +12,14 @@
     store,
     rendererRegistry,
     hostContext,
+    surfacePart = 'widget.surface',
     class: className = ''
   }: {
     frame: WidgetFrameProjection;
     store: WorkbenchStore;
     rendererRegistry: WidgetRendererRegistry<THostContext>;
     hostContext: THostContext;
+    surfacePart?: 'widget.surface' | 'floating.surface' | null;
     class?: string;
   } = $props();
 
@@ -30,20 +32,22 @@
   class={className}
   aria-label={frame.title}
   data-pomegranate-widget={frame.instanceIdAttribute}
+  data-pom-part={surfacePart ?? undefined}
   data-pomegranate-placement={frame.placement.kind}
 >
-  <header>
+  <header data-pom-part="widget.header">
     <h2>{frame.title}</h2>
-    <nav aria-label={`${frame.title} placement`}>
-      <button type="button" onclick={() => actions.dock('left')}>Dock left</button>
-      <button type="button" onclick={() => actions.dock('main')}>Dock main</button>
-      <button type="button" onclick={() => actions.dock('right')}>Dock right</button>
-      <button type="button" onclick={() => actions.float()}>Float</button>
-      <button type="button" onclick={() => actions.remove()}>Remove</button>
+    <nav aria-label={`${frame.title} placement`} data-pom-part="widget.actions">
+      <button type="button" data-pom-part="button.icon" onclick={() => actions.dock('left')}>Dock left</button>
+      <button type="button" data-pom-part="button.icon" onclick={() => actions.dock('main')}>Dock main</button>
+      <button type="button" data-pom-part="button.icon" onclick={() => actions.dock('right')}>Dock right</button>
+      <button type="button" data-pom-part="button.icon" onclick={() => actions.float()}>Float</button>
+      <button type="button" data-pom-part="button.icon" onclick={() => actions.remove()}>Remove</button>
     </nav>
   </header>
-  {#if Renderer}
-    <svelte:boundary>
+  <div data-pom-part="widget.content">
+    {#if Renderer}
+      <svelte:boundary>
       <Renderer
         instance={frame.instance}
         {hostContext}
@@ -51,14 +55,15 @@
         {dispatch}
       />
       {#snippet failed()}
-        <p role="alert" aria-label={`${frame.title} renderer failed`}>
+        <p role="alert" data-pom-part="row.surface" aria-label={`${frame.title} renderer failed`}>
           {frame.title} failed to render.
         </p>
       {/snippet}
-    </svelte:boundary>
-  {:else}
-    <p role="status" aria-label={`${frame.title} renderer unavailable`}>
-      Renderer unavailable for {frame.title}.
-    </p>
-  {/if}
+      </svelte:boundary>
+    {:else}
+      <p role="status" data-pom-part="row.surface" aria-label={`${frame.title} renderer unavailable`}>
+        Renderer unavailable for {frame.title}.
+      </p>
+    {/if}
+  </div>
 </article>
