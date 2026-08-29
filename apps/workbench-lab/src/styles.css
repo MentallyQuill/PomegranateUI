@@ -257,6 +257,12 @@ main[data-active-panel="surface-preview"] .surface-contract-facts { display: gri
   .surface-condition meter, .surface-tasks progress { display: none; }
 }
 
+@container (max-width: 220px) {
+  .widget-frame > header { min-width: 0; }
+  .widget-frame > header h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .widget-frame > header nav { flex: 0 0 auto; max-width: 100%; }
+}
+
 .widget-catalog { position: fixed; z-index: 20; top: 5.8rem; right: 1rem; bottom: 1rem; width: min(38rem, calc(100vw - 2rem)); display: grid; grid-template-rows: auto auto auto auto minmax(0, 1fr); gap: .65rem; padding: .85rem; overflow: hidden; border: var(--pom-border-width, 1px) solid var(--pom-material-menu-border, var(--line-strong)); border-radius: var(--pom-radius-large, .75rem); background: var(--pom-material-menu, var(--glass-deep)); box-shadow: var(--pom-material-menu-shadow, 0 30px 100px rgb(0 0 0 / 58%)), var(--pom-material-menu-inset, none); backdrop-filter: blur(var(--pom-material-menu-blur, 28px)) saturate(var(--pom-material-menu-saturation, 1.25)); }
 .widget-catalog[data-presentation="expanded"] { inset: 1rem; width: auto; }
 .widget-catalog > header, .widget-catalog nav { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; }
