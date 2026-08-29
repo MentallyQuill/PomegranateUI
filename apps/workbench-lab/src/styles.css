@@ -19,14 +19,9 @@ main {
   --glass: var(--pom-material-shelf, rgb(31 28 34 / 78%)); --glass-deep: var(--pom-material-menu, rgb(20 18 23 / 94%));
   --ember: var(--pom-color-accent, #e2a069); --ember-bright: var(--pom-color-focus, #ffc38d); --moss: var(--pom-color-success, #769885);
   --shadow: var(--pom-material-shelf-shadow, 0 22px 70px rgb(0 0 0 / 38%));
-  color: var(--ink); background-color: var(--pom-canvas-color, #111014); background-image: var(--pom-canvas, none);
+  color: var(--ink); background-color: transparent; background-image: none;
   font-family: var(--pom-font-ui, "Pomegranate Sans", ui-sans-serif, system-ui, sans-serif);
 }
-.atmosphere { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.atmosphere i { position: absolute; width: 38rem; height: 38rem; border-radius: 50%; filter: blur(90px); opacity: .16; }
-.atmosphere i:nth-child(1) { top: -18rem; left: -8rem; background: var(--pom-atmosphere-one, #a63e59); }
-.atmosphere i:nth-child(2) { right: -14rem; bottom: -18rem; background: var(--pom-atmosphere-two, #377779); }
-.atmosphere i:nth-child(3) { top: 34%; left: 42%; width: 22rem; height: 22rem; background: var(--pom-atmosphere-three, #b56f45); opacity: .08; }
 .top-shelf, .context-rail, .workbench-shell, .lab-footer { border: var(--pom-border-width, 1px) solid var(--line); background: var(--glass); box-shadow: var(--shadow), var(--pom-material-shelf-inset, none); backdrop-filter: blur(var(--pom-material-shelf-blur, 22px)) saturate(var(--pom-material-shelf-saturation, 1.18)); }
 
 .top-shelf { display: grid; grid-template-columns: auto minmax(17rem, 1fr) minmax(15rem, auto) auto; align-items: center; gap: .9rem; min-height: 4.4rem; padding: .55rem .7rem; border-radius: var(--pom-radius-large, .85rem) var(--pom-radius-large, .85rem) var(--pom-radius-small, .4rem) var(--pom-radius-small, .4rem); }
@@ -354,7 +349,7 @@ dialog form > div { display: flex; justify-content: flex-end; gap: .4rem; }
 @media (min-width: 1280px) { .widget-catalog[data-presentation="expanded"] ul { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: no-preference) { .widget-frame, .widget-catalog { animation: surface-in 180ms ease-out; } @keyframes surface-in { from { opacity: 0; transform: translateY(4px); } } }
 
-/* Atmospheric shell composition. Theme identity remains entirely token-driven. */
+/* Workbench shell composition. Theme identity remains entirely token-driven. */
 html, body { height: 100%; overflow: hidden; }
 main {
   display: flex;
@@ -369,7 +364,6 @@ main {
   --pom-side-width: min(286px, 18.1856%);
   --pom-showcase-height: 43px;
 }
-.atmosphere { display: none; }
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -508,19 +502,8 @@ main {
 [data-conformance-region="stage"] {
   isolation: isolate;
   display: block;
-  background-color: var(--pom-canvas-color, #080c0d);
-  background-image: var(--pom-canvas, none);
-  background-position: center;
-  background-size: cover;
+  background: transparent;
   backdrop-filter: none;
-}
-[data-conformance-region="stage"]::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  background: linear-gradient(90deg, rgb(0 0 0 / 54%), transparent 42%, rgb(0 0 0 / 12%));
-  pointer-events: none;
 }
 [data-pomegranate-floating-layer] { z-index: 10; }
 .left-collapsed .workbench-surface { --pom-left-width: 0px !important; }

@@ -5,6 +5,7 @@
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import type { WidgetFrameProjection } from '@pomegranate-ui/core';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
+  import { compileCanvasLayers, type CanvasPresentationLayer, type ThemeAssetRegistry } from '@pomegranate-ui/theme';
 
   import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
   import deepCurrentStage from './assets/deep-current-stage.jpg';
@@ -13,6 +14,7 @@
   import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
+  import ThemeCanvas from './recipes/ThemeCanvas.svelte';
   import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
@@ -58,12 +60,23 @@
     preference: createLocalThemePreference(window.localStorage),
     availableAssets: new Set(['icons.minimal', 'image.deep-current-stage', 'image.bunny-garden'])
   });
+  const themeAssetRegistry: ThemeAssetRegistry = Object.freeze({
+    'icons.minimal': { kind: 'icon-pack', source: 'icons.minimal' },
+    'image.deep-current-stage': { kind: 'image', source: deepCurrentStage },
+    'image.bunny-garden': { kind: 'image', source: bunnyGardenCanvas }
+  });
   const themeAssetBindings = [
     `--pom-asset-image-deep-current-stage:url("${deepCurrentStage}")`,
     `--pom-asset-image-bunny-garden:url("${bunnyGardenCanvas}")`
   ].join(';');
   const initialThemeSnapshot = themeController.getSnapshot();
   let themeSnapshot = $state(initialThemeSnapshot);
+  let canvasLayers = $state<readonly CanvasPresentationLayer[]>(resolveCanvasLayers(initialThemeSnapshot));
+
+  function resolveCanvasLayers(snapshot: typeof initialThemeSnapshot): readonly CanvasPresentationLayer[] {
+    const compiled = compileCanvasLayers(snapshot.resolved, themeAssetRegistry);
+    return compiled.ok ? compiled.layers : [];
+  }
 
   function themeInspector(): LabThemeInspector {
     return {
@@ -91,6 +104,7 @@
 
   function applyThemeSnapshot(snapshot: typeof initialThemeSnapshot) {
     themeSnapshot = snapshot;
+    canvasLayers = resolveCanvasLayers(snapshot);
     hostContext.theme.activeId = snapshot.activeId;
     hostContext.theme.materialControls = snapshot.materialControls;
     hostContext.theme.inspector = themeInspector();
@@ -237,11 +251,12 @@
   class:focus-mode={focusMode}
   class:left-collapsed={leftCollapsed}
   data-pom-theme={themeSnapshot.activeId}
+  data-pom-theme-root
   data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}
   style={`${themeSnapshot.cssText};${themeAssetBindings}`}
 >
-  <div class="atmosphere" aria-hidden="true"><i></i><i></i><i></i></div>
+  <ThemeCanvas layers={canvasLayers} />
   <header class="top-shelf" data-conformance-region="shelf">
     <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
     <PanelTabs {store} class="panel-tabs" />

@@ -78,10 +78,7 @@ main[data-pom-theme] [data-pomegranate-dock] {
 }
 
 main[data-pom-theme] [data-conformance-region="stage"] {
-  background-color: var(--pom-canvas-color);
-  background-image: var(--pom-canvas);
-  background-position: center;
-  background-size: cover;
+  background: transparent;
 }
 
 main[data-pom-theme] [data-conformance-region="left"] .widget-frame,
@@ -914,4 +911,10 @@ main[data-pom-theme] [data-conformance-region="stage"] {
     backdrop-filter: none;
   }
   main[data-pom-theme] .top-shelf::before { box-shadow: none; backdrop-filter: none; }
+}
+
+/* ThemeCanvas is the sole wallpaper owner; shell descendants remain structural. */
+main[data-pom-theme-root] {
+  background-color: transparent;
+  background-image: none;
 }
