@@ -586,6 +586,12 @@ main[data-pom-theme="bunny"] .composer > button {
   main[data-pom-theme="deep-current"] .workbench-shell { border-radius: 1px 1px 4px 4px; }
 }
 
+@media (pointer: coarse) {
+  main[data-pom-theme] { --pom-showcase-height: 52px; }
+  main[data-pom-theme] .context-rail { flex-basis: 52px; min-height: 52px; }
+  main[data-pom-theme] .context-rail button { min-width: 44px; min-height: 44px; }
+}
+
 @media (prefers-reduced-transparency: reduce) {
   main[data-pom-theme] .top-shelf,
   main[data-pom-theme] .context-rail,
