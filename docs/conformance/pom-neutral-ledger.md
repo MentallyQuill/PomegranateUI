@@ -17,6 +17,11 @@ PomOS does not copy Apple assets, application markup, a Dock, product identity,
 or decorative window controls. The shared Pom Workbench Widget inventory and
 real actions remain mounted in every target.
 
+## Frozen authority discrepancy queue
+
+| ID | Category | Severity | Authority | Scenario | Evidence | Diagnosis | Status | Regression | Deviation |
+|---|---|---|---|---|---|---|---|---|---|
+
 ## Live-testing verdict and corrections
 
 | ID | Severity | Live finding | Root cause | Resolution | Regression owner |
