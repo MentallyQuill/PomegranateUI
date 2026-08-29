@@ -43,3 +43,30 @@ current repository evidence remains commit `8e994e8190da409033f9ef4b47e3d9592d0c
 `e77ae630edaa409086e303c0cf580ed5105d81c4e9ad8f749b086eeb2530683b`.
 This entry records its identity without retroactively inventing source or
 license facts that are not present in the repository history.
+
+## Ash & Amber recording authority
+
+`design/theme-targets/ash-amber/sonderui-rw2-1-t80.png` is a reviewed visual
+reference extracted from `SonderUI_RW2_1.mp4` at exactly 80.000 seconds. It is
+design evidence for the Ash & Amber target; it is not a runtime canvas, an
+application implementation, or permission to redistribute the complete
+recording.
+
+| Field | Record |
+| --- | --- |
+| Source recording SHA-256 | `56F84670C2A4B1318BD26A9A482790AE93C49387D47A6D6A4AF7C470C635A889` |
+| Source stream | 1,920 by 1,280 pixels, 60 fps, 101.682 seconds |
+| Extraction timestamp | 80.000 seconds |
+| Reference PNG | `design/theme-targets/ash-amber/sonderui-rw2-1-t80.png` |
+| Reference PNG SHA-256 | `6403A7BCFD8F43195FA42C5D9715CC79964C8B7569F47C22FDEEFD1B89804997` |
+| Reviewed qualities | Muted charcoal and plum glass, warm brown title bars, restrained amber source accent, low-density atmospheric stage |
+
+The deterministic extraction command is:
+
+```powershell
+ffmpeg -hide_banner -loglevel error -ss 80.000 -i 'SonderUI_RW2_1.mp4' -frames:v 1 -c:v png 'sonderui-rw2-1-t80.png'
+```
+
+The repository retains the extracted frame and its strict manifest only. The
+full MP4 remains external to the repository and outside this asset record's
+redistribution claim.
