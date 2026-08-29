@@ -13,7 +13,7 @@ import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, wri
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
 import { BUNNY_SCENARIOS, DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, hashAuthorityFile, ORIGINAL_THEME_TARGET_SCENARIOS, POM_NEUTRAL_SCENARIOS, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
-import { assertScenarioResolution } from '../conformance/runner.ts';
+import { applyCanonicalShellGeometry, assertScenarioResolution } from '../conformance/runner.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
 import { prepareAtmosphericState } from '../conformance/drivers/reference/atmospheric.ts';
 import { prepareDeepCurrentState } from '../conformance/drivers/workbench-lab/deep-current.ts';
@@ -698,6 +698,45 @@ test('original theme references and Lab driver keep their selectors and imports 
 
 test('Lab readiness permits responsive docks to remain intentionally hidden', () => {
   assert.deepEqual(VISIBLE_IMPLEMENTATION_REGION_IDS, ['shelf', 'stage', 'composer']);
+});
+
+test('canonical shell geometry replaces platform-dependent reference boxes without replacing live evidence', () => {
+  const region = (seed) => ({
+    box: { x: seed, y: seed, width: seed, height: seed, right: seed * 2, bottom: seed * 2 },
+    visible: true,
+    overflow: { x: false, y: false, scrollWidth: seed, clientWidth: seed, scrollHeight: seed, clientHeight: seed },
+    styles: { backgroundColor: `rgb(${seed}, 0, 0)`, borderTopColor: 'transparent', color: 'white', fontFamily: 'Geist', backdropFilter: 'none' }
+  });
+  const reference = {
+    viewport: { width: 430, height: 932 },
+    document: { scrollWidth: 430, clientWidth: 430, scrollHeight: 932, clientHeight: 932 },
+    regions: {
+      shelf: region(1),
+      left: region(2),
+      stage: region(3),
+      right: region(4),
+      composer: region(5)
+    }
+  };
+  const baseline = {
+    viewport: [430, 932],
+    regions: {
+      shelf: [24, 110, 382, 40],
+      left: [24, 150, 1, 774],
+      stage: [24, 150, 382, 774],
+      right: [406, 150, 1, 774],
+      composer: [38, 841, 354, 65]
+    }
+  };
+
+  const canonical = applyCanonicalShellGeometry(reference, baseline);
+
+  assert.deepEqual(canonical.regions.shelf.box, { x: 24, y: 110, width: 382, height: 40, right: 406, bottom: 150 });
+  assert.deepEqual(canonical.regions.stage.box, { x: 24, y: 150, width: 382, height: 774, right: 406, bottom: 924 });
+  assert.strictEqual(canonical.regions.shelf.styles, reference.regions.shelf.styles);
+  assert.strictEqual(canonical.regions.shelf.overflow, reference.regions.shelf.overflow);
+  assert.strictEqual(canonical.document, reference.document);
+  assert.deepEqual(reference.regions.shelf.box, { x: 1, y: 1, width: 1, height: 1, right: 2, bottom: 2 });
 });
 
 test('the reviewed Deep Current macro baseline freezes every authority viewport', async () => {

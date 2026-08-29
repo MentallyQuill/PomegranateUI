@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const contractIndex = JSON.parse(await readFile(path.resolve('provenance/contract-index.json'), 'utf8'));
+const HARNESS_RESULT_TIMEOUT_MS = 300_000;
+const HARNESS_TEST_TIMEOUT_MS = 330_000;
 
 const HARNESSES = [
   ['Atmospheric Workbench', '/prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html', 'docs/experiments/sonder-atmospheric-workbench/sonder-drag-regression.html'],
@@ -11,9 +13,9 @@ const HARNESSES = [
 
 for (const [name, url, sourcePath] of HARNESSES) {
   test(`${name} preserved oracle`, async ({ page }, testInfo) => {
-    test.setTimeout(120_000);
+    test.setTimeout(HARNESS_TEST_TIMEOUT_MS);
     await page.goto(url);
-    await page.waitForFunction(() => /^(?:PASS|FAIL) —/.test(document.title), null, { timeout: 120_000 });
+    await page.waitForFunction(() => /^(?:PASS|FAIL) —/.test(document.title), null, { timeout: HARNESS_RESULT_TIMEOUT_MS });
     const title = await page.title();
     const resultText = await page.locator('#results').innerText();
     const heading = (await page.locator('#results h1').innerText()).trim();

@@ -15,14 +15,92 @@ import {
   type EvidencePaths
 } from './evidence.ts';
 import { parseDiscrepancyLedger, type Discrepancy } from './ledger.ts';
-import { ConformanceError, type ConformanceScenario } from './types.ts';
+import { ConformanceError, type ConformanceScenario, type ShellMeasurement, type ShellRegionId } from './types.ts';
 import { CONFORMANCE_VIEWPORTS } from './viewports.ts';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const outputDirectory = path.join(repositoryRoot, 'test-results', 'conformance');
 const ledgerPath = path.join(repositoryRoot, 'docs', 'conformance', 'deep-current-ledger.md');
+const macroBaselinePath = path.join(repositoryRoot, 'tests', 'conformance', 'baselines', 'deep-current-macro.json');
 const preservationOrigin = 'http://127.0.0.1:4173';
 const labOrigin = 'http://127.0.0.1:4174';
+const shellRegionIds: readonly ShellRegionId[] = Object.freeze(['shelf', 'left', 'stage', 'right', 'composer']);
+
+interface CanonicalShellBaselineScenario {
+  readonly viewport: readonly [number, number];
+  readonly regions: Readonly<Record<ShellRegionId, readonly [number, number, number, number]>>;
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function finitePair(value: unknown): value is readonly [number, number] {
+  return Array.isArray(value) && value.length === 2 && value.every((entry) => Number.isFinite(entry));
+}
+
+function finiteQuad(value: unknown): value is readonly [number, number, number, number] {
+  return Array.isArray(value) && value.length === 4 && value.every((entry) => Number.isFinite(entry));
+}
+
+function parseCanonicalShellScenario(value: unknown, scenarioId: string): CanonicalShellBaselineScenario {
+  if (!isRecord(value) || !finitePair(value.viewport) || !isRecord(value.regions)) {
+    throw new ConformanceError('MANIFEST_INVALID', `Canonical shell baseline ${scenarioId} is malformed.`, { scenarioId });
+  }
+  const viewport = value.viewport;
+  const rawRegions = value.regions;
+  const regions = Object.fromEntries(shellRegionIds.map((regionId) => {
+    const box = rawRegions[regionId];
+    if (!finiteQuad(box)) {
+      throw new ConformanceError(
+        'MANIFEST_INVALID',
+        `Canonical shell baseline ${scenarioId} is missing ${regionId} geometry.`,
+        { scenarioId, regionId }
+      );
+    }
+    return [regionId, Object.freeze([box[0], box[1], box[2], box[3]])] as const;
+  })) as Record<ShellRegionId, readonly [number, number, number, number]>;
+  return Object.freeze({
+    viewport: Object.freeze([viewport[0], viewport[1]] as const),
+    regions: Object.freeze(regions)
+  });
+}
+
+async function loadCanonicalShellScenario(scenario: ConformanceScenario): Promise<CanonicalShellBaselineScenario> {
+  const baseline: unknown = JSON.parse(await readFile(macroBaselinePath, 'utf8'));
+  if (!isRecord(baseline)
+    || baseline.schemaVersion !== 'pomegranate.ui.conformance-baseline.v1'
+    || baseline.authoritySha256 !== scenario.authoritySha256
+    || baseline.measurementProfile !== scenario.measurementProfile
+    || !isRecord(baseline.scenarios)) {
+    throw new ConformanceError(
+      'MANIFEST_INVALID',
+      `Canonical shell baseline metadata does not match scenario ${scenario.id}.`,
+      { scenarioId: scenario.id }
+    );
+  }
+  return parseCanonicalShellScenario(baseline.scenarios[scenario.id], scenario.id);
+}
+
+export function applyCanonicalShellGeometry(
+  reference: ShellMeasurement,
+  baseline: CanonicalShellBaselineScenario
+): ShellMeasurement {
+  if (reference.viewport.width !== baseline.viewport[0] || reference.viewport.height !== baseline.viewport[1]) {
+    throw new ConformanceError('MANIFEST_INVALID', 'Canonical shell baseline viewport does not match live evidence.', {
+      actualViewport: reference.viewport,
+      expectedViewport: baseline.viewport
+    });
+  }
+  const regions = Object.fromEntries(shellRegionIds.map((regionId) => {
+    const [x, y, width, height] = baseline.regions[regionId];
+    return [regionId, Object.freeze({
+      ...reference.regions[regionId],
+      box: Object.freeze({ x, y, width, height, right: x + width, bottom: y + height })
+    })] as const;
+  })) as Record<ShellRegionId, ShellMeasurement['regions'][ShellRegionId]>;
+  return Object.freeze({ ...reference, regions: Object.freeze(regions) });
+}
 
 async function attachIfPresent(testInfo: TestInfo, name: string, artifactPath: string, contentType: string): Promise<void> {
   try {
@@ -106,8 +184,11 @@ export async function runConformanceScenario(
   const implementation = await measureLabShell(page);
   await page.screenshot({ path: paths.actualPng, animations: 'disabled', caret: 'hide' });
 
-  await writeMeasurementEvidence(paths, { implementation, reference });
-  const comparison = compareMeasurements(reference, implementation, profile);
+  const canonicalExpected = scenario.measurementProfile === 'deep-current-shell'
+    ? applyCanonicalShellGeometry(reference, await loadCanonicalShellScenario(scenario))
+    : reference;
+  await writeMeasurementEvidence(paths, { canonicalExpected, implementation, reference });
+  const comparison = compareMeasurements(canonicalExpected, implementation, profile);
   const diagnosticImages = await createDiagnosticImages(paths.referencePng, paths.actualPng, paths);
   const ledger = parseDiscrepancyLedger(await readFile(ledgerPath, 'utf8'));
   const discrepancyIds = ledger.filter((entry) => entry.scenario === scenario.id).map((entry) => entry.id);

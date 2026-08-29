@@ -18,6 +18,13 @@ screenshots separately freeze exact implementation pixels. Interaction-only and
 Catalog lifecycle cases use screenshots as trace evidence rather than claiming
 that a preserved harness result row is a visual rendering oracle.
 
+Deep Current macro geometry uses the authority-hash-bound reviewed structured
+baseline in `tests/conformance/baselines/deep-current-macro.json`. Each run still
+captures the live preserved authority for materials, visibility, overflow, and
+diagnostic images. This keeps geometry deterministic across operating systems
+when the preserved calibration controls wrap differently outside the actual
+Workbench shell, without relaxing the reviewed shell target.
+
 ## Ledger lifecycle
 
 Every failing structured comparison has one stable target-prefixed row. The
