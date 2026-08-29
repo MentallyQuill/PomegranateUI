@@ -65,6 +65,8 @@ test('all visual targets render meaningful layered frost', async ({ page }) => {
     const shelf = await material(page, '.top-shelf');
     const utility = await material(page, '.context-rail');
     const workbench = await material(page, '.workbench-shell');
+    const stage = await material(page, '[data-conformance-region="stage"]');
+    const stageDecoration = await page.locator('[data-conformance-region="stage"]').evaluate((element) => getComputedStyle(element, '::after').backgroundImage);
     const root = await material(page, 'main');
 
     expect(blurPx(shelf.backdropFilter), `${target.label} shelf blur`).toBeGreaterThanOrEqual(16);
@@ -75,6 +77,10 @@ test('all visual targets render meaningful layered frost', async ({ page }) => {
     expect(shelf.boxShadow, `${target.label} shelf depth`).not.toBe('none');
     expect(workbench.boxShadow, `${target.label} Workbench depth`).not.toBe('none');
     expect(root.backgroundImage, `${target.label} dimensional canvas`).not.toBe('none');
+    expect(stage.backgroundImage !== 'none' || stageDecoration !== 'none', `${target.label} stage canvas`).toBe(true);
+    if (target.id === 'deep-current') {
+      expect(stage.backgroundImage, 'Deep Current approved local stage image').toContain('url(');
+    }
     expect(shelf.borderRadius, `${target.label} authored geometry`).not.toBe('0px');
   }
 });
