@@ -23,6 +23,11 @@ untrusted v1/v2 input
   -> adopter-owned root and Pom part markup
 ```
 
+Schema dispatch is strict: an exact v2 declaration is validated only as v2, an
+exact v1 declaration is migrated, a missing version is invalid, and an unknown
+version produces `THEME_MIGRATION_VERSION_UNSUPPORTED`. Invalid v2 input never
+falls through the v1 migration path, so diagnostic paths keep their v2 meaning.
+
 All stages are deterministic and side-effect free. The theme package does not
 touch the DOM, fetch a URL, load a file, persist a preference, or keep a global
 active theme. A host should compile a candidate completely and apply it
@@ -64,6 +69,13 @@ The states are `hover`, `pressed`, `selected`, `focus`, `inactive`, and
 `disabled`. They change presentation only; they cannot remove a name, action,
 status, or focus target.
 
+Recipe spacing is opt-in because the adopter still owns macro layout. Add
+`data-pom-spacing="recipe"` only where the semantic part should apply its
+declared `gap` and `padding`; omitting it preserves existing layout geometry.
+Separator recipes compile their own width, color, and block-end space. Joined
+edges compile independent side widths, and chamfer geometry uses both the
+declared depth and angle rather than treating every cut as 45 degrees.
+
 Annotate owned markup with the narrowest correct part:
 
 ```svelte
@@ -97,6 +109,7 @@ policy, and compile the result:
 import {
   applyThemePolicy,
   compileCanvasLayers,
+  compileSliderProgress,
   compileThemeBindings,
   compileThemeStyleSheet,
   resolveThemeV2,
@@ -131,7 +144,8 @@ export function prepareTheme(input: ThemeDefinitionV2) {
     theme: effective,
     rootBindings: compileThemeBindings(effective),
     partStyleSheet: compileThemeStyleSheet(effective),
-    canvas: canvas.layers
+    canvas: canvas.layers,
+    initialSliderStyle: compileSliderProgress(42, 0, 100)
   };
 }
 ```
@@ -144,13 +158,27 @@ reference implementation.
 
 Do not partially apply a failed candidate. Keep the previous prepared theme,
 show the literal diagnostic path to the developer, and persist only the ID of a
-successfully activated theme.
+successfully activated theme. Canvas compilation is part of that transaction:
+an unresolved canvas asset must leave the previous theme, bindings, preference,
+and canvas layers intact.
 
 ## Materials, glass, and single ownership
 
 A material declares a semantic base/fallback color, opacity, backdrop blur and
 color processing, border, one specular rim, bounded shadow layers, optional
 registered texture, and a reduced-transparency material ID.
+
+`contentTone` is executable policy, not documentation. `light` and `dark`
+select the safe candidate from `text` and `textOnAccent`; `auto` selects the
+higher-contrast candidate. Resolution checks text-bearing part materials and
+all of their interaction states against `minimumContrast`. The large-text
+binding uses `textMuted` only when it also clears `largeTextContrast`, otherwise
+it retains the normal safe foreground. Unsafe authored combinations are
+rejected with a literal material path.
+
+Texture recipes compile a registered texture layer plus an opacity-controlled
+base-color veil and the declared blend mode. The texture source itself still
+comes from the host asset registry; a theme cannot embed a URL.
 
 Assign backdrop blur to one surface in a nested stack. For example, a floating
 Widget uses `floating.surface` on its actual frame; its full-screen positioning
@@ -161,7 +189,10 @@ dock and child window both paint the same seam.
 
 Range controls separate visual and input geometry. A target can use a 3px track
 and 10px thumb while retaining a 44px coarse-pointer hit target. Do not enlarge
-the visible thumb to satisfy touch accessibility.
+the visible thumb to satisfy touch accessibility. Chromium/WebKit uses the
+`--pom-slider-progress` custom property for its active fill; initialize and
+update it with `compileSliderProgress(value, min, max)`. Firefox uses the same
+authored track/fill/thumb tokens through its range pseudo-elements.
 
 ## Canvas and assets
 
@@ -169,6 +200,12 @@ Canvas layers are ordered descriptors. Supported kinds are solid, linear,
 radial, conic, four-corner, image, texture, and veil. Image and texture layers
 refer only to declared asset IDs. The host maps those IDs to trusted sources;
 imported theme data cannot choose a URL or path.
+
+Every referenced asset must be declared with the same kind. The active icon
+pack and every used image or texture are required even if their declaration is
+marked optional. Fallbacks must also be declared with the same kind; resolution
+walks same-kind fallback chains and registers the resolved source under the
+requested ID. Unused optional declarations may remain unavailable.
 
 The root canvas is the only wallpaper owner. Docks, the stage, and Widgets may
 use material fills, but cannot introduce target-specific wallpaper contours.
@@ -187,16 +224,17 @@ Effective material values resolve in this order:
 3. user preferences;
 4. device and accessibility vetoes.
 
-Reduced transparency replaces translucent part materials with their declared
-opaque material, forces opacity to one, and disables blur. A browser without
+Reduced transparency replaces every translucent base and interaction-state
+material with its own declared opaque fallback, forces opacity to one, disables
+blur, and normalizes saturation and brightness. A browser without
 backdrop-filter support takes the same safe path. A device maximum clamps blur,
 and coarse-pointer policy raises the slider hit target to at least the declared
 accessibility minimum and 44 CSS pixels.
 
 ## Migrating version 1
 
-`migrateTheme(input)` accepts either exact v1 or exact v2 data. A valid v2
-definition is returned unchanged and frozen. A valid v1 definition is expanded
+`migrateTheme(input)` dispatches only on the literal version discriminator. A
+valid v2 definition is returned unchanged and frozen. A valid v1 definition is expanded
 deterministically into:
 
 - named translucent and opaque materials for every former material role;
@@ -226,7 +264,9 @@ intentional shape/state recipes, and then save the explicit v2 result.
 
 `tests/fixtures/external-theme.ts` is deliberately outside the Lab preset
 module. It defines a square copper terminal identity, compiles through only the
-public contract, and requires no stylesheet edit. Use it as the minimum proof
+public contract, compiles its canvas through the registered asset boundary, and
+requires no stylesheet edit. Playwright applies it to the same live Workbench
+tree and freezes the result as `external-copper-fixture.png`. Use it as the minimum proof
 for a new capability: if a fourth identity requires a theme-ID selector or a
 component fork, the public recipe model is missing a bounded concept.
 

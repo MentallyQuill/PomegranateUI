@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ThemeDefinition } from '@pomegranate-ui/contracts';
-import { applyThemePolicy, collectThemeAssetIds, contrastRatio, mergeTheme, resolveTheme, resolveThemeV2 } from './index.js';
+import type { ThemeDefinition, ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
+import { applyThemePolicy, collectThemeAssetIds, contrastRatio, mergeTheme, migrateTheme, resolveTheme, resolveThemeV2 } from './index.js';
 
 const material = (base: ThemeDefinition['materials']['widget']['base']) => ({
   base,
@@ -50,6 +50,12 @@ const VALID_THEME: ThemeDefinition = {
   capabilities: { translucency: true, textures: false, localImages: false }
 };
 
+function v2Theme(): ThemeDefinitionV2 {
+  const migrated = migrateTheme(VALID_THEME);
+  if (!migrated.ok) throw new Error(migrated.diagnostics.map(({ message }) => message).join('; '));
+  return structuredClone(migrated.theme);
+}
+
 describe('resolveTheme', () => {
   it('resolves both schema generations into an immutable v2 presentation model', () => {
     const result = resolveThemeV2(VALID_THEME, {
@@ -82,6 +88,89 @@ describe('resolveTheme', () => {
     ]));
   });
 
+  it('requires the active icon pack even when its declaration is marked optional', () => {
+    const theme = v2Theme();
+    theme.assets = [{ id: 'icons.minimal', kind: 'icon-pack', required: false }];
+
+    const result = resolveThemeV2(theme, {});
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({
+      code: 'THEME_ICON_PACK_MISSING',
+      path: ['iconPackId']
+    }));
+  });
+
+  it('resolves declared same-kind fallbacks for referenced local assets', () => {
+    const theme = v2Theme();
+    theme.assets = [
+      { id: 'icons.minimal', kind: 'icon-pack', required: true },
+      { id: 'image.primary', kind: 'image', required: false, fallbackId: 'image.fallback' },
+      { id: 'image.fallback', kind: 'image', required: false }
+    ];
+    theme.canvas = [
+      { kind: 'solid', color: '#111014' },
+      { kind: 'image', assetId: 'image.primary', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 1, blend: 'normal' }
+    ];
+
+    const result = resolveThemeV2(theme, {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/minimal-icons.svg' },
+      'image.fallback': { kind: 'image', source: '/assets/fallback.webp' }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.theme.assets['image.primary']).toEqual({ kind: 'image', source: '/assets/fallback.webp' });
+  });
+
+  it('rejects undeclared or wrong-kind material and canvas references before compilation', () => {
+    const theme = v2Theme();
+    theme.materials.widget = {
+      ...theme.materials.widget!,
+      texture: { assetId: 'image.undeclared', opacity: 0.2, blend: 'overlay' }
+    };
+    theme.canvas = [
+      { kind: 'texture', assetId: 'icons.minimal', opacity: 0.2, blend: 'overlay' },
+      { kind: 'image', assetId: 'image.undeclared', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 1, blend: 'normal' }
+    ];
+
+    const result = resolveThemeV2(theme, {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/minimal-icons.svg' }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'THEME_ASSET_MISSING', path: ['materials', 'widget', 'texture', 'assetId'] }),
+      expect.objectContaining({ code: 'THEME_ASSET_KIND_MISMATCH', path: ['canvas', 0, 'assetId'] }),
+      expect.objectContaining({ code: 'THEME_ASSET_MISSING', path: ['canvas', 1, 'assetId'] })
+    ]));
+  });
+
+  it('rejects a fixed content tone that cannot meet the authored contrast floor', () => {
+    const theme = v2Theme();
+    theme.colors.text = '#ffffff';
+    theme.colors.accent = '#ffffff';
+    theme.materials.widget = {
+      ...theme.materials.widget!,
+      base: 'accent',
+      fallback: 'accent',
+      contentTone: 'light'
+    };
+
+    const result = resolveThemeV2(theme, {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/minimal-icons.svg' }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({
+      code: 'THEME_CONTRAST_UNSAFE',
+      path: ['materials', 'widget', 'contentTone']
+    }));
+  });
+
   it('lets device accessibility veto replace translucent part materials without mutating the source', () => {
     const resolved = resolveThemeV2(VALID_THEME, {
       'icons.minimal': { kind: 'icon-pack', source: '/assets/minimal-icons.svg' }
@@ -102,6 +191,36 @@ describe('resolveTheme', () => {
     });
     expect(resolved.theme.recipes.parts['widget.surface'].material).toBe(originalMaterial);
     expect(Object.isFrozen(effective)).toBe(true);
+  });
+
+  it('rewrites every translucent state material through the reduced-transparency veto', () => {
+    const source = v2Theme();
+    source.recipes.parts['widget.surface'] = {
+      ...source.recipes.parts['widget.surface'],
+      states: {
+        ...source.recipes.parts['widget.surface'].states,
+        selected: { material: 'button' },
+        focus: { material: 'field' }
+      }
+    };
+    const resolved = resolveThemeV2(source, {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/minimal-icons.svg' }
+    });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+
+    const effective = applyThemePolicy(resolved.theme, { device: { reducedTransparency: true } });
+
+    expect(effective.recipes.parts['widget.surface']).toMatchObject({
+      material: 'widget-opaque',
+      states: {
+        selected: { material: 'button-opaque' },
+        focus: { material: 'field-opaque' }
+      }
+    });
+    for (const id of ['widget-opaque', 'button-opaque', 'field-opaque']) {
+      expect(effective.materials[id]).toMatchObject({ opacity: 1, backdrop: { blurPx: 0 } });
+    }
   });
 
   it('applies bounded user material preferences after runtime overrides', () => {

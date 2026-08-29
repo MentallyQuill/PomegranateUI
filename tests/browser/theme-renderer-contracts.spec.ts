@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { compileCanvasLayers, compileThemeBindings, resolveThemeV2 } from '@pomegranate-ui/theme';
+import { EXTERNAL_THEME } from '../fixtures/external-theme.js';
 
 const TARGETS = [
   { id: 'deep-current', label: 'Deep Current' },
@@ -222,11 +224,21 @@ test('material controls have refined geometry and visibly control glass', async 
     expect(geometry.hit).toBeGreaterThanOrEqual(44);
     expect(geometry.height).toBeGreaterThanOrEqual(geometry.hit);
 
+    const progress = await glass.evaluate((input) => ({
+      authored: getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim(),
+      background: getComputedStyle(input).backgroundImage,
+      value: (input as HTMLInputElement).value
+    }));
+    expect(progress.authored).toBe(`${progress.value}%`);
+    expect(progress.background).toContain('linear-gradient');
+
     await glass.fill('0');
+    await expect.poll(() => glass.evaluate((input) => getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim())).toBe('0%');
     await frost.fill('0');
     expect((await material(page, '[data-conformance-region="left"] .widget-frame')).alpha).toBe(0);
     expect(blurPx((await material(page, '[data-conformance-region="left"] .widget-frame')).backdrop)).toBe(0);
     await glass.fill('100');
+    await expect.poll(() => glass.evaluate((input) => getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim())).toBe('100%');
     await frost.fill('100');
     expect((await material(page, '[data-conformance-region="left"] .widget-frame')).alpha).toBe(1);
     expect(blurPx((await material(page, '[data-conformance-region="left"] .widget-frame')).backdrop)).toBe(40);
@@ -245,6 +257,72 @@ test('reduced transparency selects an opaque no-blur semantic fallback', async (
     expect(sample.alpha, `${selector} opacity`).toBe(1);
     expect(blurPx(sample.backdrop), `${selector} blur`).toBe(0);
   }
+  const selectedTheme = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: 'PomOS', exact: true });
+  expect((await material(page, '.theme-targets button[aria-pressed="true"]')).alpha).toBe(1);
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(selectedTheme).toBeFocused();
+  expect(await selectedTheme.evaluate((button) => {
+    const style = getComputedStyle(button);
+    const alpha = style.backgroundColor.match(/[\d.]+/g)?.map(Number)[3] ?? 1;
+    return { focusVisible: button.matches(':focus-visible'), alpha, backdrop: style.backdropFilter };
+  })).toEqual({ focusVisible: true, alpha: 1, backdrop: 'none' });
+});
+
+test('an external non-preset definition renders the same live Workbench tree', async ({ page }) => {
+  await fresh(page);
+  const registry = {
+    'icons.external-fixture': { kind: 'icon-pack' as const, source: 'icons.external-fixture' }
+  };
+  const resolution = resolveThemeV2(EXTERNAL_THEME, registry);
+  expect(resolution.ok).toBe(true);
+  if (!resolution.ok) return;
+  const canvas = compileCanvasLayers(resolution.theme, resolution.theme.assets);
+  expect(canvas.ok).toBe(true);
+  if (!canvas.ok) return;
+  const before = await page.locator('main').evaluate((root) => ({
+    revision: root.getAttribute('data-workbench-revision'),
+    widgets: [...root.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
+  }));
+
+  await page.evaluate(({ bindings, layers, recipes }) => {
+    const root = document.querySelector<HTMLElement>('main[data-pom-theme-root]')!;
+    for (const [property, value] of Object.entries(bindings)) root.style.setProperty(property, value);
+    root.dataset.pomTheme = 'external-fixture';
+    root.dataset.pomWidgetGrouping = recipes.widgetGrouping;
+    root.dataset.pomChromePresentation = recipes.chromePresentation;
+    root.dataset.pomActionPresentation = recipes.actionPresentation;
+    root.dataset.pomDensity = 'compact';
+    root.querySelector('[data-pom-part="row.surface"]')?.setAttribute('data-pom-spacing', 'recipe');
+    const canvasRoot = root.querySelector<HTMLElement>('[data-pom-canvas-root]')!;
+    canvasRoot.replaceChildren(...layers.map((layer) => {
+      const element = document.createElement('i');
+      element.dataset.pomCanvasLayer = layer.kind;
+      element.dataset.pomCanvasOrder = String(layer.order);
+      Object.assign(element.style, layer.style);
+      return element;
+    }));
+  }, {
+    bindings: compileThemeBindings(resolution.theme),
+    layers: canvas.layers,
+    recipes: resolution.theme.recipes
+  });
+
+  await expect(page.locator('main')).toHaveAttribute('data-pom-theme', 'external-fixture');
+  await expect(page.locator('main')).toHaveAttribute('data-pom-widget-grouping', resolution.theme.recipes.widgetGrouping);
+  await expect(page.locator('main')).toHaveAttribute('data-pom-chrome-presentation', resolution.theme.recipes.chromePresentation);
+  await expect(page.locator('main')).toHaveAttribute('data-pom-action-presentation', resolution.theme.recipes.actionPresentation);
+  expect(await page.locator('main').evaluate((root) => ({
+    revision: root.getAttribute('data-workbench-revision'),
+    widgets: [...root.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
+  }))).toEqual(before);
+  expect(await page.getByRole('article', { name: 'Characters (Story)' }).evaluate((article) => {
+    const style = getComputedStyle(article);
+    return { radius: style.borderRadius, family: style.fontFamily, color: style.color };
+  })).toMatchObject({ radius: '0px' });
+  await expect.poll(() => page.locator('[data-pom-part="row.surface"][data-pom-spacing="recipe"]').first()
+    .evaluate((row) => getComputedStyle(row).paddingTop)).toBe('6px');
+  await expect(page).toHaveScreenshot('external-copper-fixture.png', { animations: 'disabled', caret: 'hide' });
 });
 
 test('focused and floating compositions retain exactly one elevated material owner', async ({ page }) => {

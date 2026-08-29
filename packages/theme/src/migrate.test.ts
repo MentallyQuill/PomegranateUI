@@ -76,10 +76,30 @@ describe('migrateTheme', () => {
     expect(result).not.toHaveProperty('theme');
     expect(result.diagnostics).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        code: 'THEME_MIGRATION_INPUT_INVALID',
+        code: 'THEME_MIGRATION_VERSION_UNSUPPORTED',
         path: ['schemaVersion']
       })
     ]));
+  });
+
+  it('keeps invalid v2 diagnostics on the v2 schema instead of retrying v1', () => {
+    const migrated = migrateTheme(VALID_THEME);
+    expect(migrated.ok).toBe(true);
+    if (!migrated.ok) return;
+    const invalid = structuredClone(migrated.theme) as any;
+    invalid.recipes.parts['widget.surface'].material = 'missing-material';
+
+    const result = migrateTheme(invalid);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'THEME_MIGRATION_INPUT_INVALID',
+        path: ['recipes', 'parts', 'widget.surface', 'material']
+      })
+    ]));
+    expect(result.diagnostics.some(({ path }) => path[0] === 'geometry')).toBe(false);
   });
 
   it('is deterministic, deep-frozen, and idempotent for v2 inputs', () => {

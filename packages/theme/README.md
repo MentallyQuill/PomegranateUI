@@ -3,8 +3,9 @@
 `@pomegranate-ui/theme` is PomegranateUI's framework-neutral engine for
 versioned, declarative theme definitions from `@pomegranate-ui/contracts`.
 It validates untrusted input, migrates v1 definitions to complete v2 recipes,
-resolves semantic materials and local host assets, applies bounded accessibility
-policy, and compiles deterministic bindings for stable `data-pom-part` anatomy.
+resolves semantic materials and local host assets, enforces authored contrast,
+applies bounded accessibility policy, and compiles deterministic bindings for
+stable `data-pom-part` anatomy.
 It imports neither a view framework nor a DOM API.
 
 Resolution and compilation are deliberately side-effect free: the package does
@@ -12,6 +13,11 @@ not apply CSS, load assets, write preferences, or retain the last valid theme.
 A host registers trusted local asset IDs, rejects an invalid candidate from the
 literal diagnostics, and atomically applies `compileThemeBindings()` or the
 complete fixed-selector output from `compileThemeStyleSheet()`.
+
+`compileCanvasLayers()` participates in the same activation transaction, and
+`compileSliderProgress()` supplies the value-driven Chromium/WebKit range fill.
+Reduced-transparency policy rewrites base and interaction-state materials, not
+only the default surface.
 
 V2 themes declare bounded material and shape palettes plus every required
 semantic part. Theme data never contains CSS, selectors, HTML, scripts, URLs,

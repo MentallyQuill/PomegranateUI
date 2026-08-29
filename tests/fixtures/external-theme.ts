@@ -63,7 +63,7 @@ export const EXTERNAL_THEME: ThemeDefinitionV2 = {
     square: { family: 'square', radiusPx: 0, chamferPx: 0, chamferAngleDeg: 45, joinedEdges: [] },
     pill: { family: 'pill', radiusPx: 999, chamferPx: 0, chamferAngleDeg: 45, joinedEdges: [] }
   },
-  recipes: { parts, widgetGrouping: 'unified', chromePresentation: 'compact', actionPresentation: 'always' },
+  recipes: { parts, widgetGrouping: 'unified', chromePresentation: 'compact', actionPresentation: 'hover-focus' },
   controls: { slider: { trackPx: 3, thumbPx: 9, hitTargetPx: 44 } },
   iconPackId: 'icons.external-fixture',
   assets: [{ id: 'icons.external-fixture', kind: 'icon-pack', required: true }],

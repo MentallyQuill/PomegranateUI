@@ -1,4 +1,5 @@
 import { THEME_COLOR_ROLES, THEME_PART_IDS, type ThemePartId, type ThemePartRecipeV2, type ThemeShapeV2 } from '@pomegranate-ui/contracts';
+import { resolveMaterialContentColors } from './conformance.js';
 import type { ResolvedMaterialV2, ResolvedThemeV2 } from './resolve.js';
 
 export type ThemeBindings = Readonly<Record<string, string>>;
@@ -52,8 +53,39 @@ function compileRadius(shape: ThemeShapeV2): string {
 
 function compileClipPath(shape: ThemeShapeV2): string {
   if (shape.family !== 'chamfered' || shape.chamferPx === 0) return 'none';
-  const cut = `${formatNumber(shape.chamferPx)}px`;
-  return `polygon(${cut} 0, calc(100% - ${cut}) 0, 100% ${cut}, 100% calc(100% - ${cut}), calc(100% - ${cut}) 100%, ${cut} 100%, 0 calc(100% - ${cut}), 0 ${cut})`;
+  const horizontalCut = `${formatNumber(shape.chamferPx)}px`;
+  const verticalCut = `${formatNumber(shape.chamferPx * Math.tan(shape.chamferAngleDeg * Math.PI / 180))}px`;
+  return `polygon(${horizontalCut} 0, calc(100% - ${horizontalCut}) 0, 100% ${verticalCut}, 100% calc(100% - ${verticalCut}), calc(100% - ${horizontalCut}) 100%, ${horizontalCut} 100%, 0 calc(100% - ${verticalCut}), 0 ${verticalCut})`;
+}
+
+function compileJoinedBorderWidth(shape: ThemeShapeV2, widthPx: number): string {
+  const joined = new Set(shape.joinedEdges);
+  return ['top', 'right', 'bottom', 'left']
+    .map((edge) => `${formatNumber(joined.has(edge as 'top' | 'right' | 'bottom' | 'left') ? 0 : widthPx)}px`)
+    .join(' ');
+}
+
+function cssUrl(source: string): string {
+  const escaped = source.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replace(/[\r\n\f]/g, '');
+  return `url("${escaped}")`;
+}
+
+function compileTexture(theme: ResolvedThemeV2, material: ResolvedMaterialV2): {
+  readonly image: string;
+  readonly opacity: string;
+  readonly blend: string;
+} {
+  if (!material.texture) return { image: 'none', opacity: '0', blend: 'normal' };
+  const registration = theme.assets[material.texture.assetId];
+  if (!registration || registration.kind !== 'texture') {
+    throw new Error(`Resolved theme is missing texture '${material.texture.assetId}'.`);
+  }
+  const veil = rgba(material.base, Math.max(0, 1 - material.texture.opacity));
+  return {
+    image: `linear-gradient(${veil}, ${veil}), ${cssUrl(registration.source)}`,
+    opacity: formatNumber(material.texture.opacity),
+    blend: `normal, ${material.texture.blend}`
+  };
 }
 
 function compileShadow(material: ResolvedMaterialV2): string {
@@ -82,6 +114,8 @@ function assignPartBindings(
   const shape = theme.shapes[recipe.shape];
   if (!material || !shape) throw new Error(`Resolved theme is missing dependencies for part '${part}'.`);
   const prefix = `--pom-part-${key}`;
+  const content = resolveMaterialContentColors(theme, material);
+  const texture = compileTexture(theme, material);
   bindings[`${prefix}-material-fill`] = rgba(material.base, material.opacity);
   bindings[`${prefix}-material-fallback`] = material.fallback;
   bindings[`${prefix}-material-border`] = `${formatNumber(material.border.widthPx)}px solid ${rgba(material.border.color, material.border.opacity)}`;
@@ -91,6 +125,12 @@ function assignPartBindings(
   bindings[`${prefix}-material-shadow`] = compileShadow(material);
   bindings[`${prefix}-radius`] = compileRadius(shape);
   bindings[`${prefix}-clip-path`] = compileClipPath(shape);
+  bindings[`${prefix}-joined-border-width`] = compileJoinedBorderWidth(shape, material.border.widthPx);
+  bindings[`${prefix}-foreground`] = content.normal;
+  bindings[`${prefix}-foreground-large`] = content.large;
+  bindings[`${prefix}-texture-image`] = texture.image;
+  bindings[`${prefix}-texture-opacity`] = texture.opacity;
+  bindings[`${prefix}-texture-blend`] = texture.blend;
   bindings[`${prefix}-font-family`] = compileFont(theme, recipe);
   bindings[`${prefix}-font-weight`] = String((recipe.typography === 'display' ? theme.typography.display ?? theme.typography.ui : theme.typography[recipe.typography]).weight);
   bindings[`${prefix}-spacing`] = `${formatNumber(theme.spacing[recipe.spacing])}px`;
@@ -98,13 +138,25 @@ function assignPartBindings(
   bindings[`${prefix}-disabled-opacity`] = formatNumber(recipe.states.disabledOpacity);
   bindings[`${prefix}-elevation`] = String(recipe.elevation);
   bindings[`${prefix}-separator`] = recipe.separator;
+  bindings[`${prefix}-separator-width`] = recipe.separator === 'hairline'
+    ? '1px'
+    : `${formatNumber(material.border.widthPx)}px`;
+  bindings[`${prefix}-separator-color`] = rgba(material.border.color, material.border.opacity);
+  bindings[`${prefix}-separator-space`] = recipe.separator === 'space' ? bindings[`${prefix}-spacing`]! : '0px';
   for (const state of ['hover', 'pressed', 'selected', 'focus', 'inactive'] as const) {
     const stateRecipe = recipe.states[state];
     const stateMaterial = theme.materials[stateRecipe?.material ?? recipe.material];
     if (!stateMaterial) throw new Error(`Resolved theme is missing the ${state} material for part '${part}'.`);
     bindings[`${prefix}-state-${state}-fill`] = rgba(stateMaterial.base, stateMaterial.opacity);
     bindings[`${prefix}-state-${state}-opacity`] = formatNumber(stateRecipe?.opacity ?? 1);
+    bindings[`${prefix}-state-${state}-foreground`] = resolveMaterialContentColors(theme, stateMaterial).normal;
   }
+}
+
+export function compileSliderProgress(value: number, minimum: number, maximum: number): string {
+  if (![value, minimum, maximum].every(Number.isFinite) || maximum <= minimum) return '0%';
+  const progress = Math.max(0, Math.min(1, (value - minimum) / (maximum - minimum)));
+  return `${formatNumber(progress * 100)}%`;
 }
 
 export function compileThemeBindings(theme: ResolvedThemeV2): ThemeBindings {
@@ -178,10 +230,16 @@ function partRule(part: ThemePartId): string {
   const selector = `[data-pom-theme-root] [data-pom-part="${part}"]`;
   const prefix = `--pom-part-${key}`;
   return `${selector} {
-  color: var(--pom-color-text);
+  color: var(${prefix}-foreground);
   background-color: var(${prefix}-material-fallback);
   background-color: var(${prefix}-material-fill);
+  background-image: var(${prefix}-texture-image);
+  background-blend-mode: var(${prefix}-texture-blend);
   border: var(${prefix}-material-border);
+  border-width: var(${prefix}-joined-border-width);
+  border-block-end-width: var(${prefix}-separator-width);
+  border-block-end-color: var(${prefix}-separator-color);
+  margin-block-end: var(${prefix}-separator-space);
   border-radius: var(${prefix}-radius);
   -webkit-backdrop-filter: var(${prefix}-material-backdrop);
   backdrop-filter: var(${prefix}-material-backdrop);
@@ -192,11 +250,12 @@ function partRule(part: ThemePartId): string {
   overflow: var(${prefix}-overflow);
   z-index: var(${prefix}-elevation);
 }
-${selector}:hover { background-color: var(${prefix}-state-hover-fill); opacity: var(${prefix}-state-hover-opacity); }
-${selector}:active { background-color: var(${prefix}-state-pressed-fill); opacity: var(${prefix}-state-pressed-opacity); }
-${selector}[aria-selected="true"], ${selector}[aria-pressed="true"], ${selector}[aria-current], ${selector}[data-pom-selected="true"] { background-color: var(${prefix}-state-selected-fill); opacity: var(${prefix}-state-selected-opacity); }
-${selector}:focus-visible { background-color: var(${prefix}-state-focus-fill); opacity: var(${prefix}-state-focus-opacity); outline: var(--pom-focus-width) solid var(--pom-color-focus); outline-offset: var(--pom-focus-offset); }
-${selector}[inert], ${selector}[data-pom-inactive="true"] { background-color: var(${prefix}-state-inactive-fill); opacity: var(${prefix}-state-inactive-opacity); }
+${selector}[data-pom-spacing="recipe"] { gap: var(${prefix}-spacing); padding: var(${prefix}-spacing); }
+${selector}:hover { color: var(${prefix}-state-hover-foreground); background-color: var(${prefix}-state-hover-fill); opacity: var(${prefix}-state-hover-opacity); }
+${selector}:active { color: var(${prefix}-state-pressed-foreground); background-color: var(${prefix}-state-pressed-fill); opacity: var(${prefix}-state-pressed-opacity); }
+${selector}[aria-selected="true"], ${selector}[aria-pressed="true"], ${selector}[aria-current]:not([aria-current="false"]), ${selector}[data-pom-selected="true"] { color: var(${prefix}-state-selected-foreground); background-color: var(${prefix}-state-selected-fill); opacity: var(${prefix}-state-selected-opacity); }
+${selector}:focus-visible { color: var(${prefix}-state-focus-foreground); background-color: var(${prefix}-state-focus-fill); opacity: var(${prefix}-state-focus-opacity); outline: var(--pom-focus-width) solid var(--pom-color-focus); outline-offset: var(--pom-focus-offset); }
+${selector}[inert], ${selector}[data-pom-inactive="true"] { color: var(${prefix}-state-inactive-foreground); background-color: var(${prefix}-state-inactive-fill); opacity: var(${prefix}-state-inactive-opacity); }
 ${selector}:disabled, ${selector}[aria-disabled="true"] { opacity: var(${prefix}-disabled-opacity); }`;
 }
 
@@ -207,13 +266,17 @@ export const POM_SEMANTIC_PART_STYLE_SHEET = `${THEME_PART_IDS.map(partRule).joi
   -webkit-appearance: none;
   box-sizing: border-box;
   min-height: var(--pom-control-slider-hit-size);
-  background: transparent;
+  background-color: transparent;
+  background-image: linear-gradient(to right, var(--pom-part-slider-fill-material-fill) 0 var(--pom-slider-progress, 0%), var(--pom-part-slider-track-material-fill) var(--pom-slider-progress, 0%) 100%);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% var(--pom-control-slider-track-size);
   border: 0;
   box-shadow: none;
 }
 [data-pom-theme-root] [data-pom-part="slider.input"]::-webkit-slider-runnable-track {
   height: var(--pom-control-slider-track-size);
-  background: var(--pom-part-slider-track-material-fill);
+  background: transparent;
   border: var(--pom-part-slider-track-material-border);
   border-radius: var(--pom-part-slider-track-radius);
 }

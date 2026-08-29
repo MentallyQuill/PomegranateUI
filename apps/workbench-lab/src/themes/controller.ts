@@ -1,7 +1,9 @@
 import {
   applyThemePolicy,
+  compileCanvasLayers,
   compileThemeBindings,
   resolveThemeV2,
+  type CanvasPresentationLayer,
   type ResolvedThemeV2,
   type ThemeAssetRegistry,
   type ThemeDevicePolicy,
@@ -32,6 +34,7 @@ export interface LabThemeSnapshot {
   readonly resolved: ResolvedThemeV2;
   readonly materialControls: LabMaterialControls;
   readonly cssText: string;
+  readonly canvasLayers: readonly CanvasPresentationLayer[];
   readonly diagnostics: readonly ThemeDiagnostic[];
 }
 
@@ -61,14 +64,20 @@ function serializeBindings(bindings: Readonly<Record<string, string>>): string {
     .join(';');
 }
 
-function createSnapshot(id: LabThemeId, theme: ResolvedThemeV2, materialControls: LabMaterialControls): LabThemeSnapshot {
-  return Object.freeze({
-    activeId: id,
-    resolved: theme,
-    materialControls: Object.freeze({ ...materialControls }),
-    cssText: serializeBindings(compileThemeBindings(theme)),
-    diagnostics: Object.freeze([])
-  });
+function createSnapshot(id: LabThemeId, theme: ResolvedThemeV2, materialControls: LabMaterialControls): ThemeActivationResult {
+  const canvas = compileCanvasLayers(theme, theme.assets);
+  if (!canvas.ok) return { ok: false, diagnostics: canvas.diagnostics };
+  return {
+    ok: true,
+    snapshot: Object.freeze({
+      activeId: id,
+      resolved: theme,
+      materialControls: Object.freeze({ ...materialControls }),
+      cssText: serializeBindings(compileThemeBindings(theme)),
+      canvasLayers: canvas.layers,
+      diagnostics: Object.freeze([])
+    })
+  };
 }
 
 export function createLabThemeController(options: {
@@ -97,7 +106,7 @@ export function createLabThemeController(options: {
       ...controlsPolicy,
       ...(options.devicePolicy ? { device: options.devicePolicy } : {})
     });
-    return { ok: true, snapshot: createSnapshot(id, effective, materialControls) };
+    return createSnapshot(id, effective, materialControls);
   };
 
   let storedId: string | null = null;

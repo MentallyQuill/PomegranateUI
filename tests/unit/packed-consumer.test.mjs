@@ -93,6 +93,8 @@ test('external non-preset theme compiles distinct presentation through public AP
   assert.match(result.bindings['--pom-part-widget-surface-font-family'], /Pomegranate Mono/);
   assert.match(result.cssText, /\[data-pom-theme-root\] \[data-pom-part="widget\.surface"\]/);
   assert.doesNotMatch(result.cssText, /copper-terminal-fixture/);
+  assert.ok(result.canvasLayers.length >= 2);
+  assert.equal(result.canvasLayers[0].style.backgroundColor, '#090604');
 });
 
 test('package and example imports remain public, relative, and repository-neutral', async () => {

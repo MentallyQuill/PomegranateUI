@@ -22,7 +22,11 @@ Every formal round is independently recoverable at those paths:
 - Round 2: promoted image commit `f3dbfc7`; and
 - Round 3: the merge revision that recovered the live material controls; and
 - Round 4: the merge revision containing the current single-owner glass fix and
-  PomOS reference pass, additionally frozen by the second SHA-256 table below.
+  PomOS reference pass, additionally frozen by the second SHA-256 table below;
+- Round 5: semantic recipe renderer checkpoint `6fb1ff2`;
+- Round 6: the responsive delivery correction frozen by its hash table; and
+- Round 7: the final PR revision, including a separately promoted external
+  fourth-theme render.
 
 Uncommitted working captures are not counted as critic rounds. This preserves a
 complete audit trail without duplicating six binary files per iteration.
@@ -340,6 +344,51 @@ hierarchy, clipping, or affordance criticism remains after visual inspection.
 | `compact-scene.png` | `802ba844a9e2fcc5b61e7f08cd0bf32229e73758c423e3b0aed28336349e8512` |
 | `compact-settings.png` | `e917c7c0488056fc9225710181a7bae1fc36b573a630f140cf4367b78dbc1fe6` |
 
+## Round 7 — delivery-review contract closure
+
+An independent delivery reviewer treated the v2 contract and the rendered
+evidence as hostile inputs. The review found no critical defect, but it found
+eight important gaps that made several authored dimensions less truthful than
+the visual result implied. Promotion was reopened until all eight had a failing
+test, an implementation correction, and browser or unit proof.
+
+| Finding | Resolution and proof |
+| --- | --- |
+| Invalid v2 input could fall through v1 migration. | Dispatch strictly on the literal version; preserve v2 diagnostic paths and return an explicit unsupported-version diagnostic. |
+| Asset kinds, fallbacks, icon packs, and candidate canvas activation were not fully transactional. | Validate declared uses and same-kind fallback chains; treat active references as required; compile canvas before activation and retain the complete previous snapshot on failure. |
+| `minimumContrast`, `largeTextContrast`, and `contentTone` were inert. | Resolve safe normal/large foreground bindings for every text-bearing base and state material and reject unsafe authored combinations. |
+| Chamfer angle, joined edges, separator spacing, recipe spacing, and texture dimensions were incomplete. | Compile every dimension; keep spacing an explicit `data-pom-spacing="recipe"` opt-in so theme data cannot seize adopter layout ownership. |
+| Reduced transparency rewrote only default materials. | Rewrite every base and interaction-state material through its own opaque fallback and prove selected/focus surfaces are opaque and blur-free. |
+| Chromium/WebKit sliders lacked active fill. | Add value-driven progress bindings while preserving thin visual track/thumb geometry and the separate 44-pixel coarse-pointer target. |
+| `aria-current="false"` looked selected. | Restrict the selected selector to current values other than the literal false state. |
+| The external fourth-theme claim had compile proof but no promoted render. | Apply the copper fixture through public bindings and canvas compilation to the same live tree, derive presentation metadata from its recipe, inspect the result, and freeze a dedicated Playwright image. |
+
+The final image critic inspected the regenerated Deep Current, PomOS, Bunny,
+overlay/control states, and external Copper Terminal fixture at original
+resolution. The slider fill is now visible without a bulky face, PomOS retains
+one coherent rounded blue-glass language, Bunny remains a distinct milky
+pastel illustration system, Deep Current remains internally consistent, and
+the external fixture reads as square copper technical chrome without leaked
+Lab action controls. No blocking or substantive visual criticism remains.
+
+### Round 7 promoted evidence hashes
+
+| Snapshot | SHA-256 |
+| --- | --- |
+| `wide-scene.png` | `28a5e6b3db056f72c80115a4addf3a56593b0cb0b158dc843ba20cdc1d19e918` |
+| `wide-pom-neutral.png` | `ef2fd191a026b9940a14d1e953ee842b9938c0db3aa1744451894abc620e78c5` |
+| `wide-bunny.png` | `a02ca9c5cfd5b9890537dfbc3462cb4c8297a884b9babfec0cbc3a3b3499662e` |
+| `wide-material-controls.png` | `6e8a474ab980afc9826b5196e6a6369a917e309df48c6124421f0168214d12db` |
+| `wide-material-zero-deep-current.png` | `d1179a67c32f093f5bc04d6c01cafb045f48af034f224d29634195689d5f4d44` |
+| `wide-material-adjusted-pom-neutral.png` | `e8925d8955cd7e2c7b732fc911e837963970eb2b0955ffdad003dca12f943e47` |
+| `wide-material-full-bunny.png` | `b055eba5e33a57730db3979e5cbf622553fec51173f32c61dfb2a76b34f8aba9` |
+| `wide-catalog-drawer.png` | `a94c66c3b5745978aed63be4e79df3c87744601e9f923bb95b176be067cb7c15` |
+| `wide-catalog-expanded.png` | `574f07ff4adfb7f27a862cc7ca13ee40a773d3914444853f8f7d9d1b98d085a4` |
+| `compact-settings.png` | `971b5ee64bda0ee0372b54031af1cd0b97234568ef347890e48ce5ac639c63c5` |
+| `focus-transcript.png` | `d480263513dc5dc832fd38869d92a14fadfd465d325b1025b1244755f63b5200` |
+| `floating-widget.png` | `211b875b513c4b813a536c7e101c5f98939607694cc32d2612726f30e76f73e9` |
+| `external-copper-fixture.png` | `36c636ca50d3c4d6e59f8debb90d0f8a899af74cac7ceb09ac263e2cd5243be0` |
+
 ### Preference-only observations
 
 - PomOS could move its blue canvas warmer or cooler without correcting a
@@ -351,7 +400,8 @@ hierarchy, clipping, or affordance criticism remains after visual inspection.
 
 ## Closure
 
-Round 5 has **zero blocking findings and zero substantive findings** across the
-complete default, responsive, control, endpoint, overlay, and PomOS reference
-evidence. Promotion depends on the complete repository gate, code review, CI,
-merge, and Pages proof named by the active goal.
+Round 7 has **zero blocking findings and zero substantive findings** across the
+complete default, responsive, control, endpoint, overlay, external-theme, and
+PomOS reference evidence. Promotion depends on the complete repository gate,
+follow-up code review, CI, merge, and applicable Pages proof named by the active
+goal.

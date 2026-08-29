@@ -1,4 +1,4 @@
-import type { ThemePartId } from '@pomegranate-ui/contracts';
+import type { ThemePartId, ThemePartRecipeV2 } from '@pomegranate-ui/contracts';
 import type { ResolvedMaterialV2, ResolvedThemeV2 } from './resolve.js';
 
 export interface ThemeMaterialOverrides {
@@ -72,18 +72,27 @@ export function applyThemePolicy(theme: ResolvedThemeV2, policy: ThemePolicy = {
     || policy.device?.backdropFilterSupported === false;
 
   if (reduceTransparency) {
-    for (const [partId, recipe] of Object.entries(parts) as [ThemePartId, typeof parts[ThemePartId]][]) {
-      const material = materials[recipe.material];
-      if (!material || (material.opacity >= 1 && material.backdrop.blurPx === 0)) continue;
+    const opaqueMaterial = (materialId: string): string => {
+      const material = materials[materialId];
+      if (!material || (material.opacity >= 1 && material.backdrop.blurPx === 0)) return materialId;
       const fallbackId = material.reducedTransparency;
       const fallback = materials[fallbackId];
-      if (!fallback) continue;
+      if (!fallback) return materialId;
       materials[fallbackId] = {
         ...fallback,
         opacity: 1,
         backdrop: { ...fallback.backdrop, blurPx: 0, saturation: 1, brightness: 1 }
       };
-      parts[partId] = { ...recipe, material: fallbackId };
+      return fallbackId;
+    };
+
+    for (const [partId, recipe] of Object.entries(parts) as [ThemePartId, typeof parts[ThemePartId]][]) {
+      const states: ThemePartRecipeV2['states'] = { ...recipe.states };
+      for (const state of ['hover', 'pressed', 'selected', 'focus', 'inactive'] as const) {
+        const stateRecipe = states[state];
+        if (stateRecipe?.material) states[state] = { ...stateRecipe, material: opaqueMaterial(stateRecipe.material) };
+      }
+      parts[partId] = { ...recipe, material: opaqueMaterial(recipe.material), states };
     }
   }
 

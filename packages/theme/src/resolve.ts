@@ -9,6 +9,7 @@ import {
   type ThemePatch
 } from '@pomegranate-ui/contracts';
 import { resolveThemeAssets, type ThemeAssetRegistry } from './assets.js';
+import { resolveMaterialContentColors } from './conformance.js';
 import { migrateTheme } from './migrate.js';
 
 export type ThemeDiagnosticCode =
@@ -17,7 +18,10 @@ export type ThemeDiagnosticCode =
   | 'THEME_ASSET_MISSING'
   | 'THEME_ASSET_KIND_MISMATCH'
   | 'THEME_ICON_PACK_MISSING'
+  | 'THEME_CANVAS_ASSET_MISSING'
+  | 'THEME_CANVAS_ASSET_KIND_MISMATCH'
   | 'THEME_MIGRATION_INPUT_INVALID'
+  | 'THEME_MIGRATION_VERSION_UNSUPPORTED'
   | 'THEME_MIGRATION_OUTPUT_INVALID'
   | 'THEME_CONTRAST_UNSAFE';
 
@@ -148,6 +152,30 @@ export function resolveThemeV2(input: unknown, registry: ThemeAssetRegistry = {}
     rim: { ...material.rim, color: theme.colors[material.rim.color] },
     shadows: material.shadows.map((shadow) => ({ ...shadow, color: theme.colors[shadow.color] }))
   } satisfies ResolvedMaterialV2])) as Record<string, ResolvedMaterialV2>;
+
+  const contrastDiagnostics: ThemeDiagnostic[] = [];
+  const nonTextParts = new Set(['canvas.surface', 'separator', 'slider.input', 'slider.track', 'slider.fill', 'slider.thumb']);
+  const textMaterialIds = new Set<string>();
+  for (const [partId, recipe] of Object.entries(theme.recipes.parts)) {
+    if (nonTextParts.has(partId)) continue;
+    textMaterialIds.add(recipe.material);
+    for (const state of ['hover', 'pressed', 'selected', 'focus', 'inactive'] as const) {
+      if (recipe.states[state]?.material) textMaterialIds.add(recipe.states[state]!.material!);
+    }
+  }
+  for (const id of textMaterialIds) {
+    const material = materials[id]!;
+    const content = resolveMaterialContentColors({ colors: theme.colors, accessibility: theme.accessibility }, material);
+    if (content.normalContrast < theme.accessibility.minimumContrast
+      || content.largeContrast < theme.accessibility.largeTextContrast) {
+      contrastDiagnostics.push({
+        code: 'THEME_CONTRAST_UNSAFE',
+        path: ['materials', id, 'contentTone'],
+        message: `Material '${id}' content tone does not meet the ${theme.accessibility.minimumContrast}:1 normal and ${theme.accessibility.largeTextContrast}:1 large-text contrast floors against its fallback.`
+      });
+    }
+  }
+  if (contrastDiagnostics.length > 0) return { ok: false, diagnostics: contrastDiagnostics };
 
   return {
     ok: true,

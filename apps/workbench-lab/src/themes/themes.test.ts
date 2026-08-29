@@ -20,7 +20,7 @@ describe('Workbench Lab theme conformance', () => {
     const preset = LAB_THEME_PRESETS.find((candidate) => candidate.id === id);
     expect(preset?.definition.schemaVersion).toBe('pomegranate.ui.theme.v2');
     const result = resolveThemeV2(preset?.definition, assetRegistry);
-    expect(result.ok).toBe(true);
+    expect(result.ok, result.ok ? undefined : JSON.stringify(result.diagnostics)).toBe(true);
     if (!result.ok) return;
     expect(Object.keys(result.theme.recipes.parts)).toEqual([...THEME_PART_IDS]);
     expect(Object.isFrozen(result.theme)).toBe(true);
@@ -98,6 +98,7 @@ describe('Workbench Lab theme conformance', () => {
     expect(result.ok).toBe(true);
     expect(controller.getSnapshot().activeId).toBe('bunny');
     expect(controller.getSnapshot().cssText).not.toBe(before.cssText);
+    expect(controller.getSnapshot().canvasLayers.length).toBeGreaterThan(0);
     expect(writes).toEqual(['bunny']);
   });
 
@@ -155,7 +156,7 @@ describe('Workbench Lab theme conformance', () => {
     const invalid = invalidController.activate('bunny');
     expect(invalid.ok).toBe(false);
     expect(invalidController.getSnapshot()).toBe(beforeInvalid);
-    if (!invalid.ok) expect(invalid.diagnostics[0]).toMatchObject({ code: 'THEME_MIGRATION_INPUT_INVALID' });
+    if (!invalid.ok) expect(invalid.diagnostics[0]).toMatchObject({ code: 'THEME_MIGRATION_VERSION_UNSUPPORTED' });
 
     const missingController = createLabThemeController({ availableAssets: new Set(['icons.minimal', 'image.deep-current-stage']) });
     const beforeMissing = missingController.getSnapshot();
@@ -163,6 +164,7 @@ describe('Workbench Lab theme conformance', () => {
     expect(missing.ok).toBe(false);
     expect(missingController.getSnapshot()).toBe(beforeMissing);
     if (!missing.ok) expect(missing.diagnostics[0]).toMatchObject({ code: 'THEME_ASSET_MISSING' });
+    expect(missingController.getSnapshot().canvasLayers).toBe(beforeMissing.canvasLayers);
   });
 
   it('falls back from unknown preference and persists only the Lab preset ID', () => {

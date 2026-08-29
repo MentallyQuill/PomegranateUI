@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { compileSliderProgress } from '@pomegranate-ui/theme';
   import type { LabHostContext } from '../mockup/host-context.js';
   import type { SurfaceFixture, SurfaceState } from '../mockup/surface-fixtures.js';
 
@@ -22,6 +23,10 @@
   ] as const;
   const retainsContent = $derived(!['empty', 'unavailable', 'access-denied'].includes(surfaceState));
   const initials = (label: string) => label.split(/\s|→/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+  const sliderStyle = (value: number, minimum: number, maximum: number) => `--pom-slider-progress:${compileSliderProgress(value, minimum, maximum)}`;
+  const syncSliderProgress = (input: HTMLInputElement) => {
+    input.style.setProperty('--pom-slider-progress', compileSliderProgress(Number(input.value), Number(input.min), Number(input.max)));
+  };
 </script>
 
 {#if retainsContent}
@@ -91,7 +96,8 @@
         {:else if fixture.presentation === 'ambience'}
           <div class="surface-mixer">
             {#each fixture.rows as row, index (row[0])}
-              <label><span>{row[0]}</span><output>{row[1]}</output><input data-pom-part="slider.input" aria-label={`${row[0]} level`} type="range" min="0" max="100" value={index === 0 ? 42 : index === 1 ? 28 : 8} /></label>
+              {@const level = index === 0 ? 42 : index === 1 ? 28 : 8}
+              <label><span>{row[0]}</span><output>{row[1]}</output><input data-pom-part="slider.input" aria-label={`${row[0]} level`} type="range" min="0" max="100" value={level} style={sliderStyle(level, 0, 100)} oninput={(event) => syncSliderProgress(event.currentTarget)} /></label>
             {/each}
           </div>
         {:else if fixture.presentation === 'backdrop'}
@@ -157,7 +163,11 @@
                     min="0"
                     max="100"
                     value={hostContext.theme.materialControls[control.id]}
-                    oninput={(event) => hostContext.theme.setMaterialControl(control.id, Number(event.currentTarget.value))}
+                    style={sliderStyle(hostContext.theme.materialControls[control.id], 0, 100)}
+                    oninput={(event) => {
+                      syncSliderProgress(event.currentTarget);
+                      hostContext.theme.setMaterialControl(control.id, Number(event.currentTarget.value));
+                    }}
                   />
                 </label>
               {/each}
@@ -169,7 +179,7 @@
           </details>
         {:else if fixture.presentation === 'accessibility'}
           <div class="surface-accessibility">
-            <label>Text scale <input data-pom-part="slider.input" type="range" min="80" max="160" value="100" /><output>100%</output></label>
+            <label>Text scale <input data-pom-part="slider.input" type="range" min="80" max="160" value="100" style={sliderStyle(100, 80, 160)} oninput={(event) => syncSliderProgress(event.currentTarget)} /><output>100%</output></label>
             <label><input data-pom-part="field.surface" type="checkbox" /> High contrast</label><label><input data-pom-part="field.surface" type="checkbox" checked /> Follow reduced-motion setting</label>
             <p aria-label="Accessibility live sample">Live sample: Reservoir light across quiet water.</p>
           </div>

@@ -14,6 +14,7 @@ import {
 
 export type ThemeMigrationDiagnosticCode =
   | 'THEME_MIGRATION_INPUT_INVALID'
+  | 'THEME_MIGRATION_VERSION_UNSUPPORTED'
   | 'THEME_MIGRATION_OUTPUT_INVALID';
 
 export interface ThemeMigrationDiagnostic {
@@ -220,8 +221,29 @@ function migrateV1(theme: ThemeDefinitionV1): ThemeDefinitionV2 | null {
 }
 
 export function migrateTheme(input: unknown): ThemeMigrationResult {
-  const v2 = ThemeDefinitionV2Schema.safeParse(input);
-  if (v2.success) return { ok: true, theme: deepFreeze(v2.data), diagnostics: [] };
+  const schemaVersion = input !== null && typeof input === 'object' && 'schemaVersion' in input
+    ? (input as { readonly schemaVersion?: unknown }).schemaVersion
+    : undefined;
+
+  if (schemaVersion === 'pomegranate.ui.theme.v2') {
+    const v2 = ThemeDefinitionV2Schema.safeParse(input);
+    return v2.success
+      ? { ok: true, theme: deepFreeze(v2.data), diagnostics: [] }
+      : { ok: false, diagnostics: diagnostics('THEME_MIGRATION_INPUT_INVALID', v2.error.issues) };
+  }
+
+  if (schemaVersion !== 'pomegranate.ui.theme.v1') {
+    return {
+      ok: false,
+      diagnostics: [{
+        code: schemaVersion === undefined ? 'THEME_MIGRATION_INPUT_INVALID' : 'THEME_MIGRATION_VERSION_UNSUPPORTED',
+        path: ['schemaVersion'],
+        message: schemaVersion === undefined
+          ? 'Theme input must declare schemaVersion.'
+          : `Unsupported theme schema version '${String(schemaVersion)}'.`
+      }]
+    };
+  }
 
   const v1 = ThemeDefinitionV1Schema.safeParse(input);
   if (!v1.success) {

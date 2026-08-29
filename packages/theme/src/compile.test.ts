@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { THEME_PART_IDS, type ThemePartId } from '@pomegranate-ui/contracts';
-import { compileThemeBindings, compileThemeStyleSheet, type ResolvedThemeV2 } from './index.js';
+import { compileSliderProgress, compileThemeBindings, compileThemeStyleSheet, type ResolvedThemeV2 } from './index.js';
 
 const part = {
   material: 'glass',
@@ -86,6 +86,7 @@ describe('theme compiler', () => {
     const bindings = compileThemeBindings(RESOLVED_THEME);
 
     expect(css).toContain('::-webkit-slider-runnable-track');
+    expect(css).toContain('linear-gradient(to right, var(--pom-part-slider-fill-material-fill) 0 var(--pom-slider-progress, 0%)');
     expect(css).toContain('::-webkit-slider-thumb');
     expect(css).toContain('::-moz-range-track');
     expect(css).toContain('::-moz-range-progress');
@@ -93,6 +94,39 @@ describe('theme compiler', () => {
     expect(bindings['--pom-control-slider-track-size']).toBe('4px');
     expect(bindings['--pom-control-slider-thumb-size']).toBe('11px');
     expect(bindings['--pom-control-slider-hit-size']).toBe('44px');
+    expect(compileSliderProgress(25, 0, 100)).toBe('25%');
+    expect(compileSliderProgress(500, 0, 100)).toBe('100%');
+    expect(compileSliderProgress(5, 5, 5)).toBe('0%');
+  });
+
+  it('compiles content tone, chamfer angle, joined edges, spacing, separators, and textures', () => {
+    const variant = structuredClone(RESOLVED_THEME) as any;
+    variant.assets['texture.grain'] = { kind: 'texture', source: '/assets/grain.webp' };
+    variant.materials.glass.texture = { assetId: 'texture.grain', opacity: 0.24, blend: 'overlay' };
+    variant.shapes['adaptive-pane'] = {
+      family: 'chamfered', radiusPx: 0, chamferPx: 12, chamferAngleDeg: 30, joinedEdges: ['top', 'left']
+    };
+    variant.recipes.parts['widget.surface'] = {
+      ...variant.recipes.parts['widget.surface'],
+      spacing: 'lg',
+      separator: 'hairline'
+    };
+
+    const bindings = compileThemeBindings(variant);
+    const css = compileThemeStyleSheet(variant);
+
+    expect(bindings['--pom-part-widget-surface-foreground']).toBe('#101820');
+    expect(bindings['--pom-part-widget-surface-spacing']).toBe('16px');
+    expect(bindings['--pom-part-widget-surface-joined-border-width']).toBe('0px 1px 1px 0px');
+    expect(bindings['--pom-part-widget-surface-clip-path']).toContain('6.9282px');
+    expect(bindings['--pom-part-widget-surface-texture-image']).toContain('url("/assets/grain.webp")');
+    expect(bindings['--pom-part-widget-surface-texture-opacity']).toBe('0.24');
+    expect(bindings['--pom-part-widget-surface-texture-blend']).toBe('normal, overlay');
+    expect(css).toContain('[data-pom-part="widget.surface"][data-pom-spacing="recipe"] { gap: var(--pom-part-widget-surface-spacing); padding: var(--pom-part-widget-surface-spacing); }');
+    expect(css).toContain('border-width: var(--pom-part-widget-surface-joined-border-width)');
+    expect(css).toContain('border-block-end-width: var(--pom-part-widget-surface-separator-width)');
+    expect(css).toContain('[aria-current]:not([aria-current="false"])');
+    expect(css).toContain('background-image: var(--pom-part-widget-surface-texture-image)');
   });
 
   it('isolates a changed recipe to that semantic part bindings', () => {

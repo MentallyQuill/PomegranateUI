@@ -5,7 +5,7 @@
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import type { WidgetFrameProjection } from '@pomegranate-ui/core';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
-  import { compileCanvasLayers, POM_SEMANTIC_PART_STYLE_SHEET, type CanvasPresentationLayer, type ThemeAssetRegistry } from '@pomegranate-ui/theme';
+  import { POM_SEMANTIC_PART_STYLE_SHEET, type CanvasPresentationLayer, type ThemeAssetRegistry } from '@pomegranate-ui/theme';
 
   import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
   import deepCurrentStage from './assets/deep-current-stage.jpg';
@@ -76,12 +76,7 @@
   });
   const initialThemeSnapshot = themeController.getSnapshot();
   let themeSnapshot = $state(initialThemeSnapshot);
-  let canvasLayers = $state<readonly CanvasPresentationLayer[]>(resolveCanvasLayers(initialThemeSnapshot));
-
-  function resolveCanvasLayers(snapshot: typeof initialThemeSnapshot): readonly CanvasPresentationLayer[] {
-    const compiled = compileCanvasLayers(snapshot.resolved, themeAssetRegistry);
-    return compiled.ok ? compiled.layers : [];
-  }
+  let canvasLayers = $state<readonly CanvasPresentationLayer[]>(initialThemeSnapshot.canvasLayers);
 
   function themeInspector(): LabThemeInspector {
     return {
@@ -109,7 +104,7 @@
 
   function applyThemeSnapshot(snapshot: typeof initialThemeSnapshot) {
     themeSnapshot = snapshot;
-    canvasLayers = resolveCanvasLayers(snapshot);
+    canvasLayers = snapshot.canvasLayers;
     hostContext.theme.activeId = snapshot.activeId;
     hostContext.theme.materialControls = snapshot.materialControls;
     hostContext.theme.inspector = themeInspector();
