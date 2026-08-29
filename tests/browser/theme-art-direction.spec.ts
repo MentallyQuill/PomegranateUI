@@ -10,8 +10,18 @@ type MaterialSample = {
   backdropFilter: string;
   backgroundColor: string;
   backgroundImage: string;
-  borderRadius: string;
+  borderBottomRightRadius: string;
+  borderTopLeftRadius: string;
   boxShadow: string;
+};
+
+type SurfaceName = 'shelf' | 'utility' | 'workbench' | 'dock' | 'transcript' | 'composer' | 'catalog' | 'dialog' | 'focused' | 'floating';
+type SurfaceExpectation = {
+  blur: number;
+  radii: readonly [number, number];
+  shadow: boolean;
+  tone: 'dark' | 'light';
+  translucent: boolean;
 };
 
 async function fresh(page: Page, width = 1440, height = 900) {
@@ -39,7 +49,8 @@ async function material(page: Page, selector: string): Promise<MaterialSample> {
       backdropFilter: style.backdropFilter,
       backgroundColor: style.backgroundColor,
       backgroundImage: style.backgroundImage,
-      borderRadius: style.borderRadius,
+      borderBottomRightRadius: style.borderBottomRightRadius,
+      borderTopLeftRadius: style.borderTopLeftRadius,
       boxShadow: style.boxShadow
     };
   });
@@ -52,7 +63,8 @@ async function pseudoMaterial(page: Page, selector: string, pseudo: '::before' |
       backdropFilter: style.backdropFilter,
       backgroundColor: style.backgroundColor,
       backgroundImage: style.backgroundImage,
-      borderRadius: style.borderRadius,
+      borderBottomRightRadius: style.borderBottomRightRadius,
+      borderTopLeftRadius: style.borderTopLeftRadius,
       boxShadow: style.boxShadow
     };
   }, pseudo);
@@ -67,6 +79,69 @@ function alpha(color: string): number {
   if (commaAlpha) return Number(commaAlpha);
   const slashAlpha = color.match(/\/\s*([\d.]+)\s*\)$/)?.[1];
   return slashAlpha ? Number(slashAlpha) : 1;
+}
+
+function radiusPx(radius: string): number {
+  return Number(radius.replace('px', ''));
+}
+
+function backgroundLuminance(sample: MaterialSample): number {
+  const source = alpha(sample.backgroundColor) > 0 ? sample.backgroundColor : sample.backgroundImage;
+  const channels = source.match(/rgba?\(\s*(\d+)[, ]+\s*(\d+)[, ]+\s*(\d+)/)?.slice(1, 4).map(Number);
+  if (!channels || channels.length !== 3) return Number.NaN;
+  return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+}
+
+const MATERIAL_EXPECTATIONS: Record<(typeof TARGETS)[number]['id'], Record<SurfaceName, SurfaceExpectation>> = {
+  'deep-current': {
+    shelf: { blur: 12, radii: [0, 0], shadow: false, tone: 'dark', translucent: true },
+    utility: { blur: 24, radii: [2, 2], shadow: true, tone: 'dark', translucent: true },
+    workbench: { blur: 0, radii: [0, 0], shadow: false, tone: 'dark', translucent: false },
+    dock: { blur: 12, radii: [0, 0], shadow: false, tone: 'dark', translucent: true },
+    transcript: { blur: 18, radii: [2, 2], shadow: true, tone: 'dark', translucent: true },
+    composer: { blur: 12, radii: [0, 0], shadow: false, tone: 'dark', translucent: true },
+    catalog: { blur: 32, radii: [2, 2], shadow: true, tone: 'dark', translucent: true },
+    dialog: { blur: 32, radii: [2, 2], shadow: true, tone: 'dark', translucent: true },
+    focused: { blur: 32, radii: [2, 2], shadow: true, tone: 'dark', translucent: true },
+    floating: { blur: 18, radii: [2, 2], shadow: true, tone: 'dark', translucent: true }
+  },
+  'pom-neutral': {
+    shelf: { blur: 30, radii: [18, 10], shadow: true, tone: 'light', translucent: true },
+    utility: { blur: 28, radii: [10, 10], shadow: true, tone: 'light', translucent: true },
+    workbench: { blur: 24, radii: [12, 18], shadow: true, tone: 'light', translucent: true },
+    dock: { blur: 24, radii: [16, 16], shadow: true, tone: 'light', translucent: true },
+    transcript: { blur: 24, radii: [15, 15], shadow: true, tone: 'light', translucent: true },
+    composer: { blur: 24, radii: [15, 15], shadow: true, tone: 'light', translucent: true },
+    catalog: { blur: 30, radii: [18, 18], shadow: true, tone: 'light', translucent: true },
+    dialog: { blur: 30, radii: [18, 18], shadow: true, tone: 'light', translucent: true },
+    focused: { blur: 30, radii: [18, 18], shadow: true, tone: 'light', translucent: true },
+    floating: { blur: 20, radii: [10, 10], shadow: true, tone: 'light', translucent: true }
+  },
+  bunny: {
+    shelf: { blur: 30, radii: [24, 12], shadow: true, tone: 'light', translucent: true },
+    utility: { blur: 28, radii: [12, 12], shadow: true, tone: 'light', translucent: true },
+    workbench: { blur: 24, radii: [14, 26], shadow: true, tone: 'light', translucent: true },
+    dock: { blur: 22, radii: [20, 20], shadow: true, tone: 'light', translucent: true },
+    transcript: { blur: 24, radii: [18, 18], shadow: true, tone: 'light', translucent: true },
+    composer: { blur: 24, radii: [18, 18], shadow: true, tone: 'light', translucent: true },
+    catalog: { blur: 28, radii: [26, 26], shadow: true, tone: 'light', translucent: true },
+    dialog: { blur: 28, radii: [26, 26], shadow: true, tone: 'light', translucent: true },
+    focused: { blur: 28, radii: [26, 26], shadow: true, tone: 'light', translucent: true },
+    floating: { blur: 20, radii: [17, 17], shadow: true, tone: 'light', translucent: true }
+  }
+};
+
+function assertMaterial(target: (typeof TARGETS)[number], name: SurfaceName, sample: MaterialSample): void {
+  const expected = MATERIAL_EXPECTATIONS[target.id][name];
+  const label = `${target.label} ${name}`;
+  expect(blurPx(sample.backdropFilter), `${label} blur`).toBeGreaterThanOrEqual(expected.blur);
+  expect([radiusPx(sample.borderTopLeftRadius), radiusPx(sample.borderBottomRightRadius)], `${label} radii`).toEqual(expected.radii);
+  expect(sample.boxShadow !== 'none', `${label} shadow`).toBe(expected.shadow);
+  expect(alpha(sample.backgroundColor) < 1, `${label} translucency`).toBe(expected.translucent);
+  const luminance = backgroundLuminance(sample);
+  expect(Number.isFinite(luminance), `${label} background`).toBe(true);
+  if (expected.tone === 'dark') expect(luminance, `${label} dark material`).toBeLessThan(80);
+  else expect(luminance, `${label} light material`).toBeGreaterThan(180);
 }
 
 test('all visual targets render meaningful layered frost', async ({ page }) => {
@@ -99,55 +174,43 @@ test('all visual targets render meaningful layered frost', async ({ page }) => {
     if (target.id === 'deep-current') {
       expect(stage.backgroundImage, 'Deep Current approved local stage image').toContain('url(');
     }
-    expect(shelf.borderRadius, `${target.label} authored geometry`).toBeTruthy();
   }
 });
 
 test('every named elevated surface exposes its material contract', async ({ page }) => {
-  await fresh(page);
-
-  const structuralSurfaces = [
-    { label: 'utility', selector: '.context-rail', minimumBlur: 16 },
-    { label: 'dock', selector: '[data-conformance-region="left"]', minimumBlur: 12 },
-    { label: 'transcript', selector: '.transcript', minimumBlur: 12 },
-    { label: 'composer', selector: '.composer', minimumBlur: 12 }
-  ] as const;
-
   for (const target of TARGETS) {
+    await fresh(page);
     await selectTheme(page, target);
-    for (const surface of structuralSurfaces) {
-      const sample = await material(page, surface.selector);
-      expect(blurPx(sample.backdropFilter), `${target.label} ${surface.label} blur`).toBeGreaterThanOrEqual(surface.minimumBlur);
-      expect(alpha(sample.backgroundColor), `${target.label} ${surface.label} translucency`).toBeLessThan(1);
-      expect(sample.backgroundColor !== 'rgba(0, 0, 0, 0)' || sample.backgroundImage !== 'none', `${target.label} ${surface.label} material`).toBe(true);
-      expect(sample.borderRadius, `${target.label} ${surface.label} geometry`).toBeTruthy();
-    }
+    const samples = new Map<SurfaceName, MaterialSample>();
+    for (const [name, selector] of [
+      ['shelf', '.top-shelf'],
+      ['utility', '.context-rail'],
+      ['workbench', '.workbench-shell'],
+      ['dock', '[data-conformance-region="left"]'],
+      ['transcript', '.transcript'],
+      ['composer', '.composer']
+    ] as const) samples.set(name, await material(page, selector));
 
     await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
-    const catalog = await material(page, '.widget-catalog');
-    const panelDialog = await material(page, 'dialog');
-    for (const [label, sample] of [['Catalog', catalog], ['dialog', panelDialog]] as const) {
-      expect(blurPx(sample.backdropFilter), `${target.label} ${label} blur`).toBeGreaterThanOrEqual(16);
-      expect(alpha(sample.backgroundColor), `${target.label} ${label} translucency`).toBeLessThan(1);
-      expect(sample.boxShadow, `${target.label} ${label} depth`).not.toBe('none');
-    }
+    samples.set('catalog', await material(page, '.widget-catalog'));
     await page.getByRole('complementary', { name: 'Widget Catalog' }).getByRole('button', { name: 'Close Catalog' }).click();
+
+    await page.getByRole('button', { name: 'Create Panel' }).click();
+    samples.set('dialog', await material(page, 'dialog[open]:not(.focused-widget-dialog)'));
+    await page.getByRole('dialog', { name: 'Create a Panel' }).getByRole('button', { name: 'Cancel' }).click();
+
+    await page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Focus Widget' }).click();
+    await expect(page.locator('.focused-widget-dialog')).toBeVisible();
+    samples.set('focused', await material(page, '.focused-widget-dialog'));
+    await page.getByRole('button', { name: 'Back to Workbench' }).click();
+
+    await page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Float' }).click();
+    samples.set('floating', await material(page, '.widget-float .widget-frame'));
+
+    for (const name of Object.keys(MATERIAL_EXPECTATIONS[target.id]) as SurfaceName[]) {
+      assertMaterial(target, name, samples.get(name)!);
+    }
   }
-
-  await fresh(page);
-  await page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Focus Widget' }).click();
-  await expect(page.locator('.focused-widget-dialog')).toBeVisible();
-  const focused = await material(page, '.focused-widget-dialog');
-  expect(blurPx(focused.backdropFilter), 'focused Widget blur').toBeGreaterThanOrEqual(16);
-  expect(alpha(focused.backgroundColor), 'focused Widget translucency').toBeLessThan(1);
-  expect(focused.boxShadow, 'focused Widget depth').not.toBe('none');
-
-  await page.getByRole('button', { name: 'Back to Workbench' }).click();
-  await page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Float' }).click();
-  const floating = await material(page, '.widget-float .widget-frame');
-  expect(blurPx(floating.backdropFilter), 'floating Widget blur').toBeGreaterThanOrEqual(12);
-  expect(alpha(floating.backgroundColor), 'floating Widget translucency').toBeLessThan(1);
-  expect(floating.boxShadow, 'floating Widget depth').not.toBe('none');
 });
 
 test('reduced transparency makes every glass surface opaque', async ({ page }) => {

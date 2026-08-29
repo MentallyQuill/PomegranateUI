@@ -587,6 +587,13 @@ main[data-pom-theme="bunny"] .composer > button {
   font-weight: 700;
 }
 
+main[data-pom-theme="deep-current"] :is(.widget-catalog, dialog, .focused-widget-dialog),
+main[data-pom-theme="deep-current"] .widget-float .widget-frame { border-radius: 2px; }
+main[data-pom-theme="pom-neutral"] :is(.widget-catalog, dialog, .focused-widget-dialog) { border-radius: 18px; }
+main[data-pom-theme="pom-neutral"] .widget-float .widget-frame { border-radius: 10px; }
+main[data-pom-theme="bunny"] :is(.widget-catalog, dialog, .focused-widget-dialog) { border-radius: 26px; }
+main[data-pom-theme="bunny"] .widget-float .widget-frame { border-radius: 17px; }
+
 @media (max-width: 1180px) {
   main[data-pom-theme] .top-shelf { grid-template-columns: 164px minmax(248px, auto) minmax(0, 1fr) auto; }
   main[data-pom-theme] .context-rail { grid-template-columns: auto auto minmax(0, 1fr); }

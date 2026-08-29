@@ -15,12 +15,15 @@ The six stable evidence paths are:
 - `tests/browser/__screenshots__/native-workbench-visual.spec.ts-snapshots/wide-bunny.png`
 - `tests/browser/__screenshots__/native-workbench-visual.spec.ts-snapshots/compact-bunny.png`
 
-Earlier rounds were generated into those Playwright snapshot paths and reviewed
-before being superseded. They were transient working evidence and are retained
-as process notes below, not represented as independently recoverable image
-artifacts. The rejected starting state remains recoverable from commit
-`49dac42`. The promoted round is independently recoverable through the stable
-paths and SHA-256 values recorded below without duplicating six binary files.
+Every formal round is independently recoverable at those paths:
+
+- Round 0: rejected baseline commit `49dac42`;
+- Round 1: first complete re-art-direction commit `e128e8b`; and
+- Round 2: promoted image commit `f3dbfc7`, additionally frozen by the SHA-256
+  values below.
+
+Uncommitted working captures are not counted as critic rounds. This preserves a
+complete audit trail without duplicating six binary files per iteration.
 
 ## Severity contract
 
@@ -47,35 +50,9 @@ Source: commit `49dac42`, the merged state the user reviewed.
 | Pom Neutral | Blocking | The target read as a pale web dashboard rather than a modern macOS-like desktop material system. | Recompose as a single rounded desktop window over a dimensional cool wallpaper. |
 | Bunny | Blocking | Pink, universal pills, and a tiny ear logo read as a dated novelty page rather than professional kawaii UI. | Move to milk paper plus blush/lavender/mint/apricot, selective geometry, sparse motifs, and structured cards. |
 
-## Round 1 — material foundation
+## Round 1 — first complete re-art-direction
 
-Capture: Playwright `--update-snapshots` run after the first semantic-material
-and presentation-layer pass.
-
-| Target | Severity | Finding | Resolution in next round |
-| --- | --- | --- | --- |
-| Deep Current | Blocking | A shared dock background shorthand erased the approved stage image, leaving a near-black empty center. | Restore `var(--pom-canvas)` after the shared dock recipe and add a browser assertion for the local image URL. |
-| All compact | Blocking | Long persistence and dock controls occupied the same utility-grid row and visibly overlapped. | Replace the compact grid with a contained horizontal utility strip. |
-| Pom Neutral | Substantive | Wallpaper detail was too weak to make the new frost legible. | Increase dimensional canvas contrast and reduce panel opacity. |
-| Bunny | Substantive | The button material still made most actions pink, preserving the monochrome impression. | Make the default button material milky neutral and reserve blush for selection/primary action. |
-| All compact | Substantive | With the stage canvas missing or too faint, the narrow scenes looked like empty sheets rather than themed environments. | Restore each canvas and retain theme-specific stage decoration behind the story glass. |
-
-## Round 2 — restored canvas and responsive structure
-
-Capture: complete six-image Playwright run after the Round 1 corrections.
-
-| Target | Severity | Finding | Resolution in next round |
-| --- | --- | --- | --- |
-| Pom Neutral | Substantive | The desktop influence was present in chrome, but the stage wallpaper remained too washed out to sell spatial frost. | Add restrained slate-blue and muted-copper fields plus a stronger luminous veil. |
-| Bunny | Substantive | The palette and cards were professional, but the scene-scale bunny identity was too timid. | Add one low-opacity CSS bunny watermark and keep all dense content free of decoration. |
-| All compact | Substantive | The scrollable utility rail no longer overlapped, but a long control label was cut mid-word at the edge. | Use shorter visual labels through pseudo-content while preserving the full accessible names and horizontal access. |
-
-No functional, focus, identity, or page-overflow regression was found in this
-round.
-
-## Round 3 — first zero-substantive visual pass
-
-Capture: the six stable evidence paths listed above, inspected at original
+Source: commit `e128e8b` at the six stable evidence paths, inspected at original
 resolution after fonts loaded and animation was disabled.
 
 | Surface | Identity | Hierarchy/composition | Glass/material | Typography/spacing | Responsive/function | Result |
@@ -87,7 +64,15 @@ resolution after fonts loaded and animation was disabled.
 | Bunny wide | Premium stationery/character-goods identity is immediate and no longer monochrome pink. | Milk-paper stage, pastel instrument accents, story card, and restrained watermark have clear roles. | Milky glass, soft shadows, and edge highlights are visible without washing out text. | Selective rounding and adult-quality spacing avoid novelty-page styling. | Shared Widgets, controls, and states remain intact. | Pass |
 | Bunny compact | Bunny signature, multi-family pastels, and paper grid survive at narrow width. | Watermark stays away from dense text; story and composer remain dominant. | Frost and paper layers remain distinct. | No pill-everything regression or text collision. | No page overflow; full utility names remain accessible. | Pass |
 
-## Round 4 — independent-review hardening and final critic pass
+The image-only critic found no blocking or substantive issue, but the required
+independent critic then widened the review to the page contracts behind those
+pixels and rejected promotion. That recoverable review state therefore led to
+another implementation and render iteration.
+
+## Round 2 — independent-review hardening and final critic pass
+
+Image source: commit `f3dbfc7` at the same six paths. The subsequent test and
+overlay-radius hardening does not change those six scene pixels.
 
 The reviewer was asked to assume the implementation was wrong and check the
 preserved authorities, accessibility contract, material coverage, evidence
@@ -102,7 +87,7 @@ coherent. All were corrected before this new complete render:
 | Substantive | Reduced-transparency coverage omitted Catalog, ordinary dialog, focused dialog, and higher-specificity Widget frames. | Make every named glass surface opaque, image-free, and blur-free under the media preference; add browser coverage. |
 | Substantive | Faint Neutral text missed the declared 4.5 contrast floor, and the matrix did not check the faint role. | Darken all three faint roles where necessary and cover normal, muted, and faint text against every structural background. |
 | Substantive | Computed-style evidence omitted docks, transcript, composer, Catalog, dialog, focused, and floating surfaces. | Add table-driven material assertions for every named surface, plus the Deep Current shelf overlay. |
-| Evidence | Intermediate image rounds were not independently recoverable. | Mark them honestly as transient process evidence and freeze the promoted six-image round by stable path and SHA-256 below. |
+| Evidence | The working ledger initially counted transient images as formal rounds. | Retain only the three recoverable critic rounds and freeze the promoted six-image round by stable path and SHA-256 below. |
 
 The final visual critic then inspected the regenerated six images at original
 resolution without consulting implementation intent. It found no cross-theme
@@ -111,6 +96,15 @@ illegible state, responsive breakage, or target ambiguity. Deep Current remains
 deliberately dense and subdued; Pom Neutral keeps a large quiet wallpaper field;
 and Bunny keeps a sparse mascot field. Those are coherent target choices, not
 corrective defects.
+
+| Final surface | Blocking findings | Substantive findings | Result |
+| --- | ---: | ---: | --- |
+| Deep Current wide | 0 | 0 | Pass |
+| Deep Current compact | 0 | 0 | Pass |
+| Pom Neutral wide | 0 | 0 | Pass |
+| Pom Neutral compact | 0 | 0 | Pass |
+| Bunny wide | 0 | 0 | Pass |
+| Bunny compact | 0 | 0 | Pass |
 
 ### Promoted evidence hashes
 
@@ -133,7 +127,7 @@ corrective defects.
 
 ## Closure
 
-Round 4 has **zero blocking findings and zero substantive findings** across the
+Round 2 has **zero blocking findings and zero substantive findings** across the
 complete six-image set. The preference-only observations do not justify more
 theme-specific code or assets. Final promotion still depends on focused browser
 and accessibility checks, unchanged-tree verification, the complete repository
