@@ -84,6 +84,17 @@ test('packed verifier proves an isolated Svelte recipe consumer', async () => {
   }
 });
 
+test('external non-preset theme compiles distinct presentation through public APIs only', async () => {
+  const { compileExternalThemeFixture } = await import('../fixtures/external-theme-consumer.mjs');
+  const result = compileExternalThemeFixture();
+  assert.equal(result.id, 'copper-terminal-fixture');
+  assert.equal(result.bindings['--pom-part-widget-surface-material-fill'], 'rgba(23, 16, 11, 0.94)');
+  assert.equal(result.bindings['--pom-part-widget-surface-radius'], '0px');
+  assert.match(result.bindings['--pom-part-widget-surface-font-family'], /Pomegranate Mono/);
+  assert.match(result.cssText, /\[data-pom-theme-root\] \[data-pom-part="widget\.surface"\]/);
+  assert.doesNotMatch(result.cssText, /copper-terminal-fixture/);
+});
+
 test('package and example imports remain public, relative, and repository-neutral', async () => {
   for (const area of ['packages', 'examples']) {
     const files = (await walk(path.join(root, area))).filter((file) => /\.(?:mjs|ts|tsx)$/.test(file));

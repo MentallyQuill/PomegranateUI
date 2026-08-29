@@ -39,6 +39,7 @@
     <div data-pomegranate-panel-tab={tab.panelIdAttribute}>
       <button
         type="button"
+        data-pom-part="button.surface"
         role="tab"
         id={tab.tabId}
         aria-controls={tab.surfaceId}
@@ -49,12 +50,14 @@
       >{tab.name}</button>
       <button
         type="button"
+        data-pom-part="button.icon"
         aria-label={`Move ${tab.name} left`}
         disabled={tab.moveLeftDisabled}
         onclick={() => reorder(tab.panelId, index - 1)}
       >←</button>
       <button
         type="button"
+        data-pom-part="button.icon"
         aria-label={`Move ${tab.name} right`}
         disabled={tab.moveRightDisabled}
         onclick={() => reorder(tab.panelId, index + 1)}

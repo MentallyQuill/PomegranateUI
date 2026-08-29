@@ -17,6 +17,7 @@
       {#each hostContext.theme.presets as preset (preset.id)}
         <button
           type="button"
+          data-pom-part="button.surface"
           aria-label={preset.label}
           aria-pressed={hostContext.theme.activeId === preset.id}
           onclick={() => hostContext.theme.activate(preset.id)}
@@ -41,9 +42,9 @@
   {:else}
     <div class="widget-content settings-sample">
       <p class="widget-kicker">Device-local mockup · {hostContext.systemStatus}</p>
-      <button type="button">Comfortable reading</button>
-      <button type="button">Compact chrome</button>
-      <button type="button">High contrast</button>
+      <button type="button" data-pom-part="button.surface">Comfortable reading</button>
+      <button type="button" data-pom-part="button.surface">Compact chrome</button>
+      <button type="button" data-pom-part="button.surface">High contrast</button>
     </div>
   {/if}
 {/if}

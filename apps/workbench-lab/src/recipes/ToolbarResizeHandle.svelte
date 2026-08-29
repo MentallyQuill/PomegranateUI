@@ -66,6 +66,7 @@
   class="toolbar-resize-handle"
   class:is-dragging={dragging}
   data-dock-resizer={edge}
+  data-pom-part="separator"
   role="separator"
   aria-label={`Resize ${edge} toolbar`}
   aria-orientation="vertical"

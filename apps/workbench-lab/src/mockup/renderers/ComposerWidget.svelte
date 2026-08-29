@@ -8,8 +8,8 @@
 <div class="widget-content composer" data-conformance-region="composer">
   <label class="visually-hidden" for="lab-composer">Next action in {hostContext.storyTitle}</label>
   <div class="composer-field">
-    <textarea id="lab-composer" bind:value={draft} placeholder="Describe what you do, say, or notice…"></textarea>
+    <textarea id="lab-composer" data-pom-part="field.surface" bind:value={draft} placeholder="Describe what you do, say, or notice…"></textarea>
     <span>{draft.length} characters · draft retained locally · Perspective: Mara</span>
   </div>
-  <button type="button">Send action</button>
+  <button type="button" data-pom-part="button.surface">Send action</button>
 </div>

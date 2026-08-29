@@ -34,22 +34,23 @@
     role="tabpanel"
     aria-labelledby={surface.tabId}
     data-pomegranate-panel={surface.panelId}
+    data-pom-part="panel.surface"
   >
     {#each edges as edge}
-      <section data-pomegranate-dock={edge} aria-label={`${edge} dock`}>
+      <section data-pomegranate-dock={edge} data-pom-part="dock.surface" aria-label={`${edge} dock`}>
         {#each surface.docks[edge] as frame (frame.instanceId)}
           {@render renderWidget(frame)}
         {/each}
       </section>
     {/each}
-    <div data-pomegranate-floating-layer>
+    <div data-pomegranate-floating-layer data-pom-part="floating.surface">
       {#each surface.floating as frame (frame.instanceId)}
         {@render renderWidget(frame)}
       {/each}
     </div>
   </div>
 {:else}
-  <section data-pomegranate-empty-workbench aria-label="Empty Workbench">
+  <section data-pomegranate-empty-workbench data-pom-part="panel.surface" aria-label="Empty Workbench">
     <p>Create or activate a Panel to begin.</p>
   </section>
 {/if}

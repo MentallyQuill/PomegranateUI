@@ -39,12 +39,13 @@
   }
 </script>
 
-<section class="widget-group" role="group" aria-label="Widget group" data-widget-group>
-  <div class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets">
+<section class="widget-group" role="group" aria-label="Widget group" data-widget-group data-pom-part="group.surface">
+  <div class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets" data-pom-part="widget.header">
     {#each ordered as frame, index (frame.instanceId)}
       <span>
         <button
           type="button"
+          data-pom-part="button.surface"
           role="tab"
           data-group-tab={frame.instanceId}
           aria-selected={frame.instanceId === active?.instanceId}
@@ -55,6 +56,7 @@
         <button
           type="button"
           class="widget-group-move"
+          data-pom-part="button.icon"
           aria-label={`Move ${frame.title} left`}
           disabled={index === 0}
           onclick={() => move(frame, -1)}
@@ -62,6 +64,7 @@
         <button
           type="button"
           class="widget-group-move"
+          data-pom-part="button.icon"
           aria-label={`Move ${frame.title} right`}
           disabled={index === ordered.length - 1}
           onclick={() => move(frame, 1)}

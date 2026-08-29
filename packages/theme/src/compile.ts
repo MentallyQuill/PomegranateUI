@@ -1,4 +1,4 @@
-import { THEME_PART_IDS, type ThemePartId, type ThemePartRecipeV2, type ThemeShapeV2 } from '@pomegranate-ui/contracts';
+import { THEME_COLOR_ROLES, THEME_PART_IDS, type ThemePartId, type ThemePartRecipeV2, type ThemeShapeV2 } from '@pomegranate-ui/contracts';
 import type { ResolvedMaterialV2, ResolvedThemeV2 } from './resolve.js';
 
 export type ThemeBindings = Readonly<Record<string, string>>;
@@ -10,6 +10,10 @@ const GENERIC_FONT_FAMILIES = new Set([
 
 function partKey(part: ThemePartId): string {
   return part.replaceAll('.', '-');
+}
+
+function kebab(value: string): string {
+  return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }
 
 function formatNumber(value: number): string {
@@ -117,6 +121,54 @@ export function compileThemeBindings(theme: ResolvedThemeV2): ThemeBindings {
     '--pom-control-slider-thumb-size': `${formatNumber(theme.controls.slider.thumbPx)}px`,
     '--pom-control-slider-hit-size': `${formatNumber(theme.controls.slider.hitTargetPx)}px`
   };
+  for (const role of THEME_COLOR_ROLES) bindings[`--pom-color-${kebab(role)}`] = theme.colors[role];
+  for (const role of ['ui', 'prose', 'technical', 'display'] as const) {
+    const typography = role === 'display' ? theme.typography.display ?? theme.typography.ui : theme.typography[role];
+    bindings[`--pom-font-${role}`] = [typography.family, ...typography.fallbacks].map(fontFamily).join(', ');
+    bindings[`--pom-font-${role}-weight`] = String(typography.weight);
+    bindings[`--pom-font-${role}-strong-weight`] = String(typography.strongWeight);
+    bindings[`--pom-font-${role}-line-height`] = formatNumber(typography.lineHeight);
+    bindings[`--pom-font-${role}-tracking`] = `${formatNumber(typography.trackingEm)}em`;
+  }
+  for (const [step, size] of Object.entries(theme.typography.scale)) bindings[`--pom-type-${step}`] = `${formatNumber(size)}px`;
+  for (const step of ['xs', 'sm', 'md', 'lg', 'xl'] as const) bindings[`--pom-space-${step}`] = `${formatNumber(theme.spacing[step])}px`;
+  bindings['--pom-chrome-height'] = `${formatNumber(theme.spacing.chromeHeight)}px`;
+  const fallbackShape = theme.shapes.window ?? Object.values(theme.shapes)[0]!;
+  bindings['--pom-radius-small'] = compileRadius(theme.shapes.row ?? theme.shapes.button ?? fallbackShape);
+  bindings['--pom-radius-widget'] = compileRadius(theme.shapes.window ?? fallbackShape);
+  bindings['--pom-radius-large'] = compileRadius(theme.shapes.chrome ?? theme.shapes.window ?? fallbackShape);
+  bindings['--pom-radius-pill'] = compileRadius(theme.shapes.pill ?? fallbackShape);
+  bindings['--pom-border-width'] = `${formatNumber(theme.materials.window?.border.widthPx ?? 1)}px`;
+  const solid = theme.canvas.find((layer) => layer.kind === 'solid');
+  bindings['--pom-canvas-color'] = solid?.kind === 'solid' ? solid.color : theme.colors.canvas;
+  bindings['--pom-canvas'] = 'none';
+  bindings['--pom-atmosphere-one'] = theme.colors.danger;
+  bindings['--pom-atmosphere-two'] = theme.colors.success;
+  bindings['--pom-atmosphere-three'] = theme.colors.accent;
+  const compatibilityMaterials = {
+    shelf: 'shelf', panel: 'panel', widget: 'window', field: 'field',
+    button: 'button', menu: 'menu', dialog: 'dialog', floating: 'floating'
+  } as const;
+  const firstMaterial = Object.values(theme.materials)[0]!;
+  for (const [legacy, materialId] of Object.entries(compatibilityMaterials)) {
+    const material = theme.materials[materialId] ?? firstMaterial;
+    bindings[`--pom-material-${legacy}`] = rgba(material.base, material.opacity);
+    bindings[`--pom-material-${legacy}-fallback`] = material.fallback;
+    bindings[`--pom-material-${legacy}-fallback-surface`] = rgba(material.fallback, Math.min(1, material.opacity + 0.04));
+    bindings[`--pom-material-${legacy}-blur`] = `${formatNumber(material.backdrop.blurPx)}px`;
+    bindings[`--pom-material-${legacy}-saturation`] = formatNumber(material.backdrop.saturation);
+    bindings[`--pom-material-${legacy}-border`] = rgba(material.border.color, material.border.opacity);
+    bindings[`--pom-material-${legacy}-shadow`] = compileShadow(material);
+    bindings[`--pom-material-${legacy}-inset`] = material.rim.opacity > 0
+      ? `inset 0 1px 0 ${rgba(material.rim.color, material.rim.opacity)}`
+      : 'none';
+  }
+  const textRed = Number.parseInt(theme.colors.text.slice(1, 3), 16);
+  const textGreen = Number.parseInt(theme.colors.text.slice(3, 5), 16);
+  const textBlue = Number.parseInt(theme.colors.text.slice(5, 7), 16);
+  const lightText = 0.2126 * textRed + 0.7152 * textGreen + 0.0722 * textBlue > 150;
+  bindings['--pom-icon-filter'] = lightText ? 'invert(.72)' : 'none';
+  bindings['--pom-icon-filter-hover'] = lightText ? 'invert(.9)' : 'none';
   for (const part of THEME_PART_IDS) assignPartBindings(bindings, theme, part, theme.recipes.parts[part]);
   return Object.freeze(bindings);
 }

@@ -1,45 +1,59 @@
-import { mergeTheme } from '@pomegranate-ui/theme';
+import type { ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
 
-import { DEEP_CURRENT_THEME } from './deep-current.js';
+import { material, shapePalette, themeRecipes } from './base.js';
 
-export const POM_NEUTRAL_THEME = mergeTheme(DEEP_CURRENT_THEME, {
+export const POM_NEUTRAL_THEME: ThemeDefinitionV2 = {
+  schemaVersion: 'pomegranate.ui.theme.v2',
   id: 'pom-neutral',
   label: 'PomOS',
-  description: 'An original blue desktop workspace with floating liquid glass, luminous edges, and calm system chrome.',
+  description: 'An original blue desktop workspace with coherent adaptive glass, continuous rounded windows, and calm compact chrome.',
   colors: {
-    canvas: '#1687ed', surface: '#f6faff', surfaceElevated: '#ffffff', surfaceInset: '#e7eef7', chrome: '#f8fbff',
-    text: '#131a23', textMuted: '#151d28', textFaint: '#0d1826', textOnAccent: '#ffffff', accent: '#0868c4',
-    selection: '#b9ddff', focus: '#071d38', success: '#247253', warning: '#805b00', danger: '#a83e55',
-    border: '#b8c8dc', borderStrong: '#7e94af', shadow: '#153b68'
+    canvas: '#167fdc', surface: '#eaf4ff', surfaceElevated: '#ffffff', surfaceInset: '#dcecff', chrome: '#f6fbff',
+    text: '#101820', textMuted: '#34495e', textFaint: '#536a80', textOnAccent: '#ffffff', accent: '#0868c4',
+    selection: '#9ed1ff', focus: '#003f7d', success: '#247253', warning: '#805b00', danger: '#a83e55',
+    border: '#c8def2', borderStrong: '#7899ba', shadow: '#153b68'
   },
   typography: {
     ui: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 430, strongWeight: 650, lineHeight: 1.35, trackingEm: 0 },
     prose: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 400, strongWeight: 600, lineHeight: 1.52, trackingEm: 0 },
-    technical: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 450, strongWeight: 650, lineHeight: 1.4, trackingEm: 0.01 },
-    display: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 560, strongWeight: 680, lineHeight: 1.15, trackingEm: -0.01 }
+    technical: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 450, strongWeight: 650, lineHeight: 1.4, trackingEm: 0.005 },
+    display: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 560, strongWeight: 680, lineHeight: 1.15, trackingEm: -0.01 },
+    scale: { xs: 11, sm: 12, md: 14, lg: 18, xl: 24 }
   },
-  geometry: {
-    cornerFamily: 'rounded', cornerSm: 10, cornerMd: 18, cornerLg: 24, chamfer: 0, borderWidth: 1, sharedEdge: 'hairline', focusWidth: 2, focusOffset: 2
-  },
-  spacing: { density: 'balanced', xs: 5, sm: 8, md: 12, lg: 18, xl: 28, chromeHeight: 36 },
+  spacing: { density: 'balanced', xs: 5, sm: 8, md: 12, lg: 18, xl: 28, chromeHeight: 38 },
   materials: {
-    canvas: { base: 'canvas', fallback: 'canvas', opacity: 1, blurPx: 0, saturation: 1, border: 'border', shadow: 'shadow', shadowOpacity: 0, shadowBlurPx: 0, insetHighlight: 0, bloom: 0 },
-    shelf: { base: 'surface', fallback: 'surface', opacity: 0.32, blurPx: 28, saturation: 1.28, border: 'border', shadow: 'shadow', shadowOpacity: 0.08, shadowBlurPx: 24, insetHighlight: 0.44, bloom: 0 },
-    panel: { base: 'surface', fallback: 'surfaceInset', opacity: 0.18, blurPx: 28, saturation: 1.2, border: 'border', shadow: 'shadow', shadowOpacity: 0.08, shadowBlurPx: 30, insetHighlight: 0.5, bloom: 0 },
-    widget: { base: 'surfaceElevated', fallback: 'surface', opacity: 0.5, blurPx: 28, saturation: 1.22, border: 'border', shadow: 'shadow', shadowOpacity: 0.22, shadowBlurPx: 48, insetHighlight: 0.7, bloom: 0 },
-    field: { base: 'surfaceElevated', fallback: 'surfaceInset', opacity: 0.52, blurPx: 20, saturation: 1.16, border: 'border', shadow: 'shadow', shadowOpacity: 0.08, shadowBlurPx: 14, insetHighlight: 0.32, bloom: 0 },
-    button: { base: 'surfaceElevated', fallback: 'surface', opacity: 0.44, blurPx: 22, saturation: 1.18, border: 'border', shadow: 'shadow', shadowOpacity: 0.09, shadowBlurPx: 16, insetHighlight: 0.62, bloom: 0 },
-    menu: { base: 'surfaceElevated', fallback: 'surfaceElevated', opacity: 0.78, blurPx: 30, saturation: 1.2, border: 'borderStrong', shadow: 'shadow', shadowOpacity: 0.24, shadowBlurPx: 64, insetHighlight: 0.55, bloom: 0 },
-    dialog: { base: 'surfaceElevated', fallback: 'surfaceElevated', opacity: 0.82, blurPx: 30, saturation: 1.18, border: 'borderStrong', shadow: 'shadow', shadowOpacity: 0.26, shadowBlurPx: 72, insetHighlight: 0.55, bloom: 0 },
-    floating: { base: 'surfaceElevated', fallback: 'surfaceElevated', opacity: 0.72, blurPx: 26, saturation: 1.2, border: 'borderStrong', shadow: 'shadow', shadowOpacity: 0.28, shadowBlurPx: 64, insetHighlight: 0.58, bloom: 0 }
+    canvas: material({ base: 'canvas', opacity: 0, blurPx: 0, borderWidthPx: 0, reducedTransparency: 'canvas' }),
+    shelf: material({ base: 'chrome', fallback: 'surface', opacity: 0.3, blurPx: 30, saturation: 1.24, brightness: 1.04, border: 'surfaceElevated', borderOpacity: 0.68, rimOpacity: 0.68, shadowOpacity: 0.16, shadowBlurPx: 36, shadowY: 12 }),
+    context: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.2, blurPx: 24, saturation: 1.18, brightness: 1.03, border: 'surfaceElevated', borderOpacity: 0.56, rimOpacity: 0.5, shadowOpacity: 0.1, shadowBlurPx: 24, shadowY: 8 }),
+    panel: material({ base: 'surface', opacity: 0, blurPx: 0, borderWidthPx: 0, rimOpacity: 0, reducedTransparency: 'panel' }),
+    window: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.42, blurPx: 30, saturation: 1.22, brightness: 1.03, border: 'surfaceElevated', borderOpacity: 0.74, rimOpacity: 0.72, shadowOpacity: 0.22, shadowBlurPx: 52, shadowY: 20 }),
+    header: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.13, blurPx: 0, border: 'surfaceElevated', borderOpacity: 0.3, rimOpacity: 0.22 }),
+    content: material({ base: 'surface', fallback: 'surface', opacity: 0.12, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),
+    row: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.2, blurPx: 0, border: 'surfaceElevated', borderOpacity: 0.28, rimOpacity: 0.18 }),
+    field: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.46, blurPx: 0, border: 'surfaceElevated', borderOpacity: 0.62, rimOpacity: 0.42, shadowOpacity: 0.08, shadowBlurPx: 12, shadowY: 3, shadowSpreadPx: 0 }),
+    button: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.34, blurPx: 0, border: 'surfaceElevated', borderOpacity: 0.58, rimOpacity: 0.5, shadowOpacity: 0.08, shadowBlurPx: 12, shadowY: 4, shadowSpreadPx: 0 }),
+    selected: material({ base: 'selection', fallback: 'surface', opacity: 0.56, blurPx: 0, border: 'surfaceElevated', borderOpacity: 0.74, rimOpacity: 0.42 }),
+    menu: material({ base: 'surfaceElevated', fallback: 'surfaceElevated', opacity: 0.7, blurPx: 34, saturation: 1.2, border: 'surfaceElevated', borderOpacity: 0.76, rimOpacity: 0.64, shadowOpacity: 0.28, shadowBlurPx: 68, shadowY: 24 }),
+    dialog: material({ base: 'surfaceElevated', fallback: 'surfaceElevated', opacity: 0.76, blurPx: 36, saturation: 1.2, border: 'surfaceElevated', borderOpacity: 0.78, rimOpacity: 0.66, shadowOpacity: 0.3, shadowBlurPx: 76, shadowY: 28 }),
+    floating: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.62, blurPx: 32, saturation: 1.2, border: 'surfaceElevated', borderOpacity: 0.76, rimOpacity: 0.68, shadowOpacity: 0.3, shadowBlurPx: 70, shadowY: 26 }),
+    track: material({ base: 'surfaceInset', opacity: 0.76, blurPx: 0, border: 'borderStrong', borderOpacity: 0.2, rimOpacity: 0 }),
+    fill: material({ base: 'accent', opacity: 0.88, blurPx: 0, border: 'accent', borderOpacity: 0.38, rimOpacity: 0.12 }),
+    thumb: material({ base: 'surfaceElevated', opacity: 0.96, blurPx: 0, border: 'surfaceElevated', borderOpacity: 0.86, rimOpacity: 0.74, shadowOpacity: 0.22, shadowBlurPx: 10, shadowY: 3, shadowSpreadPx: 0 }),
+    opaque: material({ base: 'surface', opacity: 1, blurPx: 0, border: 'border', borderOpacity: 0.7, rimOpacity: 0, reducedTransparency: 'opaque' })
   },
+  shapes: shapePalette({ family: 'continuous-rounded', small: 10, medium: 18, large: 22 }),
+  recipes: themeRecipes({ widgetGrouping: 'individual', chromePresentation: 'overlay', actionPresentation: 'hover-focus' }),
+  controls: { slider: { trackPx: 4, thumbPx: 11, hitTargetPx: 44 } },
+  iconPackId: 'icons.minimal',
+  assets: [{ id: 'icons.minimal', kind: 'icon-pack', required: true }],
   canvas: [
+    { kind: 'solid', color: '#167fdc' },
+    { kind: 'four-corner', topLeft: '#a9e2ff', topRight: '#1687ed', bottomLeft: '#0061ce', bottomRight: '#5445d8' },
     { kind: 'radial-gradient', shape: 'ellipse', x: 0.08, y: 0.82, stops: [{ color: '#eefaffea', position: 0 }, { color: '#a6ddff99', position: 0.24 }, { color: '#2691ef00', position: 0.54 }] },
     { kind: 'radial-gradient', shape: 'ellipse', x: 0.9, y: 0.08, stops: [{ color: '#bdf7ffdd', position: 0 }, { color: '#42c8ff88', position: 0.25 }, { color: '#245fd900', position: 0.56 }] },
     { kind: 'radial-gradient', shape: 'ellipse', x: 0.62, y: 0.92, stops: [{ color: '#f3f6ffd4', position: 0 }, { color: '#939eff70', position: 0.28 }, { color: '#3528aa00', position: 0.62 }] },
-    { kind: 'four-corner', topLeft: '#8bd6ff', topRight: '#1687ed', bottomLeft: '#0061ce', bottomRight: '#5445d8' },
-    { kind: 'linear-gradient', angle: 124, stops: [{ color: '#ffffff52', position: 0 }, { color: '#63c8ff1f', position: 0.42 }, { color: '#182d9b4d', position: 1 }] },
-    { kind: 'solid', color: '#1687ed' }
+    { kind: 'linear-gradient', angle: 124, stops: [{ color: '#ffffff52', position: 0 }, { color: '#63c8ff1f', position: 0.42 }, { color: '#182d9b4d', position: 1 }] }
   ],
+  accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
   capabilities: { translucency: true, textures: false, localImages: false }
-});
+};
