@@ -62,7 +62,7 @@ npm.cmd run build
 npm.cmd run preview:lab
 ```
 
-The deployable, relative-base artifact is `apps/workbench-lab/dist`. GitHub Pages publishes only that directory after the cross-platform verification matrix passes.
+The deployable, relative-base artifact is `apps/workbench-lab/dist`. GitHub Pages publishes only that directory after the cross-platform verification matrix passes. The artifact includes the project license, third-party notices, and the complete bundled-font license texts.
 
 The Lab applies PomOS, Deep Current, Bunny, and Ash & Amber definitions to one mounted Panel and Widget tree. Theme switching is immediate and atomic. These definitions demonstrate the theme API's range; they are not bundled product branding.
 

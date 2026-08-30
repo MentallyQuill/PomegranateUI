@@ -1,5 +1,4 @@
-// Generated from the preserved Widget Overhaul catalog by scripts/generate-lab-catalog.mjs.
-// The Lab owns this translated fixture; the preserved prototype remains the executable oracle.
+// Lab-owned roleplay Widget Catalog fixture. This file is maintained as public demo data.
 
 import { WidgetManifestSchema, asWidgetType, type WidgetManifest } from '@pomegranate-ui/contracts';
 

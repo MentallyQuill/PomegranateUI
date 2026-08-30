@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
@@ -17,9 +18,13 @@ const ignoredDirectories = new Set([
   'playwright-report',
   'test-results'
 ]);
-const textExtensions = new Set([
-  '.css', '.d.ts', '.html', '.js', '.json', '.md', '.mjs', '.svelte', '.ts', '.tsx', '.txt', '.yaml', '.yml'
-]);
+
+function trackedFiles() {
+  return execFileSync('git', ['ls-files', '-z'], { cwd: root })
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean);
+}
 
 async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -46,14 +51,12 @@ async function repositoryManifests() {
   })));
 }
 
-test('current source tree contains no retired host-specific material', async () => {
-  const files = await walk(root);
-  for (const file of files) {
-    const relativePath = path.relative(root, file).replaceAll('\\', '/');
+test('tracked source tree contains no retired host-specific material', async () => {
+  for (const relativePath of trackedFiles()) {
     assert.doesNotMatch(relativePath, retiredHostName, relativePath);
-    const extension = path.extname(file).toLowerCase();
-    if (!textExtensions.has(extension) && path.basename(file) !== '.gitattributes') continue;
-    assert.doesNotMatch(await readFile(file, 'utf8'), retiredHostName, relativePath);
+    const contents = await readFile(path.join(root, relativePath));
+    if (contents.subarray(0, 8192).includes(0)) continue;
+    assert.doesNotMatch(contents.toString('utf8'), retiredHostName, relativePath);
   }
 });
 
@@ -76,7 +79,7 @@ test('root check composes only public native gates', async () => {
   const manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   assert.equal(
     manifest.scripts.check,
-    'npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:recipes && npm run test:pack && npm run test:browser'
+    'npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:lab-dist && npm run check:recipes && npm run test:pack && npm run test:browser'
   );
   for (const retiredScript of ['check:extraction', 'report', 'test:conformance', 'inspect:conformance']) {
     assert.equal(manifest.scripts[retiredScript], undefined, retiredScript);
@@ -101,6 +104,7 @@ test('cross-platform CI deploys the verified static Lab through GitHub Pages', a
   assert.match(workflow, /publish-demo:/);
   assert.match(workflow, /needs:\s*verification/);
   assert.match(workflow, /github\.event\.repository\.visibility == 'public'/);
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /pages:\s*write/);
   assert.match(workflow, /id-token:\s*write/);
   assert.match(workflow, /path:\s*apps\/workbench-lab\/dist/);

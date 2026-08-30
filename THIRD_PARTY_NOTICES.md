@@ -10,6 +10,8 @@ The Workbench Lab includes Geist and Geist Mono variable font files under the SI
 
 The Workbench Lab includes the Newsreader variable font under the SIL Open Font License 1.1. The complete license text is retained at [`apps/workbench-lab/src/assets/fonts/LICENSE-Newsreader.txt`](apps/workbench-lab/src/assets/fonts/LICENSE-Newsreader.txt).
 
+The static Workbench Lab build includes byte-identical copies of these license texts under `dist/licenses/`, together with this notice and the project MIT license.
+
 ## Generated showcase imagery
 
 The Workbench Lab includes project-specific generated images documented in [`docs/theme-art-direction-assets.md`](docs/theme-art-direction-assets.md). Those records describe their creation inputs, reviewed use, and asset hashes.

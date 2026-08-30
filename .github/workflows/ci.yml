@@ -48,7 +48,7 @@ jobs:
   publish-demo:
     name: Publish Workbench Lab
     needs: verification
-    if: github.event.repository.visibility == 'public' && github.event_name != 'pull_request'
+    if: github.event.repository.visibility == 'public' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,6 +72,8 @@ jobs:
         run: npm ci
       - name: Build static Workbench Lab
         run: npm run build
+      - name: Verify deployable notices
+        run: npm run check:lab-dist
       - name: Configure GitHub Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Upload static Workbench Lab
