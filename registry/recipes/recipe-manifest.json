@@ -90,9 +90,16 @@
       "revision": 1,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
       "files": [
+        "DockRegion.svelte",
+        "DockShelf.svelte",
+        "PanelTemplateSurface.svelte",
+        "ShelfResizeHandle.svelte",
+        "UnavailableTemplate.svelte",
+        "WidgetGroup.svelte",
         "WorkbenchSurface.svelte"
       ],
       "dependencies": [
+        "@pomegranate-ui/contracts",
         "@pomegranate-ui/core",
         "svelte"
       ],
@@ -102,7 +109,13 @@
         "POM-RENDER-A4B0DF2967"
       ],
       "sha256": {
-        "WorkbenchSurface.svelte": "DAA196C4DABD264E4EFEA0A3FB0B940C92947ED1FD8514A4646D0DF39A9F5E28"
+        "DockRegion.svelte": "73E9FE8743709AE3C30607FE1E06CD6A62EA02638F62D1F43A6FDB5BCB83096D",
+        "DockShelf.svelte": "3C70202E33798DFC87B2D5375D5FEEFC0299803A3F47AC4DB46EA967955B6FE2",
+        "PanelTemplateSurface.svelte": "7C31318A7AE03EDDAD8CEFD7758EEDF258D61B13D40327F9A5D9112D5434B84F",
+        "ShelfResizeHandle.svelte": "05992E3C29C2F833B11A3FCA96EF69A6F5E29E07F14311814670ABB776E5A997",
+        "UnavailableTemplate.svelte": "D37B9C22B03942229BFBAF7469E5C3631E5775ABB809D9AFB2171AF3D581875B",
+        "WidgetGroup.svelte": "BA0139F141649DA9CD296F7E1F093BEA2F1EE471F4989F8AAD919FA94771298B",
+        "WorkbenchSurface.svelte": "1EA1650A61C8045879DAAA6769665735B53CCD261908F347CCD7FA8925E4972D"
       }
     }
   ]

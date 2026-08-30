@@ -40,12 +40,15 @@ describe('Svelte Workbench Lab mockup', () => {
     for (const title of ['Characters (Story)', 'Theme Library', 'Transcript', 'Composer', 'World State', 'Room Ambience', 'Character Relationships']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();
     }
-    expect([...container.querySelectorAll('[data-conformance-region]')].map((region) => region.getAttribute('data-conformance-region'))).toEqual([
+    expect([...container.querySelectorAll('[data-conformance-region="shelf"], [data-pomegranate-region-surface]')].map((region) => region.getAttribute('data-conformance-region') ?? region.getAttribute('data-pomegranate-region-surface'))).toEqual([
       'shelf', 'left', 'stage', 'composer', 'right'
     ]);
+    expect([...container.querySelectorAll('[data-pomegranate-region-surface]')].map((region) => region.getAttribute('data-pomegranate-region-surface'))).toEqual([
+      'left', 'stage', 'composer', 'right'
+    ]);
     const composer = container.querySelector('[data-conformance-region="composer"]');
-    expect(composer?.closest('[data-conformance-region="stage"]')).not.toBeNull();
-    expect(composer?.closest('[data-widget-type="story.composer"]')).not.toBeNull();
+    expect(composer?.querySelector('[data-widget-type="story.composer"]')).not.toBeNull();
+    expect(screen.getAllByRole('separator').length).toBeGreaterThan(0);
   });
 
   it('carries the full audited 94-definition Catalog with exact category totals', async () => {

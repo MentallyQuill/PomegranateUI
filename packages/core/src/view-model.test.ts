@@ -130,6 +130,9 @@ describe('framework-neutral view projections', () => {
     expect(surface?.docks.main[0]).toMatchObject({ instanceId: missingId, title: 'missing.renderer' });
     expect(surface?.docks.right).toEqual([]);
     expect(surface?.floating.map((entry) => entry.instanceId)).toEqual([floatingId]);
+    expect(surface?.regions.map((region) => region.region.id)).toEqual(['left', 'stage', 'composer', 'right']);
+    expect(surface?.regions.find((region) => region.region.id === 'left')?.shelves[0]?.frames.map((frame) => frame.instanceId)).toEqual([notesId, summaryId]);
+    expect(surface?.unavailableTemplateId).toBeNull();
     expect(surface).toMatchObject({
       panelId: scenePanel,
       tabId: 'pomegranate-panel-tab-scene',
