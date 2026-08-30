@@ -64,9 +64,11 @@ async function prepareAuthoring(
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'load' });
   await page.evaluate(() => document.fonts.ready);
+  await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('group', { name: 'Visual target' })
     .getByRole('button', { name: 'Ash & Amber', exact: true })
     .click();
+  await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('tab', { name: 'Settings' }).click();
   const settings = page.getByRole('article', { name: 'Theme Settings' });
   await settings.waitFor({ state: 'visible' });
@@ -256,6 +258,7 @@ async function measureAmbientPrecedence(page: Page, prepared: PreparedAuthoring)
 }
 
 async function measureRoundTrip(page: Page, labOrigin: string, prepared: PreparedAuthoring): Promise<ThemeAuthoringMeasurement> {
+  await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.waitForFunction((key) => localStorage.getItem(key) !== null, layoutKey);
   const hex = prepared.settings.getByRole('textbox', { name: 'Hex color' });
@@ -263,6 +266,7 @@ async function measureRoundTrip(page: Page, labOrigin: string, prepared: Prepare
   await waitForBinding(page, '--pom-color-canvas', '#312d3b');
   await prepared.settings.getByRole('button', { name: 'Save draft' }).click();
   await page.waitForFunction((key) => localStorage.getItem(key) !== null, draftKey);
+  await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('button', { name: 'Clear saved layout' }).click();
   await page.waitForFunction((key) => localStorage.getItem(key) === null, layoutKey);
   const savedRaw = await page.evaluate((key) => localStorage.getItem(key), draftKey);

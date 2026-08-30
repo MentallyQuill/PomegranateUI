@@ -98,6 +98,7 @@ test('Theme drafts save and restore independently of layout persistence', async 
   await settings.getByRole('button', { name: 'Save draft' }).click();
   await expect.poll(() => page.evaluate((key) => window.localStorage.getItem(key), draftKey)).not.toBeNull();
 
+  await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('button', { name: 'Clear saved layout' }).click();
   expect(await page.evaluate((key) => window.localStorage.getItem(key), draftKey)).not.toBeNull();
   await page.reload();

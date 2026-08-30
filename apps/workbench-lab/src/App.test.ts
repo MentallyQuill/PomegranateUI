@@ -13,6 +13,23 @@ afterEach(() => {
 });
 
 describe('Svelte Workbench Lab mockup', () => {
+  it('uses one Atmospheric composition with integrated story surfaces and a dormant developer drawer', () => {
+    const { container } = render(App);
+    expect(container.querySelector('.context-rail')).toBeNull();
+    expect(container.querySelector('.lab-footer')).toBeNull();
+    const drawer = container.querySelector('[data-workbench-developer-drawer]');
+    expect(drawer).not.toBeNull();
+    expect(drawer).not.toHaveAttribute('open');
+    expect(screen.getByText('Developer tools')).toBeVisible();
+
+    const transcript = container.querySelector('[data-widget-type="story.transcript"]');
+    expect(transcript).not.toBeNull();
+    expect(transcript?.querySelector('[data-pom-part="widget.surface"]')).toBeNull();
+    expect(transcript?.closest('[data-story-stage]')).not.toBeNull();
+    const composer = screen.getByRole('textbox', { name: /Next action/ });
+    expect(composer.closest('[data-story-composer]')).not.toBeNull();
+  });
+
   it('renders one pointer-transparent theme canvas below the Workbench without stage wallpaper ownership', () => {
     const { container } = render(App);
     const root = container.querySelector('main');
@@ -111,6 +128,7 @@ describe('Svelte Workbench Lab mockup', () => {
 
   it('exposes persistence, focus, dock, and Panel creation controls without credential-shaped fixture text', () => {
     const { container } = render(App);
+    (container.querySelector('[data-workbench-developer-drawer]') as HTMLDetailsElement).open = true;
     for (const name of ['Save layout', 'Reload saved layout', 'Clear saved layout', 'Focus reading', 'Collapse left dock', 'Create Panel']) {
       expect(screen.getByRole('button', { name })).toBeVisible();
     }

@@ -19,7 +19,7 @@
     store: WorkbenchStore;
     rendererRegistry: WidgetRendererRegistry<THostContext>;
     hostContext: THostContext;
-    surfacePart?: 'widget.surface' | 'floating.surface' | null;
+    surfacePart?: 'widget.surface' | 'widget.content' | 'floating.surface' | null;
     class?: string;
   } = $props();
 

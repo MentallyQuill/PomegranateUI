@@ -13,12 +13,15 @@ async function fresh(page: Page, width: number, height: number) {
 type ThemeLabel = 'Deep Current' | 'PomOS' | 'Bunny' | 'Ash & Amber';
 
 async function selectTheme(page: Page, label: ThemeLabel) {
+  const drawer = page.locator('[data-workbench-developer-drawer]');
+  if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: label, exact: true }).click();
   const themeId = label === 'Deep Current' ? 'deep-current'
     : label === 'PomOS' ? 'pom-neutral'
       : label === 'Bunny' ? 'bunny'
         : 'ash-amber';
   await expect(page.locator('main')).toHaveAttribute('data-pom-theme', themeId);
+  await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('tab', { name: 'Scene' }).click();
   await page.evaluate(async () => {
     await document.fonts.ready;
@@ -58,7 +61,9 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);
   await shot(page, 'wide-scene.png');
 
-  await page.getByRole('article', { name: 'Theme Library' }).getByRole('button', { name: 'Open Theme Settings' }).click();
+  await page.getByRole('article', { name: 'Theme Library' })
+    .getByRole('button', { name: 'Open Theme Settings' })
+    .evaluate((button: HTMLButtonElement) => button.click());
   await shot(page, 'wide-material-controls.png');
   await page.getByRole('tab', { name: 'Scene' }).click();
 

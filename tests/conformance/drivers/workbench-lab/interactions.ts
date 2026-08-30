@@ -35,6 +35,7 @@ async function resetLab(page: Page, origin: string) {
 }
 
 async function saveAndReload(page: Page) {
+  await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload({ waitUntil: 'load' });
   await page.locator('main[data-pom-theme="deep-current"]').waitFor({ state: 'visible' });

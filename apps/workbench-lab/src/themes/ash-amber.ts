@@ -41,7 +41,7 @@ export const ASH_AMBER_THEME: ThemeDefinitionV2 = {
     thumb: material({ base: 'text', fallback: 'surfaceElevated', opacity: 0.92, blurPx: 0, border: 'warning', borderOpacity: 0.56, rimOpacity: 0.12, shadowOpacity: 0.24, shadowBlurPx: 12, shadowY: 3, shadowSpreadPx: 0 }),
     opaque: material({ base: 'surface', opacity: 1, blurPx: 0, border: 'borderStrong', borderOpacity: 0.46, rimOpacity: 0, reducedTransparency: 'opaque' })
   },
-  shapes: shapePalette({ family: 'chamfered', small: 4, medium: 7, large: 10, chamferPx: 5 }),
+  shapes: shapePalette({ family: 'rounded', small: 4, medium: 4, large: 4 }),
   recipes: themeRecipes({ widgetGrouping: 'unified', chromePresentation: 'compact', actionPresentation: 'compact' }),
   controls: { slider: { trackPx: 3, thumbPx: 10, hitTargetPx: 44 } },
   iconPackId: 'icons.minimal',

@@ -18,7 +18,9 @@ export async function renderLabThemeTarget(
       : scenario.target === 'bunny' ? 'Bunny'
         : scenario.target === 'ash-amber' ? 'Ash & Amber'
           : 'Deep Current';
+    await page.getByText('Developer tools', { exact: true }).click();
     await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: label, exact: true }).click();
+    await page.getByText('Developer tools', { exact: true }).click();
     if (scenario.implementationState === 'catalog') await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const afterIds = await widgetIds(page);

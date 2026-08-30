@@ -24,6 +24,26 @@ test('native workbench keeps literal relationships and keyboard reorder behavior
   await expect(page.getByLabel('Active story identity')).toContainText('story-lab-reservoir');
 });
 
+test('Atmospheric composition keeps developer chrome out of the default stage and keyboard reachable', async ({ page }) => {
+  await openFresh(page, 1600, 900);
+  await expect(page.locator('.context-rail, .lab-footer')).toHaveCount(0);
+  const drawer = page.locator('[data-workbench-developer-drawer]');
+  await expect(drawer).not.toHaveAttribute('open', '');
+  const launcher = page.getByText('Developer tools', { exact: true });
+  await launcher.focus();
+  await page.keyboard.press('Enter');
+  await expect(drawer).toHaveAttribute('open', '');
+  await expect(page.getByRole('button', { name: 'Save layout' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(drawer).not.toHaveAttribute('open', '');
+  await expect(launcher).toBeFocused();
+
+  const transcript = page.locator('[data-widget-type="story.transcript"]');
+  await expect(transcript.locator('[data-pom-part="widget.surface"]')).toHaveCount(0);
+  await expect(transcript.locator('.transcript')).toBeVisible();
+  await expect(page.locator('[data-story-composer] textarea')).toBeVisible();
+});
+
 test('native workbench Catalog supports keyboard placement and stable attributes', async ({ page }) => {
   await openFresh(page, 1024, 768);
   await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
@@ -40,6 +60,7 @@ test('native workbench Catalog supports keyboard placement and stable attributes
 
 test('native workbench keeps persistence actions reachable at the medium breakpoint', async ({ page }) => {
   await openFresh(page, 1024, 768);
+  await page.getByText('Developer tools', { exact: true }).click();
 
   for (const name of ['Save layout', 'Reload saved layout', 'Clear saved layout']) {
     await expect(page.getByRole('button', { name })).toBeVisible();
@@ -63,16 +84,16 @@ test('compact Panel changes keep chrome anchored and the document contained', as
       mainScrollTop: document.querySelector('main')?.scrollTop ?? -1,
       documentHeight: document.documentElement.scrollHeight,
       viewportHeight: window.innerHeight,
-      context: rect('.context-rail'),
-      shelf: rect('.top-shelf')
+      shelf: rect('.top-shelf'),
+      workbench: rect('.workbench-shell')
     };
   });
   expect(evidence.scrollY).toBe(0);
   expect(evidence.mainScrollTop).toBe(0);
   expect(evidence.documentHeight).toBe(evidence.viewportHeight);
-  expect(evidence.context.top).toBeGreaterThanOrEqual(0);
-  expect(evidence.context.height).toBeGreaterThanOrEqual(126);
-  expect(evidence.shelf.top).toBeGreaterThanOrEqual(evidence.context.bottom);
+  expect(evidence.shelf.top).toBeGreaterThanOrEqual(0);
+  expect(evidence.shelf.height).toBeGreaterThanOrEqual(40);
+  expect(evidence.workbench.top).toBeGreaterThanOrEqual(evidence.shelf.bottom);
 });
 
 for (const viewport of [
@@ -142,6 +163,7 @@ test('native workbench exposes coarse-pointer targets separately from compact ic
 
 test('Panel creation uses the browser modal top layer and restores focus', async ({ page }) => {
   await openFresh(page, 1024, 768);
+  await page.getByText('Developer tools', { exact: true }).click();
   const launcher = page.getByRole('button', { name: 'Create Panel' });
   await launcher.click();
   const dialog = page.getByRole('dialog', { name: 'Create a Panel' });

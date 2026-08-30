@@ -1161,6 +1161,8 @@ main[data-pom-widget-grouping="individual"] [data-conformance-region="right"] {
 main[data-pom-theme-root] .workbench-surface,
 main[data-pom-theme-root].left-collapsed .workbench-surface { display: block; position: relative; height: 100%; min-height: 0; padding: 7px; }
 main[data-pom-theme-root] .panel-template-surface { display: grid; gap: 7px; min-width: 0; height: 100%; min-height: 0; }
+.story-stage,
+.story-composer { display: contents; }
 main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="story-stage"] {
   grid-template-columns: minmax(0, var(--pom-left-width, var(--pom-side-width))) minmax(0, 1fr) minmax(0, var(--pom-right-width, var(--pom-side-width)));
   grid-template-rows: minmax(0, 1fr) auto;
@@ -1178,6 +1180,87 @@ main[data-active-panel="surface-preview"][data-surface-preview-family="story"] .
 }
 
 .panel-menu { position: relative; }
+
+/* Lab-only tools stay outside the shared Workbench geometry. */
+.workbench-developer-drawer {
+  position: fixed;
+  z-index: 40;
+  top: 5px;
+  right: 5px;
+  color: var(--ink);
+}
+.workbench-developer-drawer > summary {
+  position: absolute;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--pom-material-menu, var(--glass-deep));
+  color: transparent;
+  font-size: 0;
+  cursor: pointer;
+}
+.workbench-developer-drawer > summary::before { content: "⋮"; color: var(--muted); font: 16px/1 var(--pom-font-technical, monospace); }
+.workbench-developer-drawer[open] > summary { border-bottom-color: transparent; }
+.developer-drawer-surface {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto;
+  gap: 10px;
+  width: min(720px, calc(100vw - 48px));
+  max-height: calc(100vh - 86px);
+  margin-top: 34px;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  background: var(--pom-material-menu, var(--glass-deep));
+  box-shadow: var(--pom-material-dialog-shadow, 0 22px 70px rgb(0 0 0 / 52%));
+  -webkit-backdrop-filter: var(--pom-part-menu-surface-material-backdrop, blur(18px));
+  backdrop-filter: var(--pom-part-menu-surface-material-backdrop, blur(18px));
+}
+.developer-drawer-surface > p { margin: 0; color: var(--muted); font-size: 11px; }
+.developer-panel-identity { display: flex; gap: 8px; }
+.developer-panel-identity span { color: var(--faint); font-family: var(--pom-font-technical, monospace); }
+.developer-drawer-surface :is(.theme-targets, .dock-controls, .persistence-actions) { display: flex; flex-wrap: wrap; gap: 4px; }
+.developer-drawer-surface button {
+  min-height: 30px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--pom-radius-small, 0);
+  color: var(--ink);
+  background: var(--pom-material-button, transparent);
+}
+.developer-drawer-surface details { grid-column: 1 / -1; }
+.developer-drawer-surface ol,
+.developer-drawer-surface ul { max-height: 180px; overflow: auto; }
+
+/* Transcript and composer keep live Widget identity without a generic card shell. */
+[data-story-stage] [data-widget-type="story.transcript"] .widget-frame,
+[data-story-composer] [data-widget-type="story.composer"] .widget-frame {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+[data-story-stage] [data-widget-type="story.transcript"] .widget-frame > header,
+[data-story-composer] [data-widget-type="story.composer"] .widget-frame > header { display: none; }
+
+@media (max-width: 680px), (max-height: 620px) {
+  .workbench-developer-drawer { right: 8px; }
+  .developer-drawer-surface { width: calc(100vw - 16px); grid-template-columns: 1fr; }
+}
+@media (pointer: coarse) {
+  .workbench-developer-drawer > summary,
+  .developer-drawer-surface button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
 .panel-menu > summary { display: grid; place-items: center; width: 24px; min-height: 32px; cursor: pointer; color: var(--faint); list-style: none; }
 .panel-menu > summary::-webkit-details-marker { display: none; }
 .panel-menu > div {

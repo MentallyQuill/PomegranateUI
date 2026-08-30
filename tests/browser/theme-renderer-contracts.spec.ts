@@ -20,8 +20,11 @@ async function fresh(page: Page, width = 1440, height = 900) {
 }
 
 async function selectTheme(page: Page, target: (typeof TARGETS)[number]) {
+  const drawer = page.locator('[data-workbench-developer-drawer]');
+  if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: target.label, exact: true }).click();
   await expect(page.locator('main')).toHaveAttribute('data-pom-theme', target.id);
+  await page.getByText('Developer tools', { exact: true }).click();
 }
 
 type MaterialSample = {
@@ -252,15 +255,15 @@ test('reduced transparency selects an opaque no-blur semantic fallback', async (
   });
   await fresh(page);
   await selectTheme(page, TARGETS[1]);
-  for (const selector of ['.top-shelf', '.context-rail', '[data-conformance-region="left"] .widget-frame']) {
+  await page.getByText('Developer tools', { exact: true }).click();
+  for (const selector of ['.top-shelf', '.developer-drawer-surface', '[data-conformance-region="left"] .widget-frame']) {
     const sample = await material(page, selector);
     expect(sample.alpha, `${selector} opacity`).toBe(1);
     expect(blurPx(sample.backdrop), `${selector} blur`).toBe(0);
   }
   const selectedTheme = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: 'PomOS', exact: true });
   expect((await material(page, '.theme-targets button[aria-pressed="true"]')).alpha).toBe(1);
-  await page.keyboard.press('Tab');
-  await page.keyboard.press('Shift+Tab');
+  await selectedTheme.focus();
   await expect(selectedTheme).toBeFocused();
   expect(await selectedTheme.evaluate((button) => {
     const style = getComputedStyle(button);

@@ -2,6 +2,16 @@ import { expect, test } from '@playwright/test';
 import { IMPLEMENTED_SURFACES } from '../../apps/workbench-lab/src/mockup/implemented-surfaces.ts';
 import { SURFACE_FIXTURES, SURFACE_STATE_COPY } from '../../apps/workbench-lab/src/mockup/surface-fixtures.ts';
 
+async function openDeveloperTools(page: import('@playwright/test').Page) {
+  const drawer = page.locator('[data-workbench-developer-drawer]');
+  if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
+}
+
+async function closeDeveloperTools(page: import('@playwright/test').Page) {
+  const drawer = page.locator('[data-workbench-developer-drawer]');
+  if (await drawer.getAttribute('open') !== null) await page.getByText('Developer tools', { exact: true }).click();
+}
+
 async function dragTo(
   page: import('@playwright/test').Page,
   handle: import('@playwright/test').Locator,
@@ -84,6 +94,7 @@ test('Deep Current dock separators resize with keyboard and persist exact bounde
   await page.mouse.up();
   await expect(left).toHaveAttribute('aria-valuenow', '320');
 
+  await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
   await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '320');
@@ -112,6 +123,7 @@ test('Deep Current Widgets merge into an accessible persistent tab group and reo
 
   await group.getByRole('tab', { name: 'Room Ambience' }).press('Alt+ArrowLeft');
   await expect(group.getByRole('tab')).toHaveText(['Room Ambience', 'World State']);
+  await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
   const restored = page.getByRole('group', { name: 'Widget group' });
@@ -260,6 +272,7 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   const settingsRight = page.getByRole('separator', { name: 'Resize right toolbar' });
   await settingsRight.focus();
   await settingsRight.press('ArrowLeft');
+  await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
 
@@ -275,6 +288,7 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
 });
 
 test('native workbench POM-PERSIST-842D422EB3 POM-PERSIST-9FA69F9FC1 restores a user Panel template and order', async ({ page }) => {
+  await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Create Panel' }).click();
   const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
   await dialog.getByRole('textbox', { name: 'Panel name' }).fill('My Chronicle');
@@ -282,6 +296,7 @@ test('native workbench POM-PERSIST-842D422EB3 POM-PERSIST-9FA69F9FC1 restores a 
   await expect(page.getByRole('tab', { name: 'My Chronicle' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByLabel('Workbench context')).toContainText('columns.v1');
 
+  await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
   await expect(page.getByRole('tab', { name: 'My Chronicle' })).toHaveAttribute('aria-selected', 'true');
@@ -291,6 +306,7 @@ test('native workbench POM-PERSIST-842D422EB3 POM-PERSIST-9FA69F9FC1 restores a 
 test('native workbench POM-PERSIST-28DFDC9A8F POM-PERSIST-D50D69D3C4 restores reordered Panels', async ({ page }) => {
   await page.getByRole('button', { name: 'Move Settings left' }).click();
   await expect(page.getByRole('tab')).toHaveText(['Scene', 'Settings', 'Library']);
+  await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
   await expect(page.getByRole('tab')).toHaveText(['Scene', 'Settings', 'Library']);
@@ -308,6 +324,7 @@ test('native workbench applies complete themes without replacing live Workbench 
     widgets: [...node.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget')),
     focusedWidget: document.activeElement?.closest('[data-pomegranate-widget]')?.getAttribute('data-pomegranate-widget') ?? null
   }));
+  await openDeveloperTools(page);
   const themeTargets = page.getByRole('group', { name: 'Visual target' });
   for (const theme of [
     { label: 'PomOS', id: 'pom-neutral' },
@@ -330,6 +347,7 @@ test('native workbench applies complete themes without replacing live Workbench 
   }
   expect(identity.focusedWidget).toBeTruthy();
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem('pomegranate-ui.workbench-lab.theme.v1'))).toBe('ash-amber');
+  await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
   await expect(page.getByRole('complementary', { name: 'Widget Catalog' })).toBeVisible();
 });
@@ -337,6 +355,7 @@ test('native workbench applies complete themes without replacing live Workbench 
 test('all theme targets remain readable, transition-free, and contained at wide and compact sizes', async ({ page }) => {
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
+    await openDeveloperTools(page);
     for (const theme of [
       { label: 'Deep Current', id: 'deep-current', text: 'rgb(231, 246, 240)' },
       { label: 'PomOS', id: 'pom-neutral', text: 'rgb(16, 24, 32)' },
@@ -376,6 +395,7 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
     await page.goto('http://127.0.0.1:4174');
     await page.evaluate(() => document.fonts.ready);
     expect(await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches)).toBe(true);
+    await openDeveloperTools(page);
     for (const control of [
       page.getByRole('tab', { name: 'Scene' }),
       page.getByRole('button', { name: 'Open Widget Catalog' }),
@@ -422,6 +442,7 @@ test('all 50 reviewed Widget surfaces expose exact ready, state, focus, and resp
     expect(containment.scrollOwners, `${surface.type} scroll owners`).toBeLessThanOrEqual(1);
     expect(containment.unnamedButtons, `${surface.type} unnamed buttons`).toBe(0);
 
+    await openDeveloperTools(page);
     const statePicker = page.getByRole('combobox', { name: 'Surface preview state' });
     for (const fixtureState of fixture.states) {
       await statePicker.selectOption(fixtureState);
@@ -434,6 +455,7 @@ test('all 50 reviewed Widget surfaces expose exact ready, state, focus, and resp
     }
     await statePicker.selectOption('ready');
     await expect(implemented.locator('.surface-state')).toHaveCount(0);
+    await closeDeveloperTools(page);
 
     if (surface.family !== 'story') {
       const side = surface.family === 'systems' ? 'right' : 'left';
@@ -458,12 +480,14 @@ test('all 50 reviewed Widget surfaces expose exact ready, state, focus, and resp
 
 test('Catalog preserves all 94 identities, honest previews, search, and placement', async ({ page }) => {
   test.setTimeout(120_000);
+  await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Create Panel' }).click();
   const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
   await dialog.getByRole('textbox', { name: 'Panel name' }).fill('Catalog Proof');
   await dialog.getByRole('button', { name: 'Create Panel' }).click();
   await expect(page.getByRole('tab', { name: 'Catalog Proof' })).toHaveAttribute('aria-selected', 'true');
 
+  await closeDeveloperTools(page);
   await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
   const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
   const results = catalog.getByRole('listitem');
@@ -499,6 +523,7 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
   await expect(activePanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(44);
   const identities = await activePanel.locator('[data-widget-type]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-widget-type')));
   expect(new Set(identities).size).toBe(94);
+  await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
   const restoredPanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
@@ -510,6 +535,7 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
     for (const button of buttons) (button as HTMLButtonElement).click();
   });
   await expect(restoredPanel.locator('[data-widget-type]')).toHaveCount(0);
+  await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
   await expect(page.getByRole('tabpanel', { name: 'Catalog Proof' }).locator('[data-widget-type]')).toHaveCount(0);

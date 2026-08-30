@@ -22,7 +22,7 @@
     rendererRegistry: WidgetRendererRegistry<THostContext>;
     hostContext: THostContext;
     onfocuswidget?: (frame: WidgetFrameProjection) => void;
-    surfacePart?: 'widget.surface' | 'floating.surface' | null;
+    surfacePart?: 'widget.surface' | 'widget.content' | 'floating.surface' | null;
     class?: string;
   } = $props();
 

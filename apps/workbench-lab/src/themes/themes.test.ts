@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { THEME_PART_IDS } from '@pomegranate-ui/contracts';
 import { compileThemeBindings, contrastRatio, resolveThemeTarget, resolveThemeV2 } from '@pomegranate-ui/theme';
 import { BUNNY_THEME } from './bunny.js';
+import { ASH_AMBER_THEME } from './ash-amber.js';
 import { createLabThemeController } from './controller.js';
 import { DEEP_CURRENT_THEME } from './deep-current.js';
 import { defaultMaterialControls } from './material-controls.js';
@@ -102,9 +103,10 @@ describe('Workbench Lab theme conformance', () => {
   });
 
   it.each([
-    { theme: DEEP_CURRENT_THEME, family: 'chamfered', density: 'compact', grouping: 'unified' },
+    { theme: DEEP_CURRENT_THEME, family: 'rounded', density: 'compact', grouping: 'unified' },
     { theme: POM_NEUTRAL_THEME, family: 'continuous-rounded', density: 'balanced', grouping: 'individual' },
-    { theme: BUNNY_THEME, family: 'continuous-rounded', density: 'roomy', grouping: 'individual' }
+    { theme: BUNNY_THEME, family: 'continuous-rounded', density: 'roomy', grouping: 'individual' },
+    { theme: ASH_AMBER_THEME, family: 'rounded', density: 'compact', grouping: 'unified' }
   ] as const)('gives $theme.id a distinct material, shape, and composition identity', ({ theme, family, density, grouping }) => {
     expect(theme.shapes.pane?.family).toBe(family);
     expect(theme.spacing.density).toBe(density);
@@ -112,6 +114,12 @@ describe('Workbench Lab theme conformance', () => {
     expect(theme.materials.pane?.backdrop.blurPx).toBeGreaterThan(0);
     expect(theme.materials.pane?.opacity).toBeLessThan(0.9);
     expect(theme.canvas.some((layer) => layer.kind !== 'solid')).toBe(true);
+  });
+
+  it.each([DEEP_CURRENT_THEME, ASH_AMBER_THEME])('$label uses the tonal 4px bevel contract without chamfered silhouettes', (theme) => {
+    for (const shape of ['chrome', 'pane', 'header', 'content', 'group', 'row', 'field', 'button'] as const) {
+      expect(theme.shapes[shape]).toMatchObject({ family: 'rounded', radiusPx: 4, chamferPx: 0 });
+    }
   });
 
   it.each(LAB_THEME_IDS)('uses only packaged primary fonts and generic fallbacks in %s', (id) => {

@@ -244,7 +244,7 @@ git commit -m "feat(lab): adopt Atmospheric composition"
 **Deep target requirements:**
 
 - Near-black cyan-green canvas with one local reservoir image, top-to-bottom reading veil, and localized ambient light.
-- Low-opacity glass with visible backdrop relationship, restrained one-pixel seams, square/chamfered precision, and no oversized rounded shell.
+- Low-opacity glass with visible backdrop relationship, restrained one-pixel seams, and the shared 4px tonal bevel: slight rounded corners with no chamfered silhouette or oversized rounded shell.
 - One compact sans/technical voice for chrome and one literary serif voice for story prose.
 - Uppercase/monospace reserved for figure, status, and measurement labels; normal casing for user actions and prose.
 - Widget title bars are shallow shared-edge strips; content rows use separators, not nested cards.

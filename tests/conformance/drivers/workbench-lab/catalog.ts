@@ -48,6 +48,7 @@ export async function renderLabCatalog(
         });
         await catalog.getByRole('button', { name: 'Close Catalog' }).click();
         const placed = await catalogPanelSnapshot(page);
+        await page.getByText('Developer tools', { exact: true }).click();
         await page.getByRole('button', { name: 'Save layout' }).click();
         await page.reload({ waitUntil: 'load' });
         await page.evaluate(() => document.fonts.ready);
@@ -59,6 +60,7 @@ export async function renderLabCatalog(
           for (const button of buttons) (button as HTMLButtonElement).click();
         });
         await panel.locator('[data-widget-type]').first().waitFor({ state: 'detached' });
+        await page.getByText('Developer tools', { exact: true }).click();
         await page.getByRole('button', { name: 'Save layout' }).click();
         await page.reload({ waitUntil: 'load' });
         await page.getByRole('tabpanel', { name: 'Catalog Proof' }).waitFor({ state: 'visible' });
@@ -110,10 +112,13 @@ async function catalogPanelSnapshot(page: Page) {
 }
 
 async function createCatalogProofPanel(page: Page): Promise<void> {
+  const drawerToggle = page.getByText('Developer tools', { exact: true });
+  await drawerToggle.click();
   await page.getByRole('button', { name: 'Create Panel' }).click();
   const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
   await dialog.getByRole('textbox', { name: 'Panel name' }).fill('Catalog Proof');
   await dialog.getByRole('button', { name: 'Create Panel' }).click();
+  await drawerToggle.click();
 }
 
 async function measureInventory(catalog: Locator) {

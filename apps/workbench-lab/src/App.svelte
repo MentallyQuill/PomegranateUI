@@ -23,6 +23,7 @@
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
   import WorkbenchSurface from './recipes/WorkbenchSurface.svelte';
+  import WorkbenchDeveloperDrawer from './recipes/WorkbenchDeveloperDrawer.svelte';
   import { createLocalLayoutStorage, LAB_LAYOUT_KEY } from './storage.js';
   import { createLabThemeController } from './themes/controller.js';
   import type { LabMaterialControlId } from './themes/material-controls.js';
@@ -302,6 +303,13 @@
     const control = document.querySelector<HTMLElement>(selector);
     control?.focus();
   }
+
+  function frameSurfacePart(frame: WidgetFrameProjection) {
+    if (frame.placement.kind === 'floating') return 'floating.surface';
+    return frame.instance.type === 'story.transcript' || frame.instance.type === 'story.composer'
+      ? 'widget.content'
+      : 'widget.surface';
+  }
 </script>
 
 <svelte:head>
@@ -342,8 +350,44 @@
     </div>
   </header>
 
-  <section class="context-rail" data-pom-part="chrome.context" aria-label="Workbench context">
-    <p><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
+  <section id="workbench" class="workbench-shell" data-pom-part="panel.surface" aria-label="Active Workbench">
+    <WorkbenchSurface {store} class="workbench-surface">
+      {#snippet renderWidget(frame)}
+        <div
+          class:widget-float={frame.placement.kind === 'floating'}
+          data-widget-type={frame.instance.type}
+          data-widget-shape={frame.manifest?.catalog?.shape}
+          data-pomegranate-placement={frame.placement.kind}
+          data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.regionId === 'stage' ? 'main' : frame.placement.regionId : undefined}
+          data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
+          data-pomegranate-shelf={frame.placement.kind === 'docked' ? frame.placement.shelfId : undefined}
+          data-pomegranate-order={frame.placement.kind === 'docked' ? frame.placement.order : undefined}
+          style={floatingStyle(frame)}
+        >
+          {#if focusedFrame?.instanceId === frame.instanceId}
+            <div
+              class="focused-widget-placeholder"
+              data-focused-widget-placeholder={frame.instanceId}
+              role="status"
+            >{frame.title} is open in Focus.</div>
+          {:else}
+            <WidgetFrame
+              {frame}
+              {store}
+              {rendererRegistry}
+              {hostContext}
+              onfocuswidget={focusWidget}
+              surfacePart={frameSurfacePart(frame)}
+              class="widget-frame"
+            />
+          {/if}
+        </div>
+      {/snippet}
+    </WorkbenchSurface>
+  </section>
+
+  <WorkbenchDeveloperDrawer>
+    <p class="developer-panel-identity" aria-label="Workbench context"><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
     <div class="theme-targets" role="group" aria-label="Visual target">
       {#each LAB_THEME_PRESETS as preset (preset.id)}
         <button
@@ -376,49 +420,10 @@
       <button type="button" data-pom-part="button.surface" onclick={() => void reload()}>Reload saved layout</button>
       <button type="button" data-pom-part="button.surface" onclick={() => void clear()}>Clear saved layout</button>
     </div>
-  </section>
-
-  <section id="workbench" class="workbench-shell" data-pom-part="panel.surface" aria-label="Active Workbench">
-    <WorkbenchSurface {store} class="workbench-surface">
-      {#snippet renderWidget(frame)}
-        <div
-          class:widget-float={frame.placement.kind === 'floating'}
-          data-widget-type={frame.instance.type}
-          data-widget-shape={frame.manifest?.catalog?.shape}
-          data-pomegranate-placement={frame.placement.kind}
-          data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.regionId === 'stage' ? 'main' : frame.placement.regionId : undefined}
-          data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
-          data-pomegranate-shelf={frame.placement.kind === 'docked' ? frame.placement.shelfId : undefined}
-          data-pomegranate-order={frame.placement.kind === 'docked' ? frame.placement.order : undefined}
-          style={floatingStyle(frame)}
-        >
-          {#if focusedFrame?.instanceId === frame.instanceId}
-            <div
-              class="focused-widget-placeholder"
-              data-focused-widget-placeholder={frame.instanceId}
-              role="status"
-            >{frame.title} is open in Focus.</div>
-          {:else}
-            <WidgetFrame
-              {frame}
-              {store}
-              {rendererRegistry}
-              {hostContext}
-              onfocuswidget={focusWidget}
-              surfacePart={frame.placement.kind === 'floating' ? 'floating.surface' : 'widget.surface'}
-              class="widget-frame"
-            />
-          {/if}
-        </div>
-      {/snippet}
-    </WorkbenchSurface>
-  </section>
-
-  <footer class="lab-footer" data-pom-part="chrome.context">
     <p role="status" aria-live="polite">{status}</p>
     <details><summary>Event log</summary><ol>{#each eventLog as entry}<li>{entry}</li>{/each}</ol></details>
     <details><summary>Native contract evidence</summary><ul>{#each FIRST_SLICE_CONTRACT_IDS as id}<li>{id}</li>{/each}</ul></details>
-  </footer>
+  </WorkbenchDeveloperDrawer>
 
   <WidgetCatalog {catalog} oncreate={addFromCatalog} class="widget-catalog" />
 
