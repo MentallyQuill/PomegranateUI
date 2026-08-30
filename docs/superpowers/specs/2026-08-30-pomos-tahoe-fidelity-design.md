@@ -41,4 +41,3 @@ This delta preserves the accepted ThemeDefinition, ThemeTargetBundle, CanvasDefi
 ## Verification
 
 Each repair begins with a failing behavioral or visual contract. Required evidence includes exact DOM geometry, keyboard/pointer semantics, 44px interaction targets, responsive screenshots at all named viewports, focused unit/conformance/browser gates, and the full `npm.cmd run check` gate.
-

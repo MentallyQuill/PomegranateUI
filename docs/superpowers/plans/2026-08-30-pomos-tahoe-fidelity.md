@@ -71,4 +71,3 @@
 3. Run `npm.cmd run check` and confirm every sub-gate from fresh output.
 4. Review the scoped diff for theme IDs, component forks, semantic part expansion, unrelated changes, and generated-artifact drift.
 5. Commit in scoped conventional commits and report SHAs, exact commands/results, screenshot paths, framework capabilities, and integration notes to the source task before any merge.
-
