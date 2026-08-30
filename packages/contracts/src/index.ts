@@ -7,6 +7,7 @@ export * from './events.js';
 export * from './ids.js';
 export * from './json.js';
 export * from './model.js';
+export * from './presentation-profile.js';
 export * from './storage.js';
 export * from './templates.js';
 export * from './theme.js';

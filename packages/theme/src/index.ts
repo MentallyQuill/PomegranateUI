@@ -10,5 +10,6 @@ export * from './draft.js';
 export * from './migrate.js';
 export * from './migrate-target.js';
 export * from './policy.js';
+export * from './presentation.js';
 export * from './resolve.js';
 export * from './resolve-target.js';
