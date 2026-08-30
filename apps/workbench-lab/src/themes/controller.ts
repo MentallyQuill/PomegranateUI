@@ -1,10 +1,12 @@
 import {
   PersistedThemeDraftSchema,
   type PersistedThemeDraft,
+  type PresentationProfileDefinition,
   type ThemeDraftStorage,
   type ThemeTargetBundle
 } from '@pomegranate-ui/contracts';
 import {
+  compilePresentationProfile,
   compileThemeTarget,
   createThemeDraft,
   projectThemeDraft,
@@ -13,6 +15,8 @@ import {
   type AmbientAccessibilityPreferences,
   type AmbientCapabilityLimits,
   type CompiledThemeTarget,
+  type PresentationBindings,
+  type PresentationDiagnostic,
   type ResolvedAmbientProfile,
   type ResolvedThemeTarget,
   type ThemeAssetRegistry,
@@ -46,28 +50,32 @@ export interface LabThemeSnapshot {
   readonly compiled: CompiledThemeTarget;
   readonly materialControls: LabMaterialControls;
   readonly resolvedAmbient: ResolvedAmbientProfile;
+  readonly presentation: PresentationProfileDefinition;
+  readonly presentationBindings: PresentationBindings;
   readonly cssText: string;
-  readonly diagnostics: readonly ThemeDiagnostic[];
+  readonly diagnostics: readonly LabThemeDiagnostic[];
 }
+
+export type LabThemeDiagnostic = ThemeDiagnostic | PresentationDiagnostic;
 
 export interface LabThemeAuthoringSnapshot {
   readonly editable: unknown;
   readonly applied: LabThemeSnapshot;
-  readonly diagnostics: readonly ThemeDiagnostic[];
+  readonly diagnostics: readonly LabThemeDiagnostic[];
   readonly dirty: boolean;
 }
 
 export type ThemeActivationResult =
   | { readonly ok: true; readonly snapshot: LabThemeSnapshot }
-  | { readonly ok: false; readonly diagnostics: readonly ThemeDiagnostic[] };
+  | { readonly ok: false; readonly diagnostics: readonly LabThemeDiagnostic[] };
 
 export type ThemeDraftEditResult =
   | { readonly ok: true; readonly authoring: LabThemeAuthoringSnapshot }
-  | { readonly ok: false; readonly authoring: LabThemeAuthoringSnapshot; readonly diagnostics: readonly ThemeDiagnostic[] };
+  | { readonly ok: false; readonly authoring: LabThemeAuthoringSnapshot; readonly diagnostics: readonly LabThemeDiagnostic[] };
 
 export type ThemeDraftSaveResult =
   | { readonly ok: true; readonly authoring: LabThemeAuthoringSnapshot }
-  | { readonly ok: false; readonly authoring: LabThemeAuthoringSnapshot; readonly diagnostics: readonly ThemeDiagnostic[] };
+  | { readonly ok: false; readonly authoring: LabThemeAuthoringSnapshot; readonly diagnostics: readonly LabThemeDiagnostic[] };
 
 export interface LabThemeController {
   getSnapshot(): LabThemeSnapshot;
@@ -114,6 +122,7 @@ function serializeBindings(bindings: Readonly<Record<string, string>>): string {
 function createSnapshot(
   id: LabThemeId,
   target: ResolvedThemeTarget,
+  presentationInput: unknown | undefined,
   materialControls: LabMaterialControls,
   devicePolicy: ThemeDevicePolicy | undefined,
   ambientOptions: {
@@ -122,7 +131,9 @@ function createSnapshot(
     readonly limits?: AmbientCapabilityLimits;
     readonly accessibility?: AmbientAccessibilityPreferences;
   }
-): LabThemeSnapshot {
+): ThemeActivationResult {
+  const presentation = compilePresentationProfile(presentationInput, target.canvas);
+  if (!presentation.ok) return presentation;
   const resolvedAmbient = resolveAmbientProfile({
     fallback: ambientOptions.fallback ?? target.ambient,
     target: target.ambient,
@@ -137,17 +148,23 @@ function createSnapshot(
   });
   const cssBindings = {
     ...compiled.bindings,
+    ...presentation.bindings,
     '--pom-ambient-transparency-enabled': resolvedAmbient.transparencyEnabled ? '1' : '0'
   };
-  return Object.freeze({
-    activeId: id,
-    resolved: target,
-    compiled,
-    materialControls: Object.freeze({ ...materialControls }),
-    resolvedAmbient,
-    cssText: serializeBindings(cssBindings),
-    diagnostics: Object.freeze([])
-  });
+  return {
+    ok: true,
+    snapshot: Object.freeze({
+      activeId: id,
+      resolved: target,
+      compiled,
+      materialControls: Object.freeze({ ...materialControls }),
+      resolvedAmbient,
+      presentation: presentation.profile,
+      presentationBindings: presentation.bindings,
+      cssText: serializeBindings(cssBindings),
+      diagnostics: Object.freeze([])
+    })
+  };
 }
 
 function cloneEditable(value: unknown): unknown {
@@ -191,7 +208,7 @@ export function createLabThemeController(options: {
   const presets = options.presets ?? LAB_THEME_PRESETS;
   const assetRegistry = options.assetRegistry
     ?? registryFromIds(options.availableAssets ?? new Set(['icons.minimal', 'image.deep-current-stage', 'image.bunny-garden']));
-  const byId = new Map(presets.map((preset) => [preset.id, preset.target]));
+  const byId = new Map(presets.map((preset) => [preset.id, preset]));
   const validDrafts = new Map<LabThemeId, PersistedThemeDraft>();
   const dirtyDrafts = new Map<LabThemeId, boolean>();
   const snapshotAmbientOptions = {
@@ -202,16 +219,17 @@ export function createLabThemeController(options: {
   };
 
   const rawTarget = (id: string): ThemeTargetBundle | null => {
-    const target = byId.get(id);
+    const target = byId.get(id)?.target;
     const parsed = target ? (target as ThemeTargetBundle) : null;
     return parsed;
   };
 
   const resolveRawPreset = (id: string): ThemeActivationResult => {
     if (!isLabThemeId(id) || !byId.has(id)) return { ok: false, diagnostics: unknownPresetDiagnostic(id) };
-    const resolution = resolveThemeTarget(byId.get(id), assetRegistry);
+    const preset = byId.get(id);
+    const resolution = resolveThemeTarget(preset?.target, assetRegistry);
     if (!resolution.ok) return resolution;
-    return { ok: true, snapshot: createSnapshot(id, resolution.target, defaultMaterialControls(id), options.devicePolicy, snapshotAmbientOptions) };
+    return createSnapshot(id, resolution.target, preset?.presentation, defaultMaterialControls(id), options.devicePolicy, snapshotAmbientOptions);
   };
 
   const applyPersisted = (id: LabThemeId, persisted: PersistedThemeDraft): ThemeActivationResult => {
@@ -228,10 +246,7 @@ export function createLabThemeController(options: {
     }
     const resolution = resolveThemeTarget(candidate, assetRegistry);
     if (!resolution.ok) return resolution;
-    return {
-      ok: true,
-      snapshot: createSnapshot(id, resolution.target, persisted.draft.materials, options.devicePolicy, snapshotAmbientOptions)
-    };
+    return createSnapshot(id, resolution.target, byId.get(id)?.presentation, persisted.draft.materials, options.devicePolicy, snapshotAmbientOptions);
   };
 
   let storedId: string | null = null;
@@ -242,7 +257,7 @@ export function createLabThemeController(options: {
   if (!fallback.ok) throw new Error('The Workbench Lab Deep Current theme must resolve successfully.');
   let snapshot = fallback.snapshot;
   let editable: unknown = seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!);
-  let authoringDiagnostics: readonly ThemeDiagnostic[] = Object.freeze([]);
+  let authoringDiagnostics: readonly LabThemeDiagnostic[] = Object.freeze([]);
   let dirty = false;
   validDrafts.set(snapshot.activeId, editable as PersistedThemeDraft);
 
