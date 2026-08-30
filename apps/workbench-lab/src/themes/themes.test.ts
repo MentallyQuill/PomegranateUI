@@ -250,11 +250,12 @@ describe('Workbench Lab theme conformance', () => {
     expect(POM_NEUTRAL_THEME).toMatchObject({
       schemaVersion: 'pomegranate.ui.theme.v2', id: 'pom-neutral', label: 'PomOS',
       colors: { canvas: '#167fdc', surfaceElevated: '#ffffff', accent: '#0868c4' },
-      shapes: { pane: { family: 'continuous-rounded', radiusPx: 18 } },
+      shapes: { pane: { family: 'continuous-rounded', radiusPx: 20 } },
       controls: { slider: { trackPx: 4, thumbPx: 11, hitTargetPx: 44 } }
     });
     expect(POM_NEUTRAL_THEME.materials.panel).toMatchObject({ opacity: 0, backdrop: { blurPx: 0 }, shadows: [] });
-    expect(POM_NEUTRAL_THEME.materials.pane).toMatchObject({ opacity: 0.42, backdrop: { blurPx: 30 } });
+    expect(POM_NEUTRAL_THEME.materials.pane).toMatchObject({ opacity: 0.3, backdrop: { blurPx: 34 } });
+    expect(POM_NEUTRAL_THEME.recipes.parts['group.surface']).toMatchObject({ material: 'pane', overflow: 'clip' });
     expect(POM_NEUTRAL_THEME.materials.header?.backdrop.blurPx).toBe(0);
     expect(POM_NEUTRAL_THEME.materials.content?.backdrop.blurPx).toBe(0);
     expect(POM_NEUTRAL_THEME.canvas.every((layer) => layer.kind !== 'image')).toBe(true);
@@ -352,6 +353,25 @@ describe('Workbench Lab theme conformance', () => {
 
     expect(controller.activate('deep-current').ok).toBe(true);
     expect(controller.getSnapshot().cssText).not.toContain('--pom-expression-');
+  });
+
+  it('projects Ash readability through target expression data without changing Deep rail defaults', () => {
+    const controller = createLabThemeController({ initialId: 'deep-current' });
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-widget-header-font-size');
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-row-surface-font-size');
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-slider-input-font-size');
+
+    expect(controller.activate('ash-amber').ok).toBe(true);
+    expect(controller.getSnapshot().expressionBindings).toMatchObject({
+      '--pom-expression-widget-header-font-size': '11px',
+      '--pom-expression-row-surface-font-size': '11px',
+      '--pom-expression-slider-input-font-size': '11px'
+    });
+
+    expect(controller.activate('deep-current').ok).toBe(true);
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-widget-header-font-size');
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-row-surface-font-size');
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-slider-input-font-size');
   });
 
   it('compiles Bunny expression after reduced-transparency policy redirects decorative materials', () => {

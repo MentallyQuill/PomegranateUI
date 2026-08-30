@@ -60,6 +60,35 @@ const validationOptions = Object.freeze({
 
 const ledgerHeader = '| ID | Category | Severity | Authority | Scenario | Evidence | Diagnosis | Status | Regression | Deviation |';
 
+test('reviewed theme evidence ledgers hash the exact committed screenshots', async () => {
+  const snapshotRoot = path.join(repositoryRoot, 'tests', 'browser', '__screenshots__', 'native-workbench-visual.spec.ts-snapshots');
+  const reviewedEvidence = [
+    ['docs/conformance/pom-neutral-ledger.md', [
+      'wide-pom-neutral.png',
+      'short-desktop-pom-neutral.png',
+      'compact-pom-neutral.png',
+      'short-landscape-pom-neutral.png',
+      'zoom-200-pom-neutral.png'
+    ]],
+    ['docs/conformance/ash-amber-ledger.md', [
+      'wide-ash-amber.png',
+      'compact-ash-amber.png',
+      'wide-catalog-ash-amber.png'
+    ]]
+  ];
+
+  for (const [ledgerPath, snapshots] of reviewedEvidence) {
+    const ledger = await readFile(path.join(repositoryRoot, ledgerPath), 'utf8');
+    for (const snapshot of snapshots) {
+      const row = ledger.split(/\r?\n/).find((line) => line.startsWith('|') && line.includes('`' + snapshot + '`'));
+      assert.ok(row, `${ledgerPath} must name ${snapshot}`);
+      const reviewedHash = row.match(/`([0-9a-f]{64})`/i)?.[1];
+      assert.ok(reviewedHash, `${ledgerPath} must record a SHA-256 for ${snapshot}`);
+      assert.equal(reviewedHash.toLowerCase(), await hashAuthorityFile(path.join(snapshotRoot, snapshot)), snapshot);
+    }
+  }
+});
+
 test('the preserved Widget Overhaul harness leaves loaded Windows runners scheduling margin', async () => {
   assert.ok(WIDGET_OVERHAUL_HARNESS_TIMEOUT_MS >= 180_000);
   assert.ok(WIDGET_OVERHAUL_HOOK_TIMEOUT_MS >= WIDGET_OVERHAUL_HARNESS_TIMEOUT_MS + 30_000);

@@ -73,3 +73,36 @@ and promoted snapshots own current art-direction regression. The promoted
 visual paths are `wide-pom-neutral.png`, `compact-pom-neutral.png`, and the PomOS
 material stress captures under
 `tests/browser/__screenshots__/native-workbench-visual.spec.ts-snapshots`.
+
+## Round 8 — Tahoe fidelity and short-height closure
+
+The latest screenshot audit found shared layout defects that were most visible
+in PomOS: short side stacks could outgrow their rows, the composer could lose
+usable space at compact and zoom-equivalent sizes, chrome actions could cross
+the shelf edge, and Scene Effects lacked one explicit grouped-material owner.
+The same pass also replaced the faceted canvas with an original curved luminous
+composition, strengthened the translucent material hierarchy, unified the
+continuous-rounded geometry, and made eligible actions iconographic through the
+generic presentation-profile content mode.
+
+The repairs remain reusable: stack and scroll ownership are shared Workbench
+behavior, `group.surface` and `button.icon` are existing semantic parts, and
+presentation-sensitive geometry selects the generic `actions.content` value.
+There are no PomOS/theme-ID selectors, component forks, or semantic-part
+vocabulary additions. Text-mode themes retain their preserved action geometry.
+
+Browser contracts now measure shelf descendants, side-stack siblings and
+internals, transcript/composer containment, deterministic scroll movement,
+44-pixel range and icon-action targets, native slider thumb geometry, focus,
+keyboard and pointer behavior, grouped-material ownership, readable metadata,
+accessible icon names, and atomic switching back to a text-action target.
+
+### Round 8 responsive evidence hashes
+
+| Snapshot | Viewport | SHA-256 |
+| --- | --- | --- |
+| `wide-pom-neutral.png` | 1440x900 | `8bd35fc0a96a768f6314bee550967ec0130630f98af53eb9257837482f2eee19` |
+| `short-desktop-pom-neutral.png` | 1280x720 | `a1dff25099ea00f23db46d5fa185a64f96a318366b7c39f60906cca276e1a854` |
+| `compact-pom-neutral.png` | 390x844 | `992e2b0278a1fcb691038d3815dbd55196f633432055f33b31e11ce026a049ed` |
+| `short-landscape-pom-neutral.png` | 844x390 | `dedaa1eb2eb8eb445e001417bbf44fce969640aa563bf2571d541739a7a356fa` |
+| `zoom-200-pom-neutral.png` | 800x450 | `94d7e8cd75b2b34179d541334f36a92484c8459e64fcb78eb0e1129c95ce556c` |

@@ -118,9 +118,24 @@
     draft.ambient[field] = value;
     apply();
   }
+
+  function scrollWithKeyboard(event: KeyboardEvent) {
+    if (event.target !== event.currentTarget || (event.key !== 'Home' && event.key !== 'End')) return;
+    event.preventDefault();
+    const region = event.currentTarget as HTMLElement;
+    region.scrollTop = event.key === 'Home' ? 0 : region.scrollHeight;
+  }
 </script>
 
-<div class="compact-theme" data-surface-presentation="compact-theme">
+<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (named overflow owner implements Home/End scrolling) -->
+<div
+  class="compact-theme"
+  data-surface-presentation="compact-theme"
+  role="region"
+  aria-label="Custom Theme controls"
+  tabindex="0"
+  onkeydown={scrollWithKeyboard}
+>
   {#if selectedRole}
     <section class="compact-color-editor" aria-label={`${EDITOR_LABELS[selectedRole]} editor`}>
       <header><strong>{EDITOR_LABELS[selectedRole]}</strong><span>Edited</span></header>

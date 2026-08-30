@@ -107,6 +107,47 @@ test('Theme drafts save and restore independently of layout persistence', async 
   await expect(page.locator('[data-widget-type="settings.custom-theme"]').getByRole('textbox', { name: 'Hex color' })).toHaveValue('#111c24');
 });
 
+test('compact Custom Theme owns one keyboard-scrollable region through its ambient footer', async ({ page }) => {
+  await fresh(page, 1440, 900);
+  const card = page.getByRole('article', { name: 'Custom Theme' });
+  const controls = card.getByRole('region', { name: 'Custom Theme controls' });
+  await expect(controls).toBeVisible();
+
+  const before = await controls.evaluate((node) => ({
+    clientHeight: node.clientHeight,
+    scrollHeight: node.scrollHeight,
+    overflowY: getComputedStyle(node).overflowY,
+    documentScrollY: window.scrollY
+  }));
+  expect(before.scrollHeight).toBeGreaterThan(before.clientHeight);
+  expect(before.overflowY).toBe('auto');
+  expect(before.documentScrollY).toBe(0);
+
+  await controls.focus();
+  await controls.press('End');
+  await expect(controls).toBeFocused();
+  await expect.poll(() => controls.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+
+  const containment = await controls.evaluate((node) => {
+    const footer = node.querySelector('.compact-ambient footer');
+    if (!(footer instanceof HTMLElement)) throw new Error('Missing compact ambient footer.');
+    const owner = node.getBoundingClientRect();
+    const last = footer.getBoundingClientRect();
+    return {
+      footerTop: last.top,
+      footerBottom: last.bottom,
+      ownerTop: owner.top,
+      ownerBottom: owner.bottom,
+      viewportBottom: innerHeight,
+      documentScrollY: window.scrollY
+    };
+  });
+  expect(containment.footerTop).toBeGreaterThanOrEqual(containment.ownerTop);
+  expect(containment.footerBottom).toBeLessThanOrEqual(containment.ownerBottom + 1);
+  expect(containment.footerBottom).toBeLessThanOrEqual(containment.viewportBottom);
+  expect(containment.documentScrollY).toBe(0);
+});
+
 for (const viewport of [
   { name: 'compact', width: 390, height: 844 },
   { name: 'short landscape', width: 844, height: 390 },
@@ -131,6 +172,27 @@ for (const viewport of [
     });
     expect(evidence.overflow).toBeLessThanOrEqual(1);
     expect(evidence.scrollOwners).toBeLessThanOrEqual(1);
+
+    const save = settings.getByRole('button', { name: 'Save draft' });
+    await save.scrollIntoViewIfNeeded();
+    const reachability = await save.evaluate((button) => {
+      const settingsRoot = button.closest('[data-widget-type="settings.custom-theme"]');
+      if (!(settingsRoot instanceof HTMLElement)) throw new Error('Missing Theme Settings root.');
+      const buttonBox = button.getBoundingClientRect();
+      const settingsBox = settingsRoot.getBoundingClientRect();
+      return {
+        buttonTop: buttonBox.top,
+        buttonBottom: buttonBox.bottom,
+        settingsTop: settingsBox.top,
+        settingsBottom: settingsBox.bottom,
+        viewportBottom: innerHeight,
+        documentScrollY: window.scrollY
+      };
+    });
+    expect(reachability.buttonTop).toBeGreaterThanOrEqual(reachability.settingsTop);
+    expect(reachability.buttonBottom).toBeLessThanOrEqual(reachability.settingsBottom + 1);
+    expect(reachability.buttonBottom).toBeLessThanOrEqual(reachability.viewportBottom);
+    expect(reachability.documentScrollY).toBe(0);
   });
 }
 

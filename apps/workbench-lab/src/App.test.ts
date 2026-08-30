@@ -78,6 +78,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(within(screen.getByRole('article', { name: 'Characters' })).getByText('4 / 7')).toHaveClass('widget-frame-meta');
     expect(within(screen.getByRole('article', { name: 'Custom Theme' })).getByText('Local')).toHaveClass('widget-frame-meta');
     expect(within(screen.getByRole('article', { name: 'Scene Effects' })).getByText('Live')).toHaveClass('widget-frame-meta');
+    expect(screen.getByRole('group', { name: 'Scene Effects controls' })).toHaveAttribute('data-pom-part', 'group.surface');
     expect(screen.queryByRole('article', { name: 'World State' })).toBeNull();
     expect(screen.queryByRole('article', { name: 'Character Relationships' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Widget group' }).querySelectorAll('[role="tab"]')).toHaveLength(2);
@@ -110,10 +111,14 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByRole('button', { name: 'Undo layout' })).toHaveAttribute('data-pom-icon-action');
     expect(screen.getByRole('button', { name: 'Focus reading' })).toHaveAttribute('data-pom-icon-action');
     expect(screen.getByLabelText('Open Widget Shelf')).toHaveAttribute('data-pom-icon-action');
+    expect(screen.getByLabelText('Open Widget Shelf')).toHaveAttribute('data-pom-part', 'button.icon');
     expect(launcher).toHaveAttribute('aria-expanded', 'false');
     await user.click(launcher);
     expect(launcher).toHaveAttribute('aria-expanded', 'true');
-    const catalog = screen.getByLabelText('Widget Catalog');
+    const catalog = screen.getByRole('dialog', { name: 'Widget Catalog' });
+    expect(catalog).toHaveAttribute('open');
+    expect(within(catalog).getByRole('button', { name: 'Close Catalog' }))
+      .toHaveAttribute('data-pom-part', 'button.surface');
     expect(within(catalog).getAllByRole('listitem')).toHaveLength(94);
     await user.click(within(catalog).getByRole('button', { name: 'story' }));
     for (const category of ['extensions', 'library', 'settings', 'story', 'systems']) {
@@ -245,9 +250,15 @@ describe('Svelte Workbench Lab mockup', () => {
     };
     const group = screen.getByRole('group', { name: 'Visual target' });
 
-    for (const [label, id] of [['PomOS', 'pom-neutral'], ['Bunny', 'bunny'], ['Ash & Amber', 'ash-amber'], ['Deep Current', 'deep-current']] as const) {
+    for (const [label, id, actionContent] of [
+      ['PomOS', 'pom-neutral', 'icon'],
+      ['Bunny', 'bunny', 'text'],
+      ['Ash & Amber', 'ash-amber', 'text'],
+      ['Deep Current', 'deep-current', 'text']
+    ] as const) {
       await user.click(within(group).getByRole('button', { name: label }));
       expect(root).toHaveAttribute('data-pom-theme', id);
+      expect(root).toHaveAttribute('data-pom-action-content', actionContent);
       expect(root).toHaveAttribute('data-workbench-revision', identity.revision);
       expect([...container.querySelectorAll('[data-pomegranate-panel]')].map((node) => node.getAttribute('data-pomegranate-panel'))).toEqual(identity.panels);
       expect([...container.querySelectorAll('[data-pomegranate-widget]')].map((node) => node.getAttribute('data-pomegranate-widget'))).toEqual(identity.widgets);

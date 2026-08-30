@@ -335,6 +335,7 @@
   data-pom-widget-grouping={themeSnapshot.compiled.theme.recipes.widgetGrouping}
   data-pom-chrome-presentation={themeSnapshot.compiled.theme.recipes.chromePresentation}
   data-pom-action-presentation={themeSnapshot.compiled.theme.recipes.actionPresentation}
+  data-pom-action-content={themeSnapshot.presentation.actions.content}
   data-pom-density={themeSnapshot.compiled.theme.spacing.density}
   data-pom-ambient-source={themeSnapshot.resolvedAmbient.source}
   data-surface-preview-family={requestedDefinition?.family}
