@@ -2,7 +2,21 @@
   import type { PanelState } from '@pomegranate-ui/contracts';
   import { asPanelId, asWidgetInstanceId } from '@pomegranate-ui/contracts';
   import type { WorkbenchStore } from '@pomegranate-ui/core';
-  let { panel, store }: { panel: PanelState; store: WorkbenchStore } = $props();
+  let {
+    panel,
+    store,
+    moveLeft,
+    moveRight,
+    moveLeftDisabled = false,
+    moveRightDisabled = false
+  }: {
+    panel: PanelState;
+    store: WorkbenchStore;
+    moveLeft: () => void;
+    moveRight: () => void;
+    moveLeftDisabled?: boolean;
+    moveRightDisabled?: boolean;
+  } = $props();
   let name = $state('');
   $effect(() => { name = panel.name; });
 
@@ -33,6 +47,8 @@
 <details class="panel-menu">
   <summary aria-label={`Manage ${panel.name}`}>•••</summary>
   <div role="group" aria-label={`${panel.name} Panel actions`}>
+    <button type="button" aria-label={`Move ${panel.name} left`} disabled={moveLeftDisabled} onclick={moveLeft}>Move left</button>
+    <button type="button" aria-label={`Move ${panel.name} right`} disabled={moveRightDisabled} onclick={moveRight}>Move right</button>
     <label>Panel name<input bind:value={name} /></label>
     <button type="button" onclick={() => store.dispatch({ type: 'panel.rename', panelId: panel.id, name: name.trim() || panel.name })}>Rename</button>
     <button type="button" onclick={duplicate}>Duplicate</button>

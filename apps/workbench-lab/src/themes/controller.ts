@@ -223,7 +223,12 @@ export function createLabThemeController(options: {
 } = {}): LabThemeController {
   const presets = options.presets ?? LAB_THEME_PRESETS;
   const assetRegistry = options.assetRegistry
-    ?? registryFromIds(options.availableAssets ?? new Set(['icons.minimal', 'image.deep-current-stage', 'image.bunny-garden']));
+    ?? registryFromIds(options.availableAssets ?? new Set([
+      'icons.minimal',
+      'image.deep-current-stage',
+      'image.bunny-garden',
+      'image.ash-amber-stage'
+    ]));
   const byId = new Map(presets.map((preset) => [preset.id, preset]));
   const validDrafts = new Map<LabThemeId, PersistedThemeDraft>();
   const dirtyDrafts = new Map<LabThemeId, boolean>();

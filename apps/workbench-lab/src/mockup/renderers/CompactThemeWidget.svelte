@@ -57,10 +57,23 @@
   }
 
   let draft = $state(initialDraft());
+  let draftThemeId = $state('');
   let selectedRole = $state<ThemeDraftColorRole | null>(null);
   let colorInput = $state(initialDraft().draft.colors.canvas);
   let rgbInputs = $state<[string, string, string]>(rgb(initialDraft().draft.colors.canvas));
   const hsv = $derived(hexToHsv(draft.draft.colors[selectedRole ?? 'canvas']));
+  const activeLabel = $derived(theme.authoring.applied.resolved.theme.label);
+
+  $effect(() => {
+    const activeId = theme.activeId;
+    if (activeId === draftThemeId) return;
+    const next = initialDraft();
+    draftThemeId = activeId;
+    draft = next;
+    selectedRole = null;
+    colorInput = next.draft.colors.canvas;
+    rgbInputs = rgb(colorInput);
+  });
 
   function apply() {
     theme.editDraft(PersistedThemeDraftSchema.parse($state.snapshot(draft)));
@@ -127,7 +140,7 @@
       <button type="button" data-pom-part="button.surface" onclick={() => { selectedRole = null; }}>Back to theme overview</button>
     </section>
   {:else}
-    <header class="compact-theme-identity"><strong>Deep Current</strong><span>Edited</span></header>
+    <header class="compact-theme-identity"><strong>{activeLabel}</strong><span>Edited</span></header>
     <div class="compact-theme-swatches" role="group" aria-label="Semantic theme colors">
       {#each THEME_DRAFT_COLOR_ROLES as role (role)}
         <button

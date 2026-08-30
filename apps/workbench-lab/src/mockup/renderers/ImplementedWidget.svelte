@@ -38,7 +38,7 @@
     {:else if instance.type === 'settings.custom-theme' && !['empty', 'unavailable', 'access-denied'].includes(state)}
       <ThemeSettings theme={hostContext.theme} {eyedropper} contract={fixture} />
     {:else if instance.type === 'story.characters' && instance.configuration.presentation === 'recording' && contentVisible}
-      <RecordingCharactersWidget />
+      <RecordingCharactersWidget portraitAtlas={hostContext.visualMedia.characterPortraitAtlas} />
     {:else if instance.type === 'story.room-ambience' && instance.configuration.presentation === 'recording' && contentVisible}
       <SceneEffectsWidget />
     {:else if instance.type === 'story.personas' && instance.configuration.presentation === 'recording' && contentVisible}

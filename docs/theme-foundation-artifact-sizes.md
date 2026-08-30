@@ -44,3 +44,9 @@ WebP for the repository and static build, a reduction of 2,098,041 bytes
 existing 102,048-byte Deep Current JPEG and the Bunny WebP. Full provenance,
 hashes, and redistribution evidence are recorded in
 `docs/theme-art-direction-assets.md`.
+
+The 2026-08-30 showcase-media follow-up adds three theme-specific character
+atlases and an independent Ash & Amber canvas, totaling 801,120 bytes. The
+current static build emits 1,034,730 raw image bytes across all six runtime
+images. No new runtime dependency was added; detailed prompts, source sizes,
+dimensions, digests, and review evidence remain in the asset record above.

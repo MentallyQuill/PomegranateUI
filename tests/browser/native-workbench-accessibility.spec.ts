@@ -24,12 +24,36 @@ test('native workbench keeps literal relationships and keyboard reorder behavior
   await expect(page.getByLabel('Active story identity')).toContainText('story-lab-reservoir');
 });
 
+test('non-compact Panel tabs keep secondary actions out of their visible spacing', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+  await page.getByText('Developer tools', { exact: true }).click();
+  const pomosTarget = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: 'PomOS', exact: true });
+  await pomosTarget.click();
+  await page.getByText('Developer tools', { exact: true }).click();
+
+  const gaps = await page.getByRole('tablist', { name: 'Panels' }).getByRole('tab').evaluateAll((tabs) => tabs.slice(0, -1).map((tab, index) => {
+    const current = tab.getBoundingClientRect();
+    const next = tabs[index + 1]!.getBoundingClientRect();
+    return Math.round(next.left - current.right);
+  }));
+
+  expect(gaps).toHaveLength(2);
+  expect(Math.max(...gaps)).toBeLessThanOrEqual(8);
+});
+
 test('Atmospheric composition keeps developer chrome out of the default stage and keyboard reachable', async ({ page }) => {
   await openFresh(page, 1600, 900);
   await expect(page.locator('.context-rail, .lab-footer')).toHaveCount(0);
   const drawer = page.locator('[data-workbench-developer-drawer]');
   await expect(drawer).not.toHaveAttribute('open', '');
   const launcher = page.getByText('Developer tools', { exact: true });
+  const [runtimeBox, launcherBox] = await Promise.all([
+    page.locator('.runtime-status').boundingBox(),
+    drawer.locator('> summary').boundingBox()
+  ]);
+  expect(runtimeBox).not.toBeNull();
+  expect(launcherBox).not.toBeNull();
+  expect(runtimeBox!.x + runtimeBox!.width).toBeLessThanOrEqual(launcherBox!.x);
   await launcher.focus();
   await page.keyboard.press('Enter');
   await expect(drawer).toHaveAttribute('open', '');

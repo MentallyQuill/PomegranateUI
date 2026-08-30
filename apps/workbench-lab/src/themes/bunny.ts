@@ -73,13 +73,18 @@ export const BUNNY_THEME: ThemeDefinitionV2 = {
   recipes: BUNNY_RECIPES,
   controls: { slider: { trackPx: 4, thumbPx: 12, hitTargetPx: 44 } },
   iconPackId: 'icons.minimal',
-  assets: [{ id: 'icons.minimal', kind: 'icon-pack', required: true }],
+  assets: [
+    { id: 'icons.minimal', kind: 'icon-pack', required: true },
+    { id: 'image.bunny-garden', kind: 'image', required: true }
+  ],
   canvas: [
     { kind: 'solid', color: '#faeef6' },
-    { kind: 'four-corner', topLeft: '#ffd8e8', topRight: '#e4dcff', bottomLeft: '#d5f3e9', bottomRight: '#fff0bd' }
+    { kind: 'image', assetId: 'image.bunny-garden', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 1, blend: 'normal' },
+    { kind: 'four-corner', topLeft: '#ffd8e838', topRight: '#e4dcff38', bottomLeft: '#d5f3e938', bottomRight: '#fff0bd38' },
+    { kind: 'veil', mode: 'reading', color: '#faeef6', opacity: 0.08 }
   ],
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
-  capabilities: { translucency: true, textures: false, localImages: false }
+  capabilities: { translucency: true, textures: false, localImages: true }
 };
 
 export const BUNNY_TARGET = themeTarget(BUNNY_THEME, {

@@ -35,6 +35,27 @@ and redistribution of the asset; it does not remove the separate pre-deployment
 review for similarity, trademarks, applicable law, and the repository's final
 public license.
 
+## Theme showcase character and Ash canvas assets
+
+The following assets were generated specifically for the Workbench Lab on
+2026-08-30 through the built-in OpenAI image-generation mode. No reference
+images, third-party artwork, named franchise characters, logos, or living-person
+likenesses were supplied. Each source PNG remains in the generation record and
+is not shipped; the repository contains a reviewed WebP encoded at quality 88
+through FFmpeg `libwebp`.
+
+| Repository asset | Purpose and prompt summary | Source PNG | Repository encoding | SHA-256 |
+| --- | --- | ---: | ---: | --- |
+| `apps/workbench-lab/src/assets/pomos-character-atlas.webp` | PomOS 2-by-2 portrait atlas for Aven Rook, Mara Venn, Ilex, and the Quiet Diver; premium soft-3D editorial figures, cool blue light, clean original character design, no text or UI | 2,206,961 bytes | 1,254 by 1,254, 176,228 bytes | `60440c313115f5792f1d866ace4fe36c216a4083da3ca81240e7862e841fd995` |
+| `apps/workbench-lab/src/assets/bunny-character-atlas.webp` | Bunny 2-by-2 portrait atlas for the same cast; polished pastel Japanese anime character art, small original bunny accessories, distinct silhouettes, no text or UI | 2,487,217 bytes | 1,254 by 1,254, 288,784 bytes | `be1dba3bcd5b0ed90f0fd7345adbe0a39df234c87d5563e4945e3ab3ba238651` |
+| `apps/workbench-lab/src/assets/ash-amber-character-atlas.webp` | Ash & Amber 2-by-2 portrait atlas for the same cast; restrained charcoal-and-gouache treatment, warm amber rim light, graphite field, no purple, text, or UI | 2,442,208 bytes | 1,254 by 1,254, 230,058 bytes | `583553d5dbce0bee9603bb8a363b19a4ddac90b9c15fb1310c68803c23a22b84` |
+| `apps/workbench-lab/src/assets/ash-amber-stage.webp` | Independent wide Ash & Amber ambient canvas; graphite industrial waterside architecture, quiet reading center, restrained amber edge light, no purple, people, text, or UI | 2,116,548 bytes | 1,536 by 1,024, 106,050 bytes | `1357519bf39c475de19c79e5ee620e852539097cb419e7fbc9f25c326fd4c5f7` |
+
+All four assets were accepted after original-resolution inspection and wide and
+compact Playwright review on 2026-08-30. They use the same rights and
+redistribution basis described above; a separate pre-deployment similarity,
+trademark, applicable-law, and final-license review still applies.
+
 ## Existing Deep Current canvas
 
 `apps/workbench-lab/src/assets/deep-current-stage.jpg` predates this change. Its

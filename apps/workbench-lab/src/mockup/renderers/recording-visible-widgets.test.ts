@@ -8,16 +8,17 @@ import type { WidgetRendererProps } from '@pomegranate-ui/svelte';
 import type { LabHostContext } from '../host-context.js';
 import { createLabHostContext } from '../host-context.js';
 import { IMPLEMENTED_SURFACE_TYPES } from '../implemented-surfaces.js';
+import { resolveLabShowcaseMediaProfile } from '../showcase-media.js';
 import { createLabThemeController } from '../../themes/controller.js';
 import ImplementedWidget from './ImplementedWidget.svelte';
 
 afterEach(cleanup);
 
-function recordingHostContext(): LabHostContext {
-  const controller = createLabThemeController();
+function recordingHostContext(activeId: 'deep-current' | 'pom-neutral' | 'bunny' | 'ash-amber' = 'deep-current'): LabHostContext {
+  const controller = createLabThemeController({ initialId: activeId });
   const snapshot = controller.getSnapshot();
   return createLabHostContext({
-    activeId: 'deep-current',
+    activeId,
     presets: [],
     inspector: {
       colors: snapshot.compiled.theme.colors,
@@ -35,15 +36,18 @@ function recordingHostContext(): LabHostContext {
     editDraft: (next) => controller.editDraft(next),
     resetDraft: () => controller.resetDraft(),
     saveDraft: () => controller.saveDraft()
-  });
+  }, 'ready', resolveLabShowcaseMediaProfile(activeId));
 }
 
-const hostContext = recordingHostContext();
 const dispatch: WidgetRendererProps<LabHostContext>['dispatch'] = () => {
   throw new Error('Recording-visible fixtures do not dispatch Workbench commands.');
 };
 
-function renderSurface(rawType: string, configuration: JsonObject = { presentation: 'recording' }) {
+function renderSurface(
+  rawType: string,
+  configuration: JsonObject = { presentation: 'recording' },
+  activeId: 'deep-current' | 'pom-neutral' | 'bunny' | 'ash-amber' = 'deep-current'
+) {
   const type = asWidgetType(rawType);
   render(ImplementedWidget, {
     instance: {
@@ -52,7 +56,7 @@ function renderSurface(rawType: string, configuration: JsonObject = { presentati
       manifestVersion: '1.0.0',
       configuration
     },
-    hostContext,
+    hostContext: recordingHostContext(activeId),
     capabilities: [],
     dispatch
   });
@@ -78,6 +82,23 @@ describe('recording-visible Deep Current Widget anatomy', () => {
     expect(within(roster).getAllByTestId('character-presence').map((state) => state.textContent)).toEqual(['SEEN', 'NEAR', 'AWAY', '?']);
     expect(screen.getByRole('button', { name: 'Decrease character portrait size' })).toHaveTextContent('−');
     expect(screen.getByRole('button', { name: 'Increase character portrait size' })).toHaveTextContent('+');
+  });
+
+  it.each([
+    ['pom-neutral', 'pomos-character-atlas'],
+    ['bunny', 'bunny-character-atlas'],
+    ['ash-amber', 'ash-amber-character-atlas']
+  ] as const)('renders real Lab-owned portrait media for %s without changing character identity', (activeId, assetName) => {
+    renderSurface('story.characters', { presentation: 'recording' }, activeId);
+
+    const portraits = screen.getByRole('list', { name: 'Characters roster' }).querySelectorAll('img');
+    expect(portraits).toHaveLength(4);
+    expect([...portraits].map((portrait) => portrait.getAttribute('src'))).toEqual([
+      expect.stringContaining(assetName),
+      expect.stringContaining(assetName),
+      expect.stringContaining(assetName),
+      expect.stringContaining(assetName)
+    ]);
   });
 
   it('renders Scene Effects as four labeled technical controls with the recorded values', () => {

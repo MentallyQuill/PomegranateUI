@@ -35,7 +35,7 @@ export const ASH_AMBER_PALETTE_CONSTRAINTS = [
 
 const ASH_AMBER_CANVAS_RECIPE = [
   { kind: 'solid', color: { role: 'canvas' } },
-  { kind: 'image', assetId: 'image.deep-current-stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 0.48, blurPx: 0, saturation: 0.08, blend: 'normal' },
+  { kind: 'image', assetId: 'image.ash-amber-stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 0.72, blurPx: 0, saturation: 0.82, blend: 'normal' },
   {
     kind: 'linear-gradient',
     angle: 90,
@@ -108,7 +108,7 @@ export const ASH_AMBER_THEME: ThemeDefinitionV2 = {
   iconPackId: 'icons.minimal',
   assets: [
     { id: 'icons.minimal', kind: 'icon-pack', required: true },
-    { id: 'image.deep-current-stage', kind: 'image', required: true }
+    { id: 'image.ash-amber-stage', kind: 'image', required: true }
   ],
   canvas: [...canvasResolution.layers],
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
