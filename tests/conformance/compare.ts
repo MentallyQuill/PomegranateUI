@@ -184,12 +184,23 @@ const fidelityTypographyRoles = Object.freeze([
 const fidelityMaterials = Object.freeze([
   'header', 'widget', 'widgetHeader', 'storyVeil', 'composer', 'floating', 'dialog'
 ] as const);
+const fidelityOverflowDimensions = Object.freeze([
+  'scrollWidth', 'clientWidth', 'scrollHeight', 'clientHeight'
+] as const);
 
 const fidelityProfile: readonly ComparisonDefinition[] = Object.freeze([
   ...fidelityGeometryRegions.flatMap((region) => [
     ...['x', 'y', 'width', 'height', 'right', 'bottom'].map((field) => geometry(`geometry.${region}.box.${field}`)),
     exact(`geometry.${region}.visible`),
-    exact(`geometry.${region}.overflow`)
+    exact(`geometry.${region}.overflow.x`),
+    exact(`geometry.${region}.overflow.y`),
+    ...fidelityOverflowDimensions.map((field) => Object.freeze({
+      path: `geometry.${region}.overflow.${field}`,
+      comparator: 'within' as const,
+      tolerance: 1,
+      category: 'geometry',
+      severity: 'P1'
+    }))
   ]),
   ...fidelityTypographyRoles.flatMap((role) => [
     exact(`typography.${role}.family`, 'visual'),

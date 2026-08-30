@@ -906,7 +906,19 @@ test('the exact Deep fidelity contract covers every geometry, typography, materi
     for (const field of ['x', 'y', 'width', 'height', 'right', 'bottom']) {
       assert.ok(paths.has(`geometry.${region}.box.${field}`), `missing geometry.${region}.box.${field}`);
     }
-    assert.equal(profile.find(({ path }) => path === `geometry.${region}.overflow`)?.comparator, 'equal');
+    for (const field of ['x', 'y']) {
+      const definition = profile.find(({ path }) => path === `geometry.${region}.overflow.${field}`);
+      assert.equal(definition?.comparator, 'equal');
+      assert.equal(definition?.tolerance ?? 0, 0);
+      assert.equal(definition?.category, 'structure');
+      assert.equal(definition?.severity, 'P1');
+    }
+    for (const field of ['scrollWidth', 'clientWidth', 'scrollHeight', 'clientHeight']) {
+      assert.deepEqual(
+        profile.find(({ path }) => path === `geometry.${region}.overflow.${field}`),
+        { path: `geometry.${region}.overflow.${field}`, comparator: 'within', tolerance: 1, category: 'geometry', severity: 'P1' }
+      );
+    }
   }
   for (const role of ['wordmark', 'navigation', 'widgetTitle', 'technical', 'storyHeading', 'storyBody', 'composer']) {
     for (const field of ['family', 'size', 'weight', 'lineHeight', 'tracking', 'transform']) {
