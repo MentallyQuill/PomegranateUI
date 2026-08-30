@@ -14,6 +14,7 @@
   {#each layers as layer (layer.order)}
     <i data-pom-canvas-layer={layer.kind} data-pom-canvas-order={layer.order} style={styleText(layer.style)}></i>
   {/each}
+  <i data-pom-ambient-layer></i>
 </div>
 
 <style>
@@ -25,5 +26,18 @@
     z-index: -1 !important;
     overflow: hidden;
     pointer-events: none;
+  }
+  .pom-theme-canvas > [data-pom-ambient-layer] {
+    position: absolute;
+    inset: -20%;
+    pointer-events: none;
+    opacity: calc(var(--pom-ambient-power, 0) * var(--pom-ambient-transparency-enabled, 1));
+    background: radial-gradient(
+      circle at var(--pom-ambient-x, 50%) var(--pom-ambient-y, 50%),
+      var(--pom-ambient-color, transparent) 0,
+      color-mix(in srgb, var(--pom-ambient-color, transparent) 42%, transparent) calc(var(--pom-ambient-radius, 50%) * .46),
+      transparent var(--pom-ambient-radius, 50%)
+    );
+    mix-blend-mode: screen;
   }
 </style>

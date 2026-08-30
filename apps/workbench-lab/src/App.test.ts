@@ -23,6 +23,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(canvas).toHaveAttribute('data-pom-part', 'canvas.surface');
     expect(container.querySelectorAll('[data-pom-canvas-root]')).toHaveLength(1);
     expect(canvas?.querySelectorAll('[data-pom-canvas-layer]').length).toBeGreaterThan(0);
+    expect(canvas?.querySelector('[data-pom-ambient-layer]')).not.toBeNull();
     for (const layer of canvas?.querySelectorAll<HTMLElement>('[data-pom-canvas-layer]') ?? []) {
       expect(layer.style.pointerEvents).toBe('none');
     }

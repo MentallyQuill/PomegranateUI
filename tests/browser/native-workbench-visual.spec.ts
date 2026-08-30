@@ -84,6 +84,20 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await shot(page, 'renderer-error.png');
 });
 
+test('Theme Settings freezes the focused wide and compact authoring surfaces', async ({ page }) => {
+  await fresh(page, 1440, 900);
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await shot(page, 'wide-theme-settings.png');
+
+  await fresh(page, 390, 844);
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.locator('[data-widget-type="settings.custom-theme"]')
+    .getByRole('button', { name: 'Focus Widget' })
+    .evaluate((button: HTMLButtonElement) => button.click());
+  await expect(page.getByRole('dialog', { name: 'Focused Theme Settings' })).toBeVisible();
+  await shot(page, 'compact-theme-settings.png');
+});
+
 test('native workbench exposes the two original visual flexibility targets', async ({ page }) => {
   for (const theme of [
     { label: 'PomOS' as const, name: 'pom-neutral' },

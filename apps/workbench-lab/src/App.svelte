@@ -78,6 +78,11 @@
       reducedTransparency: mediaMatches('(prefers-reduced-transparency: reduce)'),
       coarsePointer: mediaMatches('(pointer: coarse)'),
       backdropFilterSupported
+    },
+    ambientLimits: { enabled: true, maximumPower: 1, allowMotion: true, allowTransparency: true },
+    ambientAccessibility: {
+      reducedMotion: mediaMatches('(prefers-reduced-motion: reduce)'),
+      reducedTransparency: mediaMatches('(prefers-reduced-transparency: reduce)')
     }
   });
   const initialThemeSnapshot = themeController.getSnapshot();
@@ -313,6 +318,7 @@
   data-pom-chrome-presentation={themeSnapshot.compiled.theme.recipes.chromePresentation}
   data-pom-action-presentation={themeSnapshot.compiled.theme.recipes.actionPresentation}
   data-pom-density={themeSnapshot.compiled.theme.spacing.density}
+  data-pom-ambient-source={themeSnapshot.resolvedAmbient.source}
   data-surface-preview-family={requestedDefinition?.family}
   data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}

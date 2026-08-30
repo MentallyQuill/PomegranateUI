@@ -8,8 +8,12 @@ import {
   compileThemeTarget,
   createThemeDraft,
   projectThemeDraft,
+  resolveAmbientProfile,
   resolveThemeTarget,
+  type AmbientAccessibilityPreferences,
+  type AmbientCapabilityLimits,
   type CompiledThemeTarget,
+  type ResolvedAmbientProfile,
   type ResolvedThemeTarget,
   type ThemeAssetRegistry,
   type ThemeDevicePolicy,
@@ -41,6 +45,7 @@ export interface LabThemeSnapshot {
   readonly resolved: ResolvedThemeTarget;
   readonly compiled: CompiledThemeTarget;
   readonly materialControls: LabMaterialControls;
+  readonly resolvedAmbient: ResolvedAmbientProfile;
   readonly cssText: string;
   readonly diagnostics: readonly ThemeDiagnostic[];
 }
@@ -110,18 +115,37 @@ function createSnapshot(
   id: LabThemeId,
   target: ResolvedThemeTarget,
   materialControls: LabMaterialControls,
-  devicePolicy?: ThemeDevicePolicy
+  devicePolicy: ThemeDevicePolicy | undefined,
+  ambientOptions: {
+    readonly fallback?: PersistedThemeDraft['ambient'];
+    readonly sceneOverride?: PersistedThemeDraft['ambient'];
+    readonly limits?: AmbientCapabilityLimits;
+    readonly accessibility?: AmbientAccessibilityPreferences;
+  }
 ): LabThemeSnapshot {
-  const compiled = compileThemeTarget(target, {
+  const resolvedAmbient = resolveAmbientProfile({
+    fallback: ambientOptions.fallback ?? target.ambient,
+    target: target.ambient,
+    ...(ambientOptions.sceneOverride ? { sceneOverride: ambientOptions.sceneOverride } : {}),
+    limits: ambientOptions.limits ?? { enabled: true, maximumPower: 1, allowMotion: true, allowTransparency: true },
+    accessibility: ambientOptions.accessibility ?? { reducedMotion: false, reducedTransparency: devicePolicy?.reducedTransparency === true }
+  });
+  const { source: _source, transparencyEnabled: _transparencyEnabled, ...effectiveAmbient } = resolvedAmbient;
+  const compiled = compileThemeTarget({ ...target, ambient: effectiveAmbient }, {
     ...materialControlPolicy(materialControls),
     ...(devicePolicy ? { device: devicePolicy } : {})
   });
+  const cssBindings = {
+    ...compiled.bindings,
+    '--pom-ambient-transparency-enabled': resolvedAmbient.transparencyEnabled ? '1' : '0'
+  };
   return Object.freeze({
     activeId: id,
     resolved: target,
     compiled,
     materialControls: Object.freeze({ ...materialControls }),
-    cssText: serializeBindings(compiled.bindings),
+    resolvedAmbient,
+    cssText: serializeBindings(cssBindings),
     diagnostics: Object.freeze([])
   });
 }
@@ -157,6 +181,10 @@ export function createLabThemeController(options: {
   readonly draftStorage?: ThemeDraftStorage;
   readonly assetRegistry?: ThemeAssetRegistry;
   readonly devicePolicy?: ThemeDevicePolicy;
+  readonly ambientFallback?: PersistedThemeDraft['ambient'];
+  readonly sceneAmbientOverride?: PersistedThemeDraft['ambient'];
+  readonly ambientLimits?: AmbientCapabilityLimits;
+  readonly ambientAccessibility?: AmbientAccessibilityPreferences;
   /** @deprecated Use assetRegistry when exact host sources are available. */
   readonly availableAssets?: ReadonlySet<string>;
 } = {}): LabThemeController {
@@ -166,6 +194,12 @@ export function createLabThemeController(options: {
   const byId = new Map(presets.map((preset) => [preset.id, preset.target]));
   const validDrafts = new Map<LabThemeId, PersistedThemeDraft>();
   const dirtyDrafts = new Map<LabThemeId, boolean>();
+  const snapshotAmbientOptions = {
+    ...(options.ambientFallback ? { fallback: options.ambientFallback } : {}),
+    ...(options.sceneAmbientOverride ? { sceneOverride: options.sceneAmbientOverride } : {}),
+    ...(options.ambientLimits ? { limits: options.ambientLimits } : {}),
+    ...(options.ambientAccessibility ? { accessibility: options.ambientAccessibility } : {})
+  };
 
   const rawTarget = (id: string): ThemeTargetBundle | null => {
     const target = byId.get(id);
@@ -177,7 +211,7 @@ export function createLabThemeController(options: {
     if (!isLabThemeId(id) || !byId.has(id)) return { ok: false, diagnostics: unknownPresetDiagnostic(id) };
     const resolution = resolveThemeTarget(byId.get(id), assetRegistry);
     if (!resolution.ok) return resolution;
-    return { ok: true, snapshot: createSnapshot(id, resolution.target, defaultMaterialControls(id), options.devicePolicy) };
+    return { ok: true, snapshot: createSnapshot(id, resolution.target, defaultMaterialControls(id), options.devicePolicy, snapshotAmbientOptions) };
   };
 
   const applyPersisted = (id: LabThemeId, persisted: PersistedThemeDraft): ThemeActivationResult => {
@@ -196,7 +230,7 @@ export function createLabThemeController(options: {
     if (!resolution.ok) return resolution;
     return {
       ok: true,
-      snapshot: createSnapshot(id, resolution.target, persisted.draft.materials, options.devicePolicy)
+      snapshot: createSnapshot(id, resolution.target, persisted.draft.materials, options.devicePolicy, snapshotAmbientOptions)
     };
   };
 

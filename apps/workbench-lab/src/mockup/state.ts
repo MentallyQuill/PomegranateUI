@@ -55,7 +55,8 @@ export function createLabState(): WorkbenchState {
       { id: 'primary', panelId: LAB_PANEL_IDS.library, regionId: 'focus', order: 0, weight: 1 },
       { id: 'primary', panelId: LAB_PANEL_IDS.library, regionId: 'support', order: 0, weight: 1 },
       { id: 'primary', panelId: LAB_PANEL_IDS.settings, regionId: 'column-1', order: 0, weight: 1 },
-      { id: 'primary', panelId: LAB_PANEL_IDS.settings, regionId: 'column-2', order: 0, weight: 1 }
+      { id: 'primary', panelId: LAB_PANEL_IDS.settings, regionId: 'column-2', order: 0, weight: 1 },
+      { id: 'primary', panelId: LAB_PANEL_IDS.settings, regionId: 'column-3', order: 0, weight: 1 }
     ]
   };
 
@@ -72,7 +73,8 @@ export function createLabState(): WorkbenchState {
     ['library-lore', LAB_WIDGET_TYPES.loreEntries, LAB_PANEL_IDS.library, 'support', 1, {}],
     ['settings-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
     ['settings-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.settings, 'column-1', 1, {}],
-    ['settings-accessibility', LAB_WIDGET_TYPES.accessibility, LAB_PANEL_IDS.settings, 'column-2', 0, {}]
+    ['settings-accessibility', LAB_WIDGET_TYPES.accessibility, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
+    ['settings-prompt-editor', LAB_WIDGET_TYPES.promptEditor, LAB_PANEL_IDS.settings, 'column-3', 0, {}]
   ] as const;
   for (const [id, type, panelId, regionId, order, configuration] of fixtures) {
     state = requireState(createWidget(state, {
@@ -84,19 +86,5 @@ export function createLabState(): WorkbenchState {
       kind: 'docked', panelId, regionId, shelfId: 'primary', order
     }));
   }
-  state = requireState(createWidget(state, {
-    id: asWidgetInstanceId('settings-prompt-editor'),
-    type: LAB_WIDGET_TYPES.promptEditor,
-    manifestVersion: '1.0.0',
-    configuration: {}
-  }, {
-    kind: 'floating',
-    panelId: LAB_PANEL_IDS.settings,
-    x: 72,
-    y: 68,
-    width: 420,
-    height: 520,
-    z: 2
-  }));
   return { ...state, revision: 0 };
 }
