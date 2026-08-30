@@ -68,7 +68,12 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
       .filter((element): element is HTMLElement => {
         if (!(element instanceof HTMLElement)) return false;
         const bounds = element.getBoundingClientRect();
-        return bounds.width > 0 && bounds.height > 0 && getComputedStyle(element).visibility !== 'hidden';
+        const style = getComputedStyle(element);
+        return bounds.width > 0
+          && bounds.height > 0
+          && style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && style.clip === 'auto';
       })
       .map((element, index) => rect(element, `shelf internal ${index}`));
 
@@ -84,6 +89,7 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
         clientWidth: element.clientWidth,
         scrollWidth: element.scrollWidth
       })),
+      catalogLauncher: rect(document.querySelector('[data-pom-action="open-catalog"]'), 'catalog launcher'),
       developerLauncher: rect(document.querySelector('[data-workbench-developer-drawer] > summary'), 'developer launcher'),
       workbench: rect(document.querySelector('.workbench-shell'), 'workbench'),
       leftDock: rect(document.querySelector('[data-conformance-region="left"]'), 'left dock'),
@@ -122,11 +128,16 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
 
   for (const [index, child] of evidence.shelfChildren.entries()) expectContained(child, evidence.shelf, `shelf child ${index}`);
   for (const [index, child] of evidence.shelfInternals.entries()) expectContained(child, evidence.shelf, `shelf internal ${index}`);
+  expectContained(evidence.catalogLauncher, evidence.shelf, 'catalog launcher');
   expectContained(evidence.developerLauncher, evidence.shelf, 'developer launcher');
   for (const [index, tab] of evidence.tabs.entries()) expectContained(tab, evidence.panelTabs, `panel tab ${index}`);
   if (viewport.width <= 680) {
-    expect(evidence.panelTabs.right, 'panel tabs end before compact shelf actions').toBeLessThanOrEqual(evidence.shelfActions.left + 1);
-    expect(evidence.shelfActions.right, 'compact shelf actions end before developer launcher').toBeLessThanOrEqual(evidence.developerLauncher.left + 1);
+    expect(evidence.panelTabs.right, 'panel tabs end before compact Catalog launcher')
+      .toBeLessThanOrEqual(evidence.catalogLauncher.left + 1);
+    expect(evidence.catalogLauncher.right, 'compact Catalog launcher ends before Developer launcher')
+      .toBeLessThanOrEqual(evidence.developerLauncher.left + 1);
+    expect(evidence.developerLauncher.right, 'compact Developer launcher ends inside shelf actions')
+      .toBeLessThanOrEqual(evidence.shelfActions.right + 1);
   } else if (viewport.width <= 860) {
     for (const [index, copy] of evidence.wordmarkCopy.entries()) {
       expect(copy.scrollWidth, `wordmark line ${index} remains unclipped`).toBeLessThanOrEqual(copy.clientWidth + 1);
@@ -371,6 +382,15 @@ test('PomOS icon actions keep real names and 44px targets while essential labels
   const legacyAction = page.locator('[data-pom-icon-action]:visible').first();
   await expect(legacyAction.locator('[data-pom-action-icon]')).toHaveCSS('display', 'none');
   await expect(legacyAction.locator('[data-pom-action-label]')).toBeVisible();
+  const legacyBounds = await legacyAction.evaluate((button) => {
+    const label = button.querySelector<HTMLElement>('[data-pom-action-label]');
+    if (!label) throw new Error('Legacy text action is missing its visible label.');
+    const owner = button.getBoundingClientRect();
+    const content = label.getBoundingClientRect();
+    return { owner: { left: owner.left, right: owner.right }, content: { left: content.left, right: content.right } };
+  });
+  expect(legacyBounds.content.left).toBeGreaterThanOrEqual(legacyBounds.owner.left - 1);
+  expect(legacyBounds.content.right).toBeLessThanOrEqual(legacyBounds.owner.right + 1);
 });
 
 test('native workbench keeps literal relationships and keyboard reorder behavior', async ({ page }) => {
