@@ -12,6 +12,10 @@ import {
   type ThemeDefinitionV1
 } from './theme.js';
 import { ThemeTargetBundleSchema } from './theme-target.js';
+import {
+  PersistedThemeDraftSchema,
+  ThemeDraftSchema
+} from './theme-draft.js';
 import { ThemeDefinitionV3Schema } from './theme-v3.js';
 
 const material = (base: string, fallback = base) => ({
@@ -439,5 +443,58 @@ describe('Theme target owner schemas', () => {
       mutate(candidate);
       expect(ThemeTargetBundleSchema.safeParse(candidate).success).toBe(false);
     }
+  });
+});
+
+const validPersistedDraft = () => ({
+  schemaVersion: 'pomegranate.ui.persisted-theme-draft.v1',
+  draft: {
+    schemaVersion: 'pomegranate.ui.theme-draft.v1',
+    baseTargetId: 'ash-amber',
+    colors: {
+      canvas: '#2C2938',
+      glass: '#382D31',
+      chrome: '#716667',
+      ambient: '#84008E',
+      text: '#FFFFFF',
+      source: '#D2B57A'
+    },
+    materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 }
+  },
+  ambient: {
+    schemaVersion: 'pomegranate.ui.ambient.v1',
+    id: 'ash-amber',
+    colorRole: 'accent',
+    position: { x: 0.57, y: 0.97 },
+    radius: 0.6,
+    power: 0.56
+  }
+});
+
+describe('Theme draft authoring schemas', () => {
+  it('round-trips all six Ash and Amber roles and bounded material controls exactly', () => {
+    const input = validPersistedDraft();
+    expect(PersistedThemeDraftSchema.parse(input)).toEqual(input);
+    expect(ThemeDraftSchema.parse(input.draft).colors).toEqual(input.draft.colors);
+  });
+
+  it.each([
+    ['alpha color', (value: any) => { value.draft.colors.canvas = '#2C2938FF'; }],
+    ['shorthand color', (value: any) => { value.draft.colors.canvas = '#234'; }],
+    ['named color', (value: any) => { value.draft.colors.canvas = 'black'; }],
+    ['CSS URL', (value: any) => { value.draft.colors.glass = 'url(javascript:alert(1))'; }],
+    ['padded color', (value: any) => { value.draft.colors.text = ' #FFFFFF'; }],
+    ['non-finite control', (value: any) => { value.draft.materials.frostLevel = Number.NaN; }],
+    ['decimal control', (value: any) => { value.draft.materials.frostLevel = 50.5; }],
+    ['low control', (value: any) => { value.draft.materials.glassDensity = -1; }],
+    ['high control', (value: any) => { value.draft.materials.barOpacity = 101; }],
+    ['mismatched target IDs', (value: any) => { value.ambient.id = 'deep-current'; }],
+    ['unknown role', (value: any) => { value.draft.colors.selector = '*'; }],
+    ['missing role', (value: any) => { delete value.draft.colors.source; }],
+    ['executable field', (value: any) => { value.script = '<script>alert(1)</script>'; }]
+  ])('rejects %s', (_name, mutate) => {
+    const input = validPersistedDraft();
+    mutate(input);
+    expect(PersistedThemeDraftSchema.safeParse(input).success).toBe(false);
   });
 });

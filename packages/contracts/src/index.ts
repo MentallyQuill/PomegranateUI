@@ -11,4 +11,5 @@ export * from './storage.js';
 export * from './templates.js';
 export * from './theme.js';
 export * from './theme-target.js';
+export * from './theme-draft.js';
 export * from './theme-v3.js';

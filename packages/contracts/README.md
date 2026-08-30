@@ -26,3 +26,10 @@ Additive target contracts keep art-direction owners separate:
 The exact V1 and V2 schemas remain compatibility contracts. Target contracts
 reject arbitrary CSS, executable fields, remote asset URLs, unknown keys,
 owner-ID drift, non-finite controls, and cross-owner data.
+
+Theme authoring crosses the strict `ThemeDraft` and `PersistedThemeDraft`
+schemas. Drafts contain exactly six `#RRGGBB` semantic inputs and four integer
+material controls from zero through one hundred. Persisted drafts pair one
+matching ambient profile with one base target and reject CSS, markup, scripts,
+remote URLs, unknown roles, and owner-ID drift. Browser storage remains a host
+adapter behind the framework-neutral `ThemeDraftStorage` interface.
