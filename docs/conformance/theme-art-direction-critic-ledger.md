@@ -271,7 +271,8 @@ resolution. A 390x844 browser lane separately proved phone containment and
 coarse-pointer reachability.
 
 - Deep Current now reads as one restrained industrial instrument: the dark
-  image canvas dominates, compact chamfered controls form a consistent frame,
+  image canvas dominates, compact 4px tonal bevels form a consistent frame
+  without cut-corner silhouettes,
   every right-rail control and action fits, and no pale PomOS/Bunny treatment
   leaks into the target.
 - PomOS uses one original blue dimensional canvas, two quiet glass chrome
