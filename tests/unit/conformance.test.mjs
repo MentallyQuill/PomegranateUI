@@ -11,7 +11,7 @@ import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../conformance/compare.ts';
 import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, writeMeasurementEvidence } from '../conformance/evidence.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
-import { BUNNY_SCENARIOS, DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, hashAuthorityFile, ORIGINAL_THEME_TARGET_SCENARIOS, POM_NEUTRAL_SCENARIOS, THEME_AUTHORING_SCENARIOS, validateConformanceManifest } from '../conformance/manifest.ts';
+import { BUNNY_SCENARIOS, DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, DEEP_FIDELITY_SCENARIOS, hashAuthorityFile, ORIGINAL_THEME_TARGET_SCENARIOS, POM_NEUTRAL_SCENARIOS, THEME_AUTHORING_SCENARIOS, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
 import { applyCanonicalShellGeometry, assertScenarioResolution } from '../conformance/runner.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
@@ -165,7 +165,17 @@ test('conformance authorities and viewports expose the independently recorded co
       'design/theme-targets/pom-neutral-reference.html': '6a188907925f0af7157f66017a2015e07dbe599d14413d2a590e390f0d97bd50',
       'design/theme-targets/pomos-reference.html': 'a46dc956b0664643506b5023836cd02fb2e9f64ca538acff1aca7cc7c34a7af9',
       'design/theme-targets/bunny-reference.html': 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59',
-      'design/theme-targets/ash-amber/sonderui-rw2-1-t80.png': '6403a7bcfd8f43195fa42c5d9715cc79964c8b7569f47c22fdeefd1b89804997'
+      'design/theme-targets/ash-amber/sonderui-rw2-1-t80.png': '6403a7bcfd8f43195fa42c5d9715cc79964c8b7569f47c22fdeefd1b89804997',
+      'design/theme-targets/deep-current/recordings/rw2-t52.png': '7eac0f71b594ce5860d8a93eed8a3fce129074933a981f33a6300833e81f5856',
+      'design/theme-targets/deep-current/recordings/rw2-t59.png': 'dedb153ccc0119db01a5653b1c7d6463725c877a456c2271062f92fb7f71a8dd',
+      'design/theme-targets/deep-current/recordings/rw2-t67.png': 'f365b4a925be6d0aae43c7d18c17d446edbb6e2e06956466811307f7106f5dcc',
+      'design/theme-targets/deep-current/recordings/rw2-t76.png': 'c1cf2d281a2c900056c7b5bdb3507e7f4caeae77619129b75f068421bf3b0ac6',
+      'design/theme-targets/deep-current/recordings/rw2-t84.png': '5f8313d53802fe9a783a684616bc685c752325e4bd039e94d6a75cc708b5f7d9',
+      'design/theme-targets/deep-current/recordings/rw2-1-t2.png': '343267f966a3d1a7e0c8dace8adfc886792708e45ca2dd472a79539f6f23f11b',
+      'design/theme-targets/deep-current/recordings/rw2-1-t14.png': '131540f086240423291473b0cd5ec0106ac0054e5a9df3e3b524123580853aa7',
+      'design/theme-targets/deep-current/recordings/rw2-1-t26.png': 'c36e7ad1a28660c2dae68fafc84880887016cbeb1843d530ec347ad2b88b2653',
+      'design/theme-targets/deep-current/recordings/rw2-1-t39.png': '1f2f08a310ff15c9f9b53b1ab9e66ed7e774270f9df66db59ce44ccd6872a735',
+      'design/theme-targets/deep-current/recordings/rw2-1-t60.png': '61e80edc61d6cd78b853e86474486470abdf6c2d27c29eafb5445b6c227d9520'
     }
   );
   assert.deepEqual(Object.fromEntries(CONFORMANCE_VIEWPORTS), {
@@ -849,6 +859,69 @@ test('the reviewed theme baseline freezes every target scenario and authority ha
       state: scenario.referenceState
     });
   }
+});
+
+test('the exact Deep fidelity contract covers every geometry, typography, material, structure, and functional path', () => {
+  const profile = MEASUREMENT_PROFILES.get('deep-fidelity');
+  assert.ok(profile);
+  const paths = new Set(profile.map(({ path }) => path));
+  for (const region of ['header', 'left', 'stage', 'right', 'story', 'composer', 'floating', 'widgetShelf']) {
+    for (const field of ['x', 'y', 'width', 'height', 'right', 'bottom']) {
+      assert.ok(paths.has(`geometry.${region}.box.${field}`), `missing geometry.${region}.box.${field}`);
+    }
+  }
+  for (const role of ['wordmark', 'navigation', 'widgetTitle', 'technical', 'storyHeading', 'storyBody', 'composer']) {
+    for (const field of ['family', 'size', 'weight', 'lineHeight', 'tracking', 'transform']) {
+      assert.ok(paths.has(`typography.${role}.${field}`), `missing typography.${role}.${field}`);
+    }
+  }
+  for (const material of ['header', 'widget', 'widgetHeader', 'storyVeil', 'composer', 'floating', 'dialog']) {
+    for (const field of ['background', 'opacity', 'blur', 'border', 'radius', 'shadow']) {
+      assert.ok(paths.has(`materials.${material}.${field}`), `missing materials.${material}.${field}`);
+    }
+  }
+  assert.deepEqual(
+    ['structure.panelTabs', 'structure.regions', 'structure.visibleWidgets', 'structure.widgetLocations', 'functional.stateReached', 'functional.identityStable', 'functional.noOverflow', 'functional.keyboardAccessible']
+      .filter((path) => !paths.has(path)),
+    []
+  );
+});
+
+test('exact Deep fidelity scenarios retain both executable authorities and every recording frame hash', async () => {
+  const recordingManifest = JSON.parse(await readFile(
+    path.join(repositoryRoot, 'design/theme-targets/deep-current/recordings/reference.json'),
+    'utf8'
+  ));
+  const scenariosByAuthorityPath = new Map(DEEP_FIDELITY_SCENARIOS.map((scenario) => [scenario.authorityPath, scenario]));
+
+  assert.equal(DEEP_FIDELITY_SCENARIOS.some(({ authority }) => authority === 'atmospheric-workbench'), true);
+  assert.equal(DEEP_FIDELITY_SCENARIOS.some(({ authority }) => authority === 'widget-overhaul'), true);
+  for (const frame of recordingManifest.frames) {
+    const scenario = scenariosByAuthorityPath.get(frame.file);
+    assert.ok(scenario, `missing exact-fidelity scenario for ${frame.file}`);
+    assert.equal(scenario.authoritySha256, frame.sha256.toLowerCase());
+    assert.equal(scenario.viewport, 'recording-wide');
+    assert.equal(scenario.measurementProfile, 'deep-fidelity');
+  }
+});
+
+test('exact Deep fidelity stores an inspectable original-resolution baseline and ledger', async () => {
+  const baseline = JSON.parse(await readFile(
+    path.join(repositoryRoot, 'tests/conformance/baselines/deep-fidelity.json'),
+    'utf8'
+  ));
+  assert.equal(baseline.schemaVersion, 'pomegranate.ui.deep-fidelity.v1');
+  assert.deepEqual(Object.keys(baseline.scenarios), DEEP_FIDELITY_SCENARIOS.map(({ id }) => id));
+  for (const scenario of Object.values(baseline.scenarios)) {
+    assert.equal(scenario.viewport.width, 1920);
+    assert.equal(scenario.viewport.height, 1280);
+    assert.match(scenario.referencePng, /\.png$/);
+    assert.match(scenario.actualPng, /\.png$/);
+    assert.match(scenario.overlayPng, /\.png$/);
+    assert.match(scenario.diffPng, /\.png$/);
+  }
+  const ledger = await readFile(path.join(repositoryRoot, 'docs/conformance/deep-fidelity-ledger.md'), 'utf8');
+  assert.match(ledger, /Deep exact-fidelity discrepancy ledger/);
 });
 
 test('Theme authoring exposes four literal fail-closed scenarios', async () => {

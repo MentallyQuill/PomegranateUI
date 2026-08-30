@@ -1,6 +1,7 @@
 import type { FrameLocator, Locator, Page } from '@playwright/test';
 
-import { ConformanceError, type RegionMeasurement, type ShellMeasurement, type ShellRegionId } from '../../types.ts';
+import { measureFidelitySurface } from '../../measurements.ts';
+import { ConformanceError, type FidelityMeasurement, type RegionMeasurement, type ShellMeasurement, type ShellRegionId } from '../../types.ts';
 
 const previewPath = '/prototypes/sonder-baseline/atmospheric-workbench/sonder-workbench-calibration-preview.html';
 const calibrationPath = './sonder-workbench-calibration.html?test=1';
@@ -114,4 +115,41 @@ export async function measureAtmosphericShell(page: Page): Promise<ShellMeasurem
       { driver: 'reference', cause: cause instanceof Error ? cause.message : String(cause) }
     );
   }
+}
+
+export async function measureAtmosphericFidelity(page: Page): Promise<FidelityMeasurement> {
+  const frame = referenceFrame(page);
+  return measureFidelitySurface((selector) => frame.locator(selector), {
+    root: '#sonder-calibration',
+    geometry: {
+      header: '.sonder-topbar',
+      left: '.sonder-dock-left',
+      stage: '.sonder-scene',
+      right: '.sonder-dock-right',
+      story: '.sonder-transcript',
+      composer: '.sonder-composer',
+      floating: '.sonder-floating-layer > .sonder-module',
+      widgetShelf: '.sonder-widget-shelf'
+    },
+    typography: {
+      wordmark: '.sonder-wordmark',
+      navigation: '.sonder-panel-tabs button',
+      widgetTitle: '.sonder-module-title',
+      technical: '.sonder-module-meta',
+      storyHeading: '.sonder-story-title',
+      storyBody: '.sonder-prose',
+      composer: '.sonder-composer-field'
+    },
+    materials: {
+      header: '.sonder-topbar',
+      widget: '.sonder-module',
+      widgetHeader: '.sonder-module-head',
+      storyVeil: '.sonder-transcript',
+      composer: '.sonder-composer',
+      floating: '.sonder-floating-layer > .sonder-module',
+      dialog: '.sonder-widget-shelf'
+    },
+    panelTabs: '.sonder-panel-tabs [role="tab"]',
+    widgets: '[data-widget-id]'
+  });
 }

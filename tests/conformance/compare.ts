@@ -157,6 +157,48 @@ const themeAuthoringProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('outcome')
 ]);
 
+const fidelityGeometryRegions = Object.freeze([
+  'header', 'left', 'stage', 'right', 'story', 'composer', 'floating', 'widgetShelf'
+] as const);
+const fidelityTypographyRoles = Object.freeze([
+  'wordmark', 'navigation', 'widgetTitle', 'technical', 'storyHeading', 'storyBody', 'composer'
+] as const);
+const fidelityMaterials = Object.freeze([
+  'header', 'widget', 'widgetHeader', 'storyVeil', 'composer', 'floating', 'dialog'
+] as const);
+
+const fidelityProfile: readonly ComparisonDefinition[] = Object.freeze([
+  ...fidelityGeometryRegions.flatMap((region) => [
+    ...['x', 'y', 'width', 'height', 'right', 'bottom'].map((field) => geometry(`geometry.${region}.box.${field}`)),
+    exact(`geometry.${region}.visible`),
+    noOverflow(`geometry.${region}.overflow`)
+  ]),
+  ...fidelityTypographyRoles.flatMap((role) => [
+    exact(`typography.${role}.family`, 'visual'),
+    Object.freeze({ path: `typography.${role}.size`, comparator: 'within' as const, tolerance: 0.5, category: 'visual', severity: 'P1' }),
+    exact(`typography.${role}.weight`, 'visual'),
+    Object.freeze({ path: `typography.${role}.lineHeight`, comparator: 'within' as const, tolerance: 0.5, category: 'visual', severity: 'P1' }),
+    Object.freeze({ path: `typography.${role}.tracking`, comparator: 'within' as const, tolerance: 0.1, category: 'visual', severity: 'P2' }),
+    exact(`typography.${role}.transform`, 'visual')
+  ]),
+  ...fidelityMaterials.flatMap((material) => [
+    exact(`materials.${material}.background`, 'visual'),
+    Object.freeze({ path: `materials.${material}.opacity`, comparator: 'within' as const, tolerance: 0.01, category: 'visual', severity: 'P1' }),
+    Object.freeze({ path: `materials.${material}.blur`, comparator: 'within' as const, tolerance: 0.5, category: 'visual', severity: 'P1' }),
+    exact(`materials.${material}.border`, 'visual'),
+    Object.freeze({ path: `materials.${material}.radius`, comparator: 'within' as const, tolerance: 0.5, category: 'visual', severity: 'P1' }),
+    exact(`materials.${material}.shadow`, 'visual')
+  ]),
+  exact('structure.panelTabs'),
+  exact('structure.regions'),
+  exact('structure.visibleWidgets'),
+  exact('structure.widgetLocations'),
+  exact('functional.stateReached'),
+  exact('functional.identityStable'),
+  exact('functional.noOverflow'),
+  exact('functional.keyboardAccessible')
+]);
+
 export const MEASUREMENT_PROFILES: ReadonlyMap<string, readonly ComparisonDefinition[]> = new Map([
   ['deep-current-shell', shellProfile],
   ['deep-current-shell-behavior', shellBehaviorProfile],
@@ -164,7 +206,8 @@ export const MEASUREMENT_PROFILES: ReadonlyMap<string, readonly ComparisonDefini
   ['deep-current-widget-surface', widgetSurfaceProfile],
   ['deep-current-catalog', catalogProfile],
   ['theme-target-behavior', themeTargetBehaviorProfile],
-  ['theme-authoring', themeAuthoringProfile]
+  ['theme-authoring', themeAuthoringProfile],
+  ['deep-fidelity', fidelityProfile]
 ]);
 
 function valueAtPath(root: NormalizedValue, evidencePath: string): NormalizedValue {

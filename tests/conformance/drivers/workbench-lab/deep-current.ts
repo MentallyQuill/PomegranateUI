@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
-import { ConformanceError, type RegionMeasurement, type ShellMeasurement, type ShellRegionId } from '../../types.ts';
+import { measureFidelitySurface } from '../../measurements.ts';
+import { ConformanceError, type FidelityMeasurement, type RegionMeasurement, type ShellMeasurement, type ShellRegionId } from '../../types.ts';
 
 const layoutKey = 'pomegranate-ui.workbench-lab.layout.v1';
 const themeKey = 'pomegranate-ui.workbench-lab.theme.v1';
@@ -9,7 +10,7 @@ const regionSelectors: Readonly<Record<ShellRegionId, string>> = Object.freeze({
   left: '[data-conformance-region="left"]',
   stage: '[data-conformance-region="stage"]',
   right: '[data-conformance-region="right"]',
-  composer: '[data-conformance-region="composer"]'
+  composer: '[data-pomegranate-region-surface="composer"]'
 });
 export const VISIBLE_IMPLEMENTATION_REGION_IDS: readonly ShellRegionId[] = Object.freeze([
   'shelf',
@@ -145,4 +146,42 @@ export async function measureLabShell(page: Page): Promise<ShellMeasurement> {
       { driver: 'implementation', cause: cause instanceof Error ? cause.message : String(cause) }
     );
   }
+}
+
+export async function measureLabFidelity(page: Page, initialIdentity?: string): Promise<FidelityMeasurement> {
+  const root = page.locator('main[data-pom-theme="deep-current"]');
+  const currentIdentity = await root.getAttribute('data-active-panel');
+  return measureFidelitySurface((selector) => page.locator(selector), {
+    root: 'main[data-pom-theme="deep-current"]',
+    geometry: {
+      header: '.top-shelf',
+      left: '[data-conformance-region="left"]',
+      stage: '[data-conformance-region="stage"]',
+      right: '[data-conformance-region="right"]',
+      story: '[data-widget-type="story.transcript"]',
+      composer: '[data-pomegranate-region-surface="composer"]',
+      floating: '[data-pomegranate-floating-layer] > [data-widget-type]',
+      widgetShelf: '[data-widget-shelf][open]'
+    },
+    typography: {
+      wordmark: '.wordmark',
+      navigation: '.panel-tabs [role="tab"]',
+      widgetTitle: '[data-pom-part="widget.header"]',
+      technical: '.widget-kicker',
+      storyHeading: '[data-widget-type="story.transcript"] blockquote',
+      storyBody: '[data-widget-type="story.transcript"] .transcript > p:not(.widget-kicker)',
+      composer: '[data-pomegranate-region-surface="composer"] textarea'
+    },
+    materials: {
+      header: '.top-shelf',
+      widget: '[data-pom-part="widget.surface"]',
+      widgetHeader: '[data-pom-part="widget.header"]',
+      storyVeil: '[data-widget-type="story.transcript"]',
+      composer: '[data-pomegranate-region-surface="composer"]',
+      floating: '[data-pom-part="floating.surface"]',
+      dialog: 'dialog[open], [data-widget-shelf][open]'
+    },
+    panelTabs: '.panel-tabs [role="tab"]',
+    widgets: '[data-widget-type]'
+  }, { identityStable: initialIdentity === undefined || initialIdentity === currentIdentity });
 }
