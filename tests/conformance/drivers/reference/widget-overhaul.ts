@@ -4,6 +4,11 @@ import { ConformanceError } from '../../types.ts';
 
 const harnessPath = '/prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html';
 
+// The preserved harness exercises all 94 Catalog identities before setting its
+// terminal title. Loaded Windows runners can exceed Playwright's 120s default.
+export const WIDGET_OVERHAUL_HARNESS_TIMEOUT_MS = 180_000;
+export const WIDGET_OVERHAUL_HOOK_TIMEOUT_MS = WIDGET_OVERHAUL_HARNESS_TIMEOUT_MS + 30_000;
+
 export const REFERENCE_INTERACTION_CASES: Readonly<Record<string, string>> = Object.freeze({
   'dc-int-resize-left': 'Accessibility opens and responds at its audited toolbar heights',
   'dc-int-resize-right': 'Accessibility opens and responds at its audited toolbar heights',
@@ -25,7 +30,9 @@ export async function prepareWidgetOverhaulHarness(
 ): Promise<ReadonlySet<string>> {
   try {
     await page.goto(`${preservationOrigin}${harnessPath}`, { waitUntil: 'load' });
-    await page.waitForFunction(() => /^(?:PASS|FAIL) —/.test(document.title), null, { timeout: 120_000 });
+    await page.waitForFunction(() => /^(?:PASS|FAIL) —/.test(document.title), null, {
+      timeout: WIDGET_OVERHAUL_HARNESS_TIMEOUT_MS
+    });
     if (!(await page.title()).startsWith('PASS —')) throw new Error('The preserved Widget Overhaul harness did not pass.');
     const rows = await page.locator('#results > p.pass').allInnerTexts();
     const titles = rows.map((text) => text.replace(/^PASS — /, '').split('\n', 1)[0] ?? '');

@@ -7,7 +7,7 @@ import { test, type Page } from '@playwright/test';
 import { AUTHORITY_BY_ID } from '../authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../compare.ts';
 import { exerciseLabInteraction } from '../drivers/workbench-lab/interactions.ts';
-import { prepareWidgetOverhaulHarness, requireWidgetOverhaulCase } from '../drivers/reference/widget-overhaul.ts';
+import { prepareWidgetOverhaulHarness, requireWidgetOverhaulCase, WIDGET_OVERHAUL_HOOK_TIMEOUT_MS } from '../drivers/reference/widget-overhaul.ts';
 import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, writeMeasurementEvidence } from '../evidence.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../ledger.ts';
 import { DEEP_CURRENT_INTERACTION_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../manifest.ts';
@@ -38,7 +38,7 @@ test.describe('Deep Current interaction conformance', () => {
   let ledger: ReturnType<typeof parseDiscrepancyLedger>;
 
   test.beforeAll(async ({ browser }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(WIDGET_OVERHAUL_HOOK_TIMEOUT_MS);
     await validateConformanceManifest(DEEP_CURRENT_INTERACTION_SCENARIOS, {
       repositoryRoot,
       authorities: AUTHORITY_BY_ID,
