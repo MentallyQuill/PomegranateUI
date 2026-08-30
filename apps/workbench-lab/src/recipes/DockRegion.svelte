@@ -3,10 +3,11 @@
   import type { PanelRegionProjection, WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core';
   import DockShelf from './DockShelf.svelte';
 
-  let { projection, store, renderWidget }: {
+  let { projection, store, renderWidget, surfacePart = 'dock.surface' }: {
     projection: PanelRegionProjection;
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
+    surfacePart?: 'dock.surface' | null;
   } = $props();
 
   const legacyDock = $derived(
@@ -23,7 +24,7 @@
   data-pomegranate-region-role={projection.region.role}
   data-pomegranate-dock={legacyDock}
   data-conformance-region={projection.region.id}
-  data-pom-part="dock.surface"
+  data-pom-part={surfacePart ?? undefined}
   aria-label={`${projection.region.label} region`}
 >
   {#each projection.shelves as shelf, index (`${shelf.shelf.regionId}:${shelf.shelf.id}`)}

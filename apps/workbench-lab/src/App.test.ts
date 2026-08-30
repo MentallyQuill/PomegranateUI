@@ -28,6 +28,14 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(transcript?.closest('[data-story-stage]')).not.toBeNull();
     const composer = screen.getByRole('textbox', { name: /Next action/ });
     expect(composer.closest('[data-story-composer]')).not.toBeNull();
+
+    const stageRegion = container.querySelector('[data-conformance-region="stage"]');
+    const composerRegion = container.querySelector('[data-conformance-region="composer"]');
+    const leftRegion = container.querySelector('[data-conformance-region="left"]');
+    expect(stageRegion).not.toHaveAttribute('data-pom-part');
+    expect(composerRegion).not.toHaveAttribute('data-pom-part');
+    expect(leftRegion).toHaveAttribute('data-pom-part', 'dock.surface');
+    expect(container.querySelectorAll('.dock-shelf[data-pom-part]')).toHaveLength(0);
   });
 
   it('renders one pointer-transparent theme canvas below the Workbench without stage wallpaper ownership', () => {

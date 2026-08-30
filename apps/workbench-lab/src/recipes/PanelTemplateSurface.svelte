@@ -19,9 +19,9 @@
 >
   {#each surface.regions as region (region.region.id)}
     {#if surface.templateFamily === 'story-stage' && region.region.role === 'stage'}
-      <StoryStage><DockRegion projection={region} {store} {renderWidget} /></StoryStage>
+      <StoryStage><DockRegion projection={region} {store} {renderWidget} surfacePart={null} /></StoryStage>
     {:else if surface.templateFamily === 'story-stage' && region.region.role === 'composer'}
-      <StoryComposer><DockRegion projection={region} {store} {renderWidget} /></StoryComposer>
+      <StoryComposer><DockRegion projection={region} {store} {renderWidget} surfacePart={null} /></StoryComposer>
     {:else}
       <DockRegion projection={region} {store} {renderWidget} />
     {/if}

@@ -37,7 +37,6 @@
   class="dock-shelf"
   data-pomegranate-shelf={projection.shelf.id}
   data-pomegranate-shelf-order={projection.shelf.order}
-  data-pom-part="dock.surface"
   aria-label={`${projection.shelf.id} shelf`}
   style={`--pom-shelf-weight:${projection.shelf.weight}`}
 >

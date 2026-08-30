@@ -19,12 +19,16 @@ async function fresh(page: Page, width = 1440, height = 900) {
   });
 }
 
-async function selectTheme(page: Page, target: (typeof TARGETS)[number]) {
+async function selectTheme(
+  page: Page,
+  target: (typeof TARGETS)[number],
+  { closeDrawer = true }: { readonly closeDrawer?: boolean } = {}
+) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
   if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: target.label, exact: true }).click();
   await expect(page.locator('main')).toHaveAttribute('data-pom-theme', target.id);
-  await page.getByText('Developer tools', { exact: true }).click();
+  if (closeDrawer) await page.getByText('Developer tools', { exact: true }).click();
 }
 
 type MaterialSample = {
@@ -225,7 +229,8 @@ test('material controls have refined geometry and visibly control glass', async 
     expect(geometry.thumb).toBeGreaterThanOrEqual(10);
     expect(geometry.thumb).toBeLessThanOrEqual(12);
     expect(geometry.hit).toBeGreaterThanOrEqual(44);
-    expect(geometry.height).toBeGreaterThanOrEqual(geometry.hit);
+    expect(geometry.height, 'native range geometry may quantize below its CSS size by a subpixel')
+      .toBeGreaterThanOrEqual(geometry.hit - 0.01);
 
     const progress = await glass.evaluate((input) => ({
       authored: getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim(),
@@ -264,6 +269,8 @@ test('reduced transparency selects an opaque no-blur semantic fallback', async (
   const selectedTheme = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: 'PomOS', exact: true });
   expect((await material(page, '.theme-targets button[aria-pressed="true"]')).alpha).toBe(1);
   await selectedTheme.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
   await expect(selectedTheme).toBeFocused();
   expect(await selectedTheme.evaluate((button) => {
     const style = getComputedStyle(button);
@@ -389,7 +396,7 @@ test('theme changes retain the Workbench tree and keyboard focus', async ({ page
     widgets: [...element.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
   }));
   for (const target of TARGETS) {
-    await selectTheme(page, target);
+    await selectTheme(page, target, { closeDrawer: false });
     await expect(page.getByRole('button', { name: target.label, exact: true })).toBeFocused();
     expect(await root.evaluate((element) => ({
       revision: element.getAttribute('data-workbench-revision'),

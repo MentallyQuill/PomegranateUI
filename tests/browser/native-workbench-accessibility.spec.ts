@@ -91,6 +91,82 @@ test('all themes keep centered story prose aligned with the composer instrument'
   }
 });
 
+test('all themes keep story prose inside the visible reading stage', async ({ page }) => {
+  for (const viewport of [
+    { name: 'wide', width: 1440, height: 900 },
+    { name: 'short landscape', width: 844, height: 390 }
+  ]) {
+    await openFresh(page, viewport.width, viewport.height);
+    await page.locator('[data-widget-type="story.transcript"] [data-pom-part="widget.content"]')
+      .evaluateAll((nodes) => {
+        for (const node of nodes as HTMLElement[]) {
+          node.style.fontSize = '17px';
+          node.style.lineHeight = '1.4';
+          node.style.letterSpacing = '.01em';
+        }
+      });
+
+    for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
+      await page.getByText('Developer tools', { exact: true }).click();
+      await page.getByRole('group', { name: 'Visual target' })
+        .getByRole('button', { name: theme, exact: true })
+        .click();
+      await page.getByText('Developer tools', { exact: true }).click();
+
+      const geometry = await page.evaluate(() => {
+        const rect = (selector: string) => {
+          const node = document.querySelector<HTMLElement>(selector);
+          if (!node) throw new Error(`Missing visibility owner: ${selector}`);
+          const box = node.getBoundingClientRect();
+          return { top: box.top, bottom: box.bottom, height: box.height };
+        };
+        return {
+          stage: rect('[data-conformance-region="stage"]'),
+          transcript: rect('[data-widget-type="story.transcript"]'),
+          prose: rect('[data-widget-type="story.transcript"] .transcript')
+        };
+      });
+
+      const transcriptIntersection = Math.max(
+        0,
+        Math.min(geometry.stage.bottom, geometry.transcript.bottom)
+          - Math.max(geometry.stage.top, geometry.transcript.top)
+      );
+      const proseIntersection = Math.max(
+        0,
+        Math.min(geometry.stage.bottom, geometry.prose.bottom)
+          - Math.max(geometry.stage.top, geometry.prose.top)
+      );
+      expect(transcriptIntersection, `${theme} transcript intersects the ${viewport.name} stage`).toBeGreaterThan(0);
+      expect(proseIntersection, `${theme} prose intersects the ${viewport.name} stage`).toBeGreaterThan(0);
+    }
+  }
+});
+
+test('reduced motion removes themed Widget action-rail transitions', async ({ page }) => {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Emulation.setEmulatedMedia', {
+    features: [{ name: 'prefers-reduced-motion', value: 'reduce' }]
+  });
+  await openFresh(page, 1440, 900);
+
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
+    await page.getByText('Developer tools', { exact: true }).click();
+    await page.getByRole('group', { name: 'Visual target' })
+      .getByRole('button', { name: theme, exact: true })
+      .click();
+    await page.getByText('Developer tools', { exact: true }).click();
+
+    const transition = await page.getByRole('article', { name: 'Characters (Story)' })
+      .getByRole('navigation')
+      .evaluate((nav) => {
+        const style = getComputedStyle(nav);
+        return { duration: style.transitionDuration, property: style.transitionProperty };
+      });
+    expect(transition, `${theme} reduced-motion action rail`).toEqual({ duration: '0s', property: 'none' });
+  }
+});
+
 test('native workbench Catalog supports keyboard placement and stable attributes', async ({ page }) => {
   await openFresh(page, 1024, 768);
   await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
