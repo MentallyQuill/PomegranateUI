@@ -41,48 +41,34 @@ function closeServer(server) {
   });
 }
 
-export async function startBrowserServers({
+export async function startBrowserServer({
   root,
-  preservationPort = 4173,
-  labPort = 4174,
-  includeLab = false,
+  port = 4174,
   labRoot = path.join(root, 'apps/workbench-lab/dist')
 }) {
-  const servers = [];
+  let labServer;
 
   try {
-    const preservationServer = createStaticServer({ root, host, port: preservationPort });
-    await listen(preservationServer, preservationPort);
-    servers.push(preservationServer);
-
-    let labServer;
-    if (includeLab) {
-      labServer = createStaticServer({ root: labRoot, host, port: labPort });
-      await listen(labServer, labPort);
-      servers.push(labServer);
-    }
-
-    const preservationOrigin = `http://${host}:${boundPort(preservationServer)}`;
-    const labOrigin = labServer ? `http://${host}:${boundPort(labServer)}` : undefined;
+    labServer = createStaticServer({ root: labRoot, host, port });
+    await listen(labServer, port);
+    const labOrigin = `http://${host}:${boundPort(labServer)}`;
     let closePromise;
 
     return Object.freeze({
-      preservationUrl: `${preservationOrigin}/prototypes/sonder-baseline/atmospheric-workbench/sonder-drag-regression.html`,
-      preservationOrigin,
       labOrigin,
       labUrl: labOrigin,
       close() {
-        closePromise ??= Promise.all(servers.toReversed().map(closeServer)).then(() => undefined);
+        closePromise ??= closeServer(labServer);
         return closePromise;
       }
     });
   } catch (error) {
-    await Promise.allSettled(servers.toReversed().map(closeServer));
+    if (labServer) await closeServer(labServer);
     throw error;
   }
 }
 
 export default async function globalSetup() {
-  const running = await startBrowserServers({ root: repositoryRoot, includeLab: true });
+  const running = await startBrowserServer({ root: repositoryRoot });
   return () => running.close();
 }
