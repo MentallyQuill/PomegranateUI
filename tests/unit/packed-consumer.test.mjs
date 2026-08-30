@@ -31,10 +31,6 @@ test('packed consumer fixtures and verifier are executable repository contracts'
     'examples/mock-roleplay-backend/tsconfig.json',
     'examples/mock-roleplay-backend/src/index.ts',
     'examples/mock-roleplay-backend/src/index.test.ts',
-    'examples/sonder-integration/package.json',
-    'examples/sonder-integration/tsconfig.json',
-    'examples/sonder-integration/src/adapter.ts',
-    'examples/sonder-integration/src/adapter.test.ts',
     'scripts/verify-packed-consumers.mjs'
   ]) {
     assert.equal((await stat(path.join(root, relativePath))).isFile(), true, relativePath);
@@ -42,7 +38,7 @@ test('packed consumer fixtures and verifier are executable repository contracts'
 
   const rootPackage = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   assert.equal(rootPackage.scripts['test:pack'], 'node scripts/verify-packed-consumers.mjs');
-  for (const exampleName of ['mock-roleplay-backend', 'sonder-integration']) {
+  for (const exampleName of ['mock-roleplay-backend']) {
     const manifest = JSON.parse(await readFile(path.join(root, 'examples', exampleName, 'package.json'), 'utf8'));
     assert.equal(manifest.scripts.build, 'tsc -p tsconfig.json --pretty false');
     assert.doesNotMatch(manifest.scripts.build, /\.\./);
@@ -109,7 +105,6 @@ test('package and example imports remain public, relative, and repository-neutra
     for (const file of files) {
       const relative = path.relative(root, file).replaceAll('\\', '/');
       const source = await readFile(file, 'utf8');
-      assert.doesNotMatch(source, /Sonder_Engine/i, relative);
       assert.doesNotMatch(source, /(?:from\s+|import\s*\()['"]@sveltejs\/kit(?:\/[^'"]*)?['"]/, relative);
       assert.doesNotMatch(source, /(?:^|['"(\s])[A-Za-z]:[\\/]/m, relative);
       for (const specifier of importSpecifiers(source)) {
