@@ -123,15 +123,31 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
 
     const seam = target.closest<HTMLElement>('[data-shelf-insertion]');
     if (seam?.dataset.shelfInsertion === 'left' || seam?.dataset.shelfInsertion === 'right') {
-      const edge = seam.dataset.shelfInsertion;
+      const regionId = seam.dataset.shelfInsertion;
+      const state = store.getState();
+      const shelfId = `${regionId}-shelf-${state.revision + 1}`;
+      const regionShelves = state.shelves.filter((shelf) => (
+        shelf.panelId === frame.placement.panelId && shelf.regionId === regionId
+      ));
+      const created = store.dispatch({
+        type: 'shelf.create',
+        shelf: {
+          id: shelfId,
+          panelId: frame.placement.panelId,
+          regionId,
+          order: regionShelves.length,
+          weight: 1
+        }
+      });
+      if (!created.ok) return;
       store.dispatch({
         type: 'widget.place',
         instanceId: frame.instanceId,
         placement: {
           kind: 'docked',
           panelId: frame.placement.panelId,
-          edge,
-          shelfId: `${edge}-shelf-${store.getState().revision + 1}`,
+          regionId,
+          shelfId,
           order: Number.MAX_SAFE_INTEGER
         }
       });
@@ -147,7 +163,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         placement: {
           kind: 'docked',
           panelId: frame.placement.panelId,
-          edge,
+          regionId: edge,
           shelfId: 'primary',
           order: Number.MAX_SAFE_INTEGER
         }

@@ -73,7 +73,7 @@
           onclick={() => onfocuswidget?.(frame)}
         >Focus Widget</button>
       {/if}
-      <button class="action-remove" data-pom-part="button.icon" type="button" onclick={() => actions.remove()}>Remove</button>
+      <button class="action-remove" data-pom-part="button.icon" type="button" onclick={() => actions.shelve()}>Move to Widget Shelf</button>
     </nav>
   </header>
   <div data-pom-part="widget.content">

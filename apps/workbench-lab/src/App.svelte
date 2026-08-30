@@ -14,6 +14,9 @@
   import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
+  import PanelCreateDialog from './recipes/PanelCreateDialog.svelte';
+  import WidgetShelf from './recipes/WidgetShelf.svelte';
+  import LayoutUndo from './recipes/LayoutUndo.svelte';
   import ThemeCanvas from './recipes/ThemeCanvas.svelte';
   import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
@@ -39,7 +42,7 @@
       const panelId = asPanelId('surface-preview');
       store.dispatch({
         type: 'panel.create',
-        panel: { id: panelId, name: 'Surface Preview', templateId: 'focus-support.v1', order: 3, configuration: { columns: 1 } }
+        panel: { id: panelId, name: 'Surface Preview', templateId: 'focus-support.v1', order: 3 }
       });
       store.dispatch({ type: 'panel.activate', panelId });
       store.dispatch({
@@ -149,8 +152,7 @@
   let focusedFrame = $state<WidgetFrameProjection | null>(null);
   let focusReturnId: string | null = null;
   let leftCollapsed = $state(false);
-  let panelDialog: HTMLDialogElement;
-  let panelName = $state('New Panel');
+  let panelDialog: { showModal(): void; close(): void };
   let status = $state('Local mockup ready.');
   let eventLog: string[] = $state([]);
   let sequence = 0;
@@ -189,7 +191,9 @@
       ? role === 'right-instruments' || role === 'support' ? 'support' : 'focus'
       : activePanel?.templateId === 'columns.v1'
         ? 'column-1'
-        : role === 'left-instruments' ? 'left' : role === 'right-instruments' ? 'right' : role;
+        : role === 'left-instruments' ? 'left'
+          : role === 'right-instruments' ? 'right'
+            : role === 'composer' ? 'composer' : 'stage';
     const result = store.dispatch({
       type: 'widget.create',
       instance: { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} },
@@ -198,23 +202,28 @@
     status = result.ok ? `${manifest.title} added to ${activePanel?.name ?? 'Panel'}.` : result.error.message;
   }
 
-  function createPanel(event: SubmitEvent) {
-    event.preventDefault();
-    const id = asPanelId(`user-panel-${workbench.panels.length - 2}`);
+  function createPanel(request: { name: string; templateId: string; columns?: number }) {
+    const id = asPanelId(`user-panel-${workbench.revision + 1}`);
     const result = store.dispatch({
       type: 'panel.create',
-      panel: { id, name: panelName.trim() || 'Untitled Panel', templateId: 'columns.v1', order: workbench.panels.length, configuration: { columns: 2 } }
+      panel: {
+        id,
+        name: request.name,
+        templateId: request.templateId,
+        order: workbench.panels.length,
+        ...(request.columns === undefined ? {} : { configuration: { columns: request.columns } })
+      }
     });
     if (result.ok) {
       store.dispatch({ type: 'panel.activate', panelId: id });
       panelDialog.close();
-      status = `${panelName} created.`;
+      status = `${request.name} created.`;
     } else status = result.error.message;
   }
 
   async function save() {
     const result = await saveLayout(storage, LAB_LAYOUT_KEY, store.getState());
-    status = result.ok ? 'Saved pomegranate.ui.layout.v1 locally.' : result.error.message;
+    status = result.ok ? 'Saved pomegranate.ui.layout.v2 locally.' : result.error.message;
   }
 
   async function reload() {
@@ -263,6 +272,7 @@
   data-pom-chrome-presentation={themeSnapshot.compiled.theme.recipes.chromePresentation}
   data-pom-action-presentation={themeSnapshot.compiled.theme.recipes.actionPresentation}
   data-pom-density={themeSnapshot.compiled.theme.spacing.density}
+  data-surface-preview-family={requestedDefinition?.family}
   data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}
   style={themeSnapshot.cssText}
@@ -278,6 +288,8 @@
     </div>
     <div class="shelf-actions">
       <button type="button" data-pom-part="button.surface" aria-label="Open Widget Catalog" aria-expanded={$catalogState.open} onclick={() => catalog.open('drawer')}>Widgets</button>
+      <WidgetShelf {store} />
+      <LayoutUndo {store} />
       <button type="button" data-pom-part="button.surface" aria-pressed={focusMode} onclick={() => { focusMode = !focusMode; }}>Focus reading</button>
       <span class="runtime-status"><i></i>{hostContext.systemStatus}</span>
     </div>
@@ -373,12 +385,5 @@
     />
   {/if}
 
-  <dialog bind:this={panelDialog} data-pom-part="dialog.surface" aria-labelledby="panel-dialog-title">
-    <form onsubmit={createPanel}>
-      <h2 id="panel-dialog-title">Create a Panel</h2>
-      <label>Panel name<input data-pom-part="field.surface" bind:value={panelName} /></label>
-      <p>Starts as an adopter-owned two-column layout.</p>
-      <div><button type="button" data-pom-part="button.surface" onclick={() => panelDialog.close()}>Cancel</button><button type="submit" data-pom-part="button.surface">Create Panel</button></div>
-    </form>
-  </dialog>
+  <PanelCreateDialog bind:this={panelDialog} oncreate={createPanel} />
 </main>

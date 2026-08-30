@@ -61,6 +61,7 @@ export interface WidgetActions {
   dock(edge: PanelEdge): CommandResult;
   float(): CommandResult;
   groupWithPrevious(): CommandResult;
+  shelve(): CommandResult;
   remove(): CommandResult;
 }
 
@@ -253,6 +254,9 @@ export function createWidgetActions(
         targetInstanceId: target.id,
         groupId
       });
+    },
+    shelve(): CommandResult {
+      return store.dispatch({ type: 'widget.shelve', instanceId });
     },
     remove(): CommandResult {
       return store.dispatch({ type: 'widget.remove', instanceId });

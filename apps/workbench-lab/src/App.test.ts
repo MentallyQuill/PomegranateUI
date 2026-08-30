@@ -139,6 +139,33 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(window.localStorage.getItem('pomegranate-ui.workbench-lab.theme.v1')).toBe('bunny');
   });
 
+  it('creates a selected Panel template with bounded Columns regions', async () => {
+    const user = userEvent.setup();
+    const { container } = render(App);
+    await user.click(screen.getByRole('button', { name: 'Create Panel' }));
+    const dialog = screen.getByRole('dialog', { name: 'Create a Panel' });
+    await user.clear(within(dialog).getByRole('textbox', { name: 'Panel name' }));
+    await user.type(within(dialog).getByRole('textbox', { name: 'Panel name' }), 'Four Columns');
+    await user.click(within(dialog).getByRole('radio', { name: /Columns/ }));
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Columns' }), '4');
+    await user.click(within(dialog).getByRole('button', { name: 'Create Panel' }));
+    expect(screen.getByRole('tab', { name: 'Four Columns' })).toHaveAttribute('aria-selected', 'true');
+    expect([...container.querySelectorAll('[data-pomegranate-region-surface]')].map((node) => node.getAttribute('data-pomegranate-region-surface'))).toEqual([
+      'column-1', 'column-2', 'column-3', 'column-4'
+    ]);
+  });
+
+  it('moves a Widget to the retained Shelf and restores it with one-step Undo', async () => {
+    const user = userEvent.setup();
+    render(App);
+    const transcript = screen.getByRole('article', { name: 'Transcript' });
+    await user.click(within(transcript).getByRole('button', { name: 'Move to Widget Shelf' }));
+    expect(screen.queryByRole('article', { name: 'Transcript' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo layout' })).not.toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Undo layout' }));
+    expect(screen.getByRole('article', { name: 'Transcript' })).toBeVisible();
+  });
+
   it('switches through all four complete targets without remounting the Workbench tree', async () => {
     const user = userEvent.setup();
     const { container } = render(App);

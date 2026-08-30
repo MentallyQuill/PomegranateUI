@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PanelId, WorkbenchState } from '@pomegranate-ui/contracts';
   import { selectPanelTabs, type WorkbenchStore } from '@pomegranate-ui/core';
+  import PanelMenu from './PanelMenu.svelte';
 
   let {
     store,
@@ -62,6 +63,9 @@
         disabled={tab.moveRightDisabled}
         onclick={() => reorder(tab.panelId, index + 1)}
       >→</button>
+      {#each state?.panels.filter((panel) => panel.id === tab.panelId) ?? [] as panel (panel.id)}
+        <PanelMenu {panel} {store} />
+      {/each}
     </div>
   {/each}
 </div>

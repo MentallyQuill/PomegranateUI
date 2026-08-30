@@ -84,6 +84,26 @@ describe('Workbench store', () => {
     }).state.revision).toBe(3);
   });
 
+  it('creates a Panel with one primary Shelf in every resolved region atomically', () => {
+    const store = fixtureStore();
+    const panelId = asPanelId('research');
+    const seen: number[] = [];
+    store.subscribe((state) => seen.push(state.revision));
+
+    const result = store.dispatch({
+      type: 'panel.create',
+      panel: { id: panelId, name: 'Research', templateId: 'focus-support.v1', order: 2 }
+    });
+
+    expect(result).toMatchObject({ ok: true, state: { revision: 1 } });
+    expect(result.state.shelves.filter((shelf) => shelf.panelId === panelId)).toEqual([
+      { id: 'primary', panelId, regionId: 'focus', order: 0, weight: 1 },
+      { id: 'primary', panelId, regionId: 'support', order: 0, weight: 1 }
+    ]);
+    expect(result.events).toMatchObject([{ type: 'panel.created', revision: 1, panelId }]);
+    expect(seen).toEqual([1]);
+  });
+
   it('rejects an unknown Widget type without mutation or notification', () => {
     const store = fixtureStore();
     const before = store.getState();

@@ -241,9 +241,20 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
         switch (command.type) {
           case 'panel.create': {
             const resolution = templates.resolve(command.panel);
-            transition = resolution.ok
-              ? createPanel(before, command.panel)
-              : { ok: false, state: before, error: { code: 'UNKNOWN_TEMPLATE', message: resolution.message, recoverable: true } };
+            if (!resolution.ok) {
+              transition = { ok: false, state: before, error: { code: 'UNKNOWN_TEMPLATE', message: resolution.message, recoverable: true } };
+              break;
+            }
+            transition = createPanel(before, command.panel);
+            if (transition.ok) {
+              for (const region of resolution.template.regions) {
+                transition = createShelf(transition.state, {
+                  id: 'primary', panelId: command.panel.id, regionId: region.id, order: 0, weight: 1
+                }, templates);
+                if (!transition.ok) break;
+              }
+              if (transition.ok) transition = { ok: true, state: { ...transition.state, revision: before.revision + 1 } };
+            }
             break;
           }
           case 'panel.rename':
