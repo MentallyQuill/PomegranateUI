@@ -2,10 +2,11 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import { AUTHORITY_BY_ID } from '../authorities.ts';
 import { MEASUREMENT_PROFILES } from '../compare.ts';
+import { prepareAtmosphericState } from '../drivers/reference/atmospheric.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../ledger.ts';
 import { DEEP_CURRENT_MACRO_SCENARIOS, hashAuthorityFile, validateConformanceManifest } from '../manifest.ts';
 import { runConformanceScenario } from '../runner.ts';
@@ -13,6 +14,9 @@ import { ConformanceError } from '../types.ts';
 import { CONFORMANCE_VIEWPORTS } from '../viewports.ts';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+const preservationOrigin = 'http://127.0.0.1:4173';
+const calibrationPath = '/prototypes/sonder-baseline/atmospheric-workbench/sonder-workbench-calibration.html';
+const frameTitle = 'Sonder Workbench Calibration';
 
 test.describe('Deep Current macro conformance', () => {
   test.beforeAll(async () => {
@@ -41,6 +45,26 @@ test.describe('Deep Current macro conformance', () => {
       await readFile(path.join(repositoryRoot, 'docs', 'conformance', 'deep-current-ledger.md'), 'utf8')
     );
     validateDiscrepancyLedger(ledger, DEEP_CURRENT_MACRO_SCENARIOS);
+  });
+
+  test('the Atmospheric driver waits for its test-mode iframe document', async ({ page }) => {
+    await page.route(
+      (url) => url.pathname.endsWith(calibrationPath) && url.searchParams.get('test') === '1',
+      async (route) => {
+        // Hold the replacement document long enough to expose any return against
+        // the still-attached, non-test document that the iframe is replacing.
+        await new Promise<void>((resolve) => setTimeout(resolve, 1_500));
+        await route.continue();
+      }
+    );
+
+    await prepareAtmosphericState(page, preservationOrigin);
+
+    const search = await page
+      .frameLocator(`iframe[title="${frameTitle}"]`)
+      .locator('html')
+      .evaluate(() => window.location.search);
+    expect(search).toBe('?test=1');
   });
 
   for (const scenario of DEEP_CURRENT_MACRO_SCENARIOS) {

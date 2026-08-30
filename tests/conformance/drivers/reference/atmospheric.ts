@@ -33,13 +33,22 @@ export async function prepareAtmosphericState(page: Page, preservationOrigin: st
     const frame = referenceFrame(page);
     const root = frame.locator('#sonder-calibration');
     await root.waitFor({ state: 'attached' });
+    const frameElement = await page.locator(`iframe[title="${frameTitle}"]`).elementHandle();
+    const embeddedFrame = await frameElement?.contentFrame();
+    if (!embeddedFrame) throw new Error('The Atmospheric calibration iframe is unavailable.');
+    const testModeNavigation = embeddedFrame.waitForURL(
+      (url) => url.pathname.endsWith('/sonder-workbench-calibration.html') && url.searchParams.get('test') === '1',
+      { waitUntil: 'load' }
+    );
     await root.evaluate((element, setup) => {
       window.localStorage.removeItem(setup.persistenceKey);
       const ownerFrame = element.ownerDocument.defaultView?.frameElement;
       ownerFrame?.setAttribute('src', setup.calibrationPath);
     }, { calibrationPath, persistenceKey });
-    await root.waitFor({ state: 'attached' });
-    await settle(root);
+    await testModeNavigation;
+    const testModeRoot = embeddedFrame.locator('#sonder-calibration');
+    await testModeRoot.waitFor({ state: 'attached' });
+    await settle(testModeRoot);
     for (const selector of Object.values(regionSelectors)) {
       await frame.locator(selector).waitFor({ state: 'visible' });
     }
