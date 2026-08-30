@@ -49,6 +49,22 @@ test('Ash & Amber reference and implementation drivers stay independent', async 
   assert.doesNotMatch(labDriver, /sonderui-rw2-1-t80|design\/theme-targets\/ash-amber|\.\.\/reference/);
 });
 
+test('Ash & Amber reference semantics preserve the corrected neutral and rounded rubric', async () => {
+  const [referenceDriver, ledgerText] = await Promise.all([
+    readFile(path.join(repositoryRoot, 'tests/conformance/drivers/reference/ash-amber.ts'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'docs/conformance/ash-amber-ledger.md'), 'utf8')
+  ]);
+
+  for (const expected of ["canvas: '#242321'", "accent: '#C18A3D'", "text: '#F3F0EA'", "shellRadius: '4px'", "widgetRadius: '4px'", "buttonRadius: '4px'"]) {
+    assert.match(referenceDriver, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  assert.doesNotMatch(referenceDriver, /#2C2938|#84008E|#FFFFFF|Radius: '0px'/);
+  assert.match(ledgerText, /neutral graphite\/ash surfaces/i);
+  assert.match(ledgerText, /later approved palette correction/i);
+  assert.match(ledgerText, /no purple\s+or magenta/i);
+  assert.doesNotMatch(ledgerText, /charcoal-plum|purple selection|magenta ambient/i);
+});
+
 test('Ash & Amber baseline and ledger freeze every reviewed scenario without a waiver', async () => {
   const [{ ASH_AMBER_SCENARIOS }, { parseDiscrepancyLedger, validateDiscrepancyLedger }] = await Promise.all([
     import('../conformance/manifest.ts'),

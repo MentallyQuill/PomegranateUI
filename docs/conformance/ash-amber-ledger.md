@@ -4,12 +4,14 @@
 
 ## Authority and scope
 
-The byte-hashed 1920x1280 recording frame governs the muted charcoal-plum
-atmosphere, warm ash-brown title bars, restrained purple selection, amber
-signal light, compact geometry, and dense workbench hierarchy. It is reference
-evidence only: the Lab uses its packaged local stage asset beneath declarative
-canvas and ambient layers and does not ship the recording or use the authority
-PNG as runtime wallpaper.
+The byte-hashed 1920x1280 recording frame governs composition, warm ash-brown
+title bars, restrained material depth, compact geometry, and the dense
+workbench hierarchy. The later approved palette correction governs color
+semantics: neutral graphite/ash surfaces, warm muted grey-brown chrome,
+restrained amber signal light, and a quiet atmospheric canvas with no purple
+or magenta. The frame is reference evidence only: the Lab uses its packaged
+local stage asset beneath declarative canvas and ambient layers and does not
+ship the recording or use the authority PNG as runtime wallpaper.
 
 The wide Scene scenario retains the literal recording frame. Compact Scene and
 wide Catalog scenarios apply the same semantic target to the shared mounted
@@ -31,6 +33,6 @@ and no horizontal overflow.
 
 | Scenario | Snapshot | SHA-256 |
 |---|---|---|
-| Wide Scene | `wide-ash-amber.png` | `666C15EAC16B9DBC4B3E24A22D6F172DE4381874D5694994F85B491A63860B0F` |
-| Compact Scene | `compact-ash-amber.png` | `6980C7F05D963D5224539C563F84953B57674DBB0F7044DCD3961E4EC9BAD2E7` |
-| Wide Catalog | `wide-catalog-ash-amber.png` | `E40C080DDEB902479E97A9453720E0CD269022E06BFADF662FFDEE3EA637F32C` |
+| Wide Scene | `wide-ash-amber.png` | `4CC212B359B095B4B238940F41C06518FCD4191FD9F988E0AFA59A46F3C6B978` |
+| Compact Scene | `compact-ash-amber.png` | `8EC778E9B243E21659C4CBECEAD3476154BF7CE37B431FEC54D8685EE73D646B` |
+| Wide Catalog | `wide-catalog-ash-amber.png` | `92EE8848013953C7826EAEB906917D336E92E86080E5C7EE9EDFF9658D2B7A30` |

@@ -18,11 +18,11 @@
       "outcome": {
         "editable": {
           "colors": {
-            "canvas": "#2C2938",
-            "glass": "#382D31",
-            "chrome": "#716667",
-            "ambient": "#84008E",
-            "text": "#FFFFFF",
+            "canvas": "#242321",
+            "glass": "#302E2A",
+            "chrome": "#625B52",
+            "ambient": "#51493E",
+            "text": "#F3F0EA",
             "source": "#D2B57A"
           },
           "materials": {
@@ -35,11 +35,12 @@
         },
         "applied": {
           "colors": {
-            "canvas": "#2c2938",
-            "glass": "#382d31",
-            "chrome": "#716667",
-            "ambient": "#84008e",
-            "text": "#ffffff",
+            "canvas": "#242321",
+            "glass": "#302e2a",
+            "chrome": "#625b52",
+            "ambient": "#51493e",
+            "accent": "#C18A3D",
+            "text": "#f3f0ea",
             "source": "#d2b57a"
           },
           "ambient": { "x": "57%", "y": "97%", "radius": "60%", "power": "0.56", "source": "target" },
@@ -61,10 +62,10 @@
       "outcome": {
         "invalidRaw": "url(javascript:unsafe)",
         "invalidRejected": true,
-        "unsafeRaw": "#382D31",
+        "unsafeRaw": "#302E2A",
         "unsafeRejected": true,
-        "appliedAfterInvalid": "#FFFFFF",
-        "appliedAfterUnsafe": "#FFFFFF"
+        "appliedAfterInvalid": "#F3F0EA",
+        "appliedAfterUnsafe": "#F3F0EA"
       }
     },
     "theme-authoring-ambient-precedence": {
@@ -105,11 +106,11 @@
         "saved": {
           "schemaVersion": "pomegranate.ui.persisted-theme-draft.v1",
           "baseTargetId": "ash-amber",
-          "canvas": "#312d3b"
+          "canvas": "#34312d"
         },
         "restored": {
-          "canvasBinding": "#312d3b",
-          "canvasInput": "#312d3b",
+          "canvasBinding": "#34312d",
+          "canvasInput": "#34312d",
           "diagnostics": 0
         },
         "storage": { "draftPresent": true, "layoutPresent": false }

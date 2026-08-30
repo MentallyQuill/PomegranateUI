@@ -38,11 +38,22 @@ describe('Theme draft projection', () => {
       schemaVersion: 'pomegranate.ui.theme-draft.v1',
       baseTargetId: 'ash-amber',
       colors: {
-        canvas: '#2C2938', glass: '#382D31', chrome: '#716667',
-        ambient: '#84008E', text: '#FFFFFF', source: '#D2B57A'
+        canvas: '#242321', glass: '#302E2A', chrome: '#625B52',
+        ambient: '#51493E', text: '#F3F0EA', source: '#D2B57A'
       },
       materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 }
     });
+  });
+
+  it('round-trips a target-owned non-accent ambient role without rewriting its accent', () => {
+    const draft = createThemeDraft(ASH_AMBER_TARGET);
+    const result = projectThemeDraft(ASH_AMBER_TARGET, draft, ASH_AMBER_TARGET.ambient);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.target.ambient.colorRole).toBe('selection');
+    expect(result.target.theme.colors.selection).toBe('#51493E');
+    expect(result.target.theme.colors.accent).toBe('#C18A3D');
   });
 
   it('projects semantic roles without mutating V3 recipes, assets, success, danger, or the base target', () => {
@@ -77,7 +88,7 @@ describe('Theme draft projection', () => {
 
   it('rejects authored Ash text that only a derived text-on-accent fallback could rescue', () => {
     const draft = createThemeDraft(ASH_AMBER_TARGET);
-    const unsafe = { ...draft, colors: { ...draft.colors, text: '#382D31' } };
+    const unsafe = { ...draft, colors: { ...draft.colors, text: '#302E2A' } };
     const result = projectThemeDraft(ASH_AMBER_TARGET, unsafe, ASH_AMBER_TARGET.ambient);
     expect(result.ok).toBe(false);
     expect(result.ok ? [] : result.diagnostics).toContainEqual(expect.objectContaining({

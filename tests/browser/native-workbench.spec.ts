@@ -360,7 +360,7 @@ test('all theme targets remain readable, transition-free, and contained at wide 
       { label: 'Deep Current', id: 'deep-current', text: 'rgb(231, 246, 240)' },
       { label: 'PomOS', id: 'pom-neutral', text: 'rgb(16, 24, 32)' },
       { label: 'Bunny', id: 'bunny', text: 'rgb(69, 54, 77)' },
-      { label: 'Ash & Amber', id: 'ash-amber', text: 'rgb(255, 255, 255)' }
+      { label: 'Ash & Amber', id: 'ash-amber', text: 'rgb(243, 240, 234)' }
     ]) {
       const button = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: theme.label, exact: true });
       await button.click();

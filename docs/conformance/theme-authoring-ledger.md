@@ -4,10 +4,10 @@
 
 ## Authority and scope
 
-The reviewed Ash & Amber values are literal expected evidence. The executable
-driver enters them through the shared Theme Settings controls and measures the
-independently applied semantic bindings. It never imports a target definition
-to manufacture expected results. The same lane proves last-valid rejection,
+The reviewed, corrected neutral Ash & Amber values are literal expected
+evidence. The executable driver enters them through the shared Theme Settings
+controls and measures the independently applied semantic bindings. It never
+imports a target definition to manufacture expected results. The same lane proves last-valid rejection,
 ambient fallback-target-scene-device-accessibility precedence, and device-local
 draft restoration independent of the saved Workbench layout.
 

@@ -16,13 +16,13 @@ const fixture = (): PersistedThemeDraft => ({
     schemaVersion: 'pomegranate.ui.theme-draft.v1',
     baseTargetId: 'ash-amber',
     colors: {
-      canvas: '#2C2938', glass: '#382D31', chrome: '#716667',
-      ambient: '#84008E', text: '#FFFFFF', source: '#D2B57A'
+      canvas: '#242321', glass: '#302E2A', chrome: '#625B52',
+      ambient: '#51493E', text: '#F3F0EA', source: '#D2B57A'
     },
     materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 }
   },
   ambient: {
-    schemaVersion: 'pomegranate.ui.ambient.v1', id: 'ash-amber', colorRole: 'accent',
+    schemaVersion: 'pomegranate.ui.ambient.v1', id: 'ash-amber', colorRole: 'selection',
     position: { x: 0.57, y: 0.97 }, radius: 0.6, power: 0.56
   }
 });
@@ -32,7 +32,7 @@ describe('Theme draft storage', () => {
     const encoded = encodePersistedThemeDraft(fixture());
     expect(encoded.ok).toBe(true);
     if (!encoded.ok) return;
-    expect(encoded.value).toBe('{"schemaVersion":"pomegranate.ui.persisted-theme-draft.v1","draft":{"schemaVersion":"pomegranate.ui.theme-draft.v1","baseTargetId":"ash-amber","colors":{"canvas":"#2C2938","glass":"#382D31","chrome":"#716667","ambient":"#84008E","text":"#FFFFFF","source":"#D2B57A"},"materials":{"glassDensity":20,"barOpacity":60,"selectedStrength":6,"frostLevel":50}},"ambient":{"schemaVersion":"pomegranate.ui.ambient.v1","id":"ash-amber","colorRole":"accent","position":{"x":0.57,"y":0.97},"radius":0.6,"power":0.56}}');
+    expect(encoded.value).toBe('{"schemaVersion":"pomegranate.ui.persisted-theme-draft.v1","draft":{"schemaVersion":"pomegranate.ui.theme-draft.v1","baseTargetId":"ash-amber","colors":{"canvas":"#242321","glass":"#302E2A","chrome":"#625B52","ambient":"#51493E","text":"#F3F0EA","source":"#D2B57A"},"materials":{"glassDensity":20,"barOpacity":60,"selectedStrength":6,"frostLevel":50}},"ambient":{"schemaVersion":"pomegranate.ui.ambient.v1","id":"ash-amber","colorRole":"selection","position":{"x":0.57,"y":0.97},"radius":0.6,"power":0.56}}');
     expect(decodePersistedThemeDraft(encoded.value)).toEqual({ ok: true, value: fixture() });
   });
 

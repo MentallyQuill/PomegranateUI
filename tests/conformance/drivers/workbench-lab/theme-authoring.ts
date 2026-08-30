@@ -14,11 +14,11 @@ type PreparedAuthoring = {
 };
 
 const colorRoles = [
-  ['Canvas', 'canvas', '#2C2938', '--pom-color-canvas'],
-  ['Glass', 'glass', '#382D31', '--pom-color-surface'],
-  ['Chrome', 'chrome', '#716667', '--pom-color-chrome'],
-  ['Ambient', 'ambient', '#84008E', '--pom-color-accent'],
-  ['Text', 'text', '#FFFFFF', '--pom-color-text'],
+  ['Canvas', 'canvas', '#242321', '--pom-color-canvas'],
+  ['Glass', 'glass', '#302E2A', '--pom-color-surface'],
+  ['Chrome', 'chrome', '#625B52', '--pom-color-chrome'],
+  ['Ambient', 'ambient', '#51493E', '--pom-color-selection'],
+  ['Text', 'text', '#F3F0EA', '--pom-color-text'],
   ['Source', 'source', '#D2B57A', '--pom-color-warning']
 ] as const;
 
@@ -155,6 +155,7 @@ async function measureAshSeed(page: Page, prepared: PreparedAuthoring): Promise<
   const appliedColors = Object.fromEntries(await Promise.all(colorRoles.map(async ([, id, , property]) => (
     [id, await binding(page, property)] as const
   ))));
+  const preservedAccent = await binding(page, '--pom-color-accent');
   const outcome = {
     editable: {
       colors: editableColors,
@@ -167,7 +168,7 @@ async function measureAshSeed(page: Page, prepared: PreparedAuthoring): Promise<
       }
     },
     applied: {
-      colors: appliedColors,
+      colors: { ...appliedColors, accent: preservedAccent },
       ambient: {
         x: await binding(page, '--pom-ambient-x'),
         y: await binding(page, '--pom-ambient-y'),
@@ -188,7 +189,7 @@ async function measureLastValid(page: Page, prepared: PreparedAuthoring): Promis
   const invalidDiagnostic = await prepared.settings.locator('.theme-diagnostics').textContent() ?? '';
   const invalidRaw = await hex.inputValue();
   const appliedAfterInvalid = await binding(page, '--pom-color-text');
-  await hex.fill('#382D31');
+  await hex.fill('#302E2A');
   const unsafeDiagnostic = await prepared.settings.locator('.theme-diagnostics').textContent() ?? '';
   const unsafeRaw = await hex.inputValue();
   const appliedAfterUnsafe = await binding(page, '--pom-color-text');
@@ -262,8 +263,8 @@ async function measureRoundTrip(page: Page, labOrigin: string, prepared: Prepare
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.waitForFunction((key) => localStorage.getItem(key) !== null, layoutKey);
   const hex = prepared.settings.getByRole('textbox', { name: 'Hex color' });
-  await hex.fill('#312D3B');
-  await waitForBinding(page, '--pom-color-canvas', '#312d3b');
+  await hex.fill('#34312D');
+  await waitForBinding(page, '--pom-color-canvas', '#34312d');
   await prepared.settings.getByRole('button', { name: 'Save draft' }).click();
   await page.waitForFunction((key) => localStorage.getItem(key) !== null, draftKey);
   await page.getByText('Developer tools', { exact: true }).click();
@@ -276,7 +277,7 @@ async function measureRoundTrip(page: Page, labOrigin: string, prepared: Prepare
   };
   await page.reload({ waitUntil: 'load' });
   await page.evaluate(() => document.fonts.ready);
-  await waitForBinding(page, '--pom-color-canvas', '#312d3b');
+  await waitForBinding(page, '--pom-color-canvas', '#34312d');
   await page.getByRole('tab', { name: 'Settings' }).click();
   const restoredSettings = page.getByRole('article', { name: 'Theme Settings' });
   await restoredSettings.waitFor({ state: 'visible' });

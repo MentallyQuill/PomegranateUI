@@ -136,18 +136,24 @@ repository-owned visual-reference directory and records the extraction command,
 timestamp, dimensions, source hash, and frame hash in a deterministic manifest.
 It does not commit the full recording.
 
-### Recorded semantic seed
+### Corrected semantic seed
 
-The recording establishes this six-role seed:
+The recording remains the composition and material-restraint authority. A
+later explicit user correction supersedes its earlier high-chroma palette
+interpretation and establishes this six-role seed:
 
 | Recorded role | Value | Pom projection |
 |---|---:|---|
-| Canvas Ink | `#2C2938` | canvas and darkest inset surfaces |
-| Glass Panel | `#382D31` | panel, Widget fallback, and field material base |
-| Control Chrome | `#716667` | title bars, top shelf, tabs, and control chrome |
-| Ambient Accent | `#84008E` | ambient light and restrained selected-state energy |
-| Interface Text | `#FFFFFF` | primary text, with derived muted/faint roles |
+| Canvas Ink | `#242321` | neutral graphite canvas and darkest inset surfaces |
+| Glass Panel | `#302E2A` | ash panel, Widget fallback, and field material base |
+| Control Chrome | `#625B52` | warm muted grey-brown title bars, top shelf, tabs, and control chrome |
+| Ambient Field | `#51493E` | quiet warm-neutral atmospheric energy through the target's `selection` role |
+| Interface Text | `#F3F0EA` | primary text, with derived muted/faint roles |
 | Source Accent | `#D2B57A` | source, warning, provenance, and warm amber detail |
+
+The complete target palette retains `#C18A3D` as its restrained amber
+`accent`; the six-role authoring surface edits the ambient profile's declared
+`selection` role independently and does not rewrite that accent.
 
 The recorded material controls are:
 
@@ -162,10 +168,11 @@ The recorded ambient profile is:
 - radius: `60`; and
 - power: `56`.
 
-The target intentionally combines muted graphite and warm taupe chrome with a
-small amber source accent. The magenta ambient value is subordinate atmospheric
-energy, not the dominant control color. Visual conformance to the locked frame
-wins over a literal high-chroma interpretation of an individual swatch.
+The target intentionally combines neutral graphite/ash surfaces and warm taupe
+chrome with small amber source accents. Purple and magenta are excluded from
+the target palette and canvas. Visual conformance uses the locked frame for
+composition and material restraint while the later correction governs palette
+semantics.
 
 ### Target contract
 
@@ -179,7 +186,7 @@ Ash & Amber must:
 - expose no theme-specific Widget or Panel implementation;
 - have wide Scene, compact Scene, and wide Catalog conformance scenarios;
 - have a reviewed discrepancy ledger and canonical Windows screenshots; and
-- remain reproducible by the shared Custom Theme editor from its recorded seed.
+- remain reproducible by the shared Custom Theme editor from its corrected seed.
 
 ## Shared layout architecture
 

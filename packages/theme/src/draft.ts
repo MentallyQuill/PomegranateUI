@@ -50,7 +50,7 @@ export function createThemeDraft(target: ThemeTargetBundle): ThemeDraft {
       canvas: parsed.theme.colors.canvas.slice(0, 7),
       glass: parsed.theme.colors.surface.slice(0, 7),
       chrome: parsed.theme.colors.chrome.slice(0, 7),
-      ambient: parsed.theme.colors.accent.slice(0, 7),
+      ambient: parsed.theme.colors[parsed.ambient.colorRole].slice(0, 7),
       text: parsed.theme.colors.text.slice(0, 7),
       source: parsed.theme.colors.warning.slice(0, 7)
     },
@@ -94,6 +94,15 @@ export function projectThemeDraft(
   }
 
   const colors = parsedDraft.data.colors;
+  const ambientRole = parsedAmbient.data.colorRole;
+  const ambientColorOverrides = ambientRole === 'accent'
+    ? {
+        textOnAccent: bestContrastingText(colors.ambient),
+        accent: colors.ambient,
+        selection: colors.ambient,
+        focus: mixHex(colors.ambient, colors.text, 0.18)
+      }
+    : { [ambientRole]: colors.ambient };
   const candidate = ThemeTargetBundleSchema.parse({
     ...parsedBase.data,
     theme: {
@@ -108,11 +117,8 @@ export function projectThemeDraft(
         text: colors.text,
         textMuted: mixHex(colors.text, colors.glass, 0.30),
         textFaint: mixHex(colors.text, colors.glass, 0.45),
-        textOnAccent: bestContrastingText(colors.ambient),
-        accent: colors.ambient,
-        selection: colors.ambient,
-        focus: mixHex(colors.ambient, colors.text, 0.18),
-        warning: colors.source
+        warning: colors.source,
+        ...ambientColorOverrides
       }
     },
     canvas: {
@@ -121,7 +127,7 @@ export function projectThemeDraft(
         index === 0 && layer.kind === 'solid' ? { ...layer, color: colors.canvas } : layer
       ))
     },
-    ambient: { ...parsedAmbient.data, colorRole: 'accent' }
+    ambient: parsedAmbient.data
   });
   const unsafeBackgrounds = [
     ['canvas', colors.canvas],

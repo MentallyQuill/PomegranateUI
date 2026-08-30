@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { THEME_PART_IDS } from '@pomegranate-ui/contracts';
-import { compileThemeBindings, contrastRatio, resolveThemeTarget, resolveThemeV2 } from '@pomegranate-ui/theme';
-import { BUNNY_THEME } from './bunny.js';
+import { THEME_COLOR_ROLES, THEME_PART_IDS } from '@pomegranate-ui/contracts';
+import {
+  compileThemeBindings,
+  contrastRatio,
+  hexToHsv,
+  resolveThemeTarget,
+  resolveThemeV2,
+  validateThemePalette,
+  type ThemePaletteRoleGroupConstraint
+} from '@pomegranate-ui/theme';
 import { ASH_AMBER_THEME } from './ash-amber.js';
+import { BUNNY_THEME } from './bunny.js';
 import { createLabThemeController } from './controller.js';
 import { DEEP_CURRENT_THEME } from './deep-current.js';
 import { defaultMaterialControls } from './material-controls.js';
@@ -16,6 +24,31 @@ const assetRegistry = {
   'image.deep-current-stage': { kind: 'image' as const, source: '/assets/deep-current.jpg' },
   'image.bunny-garden': { kind: 'image' as const, source: '/assets/bunny.webp' }
 };
+
+const EXPECTED_ASH_CONSTRAINTS = [
+  {
+    id: 'ash-neutral-chrome',
+    roles: ['canvas', 'surface', 'surfaceElevated', 'surfaceInset', 'chrome', 'border', 'borderStrong', 'shadow'],
+    maximumSaturation: 0.2
+  },
+  {
+    id: 'ash-no-purple-magenta',
+    roles: THEME_COLOR_ROLES,
+    hueExclusions: [{ fromDeg: 270, toDeg: 350, minimumSaturation: 0.06 }]
+  },
+  {
+    id: 'ash-restrained-accents',
+    roles: ['accent', 'selection', 'focus', 'warning'],
+    maximumSaturation: 0.7
+  }
+] as const satisfies readonly ThemePaletteRoleGroupConstraint[];
+
+function collectHexValues(value: unknown): string[] {
+  if (typeof value === 'string') return /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value) ? [value] : [];
+  if (Array.isArray(value)) return value.flatMap(collectHexValues);
+  if (value && typeof value === 'object') return Object.values(value).flatMap(collectHexValues);
+  return [];
+}
 
 describe('Workbench Lab theme conformance', () => {
   it('activates only complete target snapshots with separated resolved and compiled owners', () => {
@@ -57,24 +90,28 @@ describe('Workbench Lab theme conformance', () => {
     }
   });
 
-  it('pins Ash & Amber to the approved palette, material defaults, and ambient profile', () => {
+  it('pins Ash & Amber to the corrected neutral palette, semantic chrome, and restrained amber canvas accents', () => {
     const ash = LAB_THEME_TARGETS.find(({ id }) => id === 'ash-amber')?.target;
 
     expect(ash?.theme).toMatchObject({
       label: 'Ash & Amber',
       colors: {
-        canvas: '#2C2938',
-        surface: '#382D31',
-        chrome: '#716667',
-        accent: '#84008E',
-        text: '#FFFFFF',
+        canvas: '#242321',
+        surface: '#302E2A',
+        surfaceElevated: '#413D36',
+        surfaceInset: '#191918',
+        chrome: '#625B52',
+        accent: '#C18A3D',
+        selection: '#51493E',
+        focus: '#E0B568',
+        text: '#F3F0EA',
         warning: '#D2B57A'
       }
     });
     expect(ash?.ambient).toEqual({
       schemaVersion: 'pomegranate.ui.ambient.v1',
       id: 'ash-amber',
-      colorRole: 'accent',
+      colorRole: 'selection',
       position: { x: 0.57, y: 0.97 },
       radius: 0.6,
       power: 0.56
@@ -86,10 +123,73 @@ describe('Workbench Lab theme conformance', () => {
       frostLevel: 50
     });
     expect(ash?.theme.materials.header).toMatchObject({ base: 'chrome', fallback: 'chrome' });
-    expect(ash?.canvas.layers).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: 'image', assetId: 'image.deep-current-stage' }),
-      expect.objectContaining({ kind: 'veil', mode: 'reading' })
-    ]));
+    expect(ash?.theme.materials.shelf).toMatchObject({ base: 'chrome', fallback: 'surface' });
+    expect(ash?.theme.recipes.parts['widget.header'].material).toBe('header');
+    expect(ash?.theme.recipes.parts['chrome.shelf'].material).toBe('shelf');
+    expect(ash?.canvas.layers).toEqual([
+      { kind: 'solid', color: '#242321' },
+      expect.objectContaining({ kind: 'image', assetId: 'image.deep-current-stage', opacity: 0.48, saturation: 0.08 }),
+      {
+        kind: 'linear-gradient',
+        angle: 90,
+        stops: [
+          { color: '#191918EB', position: 0 },
+          { color: '#302E2A8F', position: 0.5 },
+          { color: '#242321E0', position: 1 }
+        ]
+      },
+      {
+        kind: 'radial-gradient',
+        shape: 'ellipse',
+        x: 0.57,
+        y: 0.97,
+        stops: [
+          { color: '#D2B57A42', position: 0 },
+          { color: '#625B521F', position: 0.34 },
+          { color: '#24232100', position: 0.68 }
+        ]
+      },
+      { kind: 'veil', mode: 'reading', color: '#302E2A', opacity: 0.28 }
+    ]);
+  });
+
+  it('exports opt-in Ash palette constraints and rejects no ordinary palette globally', async () => {
+    const ashModule = await import('./ash-amber.js') as Record<string, unknown>;
+    expect(ashModule.ASH_AMBER_PALETTE_CONSTRAINTS).toEqual(EXPECTED_ASH_CONSTRAINTS);
+    expect(validateThemePalette(
+      ASH_AMBER_THEME.colors,
+      ashModule.ASH_AMBER_PALETTE_CONSTRAINTS as readonly ThemePaletteRoleGroupConstraint[]
+    )).toEqual({ ok: true, diagnostics: [] });
+  });
+
+  it('contains no purple or magenta raw target color and keeps neutral fallbacks under reduced transparency', () => {
+    const ash = LAB_THEME_TARGETS.find(({ id }) => id === 'ash-amber')!.target;
+    for (const hex of collectHexValues(ash)) {
+      const { hue, saturation } = hexToHsv(hex.slice(0, 7));
+      expect(
+        saturation < 0.06 || hue < 270 || hue > 350,
+        `Ash & Amber contains excluded purple/magenta ${hex} at hue ${hue} and saturation ${saturation}`
+      ).toBe(true);
+    }
+
+    const reduced = createLabThemeController({
+      initialId: 'ash-amber',
+      devicePolicy: { reducedTransparency: true, backdropFilterSupported: false }
+    }).getSnapshot().compiled.theme;
+    expect(reduced.recipes.parts['widget.header'].material).toBe('opaque');
+    expect(reduced.recipes.parts['chrome.shelf'].material).toBe('opaque');
+    expect(reduced.materials.opaque).toMatchObject({
+      base: '#302E2A',
+      fallback: '#302E2A',
+      opacity: 1,
+      backdrop: { blurPx: 0, saturation: 1, brightness: 1 }
+    });
+  });
+
+  it('uses rounded 4px bevel geometry with no chamfered Ash silhouettes', () => {
+    for (const shape of ['chrome', 'pane', 'header', 'content', 'group', 'row', 'field', 'button'] as const) {
+      expect(ASH_AMBER_THEME.shapes[shape]).toMatchObject({ family: 'rounded', radiusPx: 4, chamferPx: 0 });
+    }
   });
 
   it.each(LAB_THEME_IDS)('authors and resolves %s directly as a complete target', (id) => {

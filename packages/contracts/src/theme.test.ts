@@ -452,11 +452,11 @@ const validPersistedDraft = () => ({
     schemaVersion: 'pomegranate.ui.theme-draft.v1',
     baseTargetId: 'ash-amber',
     colors: {
-      canvas: '#2C2938',
-      glass: '#382D31',
-      chrome: '#716667',
-      ambient: '#84008E',
-      text: '#FFFFFF',
+      canvas: '#242321',
+      glass: '#302E2A',
+      chrome: '#625B52',
+      ambient: '#51493E',
+      text: '#F3F0EA',
       source: '#D2B57A'
     },
     materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 }
@@ -464,7 +464,7 @@ const validPersistedDraft = () => ({
   ambient: {
     schemaVersion: 'pomegranate.ui.ambient.v1',
     id: 'ash-amber',
-    colorRole: 'accent',
+    colorRole: 'selection',
     position: { x: 0.57, y: 0.97 },
     radius: 0.6,
     power: 0.56
@@ -479,11 +479,11 @@ describe('Theme draft authoring schemas', () => {
   });
 
   it.each([
-    ['alpha color', (value: any) => { value.draft.colors.canvas = '#2C2938FF'; }],
+    ['alpha color', (value: any) => { value.draft.colors.canvas = '#242321FF'; }],
     ['shorthand color', (value: any) => { value.draft.colors.canvas = '#234'; }],
     ['named color', (value: any) => { value.draft.colors.canvas = 'black'; }],
     ['CSS URL', (value: any) => { value.draft.colors.glass = 'url(javascript:alert(1))'; }],
-    ['padded color', (value: any) => { value.draft.colors.text = ' #FFFFFF'; }],
+    ['padded color', (value: any) => { value.draft.colors.text = ' #F3F0EA'; }],
     ['non-finite control', (value: any) => { value.draft.materials.frostLevel = Number.NaN; }],
     ['decimal control', (value: any) => { value.draft.materials.frostLevel = 50.5; }],
     ['low control', (value: any) => { value.draft.materials.glassDensity = -1; }],

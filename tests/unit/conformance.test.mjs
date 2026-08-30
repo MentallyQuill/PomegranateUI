@@ -958,7 +958,7 @@ test('Theme authoring baseline freezes approved literals without importing the t
   assert.equal(baseline.measurementProfile, 'theme-authoring');
   assert.deepEqual(Object.keys(baseline.scenarios), THEME_AUTHORING_SCENARIOS.map(({ id }) => id));
   assert.deepEqual(baseline.scenarios['theme-authoring-ash-seed'].outcome.editable.colors, {
-    canvas: '#2C2938', glass: '#382D31', chrome: '#716667', ambient: '#84008E', text: '#FFFFFF', source: '#D2B57A'
+    canvas: '#242321', glass: '#302E2A', chrome: '#625B52', ambient: '#51493E', text: '#F3F0EA', source: '#D2B57A'
   });
   assert.deepEqual(baseline.scenarios['theme-authoring-ash-seed'].outcome.editable.materials, {
     glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50
@@ -966,6 +966,7 @@ test('Theme authoring baseline freezes approved literals without importing the t
   assert.deepEqual(baseline.scenarios['theme-authoring-ash-seed'].outcome.editable.ambient, {
     x: 57, y: 97, radius: 60, power: 56
   });
+  assert.equal(baseline.scenarios['theme-authoring-ash-seed'].outcome.applied.colors.accent, '#C18A3D');
   assert.doesNotMatch(baselineText, /ASH_AMBER_TARGET|ash-amber\.ts|presets/);
 });
 
@@ -973,6 +974,7 @@ test('Theme authoring driver measures editable and applied state independently',
   const driver = await readFile(path.join(repositoryRoot, 'tests/conformance/drivers/workbench-lab/theme-authoring.ts'), 'utf8');
   assert.match(driver, /Hex color/);
   assert.match(driver, /--pom-color-canvas/);
+  assert.match(driver, /--pom-color-accent/);
   assert.match(driver, /pomegranate-ui\.workbench-lab\.theme-draft\.v1/);
   assert.match(driver, /resolveAmbientProfile/);
   assert.doesNotMatch(driver, /ASH_AMBER_TARGET|ash-amber\.ts|presets|drivers\/reference/);

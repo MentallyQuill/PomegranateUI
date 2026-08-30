@@ -454,7 +454,7 @@ git commit -m "test: prove Theme Settings authoring"
 
 | ID | Contract |
 |---|---|
-| `theme-authoring-ash-seed` | entering `#2C2938/#382D31/#716667/#84008E/#FFFFFF/#D2B57A`, `20/60/6/50`, and `57/97/60/56` resolves exactly to the frozen Ash & Amber target |
+| `theme-authoring-ash-seed` | entering `#242321/#302E2A/#625B52/#51493E/#F3F0EA/#D2B57A`, `20/60/6/50`, and `57/97/60/56` resolves exactly to the corrected Ash & Amber target while preserving its `selection` ambient role |
 | `theme-authoring-last-valid` | invalid/unsafe edit cannot change the applied target |
 | `theme-authoring-ambient-precedence` | accessibility, device, scene, target, fallback order is exact |
 | `theme-authoring-round-trip` | saved draft restores independently of layout |

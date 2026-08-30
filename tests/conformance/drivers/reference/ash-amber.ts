@@ -34,15 +34,16 @@ export async function renderAshAmberReference(
         anchorWidgets: Object.freeze(['Characters (Story)', 'Transcript', 'Composer'])
       }),
       visual: Object.freeze({
-        canvas: '#2C2938',
-        accent: '#84008E',
-        text: '#FFFFFF',
-        shellRadius: '0px',
-        widgetRadius: '0px',
-        buttonRadius: '0px'
+        canvas: '#242321',
+        accent: '#C18A3D',
+        text: '#F3F0EA',
+        shellRadius: '4px',
+        widgetRadius: '4px',
+        buttonRadius: '4px'
       }),
       trace: Object.freeze([
         'opened byte-hashed SonderUI_RW2_1 frame at t=80',
+        'applied the later approved neutral Ash palette correction',
         'applied independent ' + scenario.referenceState + ' semantic rubric'
       ])
     });

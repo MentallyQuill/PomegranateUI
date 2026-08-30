@@ -1,18 +1,79 @@
-import type { ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
+import { THEME_COLOR_ROLES, type ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
+import {
+  resolveSemanticCanvasLayers,
+  validateThemePalette,
+  type SemanticCanvasLayer,
+  type ThemePaletteRoleGroupConstraint
+} from '@pomegranate-ui/theme';
 
 import { material, shapePalette, themeRecipes, themeTarget } from './base.js';
+
+const ASH_AMBER_COLORS = {
+  canvas: '#242321', surface: '#302E2A', surfaceElevated: '#413D36', surfaceInset: '#191918', chrome: '#625B52',
+  text: '#F3F0EA', textMuted: '#D0C9BE', textFaint: '#A79E91', textOnAccent: '#211C14', accent: '#C18A3D',
+  selection: '#51493E', focus: '#E0B568', success: '#8FA68A', warning: '#D2B57A', danger: '#C9836F',
+  border: '#514B43', borderStrong: '#80756A', shadow: '#0D0D0C'
+} as const satisfies ThemeDefinitionV2['colors'];
+
+export const ASH_AMBER_PALETTE_CONSTRAINTS = [
+  {
+    id: 'ash-neutral-chrome',
+    roles: ['canvas', 'surface', 'surfaceElevated', 'surfaceInset', 'chrome', 'border', 'borderStrong', 'shadow'],
+    maximumSaturation: 0.2
+  },
+  {
+    id: 'ash-no-purple-magenta',
+    roles: THEME_COLOR_ROLES,
+    hueExclusions: [{ fromDeg: 270, toDeg: 350, minimumSaturation: 0.06 }]
+  },
+  {
+    id: 'ash-restrained-accents',
+    roles: ['accent', 'selection', 'focus', 'warning'],
+    maximumSaturation: 0.7
+  }
+] as const satisfies readonly ThemePaletteRoleGroupConstraint[];
+
+const ASH_AMBER_CANVAS_RECIPE = [
+  { kind: 'solid', color: { role: 'canvas' } },
+  { kind: 'image', assetId: 'image.deep-current-stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 0.48, blurPx: 0, saturation: 0.08, blend: 'normal' },
+  {
+    kind: 'linear-gradient',
+    angle: 90,
+    stops: [
+      { color: { role: 'surfaceInset', alpha: 0.92 }, position: 0 },
+      { color: { role: 'surface', alpha: 0.56 }, position: 0.5 },
+      { color: { role: 'canvas', alpha: 0.88 }, position: 1 }
+    ]
+  },
+  {
+    kind: 'radial-gradient',
+    shape: 'ellipse',
+    x: 0.57,
+    y: 0.97,
+    stops: [
+      { color: { role: 'warning', alpha: 0.26 }, position: 0 },
+      { color: { role: 'chrome', alpha: 0.12 }, position: 0.34 },
+      { color: { role: 'canvas', alpha: 0 }, position: 0.68 }
+    ]
+  },
+  { kind: 'veil', mode: 'reading', color: { role: 'surface' }, opacity: 0.28 }
+] as const satisfies readonly SemanticCanvasLayer[];
+
+const paletteValidation = validateThemePalette(ASH_AMBER_COLORS, ASH_AMBER_PALETTE_CONSTRAINTS);
+if (!paletteValidation.ok) {
+  throw new Error(`Ash & Amber palette constraints failed: ${JSON.stringify(paletteValidation.diagnostics)}`);
+}
+const canvasResolution = resolveSemanticCanvasLayers(ASH_AMBER_COLORS, ASH_AMBER_CANVAS_RECIPE);
+if (!canvasResolution.ok) {
+  throw new Error(`Ash & Amber semantic canvas failed: ${JSON.stringify(canvasResolution.diagnostics)}`);
+}
 
 export const ASH_AMBER_THEME: ThemeDefinitionV2 = {
   schemaVersion: 'pomegranate.ui.theme.v2',
   id: 'ash-amber',
   label: 'Ash & Amber',
-  description: 'Muted plum atmospheric glass with warm ash-brown title bars, restrained amber signal light, and compact workbench geometry.',
-  colors: {
-    canvas: '#2C2938', surface: '#382D31', surfaceElevated: '#4A3A3D', surfaceInset: '#211E2B', chrome: '#716667',
-    text: '#FFFFFF', textMuted: '#DED3D5', textFaint: '#BCAEB2', textOnAccent: '#FFFFFF', accent: '#84008E',
-    selection: '#70426F', focus: '#F0C98B', success: '#8FB39C', warning: '#D2B57A', danger: '#E69B8F',
-    border: '#5A4B50', borderStrong: '#94817D', shadow: '#100D14'
-  },
+  description: 'Neutral graphite atmospheric glass with warm ash-brown title bars, restrained amber signal light, and compact workbench geometry.',
+  colors: ASH_AMBER_COLORS,
   typography: {
     ui: { family: 'Pomegranate Sans', fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'], weight: 450, strongWeight: 650, lineHeight: 1.35, trackingEm: 0 },
     prose: { family: 'Pomegranate Serif', fallbacks: ['ui-serif', 'serif'], weight: 400, strongWeight: 600, lineHeight: 1.58, trackingEm: 0 },
@@ -32,7 +93,7 @@ export const ASH_AMBER_THEME: ThemeDefinitionV2 = {
     row: material({ base: 'surfaceElevated', fallback: 'surfaceInset', opacity: 0.28, blurPx: 0, border: 'border', borderOpacity: 0.2, rimOpacity: 0.03 }),
     field: material({ base: 'surfaceInset', opacity: 0.76, blurPx: 0, border: 'borderStrong', borderOpacity: 0.34, rimOpacity: 0.04 }),
     button: material({ base: 'chrome', fallback: 'surface', opacity: 0.3, blurPx: 0, border: 'borderStrong', borderOpacity: 0.38, rimOpacity: 0.06 }),
-    selected: material({ base: 'accent', fallback: 'surfaceElevated', opacity: 0.06, blurPx: 0, border: 'focus', borderOpacity: 0.52, rimOpacity: 0.08 }),
+    selected: material({ base: 'selection', fallback: 'surfaceElevated', opacity: 0.06, blurPx: 0, border: 'focus', borderOpacity: 0.52, rimOpacity: 0.08 }),
     menu: material({ base: 'surface', opacity: 0.88, blurPx: 26, saturation: 0.96, border: 'borderStrong', borderOpacity: 0.5, rimOpacity: 0.1, shadowOpacity: 0.58, shadowBlurPx: 88 }),
     dialog: material({ base: 'surface', opacity: 0.9, blurPx: 28, saturation: 0.96, border: 'borderStrong', borderOpacity: 0.52, rimOpacity: 0.1, shadowOpacity: 0.62, shadowBlurPx: 94 }),
     floating: material({ base: 'surfaceElevated', fallback: 'surfaceInset', opacity: 0.84, blurPx: 22, saturation: 0.94, border: 'borderStrong', borderOpacity: 0.46, rimOpacity: 0.1, shadowOpacity: 0.52, shadowBlurPx: 66 }),
@@ -49,19 +110,13 @@ export const ASH_AMBER_THEME: ThemeDefinitionV2 = {
     { id: 'icons.minimal', kind: 'icon-pack', required: true },
     { id: 'image.deep-current-stage', kind: 'image', required: true }
   ],
-  canvas: [
-    { kind: 'solid', color: '#2C2938' },
-    { kind: 'image', assetId: 'image.deep-current-stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 0.66, blurPx: 0, saturation: 0.42, blend: 'normal' },
-    { kind: 'linear-gradient', angle: 90, stops: [{ color: '#211E2BE8', position: 0 }, { color: '#382D3188', position: 0.5 }, { color: '#2C2938E0', position: 1 }] },
-    { kind: 'radial-gradient', shape: 'ellipse', x: 0.57, y: 0.97, stops: [{ color: '#D2B57A66', position: 0 }, { color: '#84008E2E', position: 0.34 }, { color: '#2C293800', position: 0.68 }] },
-    { kind: 'veil', mode: 'reading', color: '#382D31', opacity: 0.24 }
-  ],
+  canvas: [...canvasResolution.layers],
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
   capabilities: { translucency: true, textures: false, localImages: true }
 };
 
 export const ASH_AMBER_TARGET = themeTarget(ASH_AMBER_THEME, {
-  colorRole: 'accent',
+  colorRole: 'selection',
   position: { x: 0.57, y: 0.97 },
   radius: 0.6,
   power: 0.56

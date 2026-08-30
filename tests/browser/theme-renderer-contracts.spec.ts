@@ -7,6 +7,7 @@ const TARGETS = [
   { id: 'pom-neutral', label: 'PomOS' },
   { id: 'bunny', label: 'Bunny' }
 ] as const;
+const ASH_TARGET = { id: 'ash-amber', label: 'Ash & Amber' } as const;
 
 async function fresh(page: Page, width = 1440, height = 900) {
   await page.setViewportSize({ width, height });
@@ -21,7 +22,7 @@ async function fresh(page: Page, width = 1440, height = 900) {
 
 async function selectTheme(
   page: Page,
-  target: (typeof TARGETS)[number],
+  target: (typeof TARGETS)[number] | typeof ASH_TARGET,
   { closeDrawer = true }: { readonly closeDrawer?: boolean } = {}
 ) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
@@ -34,6 +35,7 @@ async function selectTheme(
 type MaterialSample = {
   readonly alpha: number;
   readonly backdrop: string;
+  readonly background: string;
   readonly borderRadius: string;
   readonly borderWidth: string;
   readonly boxShadow: string;
@@ -47,6 +49,7 @@ async function material(page: Page, selector: string): Promise<MaterialSample> {
     return {
       alpha: match.length === 4 ? match[3]! : 1,
       backdrop: style.backdropFilter,
+      background: style.backgroundColor,
       borderRadius: style.borderRadius,
       borderWidth: style.borderWidth,
       boxShadow: style.boxShadow,
@@ -81,6 +84,55 @@ test('the canvas remains behind every interactive Workbench surface', async ({ p
     expect(painted.canvas, `${target.label} canvas interception`).toBe(false);
     expect(painted.widget, `${target.label} visible Widget`).toBe('scene-characters');
   }
+});
+
+test('Ash and Amber renders neutral graphite chrome, restrained amber ambience, and rounded bevels', async ({ page }) => {
+  await fresh(page);
+  await selectTheme(page, ASH_TARGET);
+
+  const evidence = await page.locator('main').evaluate((root) => {
+    const style = getComputedStyle(root);
+    return {
+      canvas: style.getPropertyValue('--pom-color-canvas').trim(),
+      surface: style.getPropertyValue('--pom-color-surface').trim(),
+      chrome: style.getPropertyValue('--pom-color-chrome').trim(),
+      accent: style.getPropertyValue('--pom-color-accent').trim(),
+      ambient: style.getPropertyValue('--pom-ambient-color').trim(),
+      layers: [...root.querySelectorAll<HTMLElement>('[data-pom-canvas-layer]')].map((layer) => ({
+        kind: layer.dataset.pomCanvasLayer,
+        background: getComputedStyle(layer).backgroundColor,
+        filter: getComputedStyle(layer).filter,
+        opacity: getComputedStyle(layer).opacity
+      }))
+    };
+  });
+  expect(evidence).toMatchObject({
+    canvas: '#242321',
+    surface: '#302E2A',
+    chrome: '#625B52',
+    accent: '#C18A3D',
+    ambient: '#51493E',
+    layers: [
+      { kind: 'solid', background: 'rgb(36, 35, 33)' },
+      { kind: 'image', filter: 'blur(0px) saturate(0.08)', opacity: '0.48' },
+      { kind: 'linear-gradient' },
+      { kind: 'radial-gradient' },
+      { kind: 'veil', background: 'rgb(48, 46, 42)', opacity: '0.28' }
+    ]
+  });
+
+  const shelf = await material(page, '[data-pom-part="chrome.shelf"]');
+  const header = await material(page, '[data-conformance-region="left"] [data-pom-part="widget.header"]');
+  expect(shelf).toMatchObject({
+    background: 'rgba(98, 91, 82, 0.6)',
+    borderRadius: '4px',
+    clipPath: 'none'
+  });
+  expect(header).toMatchObject({
+    background: 'rgba(98, 91, 82, 0.74)',
+    borderRadius: '4px 4px 0px 0px',
+    clipPath: 'none'
+  });
 });
 
 test('composition metadata and icon art survive data-only theme compilation', async ({ page }) => {
@@ -266,6 +318,7 @@ test('reduced transparency selects an opaque no-blur semantic fallback', async (
     expect(sample.alpha, `${selector} opacity`).toBe(1);
     expect(blurPx(sample.backdrop), `${selector} blur`).toBe(0);
   }
+  await expect(page.locator('[data-pom-ambient-layer]')).toHaveCSS('opacity', '0');
   const selectedTheme = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: 'PomOS', exact: true });
   expect((await material(page, '.theme-targets button[aria-pressed="true"]')).alpha).toBe(1);
   await selectedTheme.focus();
@@ -307,6 +360,31 @@ test('reduced transparency selects an opaque no-blur semantic fallback', async (
   await page.mouse.down();
   expect(await stateSample('pressed')).toEqual({ opacity: 1, alpha: 1, backdrop: 'none' });
   await page.mouse.up();
+});
+
+test('Ash and Amber reduced transparency resolves every elevated owner to neutral opaque ash', async ({ page }) => {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Emulation.setEmulatedMedia', {
+    features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }]
+  });
+  await fresh(page);
+  await selectTheme(page, ASH_TARGET);
+  await page.getByText('Developer tools', { exact: true }).click();
+
+  for (const selector of [
+    '[data-pom-part="chrome.shelf"]',
+    '.developer-drawer-surface',
+    '[data-conformance-region="left"] .widget-frame',
+    '[data-conformance-region="left"] [data-pom-part="widget.header"]'
+  ]) {
+    const sample = await material(page, selector);
+    expect(sample).toMatchObject({
+      alpha: 1,
+      backdrop: 'none',
+      background: 'rgb(48, 46, 42)'
+    });
+  }
+  await expect(page.locator('[data-pom-ambient-layer]')).toHaveCSS('opacity', '0');
 });
 
 test('an external non-preset definition renders the same live Workbench tree', async ({ page }) => {

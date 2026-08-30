@@ -1084,7 +1084,7 @@ main[data-pom-chrome-presentation="compact"] {
   padding: 0;
 }
 main[data-pom-chrome-presentation="compact"] .context-rail { border-radius: 0; }
-main[data-pom-chrome-presentation="compact"] .top-shelf { border-radius: 0; }
+main[data-pom-chrome-presentation="compact"] .top-shelf { border-radius: var(--pom-part-chrome-shelf-radius); }
 main[data-pom-chrome-presentation="overlay"] { padding: 12px; }
 main[data-pom-chrome-presentation="full"] { padding: 16px; }
 
