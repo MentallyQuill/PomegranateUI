@@ -101,8 +101,8 @@ accessible icon names, and atomic switching back to a text-action target.
 
 | Snapshot | Viewport | SHA-256 |
 | --- | --- | --- |
-| `wide-pom-neutral.png` | 1440x900 | `e1b6ad6203bac1bb2e854319b74b868b0b60061cdc12b799a5157e4075c9277e` |
-| `short-desktop-pom-neutral.png` | 1280x720 | `7c0f2016be2be315118a2fe109a3f949c8afd88c3a73dcfee861652a8f9cf10a` |
-| `compact-pom-neutral.png` | 390x844 | `5cdc1faaae4d2660748d5c7a723e33e0d4340c16961f862a3e8f78e384467be1` |
-| `short-landscape-pom-neutral.png` | 844x390 | `5e1c98f68c6d66a1a21600ee5f3b16932b697b3cef116a626e330f7cf730a020` |
-| `zoom-200-pom-neutral.png` | 800x450 | `1900174cbdcd4362e227e7ff4df5699eb48347ce2878f8fd9166894c0675e863` |
+| `wide-pom-neutral.png` | 1440x900 | `8bd35fc0a96a768f6314bee550967ec0130630f98af53eb9257837482f2eee19` |
+| `short-desktop-pom-neutral.png` | 1280x720 | `a1dff25099ea00f23db46d5fa185a64f96a318366b7c39f60906cca276e1a854` |
+| `compact-pom-neutral.png` | 390x844 | `992e2b0278a1fcb691038d3815dbd55196f633432055f33b31e11ce026a049ed` |
+| `short-landscape-pom-neutral.png` | 844x390 | `dedaa1eb2eb8eb445e001417bbf44fce969640aa563bf2571d541739a7a356fa` |
+| `zoom-200-pom-neutral.png` | 800x450 | `94d7e8cd75b2b34179d541334f36a92484c8459e64fcb78eb0e1129c95ce556c` |
