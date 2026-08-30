@@ -44,6 +44,53 @@ test('Atmospheric composition keeps developer chrome out of the default stage an
   await expect(page.locator('[data-story-composer] textarea')).toBeVisible();
 });
 
+test('all themes keep centered story prose aligned with the composer instrument', async ({ page }) => {
+  await openFresh(page, 1600, 900);
+
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
+    await page.getByText('Developer tools', { exact: true }).click();
+    await page.getByRole('group', { name: 'Visual target' })
+      .getByRole('button', { name: theme, exact: true })
+      .click();
+    await page.getByText('Developer tools', { exact: true }).click();
+
+    const geometry = await page.evaluate(() => {
+      const box = (selector: string) => {
+        const node = document.querySelector<HTMLElement>(selector);
+        if (!node) throw new Error(`Missing alignment owner: ${selector}`);
+        const rect = node.getBoundingClientRect();
+        return {
+          left: rect.left,
+          right: rect.right,
+          center: (rect.left + rect.right) / 2
+        };
+      };
+      const field = document.querySelector<HTMLElement>('[data-widget-type="story.composer"] .composer-field');
+      if (!field) throw new Error('Missing composer field');
+      return {
+        stage: box('[data-conformance-region="stage"]'),
+        prose: box('[data-widget-type="story.transcript"] .transcript > p:not(.widget-kicker)'),
+        transcript: box('[data-widget-type="story.transcript"] .widget-frame'),
+        composer: box('[data-widget-type="story.composer"] .composer'),
+        field: box('[data-widget-type="story.composer"] .composer-field'),
+        textarea: box('[data-widget-type="story.composer"] textarea'),
+        fieldDisplay: getComputedStyle(field).display
+      };
+    });
+
+    expect(Math.abs(geometry.transcript.center - geometry.stage.center), `${theme} transcript center`).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.prose.center - geometry.stage.center), `${theme} prose center`).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.composer.center - geometry.stage.center), `${theme} composer center`).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs((geometry.prose.left - geometry.composer.left) - (geometry.composer.right - geometry.prose.right)),
+      `${theme} prose inset within composer`
+    ).toBeLessThanOrEqual(1);
+    expect(geometry.fieldDisplay, `${theme} composer field layout`).toBe('grid');
+    expect(Math.abs(geometry.textarea.left - (geometry.field.left + 12)), `${theme} textarea left inset`).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.textarea.right - (geometry.field.right - 12)), `${theme} textarea right inset`).toBeLessThanOrEqual(1);
+  }
+});
+
 test('native workbench Catalog supports keyboard placement and stable attributes', async ({ page }) => {
   await openFresh(page, 1024, 768);
   await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
