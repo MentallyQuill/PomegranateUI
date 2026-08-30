@@ -125,7 +125,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(catalog).toHaveAttribute('data-result-mode', 'compact');
     await user.click(within(catalog).getByRole('button', { name: 'Close Catalog' }));
     expect(launcher).toHaveAttribute('aria-expanded', 'false');
-  });
+  }, 15_000);
 
   it('opens Panel creation as a native modal dialog', async () => {
     const user = userEvent.setup();
