@@ -21,7 +21,11 @@ export async function renderLabThemeTarget(
     await page.getByText('Developer tools', { exact: true }).click();
     await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: label, exact: true }).click();
     await page.getByText('Developer tools', { exact: true }).click();
-    if (scenario.implementationState === 'catalog') await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+    if (scenario.implementationState === 'catalog') {
+      const catalogLauncher = page.getByRole('button', { name: 'Open Widget Catalog' });
+      await catalogLauncher.focus();
+      await catalogLauncher.press('Enter');
+    }
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const afterIds = await widgetIds(page);
     return await page.locator('main').evaluate((root, expected) => {
@@ -50,8 +54,12 @@ export async function renderLabThemeTarget(
           scenarioStateReached: (visibleCatalog === (expected.state === 'catalog')) as true
         }),
         structure: Object.freeze({
-          panelTabs: Object.freeze([...root.querySelectorAll<HTMLElement>('[role="tab"]')].map((control) => control.textContent?.trim() ?? '')),
-          anchorWidgets: Object.freeze([...root.querySelectorAll<HTMLElement>('.widget-frame[aria-label]')].map((node) => node.getAttribute('aria-label') ?? ''))
+          panelTabs: Object.freeze([...root.querySelectorAll<HTMLElement>('.panel-tabs [role="tab"]')].map((control) => control.textContent?.trim() ?? '')),
+          anchorWidgets: Object.freeze([
+            ...(root.querySelector('.widget-frame[aria-label]') ? ['panel-widget'] : []),
+            ...(reader ? ['story-reader'] : []),
+            ...(root.querySelector('[data-pomegranate-region-surface="composer"]') ? ['story-composer'] : [])
+          ])
         }),
         visual: Object.freeze({
           canvas: style.getPropertyValue('--pom-color-canvas').trim(),

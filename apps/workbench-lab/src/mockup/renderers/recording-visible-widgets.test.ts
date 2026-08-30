@@ -43,7 +43,7 @@ const dispatch: WidgetRendererProps<LabHostContext>['dispatch'] = () => {
   throw new Error('Recording-visible fixtures do not dispatch Workbench commands.');
 };
 
-function renderSurface(rawType: string, configuration: JsonObject = {}) {
+function renderSurface(rawType: string, configuration: JsonObject = { presentation: 'recording' }) {
   const type = asWidgetType(rawType);
   render(ImplementedWidget, {
     instance: {

@@ -10,7 +10,7 @@ async function openFresh(page: Page, width: number, height: number) {
 
 test('native workbench keeps literal relationships and keyboard reorder behavior', async ({ page }) => {
   await openFresh(page, 1440, 900);
-  const tabs = page.getByRole('tab');
+  const tabs = page.getByRole('tablist', { name: 'Panels' }).getByRole('tab');
   await expect(tabs).toHaveCount(3);
   const scene = page.getByRole('tab', { name: 'Scene' });
   const scenePanelId = await scene.getAttribute('aria-controls');
@@ -157,7 +157,7 @@ test('reduced motion removes themed Widget action-rail transitions', async ({ pa
       .click();
     await page.getByText('Developer tools', { exact: true }).click();
 
-    const transition = await page.getByRole('article', { name: 'Characters (Story)' })
+    const transition = await page.locator('[data-widget-type="story.characters"]')
       .getByRole('navigation')
       .evaluate((nav) => {
         const style = getComputedStyle(nav);
@@ -169,7 +169,10 @@ test('reduced motion removes themed Widget action-rail transitions', async ({ pa
 
 test('native workbench Catalog supports keyboard placement and stable attributes', async ({ page }) => {
   await openFresh(page, 1024, 768);
-  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  const launcher = page.getByRole('button', { name: 'Open Widget Catalog', includeHidden: true });
+  await launcher.focus();
+  await expect(launcher).toBeVisible();
+  await launcher.press('Enter');
   const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
   await expect(catalog.getByRole('listitem')).toHaveCount(94);
   await catalog.getByRole('button', { name: 'Compact' }).click();
@@ -227,7 +230,7 @@ for (const viewport of [
   test(`native workbench ${viewport.name} surface has no horizontal overflow`, async ({ page }) => {
     await openFresh(page, viewport.width, viewport.height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-    await expect(page.getByRole('tab')).toHaveCount(3);
+    await expect(page.getByRole('tablist', { name: 'Panels' }).getByRole('tab')).toHaveCount(3);
     await expect(page.getByRole('article', { name: 'Transcript' })).toBeVisible();
   });
 }

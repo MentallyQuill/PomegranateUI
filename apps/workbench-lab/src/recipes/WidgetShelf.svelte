@@ -16,7 +16,13 @@
 </script>
 
 <details class="widget-shelf" data-widget-shelf data-empty={(surface?.widgetShelf.length ?? 0) === 0}>
-  <summary>Widget Shelf <span>{surface?.widgetShelf.length ?? 0}</span></summary>
+  <summary aria-label="Open Widget Shelf" data-pom-icon-action data-pom-action="open-shelf">
+    <span data-pom-action-icon aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16v12H4zM3 4h18v3H3zM9 11h6" /></svg>
+    </span>
+    <span data-pom-action-label>Widget Shelf</span>
+    <span class="widget-shelf-count">{surface?.widgetShelf.length ?? 0}</span>
+  </summary>
   <div>
     {#if surface?.widgetShelf.length}
       {#each surface.widgetShelf as frame (frame.instanceId)}

@@ -71,7 +71,7 @@ test('the canvas remains behind every interactive Workbench surface', async ({ p
     await selectTheme(page, target);
     await expect.poll(() => page.locator('[data-pom-canvas-root]').evaluate((canvas) => Number(getComputedStyle(canvas).zIndex)))
       .toBeLessThan(0);
-    const widget = page.getByRole('article', { name: 'Characters (Story)' });
+    const widget = page.getByRole('article', { name: 'Characters' });
     const box = await widget.boundingBox();
     expect(box, `${target.label} widget bounds`).not.toBeNull();
     const painted = await page.evaluate(({ x, y }) => {
@@ -143,13 +143,13 @@ test('composition metadata and icon art survive data-only theme compilation', as
     const root = page.locator('main');
     await expect(root).toHaveAttribute('data-pom-widget-grouping', /^(individual|unified)$/);
     await expect(root).toHaveAttribute('data-pom-chrome-presentation', /^(compact|overlay|full)$/);
-    await expect(root).toHaveAttribute('data-pom-action-presentation', /^(compact|hover-focus|full)$/);
-    const image = await page.getByRole('article', { name: 'Characters (Story)' })
+    await expect(root).toHaveAttribute('data-pom-action-presentation', /^(compact|hover-focus|full|always)$/);
+    const image = await page.getByRole('article', { name: 'Characters' })
       .getByRole('button', { name: 'Drag Widget' })
       .evaluate((button) => getComputedStyle(button).backgroundImage);
     expect(image, `${target.label} icon image`).toContain('url(');
-    const pseudoContent = await page.getByRole('article', { name: 'Characters (Story)' })
-      .locator('header')
+    const pseudoContent = await page.getByRole('article', { name: 'Characters' })
+      .locator(':scope > header')
       .evaluate((header) => [getComputedStyle(header, '::before').content, getComputedStyle(header, '::after').content]);
     expect(pseudoContent, `${target.label} decorative stoplights`).toEqual(['none', 'none']);
   }
@@ -198,19 +198,34 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
     expect(hitSurface.borderWidth, `${edge} resize artifact`).toBe('0px');
   }
 
-  const factRows = page.getByRole('article', { name: 'World State' }).locator('.surface-facts > div');
+  const factRows = page.getByRole('article', { name: 'Characters' }).locator('.recording-characters li');
   expect(await factRows.count()).toBeGreaterThan(1);
   for (const row of await factRows.all()) {
     await expect(row).toHaveAttribute('data-pom-part', 'row.surface');
     expect(await row.evaluate((element) => getComputedStyle(element).borderRadius)).not.toBe('0px');
   }
 
-  const worldWindow = page.getByRole('article', { name: 'World State' });
-  const unusedTail = await worldWindow.evaluate((article) => {
-    const content = article.querySelector('.surface-facts')!;
+  const characterWindow = page.getByRole('article', { name: 'Characters' });
+  const unusedTail = await characterWindow.evaluate((article) => {
+    const content = article.querySelector('.recording-characters li:last-child')!;
     return article.getBoundingClientRect().bottom - content.getBoundingClientRect().bottom;
   });
   expect(unusedTail, 'individual window dead space').toBeLessThanOrEqual(32);
+
+  const effectsWindow = page.getByRole('article', { name: 'Scene Effects' });
+  const effectsSlot = page.locator(
+    '[data-conformance-region="right"] > .dock-shelf > [data-widget-type="story.room-ambience"]',
+  );
+  const effectsBox = await effectsWindow.boundingBox();
+  const effectsSlotBox = await effectsSlot.boundingBox();
+  const finalEffectBox = await effectsWindow.getByRole('slider', { name: 'Reading Veil' }).boundingBox();
+  expect(effectsBox).not.toBeNull();
+  expect(effectsSlotBox).not.toBeNull();
+  expect(finalEffectBox).not.toBeNull();
+  expect(effectsBox!.y + effectsBox!.height, 'PomOS Scene Effects window stays inside its shelf slot')
+    .toBeLessThanOrEqual(effectsSlotBox!.y + effectsSlotBox!.height + 1);
+  expect(finalEffectBox!.y + finalEffectBox!.height, 'PomOS exposes all four Scene Effects controls inside the window')
+    .toBeLessThanOrEqual(effectsBox!.y + effectsBox!.height + 1);
 
   for (const target of TARGETS.slice(1)) {
     await selectTheme(page, target);
@@ -274,7 +289,7 @@ test('Bunny matches the stationery reference through reusable expression binding
       widget: style('[data-conformance-region="left"] .widget-frame'),
       header: style('[data-conformance-region="left"] .widget-frame > header'),
       icon: style('[data-conformance-region="left"] .widget-frame nav button'),
-      row: style('[data-widget-type="systems.world-state"] [data-pom-part="row.surface"]'),
+      row: style('[data-widget-type="story.characters"] [data-pom-part="row.surface"]'),
       button: style('.top-shelf [data-pom-part="button.surface"]'),
       reader: {
         ...style('[data-widget-type="story.transcript"] .widget-frame > [data-pom-part="widget.content"]'),
@@ -417,14 +432,14 @@ test('unified compositions allocate rail space to functional content', async ({ 
   await fresh(page);
   await selectTheme(page, TARGETS[0]);
 
-  const ambience = page.getByRole('article', { name: 'Room Ambience' });
-  const action = ambience.getByRole('button', { name: 'Pause ambience' });
-  const ambienceBox = await ambience.boundingBox();
-  const actionBox = await action.boundingBox();
-  expect(ambienceBox).not.toBeNull();
-  expect(actionBox).not.toBeNull();
-  expect(actionBox!.y + actionBox!.height, 'ambience action stays inside its assigned unified row')
-    .toBeLessThanOrEqual(ambienceBox!.y + ambienceBox!.height + 1);
+  const effects = page.getByRole('article', { name: 'Scene Effects' });
+  const finalControl = effects.getByRole('slider', { name: 'Reading Veil' });
+  const effectsBox = await effects.boundingBox();
+  const controlBox = await finalControl.boundingBox();
+  expect(effectsBox).not.toBeNull();
+  expect(controlBox).not.toBeNull();
+  expect(controlBox!.y + controlBox!.height, 'final effect control stays inside its assigned unified row')
+    .toBeLessThanOrEqual(effectsBox!.y + effectsBox!.height + 1);
 });
 
 test('each target keeps one glass owner per Widget and a seamless structural dock', async ({ page }) => {
@@ -450,7 +465,7 @@ test('material controls have refined geometry and visibly control glass', async 
     await fresh(page);
     await selectTheme(page, target);
     await page.getByRole('tab', { name: 'Settings' }).click();
-    const settings = page.getByRole('article', { name: 'Theme Settings' });
+    const settings = page.locator('[data-widget-type="settings.custom-theme"]');
     const glass = settings.getByRole('slider', { name: 'Glass Density' });
     const frost = settings.getByRole('slider', { name: 'Frost Level' });
     const geometry = await glass.evaluate((input) => {
@@ -621,7 +636,7 @@ test('an external non-preset definition renders the same live Workbench tree', a
     revision: root.getAttribute('data-workbench-revision'),
     widgets: [...root.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
   }))).toEqual(before);
-  expect(await page.getByRole('article', { name: 'Characters (Story)' }).evaluate((article) => {
+  expect(await page.getByRole('article', { name: 'Characters' }).evaluate((article) => {
     const style = getComputedStyle(article);
     return { radius: style.borderRadius, family: style.fontFamily, color: style.color };
   })).toMatchObject({ radius: '0px' });
@@ -635,7 +650,7 @@ test('an external non-preset definition renders the same live Workbench tree', a
 test('focused and floating compositions retain exactly one elevated material owner', async ({ page }) => {
   await fresh(page);
   await selectTheme(page, TARGETS[1]);
-  const world = page.getByRole('article', { name: 'World State' });
+  const world = page.getByRole('article', { name: 'Scene Effects' });
 
   await world.getByRole('button', { name: 'Focus Widget' }).click();
   const dialog = await material(page, '.focused-widget-dialog');

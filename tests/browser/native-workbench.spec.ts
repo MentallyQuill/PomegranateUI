@@ -12,6 +12,14 @@ async function closeDeveloperTools(page: import('@playwright/test').Page) {
   if (await drawer.getAttribute('open') !== null) await page.getByText('Developer tools', { exact: true }).click();
 }
 
+async function openWidgetCatalog(page: import('@playwright/test').Page) {
+  const launcher = page.getByRole('button', { name: 'Open Widget Catalog' });
+  await launcher.focus();
+  await expect(launcher).toBeFocused();
+  await expect(launcher).toBeVisible();
+  await launcher.press('Enter');
+}
+
 async function dragTo(
   page: import('@playwright/test').Page,
   handle: import('@playwright/test').Locator,
@@ -64,12 +72,12 @@ test('native workbench POM-PANEL-07856BFE9A POM-PANEL-DF4EC7C581 activates a Pan
 test('native workbench POM-PANEL-0C32491298 POM-PANEL-E6D6A0E64B appends menu docking to an occupied edge', async ({ page }) => {
   const leftDock = page.locator('[data-pomegranate-dock="left"]');
   await expect(leftDock.getByRole('article')).toHaveCount(2);
-  const world = page.getByRole('article', { name: 'World State' });
-  await world.getByRole('button', { name: 'Dock left' }).click();
+  const effects = page.getByRole('article', { name: 'Scene Effects' });
+  await effects.getByRole('button', { name: 'Dock left' }).click();
   await expect(leftDock.getByRole('article')).toHaveCount(3);
-  await expect(leftDock.getByRole('article').nth(0)).toHaveAttribute('aria-label', 'Characters (Story)');
-  await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Theme Library');
-  await expect(leftDock.getByRole('article').nth(2)).toHaveAttribute('aria-label', 'World State');
+  await expect(leftDock.getByRole('article').nth(0)).toHaveAttribute('aria-label', 'Characters');
+  await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Custom Theme');
+  await expect(leftDock.getByRole('article').nth(2)).toHaveAttribute('aria-label', 'Scene Effects');
 });
 
 test('Deep Current dock separators resize with keyboard and persist exact bounded widths', async ({ page }) => {
@@ -77,11 +85,11 @@ test('Deep Current dock separators resize with keyboard and persist exact bounde
   const right = page.getByRole('separator', { name: 'Resize right toolbar' });
   await expect(left).toHaveAttribute('aria-valuemin', '200');
   await expect(left).toHaveAttribute('aria-valuemax', '420');
-  await expect(left).toHaveAttribute('aria-valuenow', '286');
+  await expect(left).toHaveAttribute('aria-valuenow', '334');
 
   await left.focus();
   await left.press('ArrowRight');
-  await expect(left).toHaveAttribute('aria-valuenow', '294');
+  await expect(left).toHaveAttribute('aria-valuenow', '342');
   await right.focus();
   await right.press('End');
   await expect(right).toHaveAttribute('aria-valuenow', '420');
@@ -92,71 +100,73 @@ test('Deep Current dock separators resize with keyboard and persist exact bounde
   await page.mouse.down();
   await page.mouse.move(handle.x + handle.width / 2 + 26, handle.y + handle.height / 2, { steps: 3 });
   await page.mouse.up();
-  await expect(left).toHaveAttribute('aria-valuenow', '320');
+  await expect(left).toHaveAttribute('aria-valuenow', '368');
 
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
-  await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '320');
+  await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '368');
   await expect(page.getByRole('separator', { name: 'Resize right toolbar' })).toHaveAttribute('aria-valuenow', '420');
-  await expect.poll(() => page.locator('[data-pomegranate-dock="left"]').evaluate((node) => node.getBoundingClientRect().width)).toBe(320);
+  await expect.poll(() => page.locator('[data-pomegranate-dock="left"]').evaluate((node) => node.getBoundingClientRect().width)).toBe(368);
   await expect.poll(() => page.locator('[data-pomegranate-dock="right"]').evaluate((node) => node.getBoundingClientRect().width)).toBe(420);
 });
 
 test('Deep Current Widgets merge into an accessible persistent tab group and reorder', async ({ page }) => {
-  const ambience = page.getByRole('article', { name: 'Room Ambience' });
-  const worldBox = await page.getByRole('article', { name: 'World State' }).boundingBox();
-  if (!worldBox) throw new Error('Expected World State geometry.');
-  await dragTo(page, ambience.getByRole('button', { name: 'Drag Widget' }), {
-    x: worldBox.x + worldBox.width / 2,
-    y: worldBox.y + worldBox.height / 2
+  const customTheme = page.getByRole('article', { name: 'Custom Theme' });
+  const charactersBox = await page.getByRole('article', { name: 'Characters' }).boundingBox();
+  if (!charactersBox) throw new Error('Expected Characters geometry.');
+  await dragTo(page, customTheme.getByRole('button', { name: 'Drag Widget' }), {
+    x: charactersBox.x + charactersBox.width / 2,
+    y: charactersBox.y + charactersBox.height / 2
   });
 
-  const group = page.getByRole('group', { name: 'Widget group' });
-  await expect(group.getByRole('tab')).toHaveText(['World State', 'Room Ambience']);
-  await expect(group.getByRole('tab', { name: 'Room Ambience' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('article', { name: 'World State' })).toHaveCount(0);
+  const group = page.getByRole('group', { name: 'Widget group' })
+    .filter({ has: page.getByRole('tab', { name: 'Characters' }) });
+  await expect(group.getByRole('tab')).toHaveText(['Characters', 'Custom Theme']);
+  await expect(group.getByRole('tab', { name: 'Custom Theme' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('article', { name: 'Characters' })).toHaveCount(0);
 
-  await group.getByRole('tab', { name: 'World State' }).click();
-  await expect(page.getByRole('article', { name: 'World State' })).toBeVisible();
-  await expect(page.getByRole('article', { name: 'Room Ambience' })).toHaveCount(0);
+  await group.getByRole('tab', { name: 'Characters' }).click();
+  await expect(page.getByRole('article', { name: 'Characters' })).toBeVisible();
+  await expect(page.getByRole('article', { name: 'Custom Theme' })).toHaveCount(0);
 
-  await group.getByRole('tab', { name: 'Room Ambience' }).press('Alt+ArrowLeft');
-  await expect(group.getByRole('tab')).toHaveText(['Room Ambience', 'World State']);
+  await group.getByRole('tab', { name: 'Custom Theme' }).press('Alt+ArrowLeft');
+  await expect(group.getByRole('tab')).toHaveText(['Custom Theme', 'Characters']);
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
-  const restored = page.getByRole('group', { name: 'Widget group' });
-  await expect(restored.getByRole('tab')).toHaveText(['Room Ambience', 'World State']);
-  await expect(restored.getByRole('tab', { name: 'World State' })).toHaveAttribute('aria-selected', 'true');
+  const restored = page.getByRole('group', { name: 'Widget group' })
+    .filter({ has: page.getByRole('tab', { name: 'Characters' }) });
+  await expect(restored.getByRole('tab')).toHaveText(['Custom Theme', 'Characters']);
+  await expect(restored.getByRole('tab', { name: 'Characters' })).toHaveAttribute('aria-selected', 'true');
 });
 
 test('Deep Current Focus and Back keep one Widget identity and restore invoking focus', async ({ page }) => {
-  const world = page.getByRole('article', { name: 'World State' });
-  const focus = world.getByRole('button', { name: 'Focus Widget' });
+  const effects = page.getByRole('article', { name: 'Scene Effects' });
+  const focus = effects.getByRole('button', { name: 'Focus Widget' });
   await focus.click();
 
-  const dialog = page.getByRole('dialog', { name: 'Focused World State' });
+  const dialog = page.getByRole('dialog', { name: 'Focused Scene Effects' });
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator('[data-pomegranate-widget="scene-world"]')).toHaveCount(1);
-  await expect(page.locator('[data-focused-widget-placeholder="scene-world"]')).toBeVisible();
-  await expect(page.locator('[data-pomegranate-widget="scene-world"]')).toHaveCount(1);
+  await expect(dialog.locator('[data-pomegranate-widget="scene-ambience"]')).toHaveCount(1);
+  await expect(page.locator('[data-focused-widget-placeholder="scene-ambience"]')).toBeVisible();
+  await expect(page.locator('[data-pomegranate-widget="scene-ambience"]')).toHaveCount(1);
 
   await dialog.getByRole('button', { name: 'Back to Workbench' }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Focus Widget' })).toBeFocused();
+  await expect(page.getByRole('article', { name: 'Scene Effects' }).getByRole('button', { name: 'Focus Widget' })).toBeFocused();
 });
 
 test('Deep Current pointer drag floats and subsequently moves a Widget within the canvas', async ({ page }) => {
-  const world = page.getByRole('article', { name: 'World State' });
+  const effects = page.getByRole('article', { name: 'Scene Effects' });
   const stageBox = await page.locator('[data-pomegranate-dock="main"]').boundingBox();
   if (!stageBox) throw new Error('Expected stage geometry.');
-  await dragTo(page, world.getByRole('button', { name: 'Drag Widget' }), {
+  await dragTo(page, effects.getByRole('button', { name: 'Drag Widget' }), {
     x: stageBox.x + stageBox.width * 0.72,
     y: stageBox.y + 90
   });
 
-  const floating = page.locator('[data-widget-type="systems.world-state"][data-pomegranate-placement="floating"]');
+  const floating = page.locator('[data-widget-type="story.room-ambience"][data-pomegranate-placement="floating"]');
   await expect(floating).toBeVisible();
   const first = await floating.boundingBox();
   if (!first) throw new Error('Expected floating Widget geometry.');
@@ -173,20 +183,20 @@ test('Deep Current pointer drag floats and subsequently moves a Widget within th
 });
 
 test('Deep Current drag creates a new shelf and invalid release restores exact origin', async ({ page }) => {
-  const world = page.getByRole('article', { name: 'World State' });
+  const effects = page.getByRole('article', { name: 'Scene Effects' });
   const seam = page.locator('[data-shelf-insertion="left"]');
   const seamBox = await seam.boundingBox();
   if (!seamBox) throw new Error('Expected left shelf seam geometry.');
-  await dragTo(page, world.getByRole('button', { name: 'Drag Widget' }), {
+  await dragTo(page, effects.getByRole('button', { name: 'Drag Widget' }), {
     x: seamBox.x + seamBox.width / 2,
     y: seamBox.y + seamBox.height / 2
   });
-  const placed = page.locator('[data-widget-type="systems.world-state"]');
+  const placed = page.locator('[data-widget-type="story.room-ambience"]');
   await expect(placed).toHaveAttribute('data-pomegranate-edge', 'left');
   await expect(placed).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
 
-  const ambience = page.locator('[data-widget-type="story.room-ambience"]');
-  const origin = await ambience.evaluate((node) => ({
+  const characters = page.locator('[data-widget-type="story.characters"]');
+  const origin = await characters.evaluate((node) => ({
     parent: node.parentElement?.getAttribute('data-pomegranate-dock'),
     edge: node.getAttribute('data-pomegranate-edge'),
     shelf: node.getAttribute('data-pomegranate-shelf'),
@@ -194,8 +204,8 @@ test('Deep Current drag creates a new shelf and invalid release restores exact o
     style: node.getAttribute('style')
   }));
   const revision = await page.locator('main').getAttribute('data-workbench-revision');
-  await dragTo(page, ambience.getByRole('button', { name: 'Drag Widget' }), { x: 2, y: 2 });
-  await expect.poll(() => ambience.evaluate((node) => ({
+  await dragTo(page, characters.getByRole('button', { name: 'Drag Widget' }), { x: 2, y: 2 });
+  await expect.poll(() => characters.evaluate((node) => ({
     parent: node.parentElement?.getAttribute('data-pomegranate-dock'),
     edge: node.getAttribute('data-pomegranate-edge'),
     shelf: node.getAttribute('data-pomegranate-shelf'),
@@ -204,7 +214,7 @@ test('Deep Current drag creates a new shelf and invalid release restores exact o
   }))).toEqual(origin);
   await expect(page.locator('main')).toHaveAttribute('data-workbench-revision', revision ?? '');
 
-  const cancelHandle = ambience.getByRole('button', { name: 'Drag Widget' });
+  const cancelHandle = characters.getByRole('button', { name: 'Drag Widget' });
   const cancelBox = await cancelHandle.boundingBox();
   if (!cancelBox) throw new Error('Expected cancel drag handle geometry.');
   await page.mouse.move(cancelBox.x + cancelBox.width / 2, cancelBox.y + cancelBox.height / 2);
@@ -212,7 +222,7 @@ test('Deep Current drag creates a new shelf and invalid release restores exact o
   await page.mouse.move(cancelBox.x + cancelBox.width / 2 + 18, cancelBox.y + cancelBox.height / 2 + 18);
   await cancelHandle.dispatchEvent('pointercancel', { pointerId: 1, pointerType: 'mouse' });
   await page.mouse.up();
-  await expect.poll(() => ambience.evaluate((node) => ({
+  await expect.poll(() => characters.evaluate((node) => ({
     parent: node.parentElement?.getAttribute('data-pomegranate-dock'),
     edge: node.getAttribute('data-pomegranate-edge'),
     shelf: node.getAttribute('data-pomegranate-shelf'),
@@ -229,7 +239,7 @@ test('Deep Current accepts the same shelf placement path from a coarse touch poi
     await page.goto('http://127.0.0.1:4174');
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
-    const handle = page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Drag Widget' });
+    const handle = page.getByRole('article', { name: 'Scene Effects' }).getByRole('button', { name: 'Drag Widget' });
     const handleBox = await handle.boundingBox();
     const seamBox = await page.locator('[data-shelf-insertion="left"]').boundingBox();
     if (!handleBox || !seamBox) throw new Error('Expected touch placement geometry.');
@@ -238,7 +248,7 @@ test('Deep Current accepts the same shelf placement path from a coarse touch poi
     await handle.dispatchEvent('pointerdown', { pointerId: 17, pointerType: 'touch', isPrimary: true, button: 0, clientX: start.x, clientY: start.y });
     await handle.dispatchEvent('pointermove', { pointerId: 17, pointerType: 'touch', isPrimary: true, button: 0, clientX: end.x, clientY: end.y });
     await handle.dispatchEvent('pointerup', { pointerId: 17, pointerType: 'touch', isPrimary: true, button: 0, clientX: end.x, clientY: end.y });
-    await expect(page.locator('[data-widget-type="systems.world-state"]')).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
+    await expect(page.locator('[data-widget-type="story.room-ambience"]')).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
   } finally {
     await context.close();
   }
@@ -250,11 +260,11 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   await sceneLeft.press('End');
   const sceneSeam = await page.locator('[data-shelf-insertion="left"]').boundingBox();
   if (!sceneSeam) throw new Error('Expected Scene shelf seam.');
-  await dragTo(page, page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Drag Widget' }), {
+  await dragTo(page, page.getByRole('article', { name: 'Scene Effects' }).getByRole('button', { name: 'Drag Widget' }), {
     x: sceneSeam.x + sceneSeam.width / 2,
     y: sceneSeam.y + sceneSeam.height / 2
   });
-  await page.getByRole('article', { name: 'Character Relationships' }).getByRole('button', { name: 'Float' }).click();
+  await page.getByRole('article', { name: 'Characters' }).getByRole('button', { name: 'Float' }).click();
 
   await page.getByRole('tab', { name: 'Library' }).click();
   const libraryLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
@@ -283,8 +293,8 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   await expect(page.getByRole('group', { name: 'Widget group' }).getByRole('tab')).toHaveText(['Character Card', 'Lore Entry Tree']);
   await page.getByRole('tab', { name: 'Scene' }).click();
   await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '420');
-  await expect(page.locator('[data-widget-type="systems.world-state"]')).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
-  await expect(page.locator('[data-widget-type="systems.character-relationships"]')).toHaveAttribute('data-pomegranate-placement', 'floating');
+  await expect(page.locator('[data-widget-type="story.room-ambience"]')).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
+  await expect(page.locator('[data-widget-type="story.characters"]')).toHaveAttribute('data-pomegranate-placement', 'floating');
 });
 
 test('native workbench POM-PERSIST-842D422EB3 POM-PERSIST-9FA69F9FC1 restores a user Panel template and order', async ({ page }) => {
@@ -304,12 +314,14 @@ test('native workbench POM-PERSIST-842D422EB3 POM-PERSIST-9FA69F9FC1 restores a 
 });
 
 test('native workbench POM-PERSIST-28DFDC9A8F POM-PERSIST-D50D69D3C4 restores reordered Panels', async ({ page }) => {
-  await page.getByRole('button', { name: 'Move Settings left' }).click();
-  await expect(page.getByRole('tab')).toHaveText(['Scene', 'Settings', 'Library']);
+  const panelTabs = page.getByRole('tablist', { name: 'Panels' });
+  await panelTabs.getByRole('tab', { name: 'Settings' }).focus();
+  await panelTabs.getByRole('tab', { name: 'Settings' }).press('ArrowLeft');
+  await expect(panelTabs.getByRole('tab')).toHaveText(['Scene', 'Settings', 'Library']);
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
-  await expect(page.getByRole('tab')).toHaveText(['Scene', 'Settings', 'Library']);
+  await expect(panelTabs.getByRole('tab')).toHaveText(['Scene', 'Settings', 'Library']);
 });
 
 test('native workbench applies complete themes without replacing live Workbench identity', async ({ page }) => {
@@ -348,7 +360,7 @@ test('native workbench applies complete themes without replacing live Workbench 
   expect(identity.focusedWidget).toBeTruthy();
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem('pomegranate-ui.workbench-lab.theme.v1'))).toBe('ash-amber');
   await page.getByText('Developer tools', { exact: true }).click();
-  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  await openWidgetCatalog(page);
   await expect(page.getByRole('complementary', { name: 'Widget Catalog' })).toBeVisible();
 });
 
@@ -414,14 +426,24 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
   }
 });
 
-test('all 50 reviewed Widget surfaces expose exact ready, state, focus, and responsive contracts', async ({ page }) => {
+test('all 51 reviewed Widget surfaces expose exact ready, state, focus, and responsive contracts', async ({ page }) => {
   test.setTimeout(120_000);
+  const presentationTitleOverrides = new Map<string, string>([
+    ['settings.connections', 'AI Connections'],
+    ['settings.custom-theme', 'Custom Theme'],
+    ['story.characters', 'Characters'],
+    ['story.personas', 'Personas'],
+    ['story.room-ambience', 'Scene Effects']
+  ]);
   for (const surface of IMPLEMENTED_SURFACES) {
     const fixture = SURFACE_FIXTURES.get(surface.type);
     if (!fixture) throw new Error(`Missing fixture for ${surface.type}.`);
     await page.goto(`http://127.0.0.1:4174/?surface=${encodeURIComponent(surface.type)}`);
     await page.evaluate(() => document.fonts.ready);
-    const article = page.getByRole('article', { name: surface.title });
+    const article = page.locator(`[data-widget-type="${surface.type}"] > article`);
+    await expect(article).toHaveCount(1);
+    const expectedPresentationTitle = presentationTitleOverrides.get(surface.type) ?? surface.title;
+    await expect(article).toHaveAttribute('aria-label', expectedPresentationTitle);
     const implemented = article.locator(`[data-surface-type="${surface.type}"]`);
     await expect(implemented).toHaveAttribute('data-surface-state', 'ready');
     await expect(implemented.locator('.surface-scope')).toHaveText(fixture.scope);
@@ -473,7 +495,7 @@ test('all 50 reviewed Widget surfaces expose exact ready, state, focus, and resp
     }
 
     await article.getByRole('button', { name: 'Focus Widget' }).click();
-    const dialog = page.getByRole('dialog', { name: `Focused ${surface.title}` });
+    const dialog = page.getByRole('dialog', { name: `Focused ${expectedPresentationTitle}` });
     await expect(dialog.locator(`[data-surface-type="${surface.type}"]`)).toHaveCount(1);
     await dialog.getByRole('button', { name: 'Back to Workbench' }).click();
     await expect(article.getByRole('button', { name: 'Focus Widget' })).toBeFocused();
@@ -490,13 +512,13 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
   await expect(page.getByRole('tab', { name: 'Catalog Proof' })).toHaveAttribute('aria-selected', 'true');
 
   await closeDeveloperTools(page);
-  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  await openWidgetCatalog(page);
   const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
   const results = catalog.getByRole('listitem');
   await expect(results).toHaveCount(94);
   await expect(catalog.locator('.catalog-miniature')).toHaveCount(94);
-  await expect(catalog.locator('[data-renderer-status="implemented"]')).toHaveCount(50);
-  await expect(catalog.locator('[data-renderer-status="unavailable"]')).toHaveCount(44);
+  await expect(catalog.locator('[data-renderer-status="implemented"]')).toHaveCount(51);
+  await expect(catalog.locator('[data-renderer-status="unavailable"]')).toHaveCount(43);
 
   for (const [category, total] of [['story', 12], ['library', 19], ['systems', 21], ['settings', 39], ['extensions', 3]] as const) {
     await catalog.getByRole('button', { name: category, exact: true }).click();
@@ -521,8 +543,8 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
   await catalog.getByRole('button', { name: 'Close Catalog' }).click();
   const activePanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
   await expect(activePanel.getByRole('article')).toHaveCount(94);
-  await expect(activePanel.locator('.implemented-widget')).toHaveCount(50);
-  await expect(activePanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(44);
+  await expect(activePanel.locator('.implemented-widget')).toHaveCount(51);
+  await expect(activePanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(43);
   const identities = await activePanel.locator('[data-widget-type]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-widget-type')));
   expect(new Set(identities).size).toBe(94);
   await openDeveloperTools(page);
@@ -530,8 +552,8 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
   await page.reload();
   const restoredPanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
   await expect(restoredPanel.locator('[data-widget-type]')).toHaveCount(94);
-  await expect(restoredPanel.locator('.implemented-widget')).toHaveCount(50);
-  await expect(restoredPanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(44);
+  await expect(restoredPanel.locator('.implemented-widget')).toHaveCount(51);
+  await expect(restoredPanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(43);
   await expect(restoredPanel.locator('button.action-remove')).toHaveCount(94);
   await restoredPanel.locator('button.action-remove').evaluateAll((buttons) => {
     for (const button of buttons) (button as HTMLButtonElement).click();

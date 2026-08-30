@@ -48,10 +48,10 @@ async function uniqueWidgetIds(page: Page): Promise<readonly string[]> {
 }
 
 async function mergeSceneWidgets(page: Page) {
-  const target = page.getByRole('article', { name: 'World State' });
+  const target = page.getByRole('article', { name: 'Characters' });
   const box = await target.boundingBox();
-  requireOutcome(box, 'World State lacks merge geometry.');
-  await dragTo(page, page.getByRole('article', { name: 'Room Ambience' }).getByRole('button', { name: 'Drag Widget' }), {
+  requireOutcome(box, 'Characters lacks merge geometry.');
+  await dragTo(page, page.getByRole('article', { name: 'Custom Theme' }).getByRole('button', { name: 'Drag Widget' }), {
     x: box.x + box.width / 2,
     y: box.y + box.height / 2
   });
@@ -79,41 +79,49 @@ async function exerciseScenario(page: Page, scenarioId: string, trace: string[])
     case 'dc-int-shelf-insert': {
       const seam = await page.locator('[data-shelf-insertion="left"]').boundingBox();
       requireOutcome(seam, 'Left shelf seam lacks geometry.');
-      await dragTo(page, page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Drag Widget' }), {
+      await dragTo(page, page.getByRole('article', { name: 'Scene Effects' }).getByRole('button', { name: 'Drag Widget' }), {
         x: seam.x + seam.width / 2,
         y: seam.y + seam.height / 2
       });
       trace.push('pointer drop created a left shelf');
       await saveAndReload(page);
-      requireOutcome((await page.locator('[data-widget-type="systems.world-state"]').getAttribute('data-pomegranate-shelf'))?.startsWith('left-shelf-'), 'New shelf did not persist.');
+      requireOutcome((await page.locator('[data-widget-type="story.room-ambience"]').getAttribute('data-pomegranate-shelf'))?.startsWith('left-shelf-'), 'New shelf did not persist.');
       return;
     }
     case 'dc-int-tab-merge':
       await mergeSceneWidgets(page);
-      trace.push('Room Ambience merged onto World State');
+      trace.push('Custom Theme merged onto Characters');
       await saveAndReload(page);
-      requireOutcome(await page.getByRole('group', { name: 'Widget group' }).getByRole('tab').count() === 2, 'Merged tab group did not persist.');
+      {
+        const group = page.getByRole('group', { name: 'Widget group' }).filter({
+          has: page.getByRole('tab', { name: 'Custom Theme' })
+        });
+        requireOutcome(await group.count() === 1 && await group.getByRole('tab').count() === 2, 'Merged tab group did not persist.');
+      }
       return;
     case 'dc-int-tab-reorder': {
       await mergeSceneWidgets(page);
-      const ambience = page.getByRole('group', { name: 'Widget group' }).getByRole('tab', { name: 'Room Ambience' });
-      await ambience.press('Alt+ArrowLeft');
+      const customTheme = page.getByRole('group', { name: 'Widget group' }).getByRole('tab', { name: 'Custom Theme' });
+      await customTheme.press('Alt+ArrowLeft');
       trace.push('Alt+ArrowLeft reordered the active tab');
       await saveAndReload(page);
-      const titles = await page.getByRole('group', { name: 'Widget group' }).getByRole('tab').allInnerTexts();
-      requireOutcome(titles.join('|') === 'Room Ambience|World State', 'Tab order did not persist.');
+      const group = page.getByRole('group', { name: 'Widget group' }).filter({
+        has: page.getByRole('tab', { name: 'Custom Theme' })
+      });
+      const titles = await group.getByRole('tab').allInnerTexts();
+      requireOutcome(titles.join('|') === 'Custom Theme|Characters', 'Tab order did not persist.');
       return;
     }
     case 'dc-int-float': {
       const stage = await page.locator('[data-pomegranate-dock="main"]').boundingBox();
       requireOutcome(stage, 'Stage lacks floating geometry.');
-      await dragTo(page, page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Drag Widget' }), {
+      await dragTo(page, page.getByRole('article', { name: 'Scene Effects' }).getByRole('button', { name: 'Drag Widget' }), {
         x: stage.x + stage.width * .72,
         y: stage.y + 90
       });
-      trace.push('pointer drop floated World State');
+      trace.push('pointer drop floated Scene Effects');
       await saveAndReload(page);
-      requireOutcome(await page.locator('[data-widget-type="systems.world-state"]').getAttribute('data-pomegranate-placement') === 'floating', 'Floating placement did not persist.');
+      requireOutcome(await page.locator('[data-widget-type="story.room-ambience"]').getAttribute('data-pomegranate-placement') === 'floating', 'Floating placement did not persist.');
       return;
     }
     case 'dc-int-invalid-restore': {
@@ -142,11 +150,11 @@ async function exerciseScenario(page: Page, scenarioId: string, trace: string[])
       return;
     }
     case 'dc-int-focus-back': {
-      const focus = page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Focus Widget' });
+      const focus = page.getByRole('article', { name: 'Scene Effects' }).getByRole('button', { name: 'Focus Widget' });
       await focus.click();
-      const dialog = page.getByRole('dialog', { name: 'Focused World State' });
+      const dialog = page.getByRole('dialog', { name: 'Focused Scene Effects' });
       await dialog.getByRole('button', { name: 'Back to Workbench' }).click();
-      requireOutcome(await page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Focus Widget' }).evaluate((node) => node === document.activeElement), 'Focus did not return to the invoker.');
+      requireOutcome(await page.getByRole('article', { name: 'Scene Effects' }).getByRole('button', { name: 'Focus Widget' }).evaluate((node) => node === document.activeElement), 'Focus did not return to the invoker.');
       trace.push('Focus and Back restored the invoking control');
       await saveAndReload(page);
       return;
@@ -167,7 +175,8 @@ async function exerciseScenario(page: Page, scenarioId: string, trace: string[])
       trace.push('three Panel presentation states restored independently');
       return;
     case 'dc-int-catalog-place':
-      await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+      await page.getByRole('button', { name: 'Open Widget Catalog' }).focus();
+      await page.getByRole('button', { name: 'Open Widget Catalog' }).press('Enter');
       await page.getByRole('complementary', { name: 'Widget Catalog' }).getByRole('button', { name: 'Compact' }).click();
       await page.getByRole('complementary', { name: 'Widget Catalog' }).getByRole('button', { name: 'Add Accessibility', exact: true }).press('Enter');
       trace.push('keyboard Catalog placement created Accessibility');
@@ -177,8 +186,10 @@ async function exerciseScenario(page: Page, scenarioId: string, trace: string[])
     case 'dc-int-coarse-targets': {
       const controls = [
         { label: 'Scene tab', locator: page.getByRole('tab', { name: 'Scene' }) },
-        { label: 'Catalog launcher', locator: page.getByRole('button', { name: 'Open Widget Catalog' }) },
-        { label: 'World State drag handle', locator: page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Drag Widget' }) }
+        { label: 'Widget Catalog action', locator: page.getByRole('button', { name: 'Open Widget Catalog' }) },
+        { label: 'Focus reading action', locator: page.getByRole('button', { name: 'Focus reading' }) },
+        { label: 'Developer tools launcher', locator: page.getByText('Developer tools', { exact: true }) },
+        { label: 'Scene Effects drag handle', locator: page.getByRole('article', { name: 'Scene Effects' }).getByRole('button', { name: 'Drag Widget' }) }
       ];
       for (const { label, locator } of controls) {
         const box = await locator.boundingBox();

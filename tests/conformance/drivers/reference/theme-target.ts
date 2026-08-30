@@ -15,7 +15,8 @@ export async function renderOriginalThemeReference(
     return await page.locator('body').evaluate((body, expected) => {
       const style = getComputedStyle(body);
       const shell = body.querySelector<HTMLElement>('.workbench');
-      const shelf = body.querySelector<HTMLElement>('.shelf');
+      const shelf = body.querySelector<HTMLElement>('.shelf')
+        ?? body.querySelector<HTMLElement>('.showcase');
       const dock = body.querySelector<HTMLElement>('.dock');
       const widget = body.querySelector<HTMLElement>('.widget');
       const button = body.querySelector<HTMLElement>('.showcase button');
@@ -37,7 +38,11 @@ export async function renderOriginalThemeReference(
         }),
         structure: Object.freeze({
           panelTabs: Object.freeze([...body.querySelectorAll<HTMLButtonElement>('.tabs button')].map((control) => control.textContent?.trim() ?? '')),
-          anchorWidgets: Object.freeze([...body.querySelectorAll<HTMLElement>('[data-widget-label]')].map((node) => node.dataset.widgetLabel ?? ''))
+          anchorWidgets: Object.freeze([
+            ...(body.querySelector('[data-widget-label]') ? ['panel-widget'] : []),
+            ...(reader ? ['story-reader'] : []),
+            ...(body.querySelector('.composer') ? ['story-composer'] : [])
+          ])
         }),
         visual: Object.freeze({
           canvas: style.getPropertyValue('--canvas').trim(),

@@ -27,13 +27,14 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(transcript?.querySelector('[data-pom-part="widget.surface"]')).toBeNull();
     const stage = transcript?.closest('[data-story-stage]');
     expect(stage).not.toBeNull();
-    expect(stage).toHaveAttribute('data-pom-part', 'widget.content');
-    expect(stage?.querySelectorAll('[data-pom-part="widget.content"]')).toHaveLength(0);
+    expect(stage).not.toHaveAttribute('data-pom-part');
+    expect(stage?.querySelectorAll('[data-pom-part="widget.content"]')).toHaveLength(1);
+    expect(transcript?.querySelector(':scope > .widget-frame > [data-pom-part="widget.content"]')).not.toBeNull();
     expect(stage?.querySelectorAll('[data-pom-part="dock.surface"]')).toHaveLength(0);
     const composer = screen.getByRole('textbox', { name: /Next action/ });
     const composerInstrument = composer.closest('[data-story-composer]');
-    expect(composerInstrument).toHaveAttribute('data-pom-part', 'widget.content');
-    expect(composerInstrument?.querySelectorAll('[data-pom-part="widget.content"]')).toHaveLength(0);
+    expect(composerInstrument).not.toHaveAttribute('data-pom-part');
+    expect(composerInstrument?.querySelectorAll('[data-pom-part="widget.content"]')).toHaveLength(1);
     expect(composerInstrument?.querySelectorAll('[data-pom-part="dock.surface"]')).toHaveLength(0);
 
     const stageRegion = container.querySelector('[data-conformance-region="stage"]');
@@ -104,6 +105,10 @@ describe('Svelte Workbench Lab mockup', () => {
     const user = userEvent.setup();
     render(App);
     const launcher = screen.getByRole('button', { name: 'Open Widget Catalog' });
+    expect(launcher).toHaveAttribute('data-pom-icon-action');
+    expect(screen.getByRole('button', { name: 'Undo layout' })).toHaveAttribute('data-pom-icon-action');
+    expect(screen.getByRole('button', { name: 'Focus reading' })).toHaveAttribute('data-pom-icon-action');
+    expect(screen.getByLabelText('Open Widget Shelf')).toHaveAttribute('data-pom-icon-action');
     expect(launcher).toHaveAttribute('aria-expanded', 'false');
     await user.click(launcher);
     expect(launcher).toHaveAttribute('aria-expanded', 'true');
@@ -153,6 +158,17 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(dockedEffects.closest('[data-pomegranate-dock]')).toHaveAttribute('data-pomegranate-dock', 'left');
     await user.click(within(dockedEffects).getByRole('button', { name: 'Float' }));
     expect(screen.getByRole('article', { name: 'Scene Effects' })).toHaveAttribute('data-pomegranate-placement', 'floating');
+  });
+
+  it('keeps host presentation titles through Focus', async () => {
+    const user = userEvent.setup();
+    render(App);
+    const effects = screen.getByRole('article', { name: 'Scene Effects' });
+    const focus = within(effects).getByRole('button', { name: 'Focus Widget' });
+    await user.click(focus);
+    const dialog = screen.getByRole('dialog', { name: 'Focused Scene Effects' });
+    expect(dialog).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Back to Workbench' }));
   });
 
   it('exposes persistence, focus, dock, and Panel creation controls without credential-shaped fixture text', () => {

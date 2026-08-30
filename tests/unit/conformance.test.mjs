@@ -14,6 +14,8 @@ import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformanc
 import { BUNNY_SCENARIOS, DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, DEEP_FIDELITY_SCENARIOS, hashAuthorityFile, ORIGINAL_THEME_TARGET_SCENARIOS, POM_NEUTRAL_SCENARIOS, THEME_AUTHORING_SCENARIOS, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
 import { applyCanonicalShellGeometry, assertScenarioResolution } from '../conformance/runner.ts';
+import { hashReviewValue, validateFidelityRegressionReview } from '../conformance/review.ts';
+import { compareLiveAuthorityFidelity, compareRecordingFrameFidelity } from '../conformance/source-fidelity.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
 import { prepareAtmosphericState } from '../conformance/drivers/reference/atmospheric.ts';
 import { DEEP_RECORDING_IMPLEMENTATION_STATES, prepareDeepCurrentState } from '../conformance/drivers/workbench-lab/deep-current.ts';
@@ -904,6 +906,7 @@ test('the exact Deep fidelity contract covers every geometry, typography, materi
     for (const field of ['x', 'y', 'width', 'height', 'right', 'bottom']) {
       assert.ok(paths.has(`geometry.${region}.box.${field}`), `missing geometry.${region}.box.${field}`);
     }
+    assert.equal(profile.find(({ path }) => path === `geometry.${region}.overflow`)?.comparator, 'equal');
   }
   for (const role of ['wordmark', 'navigation', 'widgetTitle', 'technical', 'storyHeading', 'storyBody', 'composer']) {
     for (const field of ['family', 'size', 'weight', 'lineHeight', 'tracking', 'transform']) {
@@ -954,16 +957,113 @@ test('exact Deep fidelity stores an inspectable original-resolution baseline and
   ));
   assert.equal(baseline.schemaVersion, 'pomegranate.ui.deep-fidelity.v1');
   assert.deepEqual(Object.keys(baseline.scenarios), DEEP_FIDELITY_SCENARIOS.map(({ id }) => id));
-  for (const scenario of Object.values(baseline.scenarios)) {
+  for (const [scenarioId, scenario] of Object.entries(baseline.scenarios)) {
+    const manifestScenario = DEEP_FIDELITY_SCENARIOS.find(({ id }) => id === scenarioId);
+    assert.ok(manifestScenario);
     assert.equal(scenario.viewport.width, 1920);
     assert.equal(scenario.viewport.height, 1280);
     assert.match(scenario.referencePng, /\.png$/);
     assert.match(scenario.actualPng, /\.png$/);
     assert.match(scenario.overlayPng, /\.png$/);
     assert.match(scenario.diffPng, /\.png$/);
+    assert.ok(scenario.expected, 'missing reviewed normalized fidelity measurement');
+    assert.equal(scenario.review.schemaVersion, 'pomegranate.ui.deep-fidelity-toolkit-regression-review.v1');
+    assert.deepEqual(scenario.review.authority, {
+      id: manifestScenario.authority,
+      path: manifestScenario.authorityPath,
+      sha256: manifestScenario.authoritySha256
+    });
+    assert.equal(scenario.review.expectedSha256, hashReviewValue(scenario.expected));
+    assert.deepEqual(Object.keys(scenario.expected).sort(), [
+      'functional',
+      'geometry',
+      'materials',
+      'structure',
+      'typography'
+    ]);
   }
   const ledger = await readFile(path.join(repositoryRoot, 'docs/conformance/deep-fidelity-ledger.md'), 'utf8');
   assert.match(ledger, /Deep exact-fidelity discrepancy ledger/);
+});
+
+test('source-gated Deep toolkit regression review rejects authority, expected, and critic drift', () => {
+  const scenario = DEEP_FIDELITY_SCENARIOS[0];
+  const reference = { source: 'fresh authority measurement' };
+  const expected = { target: 'reviewed normalized target' };
+  const review = {
+    schemaVersion: 'pomegranate.ui.deep-fidelity-toolkit-regression-review.v1',
+    critic: 'source-gated-toolkit-regression',
+    ledgerId: 'DC-FID-001',
+    authority: { id: scenario.authority, path: scenario.authorityPath, sha256: scenario.authoritySha256 },
+    authorityMeasurementSha256: hashReviewValue(reference),
+    recordingLandmarksSha256: null,
+    expectedSha256: hashReviewValue(expected)
+  };
+  review.reviewSha256 = hashReviewValue(review);
+
+  assert.doesNotThrow(() => validateFidelityRegressionReview({
+    scenario,
+    ledgerId: 'DC-FID-001',
+    expected,
+    reference,
+    recordingLandmarks: null,
+    review
+  }));
+  assert.throws(() => validateFidelityRegressionReview({
+    scenario,
+    ledgerId: 'DC-FID-001',
+    expected: { target: 'self-approved replacement' },
+    reference,
+    recordingLandmarks: null,
+    review
+  }), (error) => error.code === 'MANIFEST_INVALID' && /expected measurement hash drifted/.test(error.message));
+  assert.throws(() => validateFidelityRegressionReview({
+    scenario,
+    ledgerId: 'DC-FID-001',
+    expected,
+    reference: { source: 'different authority measurement' },
+    recordingLandmarks: null,
+    review
+  }), (error) => error.code === 'REFERENCE_HASH_DRIFT' && /authority measurement hash drifted/.test(error.message));
+});
+
+test('Deep exact fidelity is independently gated by live authority structure and recording pixels', () => {
+  const region = (width, height) => ({
+    box: { x: 0, y: 0, width, height, right: width, bottom: height },
+    visible: true,
+    overflow: { x: false, y: false, scrollWidth: width, clientWidth: width, scrollHeight: height, clientHeight: height },
+    styles: { backgroundColor: 'rgba(0, 0, 0, 1)', borderTopColor: 'rgba(255, 255, 255, 1)', color: 'rgba(255, 255, 255, 1)', fontFamily: 'sans-serif', backdropFilter: 'none' }
+  });
+  const measurement = (scale = 1) => ({
+    functional: { identityStable: true, keyboardAccessible: true, noOverflow: true, stateReached: true },
+    geometry: {
+      header: region(1920, 40 * scale), left: region(286 * scale, 1165), stage: region(1300 * scale, 1165), right: region(286 * scale, 1165),
+      story: region(680 * scale, 140), composer: region(680 * scale, 64), floating: region(0, 0), widgetShelf: region(0, 0)
+    },
+    materials: { header: { radius: 4 } },
+    structure: { panelTabs: ['Scene', 'Library', 'Settings'] },
+    typography: { storyBody: { size: 15 * scale } }
+  });
+  assert.equal(compareLiveAuthorityFidelity(measurement(), measurement(1.15)).pass, true);
+  assert.equal(compareLiveAuthorityFidelity(measurement(), measurement(1.8)).pass, false);
+
+  const authority = new PNG({ width: 192, height: 128 });
+  for (let y = 0; y < authority.height; y += 1) {
+    for (let x = 0; x < authority.width; x += 1) {
+      const offset = (y * authority.width + x) * 4;
+      const value = (x * 3 + y * 2) % 256;
+      authority.data[offset] = value;
+      authority.data[offset + 1] = value;
+      authority.data[offset + 2] = value;
+      authority.data[offset + 3] = 255;
+    }
+  }
+  const matching = PNG.sync.write(authority);
+  const unrelated = new PNG({ width: 192, height: 128 });
+  unrelated.data.fill(0);
+  for (let offset = 3; offset < unrelated.data.length; offset += 4) unrelated.data[offset] = 255;
+  assert.equal(compareRecordingFrameFidelity(matching, matching).pass, true);
+  assert.equal(compareRecordingFrameFidelity(matching, PNG.sync.write(unrelated)).pass, false);
 });
 
 test('Theme authoring exposes four literal fail-closed scenarios', async () => {

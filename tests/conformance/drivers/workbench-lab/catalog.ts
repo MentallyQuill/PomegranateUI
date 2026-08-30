@@ -16,7 +16,9 @@ export async function renderLabCatalog(
     await page.evaluate(() => document.fonts.ready);
 
     if (catalogCase.scenarioId === 'dc-catalog-placement-all') await createCatalogProofPanel(page);
-    await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+    const catalogLauncher = page.getByRole('button', { name: 'Open Widget Catalog' });
+    await catalogLauncher.focus();
+    await catalogLauncher.press('Enter');
     const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
     await catalog.waitFor({ state: 'visible' });
     const inventory = await measureInventory(catalog);
@@ -75,8 +77,8 @@ export async function renderLabCatalog(
         break;
       }
       case 'dc-catalog-fallback-46':
-        outcomeReached = await catalog.locator('[data-renderer-status="implemented"]').count() === 50
-          && await catalog.locator('[data-renderer-status="unavailable"]').count() === 44
+        outcomeReached = await catalog.locator('[data-renderer-status="implemented"]').count() === 51
+          && await catalog.locator('[data-renderer-status="unavailable"]').count() === 43
           && await catalog.locator('.catalog-miniature').count() === 94;
         break;
       default:

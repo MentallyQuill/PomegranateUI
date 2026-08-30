@@ -201,15 +201,16 @@ export async function measureFidelitySurface(
     const widgetRecords = await locate(selectors.widgets).evaluateAll((elements) => elements
       .filter((element) => element.getClientRects().length > 0)
       .map((element) => {
-        const title = element.querySelector('[data-pom-part="widget.header"]')?.textContent?.trim()
-          || element.getAttribute('data-widget-type')
+        const title = element.getAttribute('data-widget-type')
+          || element.querySelector('[data-pom-part="widget.header"]')?.textContent?.trim()
           || 'Widget';
         const placement = element.getAttribute('data-pomegranate-placement') ?? 'docked';
         const region = element.getAttribute('data-pomegranate-region') ?? placement;
         return { title, location: region };
       }));
-    const regions = await locate('[data-conformance-region]').evaluateAll((elements) => elements
-      .map((element) => element.getAttribute('data-conformance-region'))
+    const regions = await locate('[data-conformance-region="shelf"], [data-pomegranate-region-surface]').evaluateAll((elements) => elements
+      .map((element) => element.getAttribute('data-conformance-region')
+        ?? element.getAttribute('data-pomegranate-region-surface'))
       .filter((value): value is string => Boolean(value)));
 
     return {

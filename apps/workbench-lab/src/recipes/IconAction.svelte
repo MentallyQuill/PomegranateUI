@@ -6,7 +6,8 @@
     | 'load-layout'
     | 'clear-layout'
     | 'undo-layout'
-    | 'open-shelf';
+    | 'open-shelf'
+    | 'focus-reading';
 </script>
 
 <script lang="ts">
@@ -40,7 +41,7 @@
   aria-expanded={expanded}
   {disabled}
   {onclick}
-  style="display:inline-grid;min-width:44px;min-height:44px;align-items:center;justify-content:center"
+  style="display:var(--pom-icon-action-display,inline-grid);min-width:var(--pom-icon-action-hit-size,44px);min-height:var(--pom-icon-action-hit-size,44px);align-items:center;justify-content:center"
 >
   <span data-pom-action-icon aria-hidden="true">
     <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
@@ -64,6 +65,9 @@
       {:else if action === 'undo-layout'}
         <path d="M8 8H3.5V3.5" />
         <path d="M4 8a8.5 8.5 0 1 1 1.8 9.5" />
+      {:else if action === 'focus-reading'}
+        <path d="M4 6.5h6.5c1.1 0 1.5.6 1.5 1.5v10c0-.9-.4-1.5-1.5-1.5H4z" />
+        <path d="M20 6.5h-6.5c-1.1 0-1.5.6-1.5 1.5v10c0-.9.4-1.5 1.5-1.5H20z" />
       {:else}
         <path d="M4 7h16v12H4zM3 4h18v3H3z" />
         <path d="M9 11h6" />

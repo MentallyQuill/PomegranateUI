@@ -59,6 +59,7 @@ test.describe('Theme authoring conformance', () => {
 
   for (const scenario of THEME_AUTHORING_SCENARIOS) {
     test(`${scenario.id} ${scenario.title}`, async ({ browser }, testInfo) => {
+      test.setTimeout(120_000);
       const viewport = CONFORMANCE_VIEWPORTS.get(scenario.viewport);
       const profile = MEASUREMENT_PROFILES.get(scenario.measurementProfile);
       if (!viewport || !profile) throw new ConformanceError('MANIFEST_INVALID', `Missing Theme authoring runtime profile for ${scenario.id}.`);

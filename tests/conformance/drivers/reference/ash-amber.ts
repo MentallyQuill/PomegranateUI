@@ -31,7 +31,7 @@ export async function renderAshAmberReference(
       }),
       structure: Object.freeze({
         panelTabs: Object.freeze(['Scene', 'Library', 'Settings']),
-        anchorWidgets: Object.freeze(['Characters (Story)', 'Transcript', 'Composer'])
+        anchorWidgets: Object.freeze(['panel-widget', 'story-reader', 'story-composer'])
       }),
       visual: Object.freeze({
         canvas: '#242321',

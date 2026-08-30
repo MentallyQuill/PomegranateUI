@@ -37,13 +37,13 @@
       <CompactThemeWidget theme={hostContext.theme} />
     {:else if instance.type === 'settings.custom-theme' && !['empty', 'unavailable', 'access-denied'].includes(state)}
       <ThemeSettings theme={hostContext.theme} {eyedropper} contract={fixture} />
-    {:else if instance.type === 'story.characters' && contentVisible}
+    {:else if instance.type === 'story.characters' && instance.configuration.presentation === 'recording' && contentVisible}
       <RecordingCharactersWidget />
-    {:else if instance.type === 'story.room-ambience' && contentVisible}
+    {:else if instance.type === 'story.room-ambience' && instance.configuration.presentation === 'recording' && contentVisible}
       <SceneEffectsWidget />
-    {:else if instance.type === 'story.personas' && contentVisible}
+    {:else if instance.type === 'story.personas' && instance.configuration.presentation === 'recording' && contentVisible}
       <PersonasWidget />
-    {:else if instance.type === 'settings.connections' && contentVisible}
+    {:else if instance.type === 'settings.connections' && instance.configuration.presentation === 'recording' && contentVisible}
       <AIConnectionsWidget />
     {:else}
       <WidgetAnatomy {fixture} {state} {hostContext} />

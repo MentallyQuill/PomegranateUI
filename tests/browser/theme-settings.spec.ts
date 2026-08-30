@@ -12,7 +12,7 @@ async function fresh(page: Page, width = 1440, height = 900) {
 
 async function openThemeSettings(page: Page) {
   await page.getByRole('tab', { name: 'Settings' }).click();
-  const settings = page.getByRole('article', { name: 'Theme Settings' });
+  const settings = page.locator('[data-widget-type="settings.custom-theme"]');
   await expect(settings).toBeVisible();
   return settings;
 }
@@ -104,7 +104,7 @@ test('Theme drafts save and restore independently of layout persistence', async 
   await page.reload();
   await expect.poll(() => binding(page, '--pom-color-canvas')).toBe('#111c24');
   await openThemeSettings(page);
-  await expect(page.getByRole('article', { name: 'Theme Settings' }).getByRole('textbox', { name: 'Hex color' })).toHaveValue('#111c24');
+  await expect(page.locator('[data-widget-type="settings.custom-theme"]').getByRole('textbox', { name: 'Hex color' })).toHaveValue('#111c24');
 });
 
 for (const viewport of [

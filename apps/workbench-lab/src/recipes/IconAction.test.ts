@@ -37,11 +37,11 @@ describe('IconAction', () => {
     const label = container.querySelector<HTMLElement>('[data-pom-action-label]');
     const buttonStyle = getComputedStyle(button);
 
-    expect(buttonStyle.display).toBe('inline-grid');
+    expect(button.style.display).toBe('var(--pom-icon-action-display,inline-grid)');
     expect(buttonStyle.alignItems).toBe('center');
     expect(buttonStyle.justifyContent).toBe('center');
-    expect(buttonStyle.minWidth).toBe('44px');
-    expect(buttonStyle.minHeight).toBe('44px');
+    expect(button.style.minWidth).toBe('var(--pom-icon-action-hit-size,44px)');
+    expect(button.style.minHeight).toBe('var(--pom-icon-action-hit-size,44px)');
     expect(getComputedStyle(label!).display).toBe('inline');
   });
 });

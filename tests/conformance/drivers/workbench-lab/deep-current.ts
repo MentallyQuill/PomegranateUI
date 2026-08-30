@@ -10,7 +10,7 @@ const regionSelectors: Readonly<Record<ShellRegionId, string>> = Object.freeze({
   left: '[data-conformance-region="left"]',
   stage: '[data-conformance-region="stage"]',
   right: '[data-conformance-region="right"]',
-  composer: '[data-pomegranate-region-surface="composer"]'
+  composer: '[data-pomegranate-region-surface="composer"] .composer'
 });
 export const VISIBLE_IMPLEMENTATION_REGION_IDS: readonly ShellRegionId[] = Object.freeze([
   'shelf',
@@ -34,6 +34,9 @@ export const DEEP_RECORDING_IMPLEMENTATION_STATES = Object.freeze([
 async function settle(locator: Locator): Promise<void> {
   await locator.evaluate(async () => {
     await document.fonts.ready;
+    for (const animation of document.getAnimations()) {
+      try { animation.finish(); } catch { /* Infinite host motion remains governed by its own policy. */ }
+    }
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     window.scrollTo(0, 0);
   });
@@ -297,8 +300,8 @@ export async function measureLabFidelity(page: Page, initialIdentity?: string): 
       left: '[data-conformance-region="left"]',
       stage: '[data-conformance-region="stage"]',
       right: '[data-conformance-region="right"]',
-      story: '[data-widget-type="story.transcript"]',
-      composer: '[data-pomegranate-region-surface="composer"]',
+      story: '[data-widget-type="story.transcript"] .transcript',
+      composer: '[data-pomegranate-region-surface="composer"] .composer',
       floating: '[data-pomegranate-floating-layer] > [data-widget-type]',
       widgetShelf: '[data-widget-shelf][open]'
     },
@@ -316,7 +319,7 @@ export async function measureLabFidelity(page: Page, initialIdentity?: string): 
       widget: '[data-pom-part="widget.surface"]',
       widgetHeader: '[data-pom-part="widget.header"]',
       storyVeil: '[data-widget-type="story.transcript"]',
-      composer: '[data-pomegranate-region-surface="composer"]',
+      composer: '[data-pomegranate-region-surface="composer"] .composer',
       floating: '[data-pom-part="floating.surface"]',
       dialog: 'dialog[open], [data-widget-shelf][open]'
     },

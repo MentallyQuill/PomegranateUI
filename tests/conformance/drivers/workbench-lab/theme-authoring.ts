@@ -40,10 +40,14 @@ async function binding(page: Page, property: string): Promise<string> {
 }
 
 async function waitForBinding(page: Page, property: string, expected: string): Promise<void> {
-  await page.waitForFunction(([name, value]) => {
-    const root = document.querySelector('main');
-    return root !== null && getComputedStyle(root).getPropertyValue(name).trim() === value;
-  }, [property, expected] as const);
+  try {
+    await page.waitForFunction(([name, value]) => {
+      const root = document.querySelector('main');
+      return root !== null && getComputedStyle(root).getPropertyValue(name).trim() === value;
+    }, [property, expected] as const, { timeout: 5_000 });
+  } catch {
+    throw new Error(`${property} did not reach ${expected}; received ${await binding(page, property)}.`);
+  }
 }
 
 async function prepareAuthoring(
@@ -70,7 +74,7 @@ async function prepareAuthoring(
     .click();
   await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('tab', { name: 'Settings' }).click();
-  const settings = page.getByRole('article', { name: 'Theme Settings' });
+  const settings = page.getByRole('article', { name: 'Custom Theme' });
   await settings.waitFor({ state: 'visible' });
   return {
     settings,
@@ -267,7 +271,6 @@ async function measureRoundTrip(page: Page, labOrigin: string, prepared: Prepare
   await waitForBinding(page, '--pom-color-canvas', '#34312d');
   await prepared.settings.getByRole('button', { name: 'Save draft' }).click();
   await page.waitForFunction((key) => localStorage.getItem(key) !== null, draftKey);
-  await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('button', { name: 'Clear saved layout' }).click();
   await page.waitForFunction((key) => localStorage.getItem(key) === null, layoutKey);
   const savedRaw = await page.evaluate((key) => localStorage.getItem(key), draftKey);
@@ -279,7 +282,7 @@ async function measureRoundTrip(page: Page, labOrigin: string, prepared: Prepare
   await page.evaluate(() => document.fonts.ready);
   await waitForBinding(page, '--pom-color-canvas', '#34312d');
   await page.getByRole('tab', { name: 'Settings' }).click();
-  const restoredSettings = page.getByRole('article', { name: 'Theme Settings' });
+  const restoredSettings = page.getByRole('article', { name: 'Custom Theme' });
   await restoredSettings.waitFor({ state: 'visible' });
   const restoredIds = await widgetIds(page);
   const storageState = await page.evaluate(([draftStorageKey, layoutStorageKey]) => ({

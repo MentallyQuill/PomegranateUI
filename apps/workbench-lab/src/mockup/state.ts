@@ -65,13 +65,13 @@ export function createLabState(): WorkbenchState {
   };
 
   const fixtures = [
-    ['scene-characters', LAB_WIDGET_TYPES.characters, LAB_PANEL_IDS.scene, 'left', 0, {}],
+    ['scene-characters', LAB_WIDGET_TYPES.characters, LAB_PANEL_IDS.scene, 'left', 0, { presentation: 'recording' }],
     ['scene-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.scene, 'left', 1, { presentation: 'compact' }],
     ['scene-transcript', LAB_WIDGET_TYPES.transcript, LAB_PANEL_IDS.scene, 'stage', 0, {}],
     ['scene-composer', LAB_WIDGET_TYPES.composer, LAB_PANEL_IDS.scene, 'composer', 0, {}],
-    ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 0, {}],
-    ['scene-personas', LAB_WIDGET_TYPES.personas, LAB_PANEL_IDS.scene, 'right', 1, {}],
-    ['scene-connections', LAB_WIDGET_TYPES.connections, LAB_PANEL_IDS.scene, 'right', 2, {}],
+    ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 0, { presentation: 'recording' }],
+    ['scene-personas', LAB_WIDGET_TYPES.personas, LAB_PANEL_IDS.scene, 'right', 1, { presentation: 'recording' }],
+    ['scene-connections', LAB_WIDGET_TYPES.connections, LAB_PANEL_IDS.scene, 'right', 2, { presentation: 'recording' }],
     ['library-main', LAB_WIDGET_TYPES.library, LAB_PANEL_IDS.library, 'focus', 0, {}],
     ['library-character', LAB_WIDGET_TYPES.characterCard, LAB_PANEL_IDS.library, 'support', 0, { fixtureMode: 'failure' }],
     ['library-lore', LAB_WIDGET_TYPES.loreEntries, LAB_PANEL_IDS.library, 'support', 1, {}],

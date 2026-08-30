@@ -18,6 +18,7 @@
   import PanelCreateDialog from './recipes/PanelCreateDialog.svelte';
   import WidgetShelf from './recipes/WidgetShelf.svelte';
   import LayoutUndo from './recipes/LayoutUndo.svelte';
+  import IconAction from './recipes/IconAction.svelte';
   import ThemeCanvas from './recipes/ThemeCanvas.svelte';
   import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
@@ -311,13 +312,6 @@
       : 'widget.surface';
   }
 
-  function frameContentPart(frame: WidgetFrameProjection) {
-    if (frame.placement.kind === 'floating') return 'widget.content';
-    return frame.instance.type === 'story.transcript' || frame.instance.type === 'story.composer'
-      ? null
-      : 'widget.content';
-  }
-
   const frameTitle = (frame: WidgetFrameProjection) => resolveLabWidgetTitle(frame.instance.type, frame.title);
   const frameMeta = (frame: WidgetFrameProjection) => resolveLabWidgetMeta(frame.instance.type);
 </script>
@@ -352,10 +346,10 @@
       <small aria-label="Active story identity">{hostContext.storyId} · {hostContext.frameLabel}</small>
     </div>
     <div class="shelf-actions">
-      <button type="button" data-pom-part="button.surface" aria-label="Open Widget Catalog" aria-expanded={$catalogState.open} onclick={() => catalog.open('drawer')}>Widgets</button>
+      <IconAction label="Open Widget Catalog" action="open-catalog" expanded={$catalogState.open} onclick={() => catalog.open('drawer')} />
       <WidgetShelf {store} />
       <LayoutUndo {store} />
-      <button type="button" data-pom-part="button.surface" aria-pressed={focusMode} onclick={() => { focusMode = !focusMode; }}>Focus reading</button>
+      <IconAction label="Focus reading" action="focus-reading" pressed={focusMode} onclick={() => { focusMode = !focusMode; }} />
       <span class="runtime-status"><i></i>{hostContext.systemStatus}</span>
     </div>
   </header>
@@ -388,7 +382,6 @@
               {hostContext}
               onfocuswidget={focusWidget}
               surfacePart={frameSurfacePart(frame)}
-              contentPart={frameContentPart(frame)}
               title={frameTitle(frame)}
               meta={frameMeta(frame)}
               class="widget-frame"
@@ -443,6 +436,8 @@
   {#if focusedFrame}
     <FocusedWidget
       frame={focusedFrame}
+      title={frameTitle(focusedFrame)}
+      meta={frameMeta(focusedFrame)}
       {store}
       {rendererRegistry}
       {hostContext}

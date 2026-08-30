@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { WorkbenchState } from '@pomegranate-ui/contracts';
   import type { WorkbenchStore } from '@pomegranate-ui/core';
+  import IconAction from './IconAction.svelte';
   let { store }: { store: WorkbenchStore } = $props();
   let state = $state<WorkbenchState>();
   $effect(() => {
@@ -8,4 +9,10 @@
     return store.subscribe((next) => { state = next; });
   });
 </script>
-<button type="button" data-layout-undo disabled={!state || !store.canUndo()} onclick={() => store.dispatch({ type: 'layout.undo' })}>Undo layout</button>
+<IconAction
+  class="layout-undo-action"
+  label="Undo layout"
+  action="undo-layout"
+  disabled={!state || !store.canUndo()}
+  onclick={() => store.dispatch({ type: 'layout.undo' })}
+/>

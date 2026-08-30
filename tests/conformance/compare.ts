@@ -189,7 +189,7 @@ const fidelityProfile: readonly ComparisonDefinition[] = Object.freeze([
   ...fidelityGeometryRegions.flatMap((region) => [
     ...['x', 'y', 'width', 'height', 'right', 'bottom'].map((field) => geometry(`geometry.${region}.box.${field}`)),
     exact(`geometry.${region}.visible`),
-    noOverflow(`geometry.${region}.overflow`)
+    exact(`geometry.${region}.overflow`)
   ]),
   ...fidelityTypographyRoles.flatMap((role) => [
     exact(`typography.${role}.family`, 'visual'),

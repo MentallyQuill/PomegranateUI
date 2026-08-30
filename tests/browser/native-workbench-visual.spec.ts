@@ -31,9 +31,16 @@ async function selectTheme(page: Page, label: ThemeLabel) {
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 }
 
+async function invokeCompactChromeAction(page: Page, name: string) {
+  const action = page.getByRole('button', { name });
+  await action.focus();
+  await expect(action).toBeVisible();
+  await action.press('Enter');
+}
+
 async function setMaterialControls(page: Page, values: readonly [number, number, number, number]) {
   await page.getByRole('tab', { name: 'Settings' }).click();
-  const themeSettings = page.getByRole('article', { name: 'Theme Settings' });
+  const themeSettings = page.getByRole('article', { name: 'Custom Theme' });
   for (const [label, value] of [
     ['Glass Density', values[0]],
     ['Bar Opacity', values[1]],
@@ -61,20 +68,19 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);
   await shot(page, 'wide-scene.png');
 
-  await page.getByRole('article', { name: 'Theme Library' })
-    .getByRole('button', { name: 'Open Theme Settings' })
-    .evaluate((button: HTMLButtonElement) => button.click());
+  await page.getByRole('tab', { name: 'Settings' }).click();
   await shot(page, 'wide-material-controls.png');
   await page.getByRole('tab', { name: 'Scene' }).click();
 
-  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  await invokeCompactChromeAction(page, 'Open Widget Catalog');
   await shot(page, 'wide-catalog-drawer.png');
   const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
   await catalog.getByRole('button', { name: 'Expanded' }).click();
   await shot(page, 'wide-catalog-expanded.png');
   await catalog.getByRole('button', { name: 'Close Catalog' }).click();
 
-  await page.getByRole('button', { name: 'Focus reading' }).click();
+  await invokeCompactChromeAction(page, 'Focus reading');
+  await page.getByRole('button', { name: 'Focus reading' }).evaluate((button: HTMLButtonElement) => button.blur());
   await shot(page, 'focus-transcript.png');
 
   await fresh(page, 390, 844);
@@ -83,7 +89,7 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await shot(page, 'compact-settings.png');
 
   await fresh(page, 1440, 900);
-  await page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Float' }).click();
+  await page.getByRole('article', { name: 'Scene Effects' }).getByRole('button', { name: 'Float' }).click();
   await shot(page, 'floating-widget.png');
   await page.getByRole('tab', { name: 'Library' }).click();
   await shot(page, 'renderer-error.png');
@@ -99,7 +105,7 @@ test('Theme Settings freezes the focused wide and compact authoring surfaces', a
   await page.locator('[data-widget-type="settings.custom-theme"]')
     .getByRole('button', { name: 'Focus Widget' })
     .evaluate((button: HTMLButtonElement) => button.click());
-  await expect(page.getByRole('dialog', { name: 'Focused Theme Settings' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Focused Custom Theme' })).toBeVisible();
   await shot(page, 'compact-theme-settings.png');
 });
 
@@ -129,7 +135,7 @@ test('Ash and Amber freezes the reviewed wide, compact, and Catalog target state
 
   await fresh(page, 1440, 900);
   await selectTheme(page, 'Ash & Amber');
-  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  await invokeCompactChromeAction(page, 'Open Widget Catalog');
   await shot(page, 'wide-catalog-ash-amber.png');
 });
 
