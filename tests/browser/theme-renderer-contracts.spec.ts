@@ -203,10 +203,10 @@ test('material controls have refined geometry and visibly control glass', async 
   for (const target of TARGETS) {
     await fresh(page);
     await selectTheme(page, target);
-    const library = page.getByRole('article', { name: 'Theme Library' });
-    await library.getByText('Material controls', { exact: true }).click();
-    const glass = library.getByRole('slider', { name: 'Glass density' });
-    const frost = library.getByRole('slider', { name: 'Frost level' });
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    const settings = page.getByRole('article', { name: 'Theme Settings' });
+    const glass = settings.getByRole('slider', { name: 'Glass Density' });
+    const frost = settings.getByRole('slider', { name: 'Frost Level' });
     const geometry = await glass.evaluate((input) => {
       const root = input.closest('[data-pom-theme-root]')!;
       const style = getComputedStyle(root);
@@ -235,13 +235,13 @@ test('material controls have refined geometry and visibly control glass', async 
     await glass.fill('0');
     await expect.poll(() => glass.evaluate((input) => getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim())).toBe('0%');
     await frost.fill('0');
-    expect((await material(page, '[data-conformance-region="left"] .widget-frame')).alpha).toBe(0);
-    expect(blurPx((await material(page, '[data-conformance-region="left"] .widget-frame')).backdrop)).toBe(0);
+    expect((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).alpha).toBe(0);
+    expect(blurPx((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).backdrop)).toBe(0);
     await glass.fill('100');
     await expect.poll(() => glass.evaluate((input) => getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim())).toBe('100%');
     await frost.fill('100');
-    expect((await material(page, '[data-conformance-region="left"] .widget-frame')).alpha).toBe(1);
-    expect(blurPx((await material(page, '[data-conformance-region="left"] .widget-frame')).backdrop)).toBe(40);
+    expect((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).alpha).toBe(1);
+    expect(blurPx((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).backdrop)).toBe(40);
   }
 });
 

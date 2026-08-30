@@ -189,4 +189,41 @@ describe('Svelte Workbench Lab mockup', () => {
       expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveValue('Atomic target draft.');
     }
   });
+
+  it('authors one shared Theme Settings draft with synchronized color, material, and ambient controls', async () => {
+    const user = userEvent.setup();
+    const { container } = render(App);
+    await user.click(within(screen.getByRole('article', { name: 'Theme Library' })).getByRole('button', { name: 'Open Theme Settings' }));
+    expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
+
+    const settings = screen.getByRole('article', { name: 'Theme Settings' });
+    for (const role of ['Canvas', 'Glass', 'Chrome', 'Ambient', 'Text', 'Source']) {
+      expect(within(settings).getByRole('button', { name: role })).toBeVisible();
+    }
+    for (const control of ['Glass Density', 'Bar Opacity', 'Selected Strength', 'Frost Level', 'Radius', 'Power']) {
+      expect(within(settings).getByRole('slider', { name: control })).toBeVisible();
+    }
+
+    const hex = within(settings).getByRole('textbox', { name: 'Hex color' });
+    await user.clear(hex);
+    await user.type(hex, '#101820');
+    expect((container.querySelector('main') as HTMLElement).style.getPropertyValue('--pom-color-canvas')).toBe('#101820');
+
+    await user.clear(hex);
+    await user.type(hex, 'unsafe');
+    expect(hex).toHaveValue('unsafe');
+    expect(within(settings).getAllByText(/#RRGGBB/).length).toBeGreaterThan(0);
+    expect((container.querySelector('main') as HTMLElement).style.getPropertyValue('--pom-color-canvas')).toBe('#101820');
+
+    const plane = within(settings).getByRole('application', { name: 'Saturation and value' });
+    plane.focus();
+    await user.keyboard('{ArrowRight}{ArrowUp}');
+    expect(plane).toHaveFocus();
+    expect(within(settings).getByText(/Saturation .* Value/)).toBeVisible();
+
+    await user.click(within(settings).getByRole('button', { name: 'Reset' }));
+    expect(within(settings).getByRole('textbox', { name: 'Hex color' })).not.toHaveValue('unsafe');
+    await user.click(within(settings).getByRole('button', { name: 'Save draft' }));
+    expect(window.localStorage.getItem('pomegranate-ui.workbench-lab.theme-draft.v1')).not.toBeNull();
+  });
 });

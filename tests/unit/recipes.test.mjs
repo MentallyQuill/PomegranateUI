@@ -28,6 +28,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
   assert.deepEqual(manifest.recipes.map((entry) => entry.id), [
     'error-state',
     'panel-tabs',
+    'theme-settings',
     'widget-catalog',
     'widget-frame',
     'workbench-surface'
@@ -52,7 +53,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
 test('recipe check mode validates actual source hashes', () => {
   const result = run(['--check']);
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /Recipe registry verified: 5 recipes, 11 files\./);
+  assert.match(result.stdout, /Recipe registry verified: 6 recipes, 15 files\./);
 });
 
 test('recipe copy is clean and refuses to overwrite adopter edits', async () => {

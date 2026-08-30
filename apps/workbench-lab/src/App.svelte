@@ -11,6 +11,7 @@
   import deepCurrentStage from './assets/deep-current-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
   import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
+  import { LAB_PANEL_IDS } from './mockup/state.js';
   import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
@@ -175,6 +176,7 @@
     activate: activateTheme,
     setMaterialControl,
     resetMaterialControls,
+    openSettings: () => { store.dispatch({ type: 'panel.activate', panelId: LAB_PANEL_IDS.settings }); },
     editDraft: editThemeDraft,
     resetDraft: resetThemeDraft,
     saveDraft: saveThemeDraft

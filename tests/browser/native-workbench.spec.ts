@@ -392,7 +392,7 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
   }
 });
 
-test('all 49 reviewed Widget surfaces expose exact ready, state, focus, and responsive contracts', async ({ page }) => {
+test('all 50 reviewed Widget surfaces expose exact ready, state, focus, and responsive contracts', async ({ page }) => {
   test.setTimeout(120_000);
   for (const surface of IMPLEMENTED_SURFACES) {
     const fixture = SURFACE_FIXTURES.get(surface.type);
@@ -469,8 +469,8 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
   const results = catalog.getByRole('listitem');
   await expect(results).toHaveCount(94);
   await expect(catalog.locator('.catalog-miniature')).toHaveCount(94);
-  await expect(catalog.locator('[data-renderer-status="implemented"]')).toHaveCount(49);
-  await expect(catalog.locator('[data-renderer-status="unavailable"]')).toHaveCount(45);
+  await expect(catalog.locator('[data-renderer-status="implemented"]')).toHaveCount(50);
+  await expect(catalog.locator('[data-renderer-status="unavailable"]')).toHaveCount(44);
 
   for (const [category, total] of [['story', 12], ['library', 19], ['systems', 21], ['settings', 39], ['extensions', 3]] as const) {
     await catalog.getByRole('button', { name: category, exact: true }).click();
@@ -495,16 +495,16 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
   await catalog.getByRole('button', { name: 'Close Catalog' }).click();
   const activePanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
   await expect(activePanel.getByRole('article')).toHaveCount(94);
-  await expect(activePanel.locator('.implemented-widget')).toHaveCount(49);
-  await expect(activePanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(45);
+  await expect(activePanel.locator('.implemented-widget')).toHaveCount(50);
+  await expect(activePanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(44);
   const identities = await activePanel.locator('[data-widget-type]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-widget-type')));
   expect(new Set(identities).size).toBe(94);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
   const restoredPanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
   await expect(restoredPanel.locator('[data-widget-type]')).toHaveCount(94);
-  await expect(restoredPanel.locator('.implemented-widget')).toHaveCount(49);
-  await expect(restoredPanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(45);
+  await expect(restoredPanel.locator('.implemented-widget')).toHaveCount(50);
+  await expect(restoredPanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(44);
   await expect(restoredPanel.locator('button.action-remove')).toHaveCount(94);
   await restoredPanel.locator('button.action-remove').evaluateAll((buttons) => {
     for (const button of buttons) (button as HTMLButtonElement).click();

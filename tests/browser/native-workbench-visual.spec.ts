@@ -29,18 +29,19 @@ async function selectTheme(page: Page, label: ThemeLabel) {
 }
 
 async function setMaterialControls(page: Page, values: readonly [number, number, number, number]) {
-  const themeLibrary = page.getByRole('article', { name: 'Theme Library' });
-  await themeLibrary.getByText('Material controls', { exact: true }).click();
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  const themeSettings = page.getByRole('article', { name: 'Theme Settings' });
   for (const [label, value] of [
-    ['Glass density', values[0]],
-    ['Bar opacity', values[1]],
-    ['Selected strength', values[2]],
-    ['Frost level', values[3]]
+    ['Glass Density', values[0]],
+    ['Bar Opacity', values[1]],
+    ['Selected Strength', values[2]],
+    ['Frost Level', values[3]]
   ] as const) {
-    const control = themeLibrary.getByRole('slider', { name: label });
+    const control = themeSettings.getByRole('slider', { name: label });
     await control.fill(String(value));
     await expect(control).toHaveValue(String(value));
   }
+  await page.getByRole('tab', { name: 'Scene' }).click();
   await page.evaluate(async () => {
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     window.scrollTo(0, 0);
@@ -57,10 +58,9 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);
   await shot(page, 'wide-scene.png');
 
-  const materialControls = page.getByRole('article', { name: 'Theme Library' }).getByText('Material controls', { exact: true });
-  await materialControls.click();
+  await page.getByRole('article', { name: 'Theme Library' }).getByRole('button', { name: 'Open Theme Settings' }).click();
   await shot(page, 'wide-material-controls.png');
-  await materialControls.click();
+  await page.getByRole('tab', { name: 'Scene' }).click();
 
   await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
   await shot(page, 'wide-catalog-drawer.png');

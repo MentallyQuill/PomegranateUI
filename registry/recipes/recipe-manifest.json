@@ -44,6 +44,32 @@
       }
     },
     {
+      "id": "theme-settings",
+      "revision": 1,
+      "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
+      "files": [
+        "AmbientPosition.svelte",
+        "ColorPlane.svelte",
+        "HueControl.svelte",
+        "ThemeSettings.svelte"
+      ],
+      "dependencies": [
+        "@pomegranate-ui/contracts",
+        "@pomegranate-ui/theme",
+        "svelte"
+      ],
+      "rendererContractIds": [
+        "POM-RENDER-829EBD0745",
+        "POM-RENDER-A4B0DF2967"
+      ],
+      "sha256": {
+        "AmbientPosition.svelte": "C3B6C929BDB704E606F184D961C70D10414AA4BC381C8CB855C7F133D3BAF3AF",
+        "ColorPlane.svelte": "C68F0A836D3A4F5A70E7DA83DC5E9EBFBE1E5561F9492F5F14B955AB13213A60",
+        "HueControl.svelte": "0804D5BDBE0AA7B29FD8260E900DEE0855079F3926F7DF6F51CC7EE6A548E6E3",
+        "ThemeSettings.svelte": "63BD0E38B9212ED66763BB7F44FDE09DEFE434F33931AA492BECF0AE72153BE2"
+      }
+    },
+    {
       "id": "widget-catalog",
       "revision": 1,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",

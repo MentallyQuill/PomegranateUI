@@ -28,6 +28,7 @@ export const LAB_WIDGET_TYPES = Object.freeze({
   characterCard: asWidgetType('library.character-card'),
   loreEntries: asWidgetType('library.lore-entries'),
   themeLibrary: asWidgetType('settings.theme'),
+  themeSettings: asWidgetType('settings.custom-theme'),
   accessibility: asWidgetType('settings.accessibility'),
   promptEditor: asWidgetType('settings.prompt-editor')
 });
@@ -70,6 +71,7 @@ export function createLabState(): WorkbenchState {
     ['library-character', LAB_WIDGET_TYPES.characterCard, LAB_PANEL_IDS.library, 'support', 0, { fixtureMode: 'failure' }],
     ['library-lore', LAB_WIDGET_TYPES.loreEntries, LAB_PANEL_IDS.library, 'support', 1, {}],
     ['settings-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
+    ['settings-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.settings, 'column-1', 1, {}],
     ['settings-accessibility', LAB_WIDGET_TYPES.accessibility, LAB_PANEL_IDS.settings, 'column-2', 0, {}]
   ] as const;
   for (const [id, type, panelId, regionId, order, configuration] of fixtures) {

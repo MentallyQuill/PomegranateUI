@@ -13,7 +13,7 @@
 {#if rendererReady()}
   {#if instance.type === 'settings.custom-theme'}
     <div class="widget-content settings-sample theme-picker">
-      <p class="widget-kicker">Same Workbench · three complete targets</p>
+      <p class="widget-kicker">Same Workbench · four complete targets</p>
       {#each hostContext.theme.presets as preset (preset.id)}
         <button
           type="button"

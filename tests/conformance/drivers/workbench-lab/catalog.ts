@@ -73,8 +73,8 @@ export async function renderLabCatalog(
         break;
       }
       case 'dc-catalog-fallback-46':
-        outcomeReached = await catalog.locator('[data-renderer-status="implemented"]').count() === 49
-          && await catalog.locator('[data-renderer-status="unavailable"]').count() === 45
+        outcomeReached = await catalog.locator('[data-renderer-status="implemented"]').count() === 50
+          && await catalog.locator('[data-renderer-status="unavailable"]').count() === 44
           && await catalog.locator('.catalog-miniature').count() === 94;
         break;
       default:

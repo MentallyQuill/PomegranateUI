@@ -23,6 +23,7 @@ export interface LabThemeHostContext {
   readonly activate: (id: string) => void;
   readonly setMaterialControl: (id: LabMaterialControlId, value: number) => void;
   readonly resetMaterialControls: () => void;
+  readonly openSettings: () => void;
   readonly editDraft: (next: unknown) => ThemeDraftEditResult;
   readonly resetDraft: () => ThemeDraftEditResult;
   readonly saveDraft: () => Promise<ThemeDraftSaveResult>;

@@ -26,11 +26,12 @@ async function settle(locator: Locator): Promise<void> {
 }
 
 async function applyPreservedMaterialState(page: Page, root: Locator): Promise<void> {
+  await page.getByRole('tab', { name: 'Settings' }).click();
   for (const [name, value] of [
-    ['Glass density', '20'],
-    ['Bar opacity', '60'],
-    ['Selected strength', '6'],
-    ['Frost level', '50']
+    ['Glass Density', '20'],
+    ['Bar Opacity', '60'],
+    ['Selected Strength', '6'],
+    ['Frost Level', '50']
   ] as const) {
     await page.getByRole('slider', { name, includeHidden: true }).evaluate((input, nextValue) => {
       if (!(input instanceof HTMLInputElement)) throw new Error(`${nextValue} material control is not an input.`);
@@ -38,6 +39,7 @@ async function applyPreservedMaterialState(page: Page, root: Locator): Promise<v
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }, value);
   }
+  await page.getByRole('tab', { name: 'Scene' }).click();
   const materialState = await root.evaluate((element) => {
     const style = getComputedStyle(element);
     return {

@@ -1218,6 +1218,59 @@ main[data-active-panel="surface-preview"][data-surface-preview-family="story"] .
 .panel-template-choices small { color: var(--faint); }
 .shelf-resize-handle { width: 100%; padding: 0; border: 0; border-radius: 0; }
 
+.theme-settings {
+  display: grid;
+  gap: var(--pom-space-md, 12px);
+  min-width: 0;
+  padding: var(--pom-space-md, 12px);
+  color: var(--pom-color-text);
+}
+.theme-settings > section { display: grid; gap: 8px; min-width: 0; }
+.theme-settings h3 { margin: 0; color: var(--pom-color-text-muted); font: 650 11px/1.2 var(--pom-font-ui); letter-spacing: .09em; text-transform: uppercase; }
+.theme-role-swatches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.theme-role-swatches button { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 6px; align-items: center; min-width: 0; min-height: 34px; padding: 5px 7px; text-align: left; }
+.theme-role-swatches button[aria-pressed="true"] { border-color: var(--pom-color-focus); background: var(--pom-material-selected, var(--pom-color-selection)); }
+.theme-role-swatches i { width: 18px; height: 18px; border: 1px solid var(--pom-color-border-strong); border-radius: 50%; background: var(--theme-swatch); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.theme-color-editor { display: grid; gap: 7px; min-width: 0; }
+.theme-color-plane {
+  position: relative;
+  min-height: 132px;
+  overflow: hidden;
+  border: 1px solid var(--pom-color-border-strong);
+  border-radius: var(--pom-shape-field-radius, 5px);
+  cursor: crosshair;
+  touch-action: none;
+  width: 100%;
+  padding: 0;
+  background:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, hsl(var(--theme-hue) 100% 50%));
+}
+.theme-color-plane > span { position: absolute; left: var(--theme-saturation); top: var(--theme-value); width: 12px; height: 12px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #000; transform: translate(-50%, -50%); pointer-events: none; }
+.theme-color-plane-value { color: var(--pom-color-text-muted); font: 500 10px/1.2 var(--pom-font-technical); }
+.theme-hue-control,
+.theme-settings-ranges label { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; }
+.theme-hue-control input,
+.theme-settings-ranges input { grid-column: 1 / -1; width: 100%; }
+.theme-hue-control input { background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+.theme-channel-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.theme-channel-fields .theme-hex-field { grid-column: 1 / -1; }
+.theme-channel-fields label { display: grid; gap: 3px; min-width: 0; color: var(--pom-color-text-muted); font-size: 10px; }
+.theme-channel-fields input { width: 100%; min-width: 0; padding: 6px; }
+.ambient-position { position: relative; width: 100%; min-height: 92px; padding: 0; border: 1px solid var(--pom-color-border-strong); border-radius: var(--pom-shape-field-radius, 5px); cursor: crosshair; touch-action: none; background: radial-gradient(circle at var(--ambient-x) var(--ambient-y), var(--pom-ambient-color) 0, color-mix(in srgb, var(--pom-ambient-color) 28%, transparent) 18%, transparent 48%), var(--pom-material-field); }
+.ambient-position > span { position: absolute; left: var(--ambient-x); top: var(--ambient-y); width: 13px; height: 13px; border: 2px solid var(--pom-color-text); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 14px var(--pom-ambient-color); }
+.theme-settings-ranges { display: grid; gap: 7px; }
+.theme-settings output { color: var(--pom-color-text-muted); font-family: var(--pom-font-technical); }
+.theme-diagnostics { margin: 0; padding: 8px 8px 8px 26px; border: 1px solid var(--pom-color-danger); color: var(--pom-color-danger); background: color-mix(in srgb, var(--pom-color-danger) 8%, transparent); }
+.theme-settings-status { min-height: 1.3em; margin: 0; color: var(--pom-color-text-muted); font-size: 10px; }
+.theme-settings > .surface-actions { display: flex; justify-content: flex-end; gap: 6px; }
+
+@media (max-width: 520px) {
+  .theme-role-swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .theme-channel-fields { grid-template-columns: repeat(3, minmax(48px, 1fr)); }
+  .theme-channel-fields .theme-hex-field { grid-column: 1 / -1; }
+}
+
 @media (max-width: 1180px) {
   main[data-pom-theme-root] .story-lockup { display: none; }
   main[data-pom-theme-root] .top-shelf { grid-template-columns: 188px minmax(0, 1fr) auto; }

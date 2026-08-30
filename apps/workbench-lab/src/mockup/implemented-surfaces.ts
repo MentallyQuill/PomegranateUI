@@ -14,6 +14,7 @@ const IMPLEMENTED_TYPES = Object.freeze([
   'settings.provider-credentials',
   'settings.model-assignments',
   'settings.theme',
+  'settings.custom-theme',
   'settings.accessibility',
   'settings.maintenance',
   'settings.prompt-editor',
