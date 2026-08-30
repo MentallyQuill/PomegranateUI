@@ -43,7 +43,8 @@
   data-pomegranate-widget={frame.instanceIdAttribute}
   data-pom-part={surfacePart ?? undefined}
   data-pomegranate-placement={frame.placement.kind}
-  data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.edge : 'floating'}
+  data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.regionId === 'stage' ? 'main' : frame.placement.regionId : 'floating'}
+  data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
 >
   <header class:is-dragging={dragging} data-pom-part="widget.header">
     <h2>{frame.title}</h2>

@@ -30,7 +30,7 @@ function catalogManifest(type: string, title: string): WidgetManifest {
     title,
     capabilities: [],
     defaultConfiguration: {},
-    defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' },
+    defaultPlacement: { kind: 'docked', regionRole: 'stage', shelfId: 'primary' },
     catalog: {
       category: 'Story',
       purpose: `${title} purpose`,

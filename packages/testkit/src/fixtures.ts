@@ -43,7 +43,7 @@ function manifest(type: typeof CONFORMANCE_IDS.summaryType, title: string): Widg
     title,
     capabilities: ['story.read'],
     defaultConfiguration: {},
-    defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+    defaultPlacement: { kind: 'docked', regionRole: 'left-instruments', shelfId: 'primary' }
   };
 }
 
@@ -52,15 +52,22 @@ export function createConformanceFixture(): ConformanceFixture {
   state = requireState(createPanel(state, {
     id: CONFORMANCE_IDS.scenePanel,
     name: 'Scene',
-    templateId: 'standard',
+    templateId: 'story-stage.v1',
     order: 0
   }));
   state = requireState(createPanel(state, {
     id: CONFORMANCE_IDS.libraryPanel,
     name: 'Library',
-    templateId: 'library',
+    templateId: 'focus-support.v1',
     order: 1
   }));
+  state = {
+    ...state,
+    shelves: [
+      { id: 'primary', panelId: CONFORMANCE_IDS.scenePanel, regionId: 'left', order: 0, weight: 1 },
+      { id: 'primary', panelId: CONFORMANCE_IDS.scenePanel, regionId: 'right', order: 0, weight: 1 }
+    ]
+  };
   state = requireState(createWidget(state, {
     id: CONFORMANCE_IDS.summaryWidget,
     type: CONFORMANCE_IDS.summaryType,
@@ -69,7 +76,7 @@ export function createConformanceFixture(): ConformanceFixture {
   }, {
     kind: 'docked',
     panelId: CONFORMANCE_IDS.scenePanel,
-    edge: 'left',
+    regionId: 'left',
     shelfId: 'primary',
     order: 0
   }));
@@ -81,7 +88,7 @@ export function createConformanceFixture(): ConformanceFixture {
   }, {
     kind: 'docked',
     panelId: CONFORMANCE_IDS.scenePanel,
-    edge: 'right',
+    regionId: 'right',
     shelfId: 'primary',
     order: 0
   }));

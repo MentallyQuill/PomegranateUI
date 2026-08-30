@@ -19,10 +19,11 @@ const widgetId = asWidgetInstanceId('summary-1');
 const widgetType = asWidgetType('story.summary');
 
 const state: WorkbenchState = {
-  schema: 'pomegranate.ui.state.v1',
+  schema: 'pomegranate.ui.state.v2',
   revision: 0,
   activePanelId: panelId,
   panels: [{ id: panelId, name: 'Scene', templateId: 'standard', order: 0 }],
+  shelves: [{ id: 'primary', panelId, regionId: 'left', order: 0, weight: 1 }],
   widgets: {
     [widgetId]: {
       id: widgetId,
@@ -35,7 +36,7 @@ const state: WorkbenchState = {
     [widgetId]: {
       kind: 'docked',
       panelId,
-      edge: 'left',
+      regionId: 'left',
       shelfId: 'primary',
       order: 0
     }
@@ -73,7 +74,7 @@ describe('public contracts', () => {
       title: 'Story summary',
       capabilities: ['story.read'],
       defaultConfiguration: { density: 'compact' },
-      defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+      defaultPlacement: { kind: 'docked', regionRole: 'left-instruments', shelfId: 'primary' }
     });
     expect(parsed.type).toBe(widgetType);
     expect(() => WidgetManifestSchema.parse({ ...parsed, defaultConfiguration: { unsafe: 1n } })).toThrow();
@@ -86,7 +87,7 @@ describe('public contracts', () => {
       title: 'Story transcript',
       capabilities: ['story.read'],
       defaultConfiguration: {},
-      defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' },
+      defaultPlacement: { kind: 'docked', regionRole: 'stage', shelfId: 'primary' },
       catalog: {
         category: 'story',
         purpose: 'Read the current story transcript.',
@@ -118,7 +119,7 @@ describe('public contracts', () => {
       title: 'Story transcript',
       capabilities: ['story.read'],
       defaultConfiguration: {},
-      defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' },
+      defaultPlacement: { kind: 'docked', regionRole: 'stage', shelfId: 'primary' },
       catalog: {
         category: 'story',
         purpose: 'Read the current story transcript.',
@@ -141,7 +142,7 @@ describe('public contracts', () => {
       title: 'Story transcript',
       capabilities: ['story.read'],
       defaultConfiguration: {},
-      defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' },
+      defaultPlacement: { kind: 'docked', regionRole: 'stage', shelfId: 'primary' },
       catalog: {
         category: 'story',
         purpose: 'Read the current story transcript.',
@@ -164,7 +165,7 @@ describe('public contracts', () => {
       title: 'Story transcript',
       capabilities: ['story.read'],
       defaultConfiguration: {},
-      defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' },
+      defaultPlacement: { kind: 'docked', regionRole: 'stage', shelfId: 'primary' },
       catalog: {
         category: 'story',
         purpose: 'Read the current story transcript.',
@@ -181,14 +182,16 @@ describe('public contracts', () => {
   });
 
   it('uses exact state and snapshot schema discriminants', () => {
-    expect(WorkbenchStateSchema.parse(state).schema).toBe('pomegranate.ui.state.v1');
+    expect(WorkbenchStateSchema.parse(state).schema).toBe('pomegranate.ui.state.v2');
     expect(LayoutSnapshotV1Schema.parse({
       schema: 'pomegranate.ui.layout.v1',
       revision: state.revision,
       activePanelId: state.activePanelId,
       panels: state.panels,
       widgets: state.widgets,
-      placements: state.placements
+      placements: {
+        [widgetId]: { kind: 'docked', panelId, edge: 'left', shelfId: 'primary', order: 0 }
+      }
     }).schema).toBe('pomegranate.ui.layout.v1');
     expect(LayoutSnapshotV1Schema.safeParse({ schema: 'future.v9' }).success).toBe(false);
   });
@@ -233,8 +236,8 @@ describe('public contracts', () => {
       { type: 'panel.activate', panelId },
       { type: 'panel.reorder', panelId, toIndex: 0 },
       { type: 'panel.resize-dock', panelId, edge: 'left', width: 320 },
-      { type: 'widget.create', instance: state.widgets[widgetId]!, placement: state.placements[widgetId]! },
-      { type: 'widget.place', instanceId: widgetId, placement: state.placements[widgetId]! },
+      { type: 'widget.create', instance: state.widgets[widgetId]!, placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'primary', order: 0 } },
+      { type: 'widget.place', instanceId: widgetId, placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'primary', order: 0 } },
       { type: 'widget.group', instanceId: widgetId, targetInstanceId: widgetId, groupId: 'reading-stack' },
       { type: 'widget.group.activate', instanceId: widgetId },
       { type: 'widget.group.reorder', instanceId: widgetId, toIndex: 0 },

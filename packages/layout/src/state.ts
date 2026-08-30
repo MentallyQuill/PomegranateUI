@@ -12,6 +12,7 @@ export function createInitialWorkbenchState(): WorkbenchState {
     revision: 0,
     activePanelId: null,
     panels: [],
+    shelves: [],
     widgets: {},
     placements: {}
   };
@@ -22,7 +23,32 @@ export function normalizePanels(panels: readonly PanelState[]): readonly PanelSt
 }
 
 function dockKey(placement: DockedPlacement): string {
-  return `${placement.panelId}\u0000${placement.edge}\u0000${placement.shelfId}`;
+  return `${placement.panelId}\u0000${placement.regionId}\u0000${placement.shelfId}`;
+}
+
+export function normalizeShelves(shelves: readonly import('@pomegranate-ui/contracts').ShelfState[]): readonly import('@pomegranate-ui/contracts').ShelfState[] {
+  const byRegion = new Map<string, import('@pomegranate-ui/contracts').ShelfState[]>();
+  for (const shelf of shelves) {
+    const key = `${shelf.panelId}\u0000${shelf.regionId}`;
+    const group = byRegion.get(key) ?? [];
+    group.push(shelf);
+    byRegion.set(key, group);
+  }
+  const normalized: import('@pomegranate-ui/contracts').ShelfState[] = [];
+  for (const group of byRegion.values()) {
+    group.sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
+    const sum = group.reduce((total, shelf) => total + shelf.weight, 0);
+    group.forEach((shelf, order) => normalized.push({
+      ...shelf,
+      order,
+      weight: sum > 0 ? shelf.weight / sum : 1 / group.length
+    }));
+  }
+  return normalized.sort((left, right) => (
+    left.panelId.localeCompare(right.panelId)
+    || left.regionId.localeCompare(right.regionId)
+    || left.order - right.order
+  ));
 }
 
 export function normalizeDockOrders(

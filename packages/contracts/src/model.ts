@@ -10,15 +10,18 @@ import {
 } from './ids.js';
 import { JsonObjectSchema, type JsonObject } from './json.js';
 
-export const WORKBENCH_STATE_SCHEMA = 'pomegranate.ui.state.v1' as const;
+export const WORKBENCH_STATE_SCHEMA = 'pomegranate.ui.state.v2' as const;
 export const LAYOUT_SNAPSHOT_V1_SCHEMA = 'pomegranate.ui.layout.v1' as const;
+export const LAYOUT_SNAPSHOT_V2_SCHEMA = 'pomegranate.ui.layout.v2' as const;
 
 export type PanelEdge = 'left' | 'main' | 'right';
+export const WidgetShapeSchema = z.enum(['narrow', 'medium', 'wide', 'stage', 'strip']);
+export type WidgetShape = z.infer<typeof WidgetShapeSchema>;
 
 export type WidgetPlacementHint =
   | {
       readonly kind: 'docked';
-      readonly edge: PanelEdge;
+      readonly regionRole: import('./templates.js').PanelRegionRole;
       readonly shelfId: string;
     }
   | {
@@ -32,7 +35,7 @@ export interface WidgetCatalogMetadata {
   readonly purpose: string;
   readonly keywords: readonly string[];
   readonly iconKey: string;
-  readonly shape: 'narrow' | 'medium' | 'wide' | 'stage' | 'strip';
+  readonly shape: WidgetShape;
   readonly minColumns: number;
   readonly geometry: {
     readonly minHeight: number;
@@ -70,7 +73,7 @@ export interface PanelState {
 export type DockedPlacement = {
   readonly kind: 'docked';
   readonly panelId: PanelId;
-  readonly edge: PanelEdge;
+  readonly regionId: string;
   readonly shelfId: string;
   readonly order: number;
   readonly group?: {
@@ -90,13 +93,30 @@ export type FloatingPlacement = {
   readonly z: number;
 };
 
-export type WidgetPlacement = DockedPlacement | FloatingPlacement;
+export type VisibleWidgetPlacement = DockedPlacement | FloatingPlacement;
+
+export type ShelvedPlacement = {
+  readonly kind: 'shelved';
+  readonly panelId: PanelId;
+  readonly lastVisible: VisibleWidgetPlacement;
+};
+
+export type WidgetPlacement = VisibleWidgetPlacement | ShelvedPlacement;
+
+export interface ShelfState {
+  readonly id: string;
+  readonly panelId: PanelId;
+  readonly regionId: string;
+  readonly order: number;
+  readonly weight: number;
+}
 
 export interface WorkbenchState {
   readonly schema: typeof WORKBENCH_STATE_SCHEMA;
   readonly revision: number;
   readonly activePanelId: PanelId | null;
   readonly panels: readonly PanelState[];
+  readonly shelves: readonly ShelfState[];
   readonly widgets: Readonly<Record<string, WidgetInstance>>;
   readonly placements: Readonly<Record<string, WidgetPlacement>>;
 }
@@ -107,8 +127,15 @@ export interface LayoutSnapshotV1 {
   readonly activePanelId: PanelId | null;
   readonly panels: readonly PanelState[];
   readonly widgets: Readonly<Record<string, WidgetInstance>>;
-  readonly placements: Readonly<Record<string, WidgetPlacement>>;
+  readonly placements: Readonly<Record<string, LegacyWidgetPlacement>>;
 }
+
+export interface LayoutSnapshotV2 extends Omit<WorkbenchState, 'schema'> {
+  readonly schema: typeof LAYOUT_SNAPSHOT_V2_SCHEMA;
+}
+
+export type LegacyDockedPlacement = Omit<DockedPlacement, 'regionId'> & { readonly edge: PanelEdge };
+export type LegacyWidgetPlacement = LegacyDockedPlacement | FloatingPlacement;
 
 const unpaddedString = (label: string) => z.string().refine(
   (value) => value.length > 0 && value.trim() === value,
@@ -122,7 +149,7 @@ export const PanelEdgeSchema = z.enum(['left', 'main', 'right']);
 export const WidgetPlacementHintSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('docked'),
-    edge: PanelEdgeSchema,
+    regionRole: z.enum(['left-instruments', 'stage', 'composer', 'right-instruments', 'focus', 'support', 'column']),
     shelfId: unpaddedString('shelfId')
   }).strict(),
   z.object({
@@ -140,7 +167,7 @@ export const WidgetCatalogMetadataSchema = z.object({
     { message: 'Widget catalog keywords must be unique.' }
   ),
   iconKey: unpaddedString('Widget catalog iconKey'),
-  shape: z.enum(['narrow', 'medium', 'wide', 'stage', 'strip']),
+  shape: WidgetShapeSchema,
   minColumns: z.number().int().positive(),
   geometry: z.object({
     minHeight: finiteNumber.positive(),
@@ -187,7 +214,7 @@ export const PanelStateSchema = z.object({
 export const DockedPlacementSchema = z.object({
   kind: z.literal('docked'),
   panelId: PanelIdSchema,
-  edge: PanelEdgeSchema,
+  regionId: unpaddedString('regionId'),
   shelfId: unpaddedString('shelfId'),
   order: nonnegativeInteger,
   group: z.object({
@@ -207,15 +234,36 @@ export const FloatingPlacementSchema = z.object({
   z: nonnegativeInteger
 }).strict();
 
-export const WidgetPlacementSchema = z.discriminatedUnion('kind', [
+export const VisibleWidgetPlacementSchema = z.discriminatedUnion('kind', [
   DockedPlacementSchema,
   FloatingPlacementSchema
 ]);
+
+export const ShelvedPlacementSchema = z.object({
+  kind: z.literal('shelved'),
+  panelId: PanelIdSchema,
+  lastVisible: VisibleWidgetPlacementSchema
+}).strict();
+
+export const WidgetPlacementSchema = z.discriminatedUnion('kind', [
+  DockedPlacementSchema,
+  FloatingPlacementSchema,
+  ShelvedPlacementSchema
+]);
+
+export const ShelfStateSchema = z.object({
+  id: unpaddedString('shelfId'),
+  panelId: PanelIdSchema,
+  regionId: unpaddedString('regionId'),
+  order: nonnegativeInteger,
+  weight: finiteNumber.min(0.05).max(1)
+}).strict();
 
 const workbenchCollections = {
   revision: nonnegativeInteger,
   activePanelId: PanelIdSchema.nullable(),
   panels: z.array(PanelStateSchema),
+  shelves: z.array(ShelfStateSchema),
   widgets: z.record(z.string(), WidgetInstanceSchema),
   placements: z.record(z.string(), WidgetPlacementSchema)
 };
@@ -227,6 +275,29 @@ export const WorkbenchStateSchema = z.object({
 
 export const LayoutSnapshotV1Schema = z.object({
   schema: z.literal(LAYOUT_SNAPSHOT_V1_SCHEMA),
+  revision: nonnegativeInteger,
+  activePanelId: PanelIdSchema.nullable(),
+  panels: z.array(PanelStateSchema),
+  widgets: z.record(z.string(), WidgetInstanceSchema),
+  placements: z.record(z.string(), z.discriminatedUnion('kind', [
+    z.object({
+      kind: z.literal('docked'),
+      panelId: PanelIdSchema,
+      edge: PanelEdgeSchema,
+      shelfId: unpaddedString('shelfId'),
+      order: nonnegativeInteger,
+      group: z.object({
+        id: unpaddedString('groupId'),
+        order: nonnegativeInteger,
+        active: z.boolean()
+      }).strict().optional()
+    }).strict(),
+    FloatingPlacementSchema
+  ]))
+}).strict();
+
+export const LayoutSnapshotV2Schema = z.object({
+  schema: z.literal(LAYOUT_SNAPSHOT_V2_SCHEMA),
   ...workbenchCollections
 }).strict();
 
@@ -234,3 +305,5 @@ export type WorkbenchStateInput = z.input<typeof WorkbenchStateSchema>;
 export type ParsedWorkbenchState = z.output<typeof WorkbenchStateSchema>;
 export type LayoutSnapshotV1Input = z.input<typeof LayoutSnapshotV1Schema>;
 export type ParsedLayoutSnapshotV1 = z.output<typeof LayoutSnapshotV1Schema>;
+export type LayoutSnapshotV2Input = z.input<typeof LayoutSnapshotV2Schema>;
+export type ParsedLayoutSnapshotV2 = z.output<typeof LayoutSnapshotV2Schema>;

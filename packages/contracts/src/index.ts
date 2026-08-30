@@ -8,6 +8,7 @@ export * from './ids.js';
 export * from './json.js';
 export * from './model.js';
 export * from './storage.js';
+export * from './templates.js';
 export * from './theme.js';
 export * from './theme-target.js';
 export * from './theme-v3.js';

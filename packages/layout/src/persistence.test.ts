@@ -22,13 +22,14 @@ const missingRendererId = asWidgetInstanceId('extension-widget');
 
 function populatedState(): WorkbenchState {
   return {
-    schema: 'pomegranate.ui.state.v1',
+    schema: 'pomegranate.ui.state.v2',
     revision: 12,
     activePanelId: sceneId,
     panels: [
       { id: sceneId, name: 'Scene', templateId: 'standard', order: 0, configuration: { z: 1, a: 2 } },
       { id: libraryId, name: 'Library', templateId: 'library', order: 1 }
     ],
+    shelves: [{ id: 'primary', panelId: sceneId, regionId: 'left', order: 0, weight: 1 }],
     widgets: {
       [missingRendererId]: {
         id: missingRendererId,
@@ -56,7 +57,7 @@ function populatedState(): WorkbenchState {
       [summaryId]: {
         kind: 'docked',
         panelId: sceneId,
-        edge: 'left',
+        regionId: 'left',
         shelfId: 'primary',
         order: 0
       }

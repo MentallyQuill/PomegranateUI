@@ -11,7 +11,7 @@ function manifest(type: string, title: string, category: string): WidgetManifest
     title,
     capabilities: [],
     defaultConfiguration: {},
-    defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' },
+    defaultPlacement: { kind: 'docked', regionRole: 'stage', shelfId: 'primary' },
     catalog: {
       category,
       purpose: `Use ${title}.`,

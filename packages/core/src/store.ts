@@ -60,12 +60,26 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
   switch (command.type) {
     case 'panel.create':
       return { type: 'panel.created', revision, panelId: command.panel.id };
+    case 'panel.rename':
+      return { type: 'panel.renamed', revision, panelId: command.panelId };
+    case 'panel.duplicate':
+      return { type: 'panel.duplicated', revision, panelId: command.ids.panelId };
+    case 'panel.reset':
+      return { type: 'panel.reset', revision, panelId: command.panelId };
+    case 'panel.clear':
+      return { type: 'panel.cleared', revision, panelId: command.panelId };
+    case 'panel.delete':
+      return { type: 'panel.deleted', revision, panelId: command.panelId };
     case 'panel.activate':
       return { type: 'panel.activated', revision, panelId: command.panelId };
     case 'panel.reorder':
       return { type: 'panel.reordered', revision, panelId: command.panelId };
     case 'panel.resize-dock':
       return { type: 'panel.dock-resized', revision, panelId: command.panelId, edge: command.edge };
+    case 'shelf.create':
+      return { type: 'shelf.created', revision, panelId: command.shelf.panelId, shelfId: command.shelf.id };
+    case 'shelf.resize':
+      return { type: 'shelf.resized', revision, panelId: command.panelId, shelfId: command.shelfId };
     case 'widget.create':
       return { type: 'widget.created', revision, instanceId: command.instance.id };
     case 'widget.place':
@@ -76,11 +90,33 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'widget.group-activated', revision, instanceId: command.instanceId };
     case 'widget.group.reorder':
       return { type: 'widget.group-reordered', revision, instanceId: command.instanceId };
+    case 'widget.group.separate':
+      return { type: 'widget.group-separated', revision, instanceId: command.instanceId };
+    case 'widget.shelve':
+      return { type: 'widget.shelved', revision, instanceId: command.instanceId };
+    case 'widget.restore':
+      return { type: 'widget.restored', revision, instanceId: command.instanceId };
+    case 'widget.delete':
+      return { type: 'widget.deleted', revision, instanceId: command.instanceId };
     case 'widget.remove':
       return { type: 'widget.removed', revision, instanceId: command.instanceId };
     case 'layout.hydrate':
       return { type: 'layout.hydrated', revision };
+    case 'layout.undo':
+      return { type: 'layout.undone', revision };
   }
+}
+
+function unsupported(state: WorkbenchState): LayoutResult {
+  return {
+    ok: false,
+    state,
+    error: {
+      code: 'CAPABILITY_DENIED',
+      message: 'This Workbench capability is not configured.',
+      recoverable: true
+    }
+  };
 }
 
 function hydrateState(current: WorkbenchState, requested: WorkbenchState): LayoutResult {
@@ -132,7 +168,7 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
           });
         }
 
-        let transition: LayoutResult;
+        let transition: LayoutResult = unsupported(before);
         switch (command.type) {
           case 'panel.create':
             transition = createPanel(before, command.panel);
@@ -166,6 +202,20 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
             break;
           case 'layout.hydrate':
             transition = hydrateState(before, command.state);
+            break;
+          case 'panel.rename':
+          case 'panel.duplicate':
+          case 'panel.reset':
+          case 'panel.clear':
+          case 'panel.delete':
+          case 'shelf.create':
+          case 'shelf.resize':
+          case 'widget.shelve':
+          case 'widget.restore':
+          case 'widget.delete':
+          case 'widget.group.separate':
+          case 'layout.undo':
+            transition = unsupported(before);
             break;
         }
 

@@ -7,7 +7,7 @@ import {
   type PanelId,
   type WidgetInstance,
   type WidgetInstanceId,
-  type WidgetPlacement,
+  type VisibleWidgetPlacement,
   type WorkbenchState
 } from '@pomegranate-ui/contracts';
 
@@ -16,13 +16,18 @@ import {
   activateWidgetGroup,
   createInitialWorkbenchState,
   createPanel,
+  createPanelTemplateRegistry,
+  createShelf,
   createWidget,
   mergeWidgetGroup,
   placeWidget,
   removeWidget,
+  resizeShelf,
+  restoreWidget,
   reorderWidgetGroup,
   reorderPanel,
   resizePanelDock
+  ,shelveWidget
 } from './index.js';
 
 const sceneId = asPanelId('scene');
@@ -32,11 +37,11 @@ const notesId = asWidgetInstanceId('notes');
 
 function dock(
   instancePanelId: PanelId,
-  edge: 'left' | 'main' | 'right',
+  regionId: 'left' | 'stage' | 'right',
   order: number,
   shelfId = 'primary'
-): WidgetPlacement {
-  return { kind: 'docked', panelId: instancePanelId, edge, shelfId, order };
+): VisibleWidgetPlacement {
+  return { kind: 'docked', panelId: instancePanelId, regionId, shelfId, order };
 }
 
 function instance(id: WidgetInstanceId, type: string): WidgetInstance {
@@ -50,12 +55,20 @@ function instance(id: WidgetInstanceId, type: string): WidgetInstance {
 
 function populatedState(): WorkbenchState {
   return {
-    schema: 'pomegranate.ui.state.v1',
+    schema: 'pomegranate.ui.state.v2',
     revision: 0,
     activePanelId: sceneId,
     panels: [
-      { id: sceneId, name: 'Scene', templateId: 'standard', order: 0 },
-      { id: libraryId, name: 'Library', templateId: 'standard', order: 1 }
+      { id: sceneId, name: 'Scene', templateId: 'story-stage.v1', order: 0 },
+      { id: libraryId, name: 'Library', templateId: 'story-stage.v1', order: 1 }
+    ],
+    shelves: [
+      { id: 'primary', panelId: sceneId, regionId: 'left', order: 0, weight: 1 },
+      { id: 'primary', panelId: sceneId, regionId: 'stage', order: 0, weight: 1 },
+      { id: 'primary', panelId: sceneId, regionId: 'right', order: 0, weight: 1 },
+      { id: 'primary', panelId: libraryId, regionId: 'left', order: 0, weight: 1 },
+      { id: 'primary', panelId: libraryId, regionId: 'stage', order: 0, weight: 1 },
+      { id: 'primary', panelId: libraryId, regionId: 'right', order: 0, weight: 1 }
     ],
     widgets: {
       [summaryId]: instance(summaryId, 'story.summary'),
@@ -72,10 +85,11 @@ describe('atomic layout operations', () => {
   it('creates a valid empty state and activates the first Panel', () => {
     const empty = createInitialWorkbenchState();
     expect(empty).toEqual({
-      schema: 'pomegranate.ui.state.v1',
+      schema: 'pomegranate.ui.state.v2',
       revision: 0,
       activePanelId: null,
       panels: [],
+      shelves: [],
       widgets: {},
       placements: {}
     });
@@ -83,7 +97,7 @@ describe('atomic layout operations', () => {
     const created = createPanel(empty, {
       id: sceneId,
       name: 'Scene',
-      templateId: 'standard',
+      templateId: 'story-stage.v1',
       order: 0
     });
     expect(created.ok).toBe(true);
@@ -125,13 +139,13 @@ describe('atomic layout operations', () => {
     const created = createWidget(
       before,
       instance(timelineId, 'story.timeline'),
-      dock(sceneId, 'main', 99)
+      dock(sceneId, 'stage', 99)
     );
     expect(created.ok).toBe(true);
     expect(Object.keys(created.state.widgets)).toContain(timelineId);
     expect(Object.keys(created.state.placements).filter((id) => id === timelineId)).toHaveLength(1);
 
-    const duplicate = createWidget(created.state, instance(timelineId, 'story.timeline'), dock(sceneId, 'main', 0));
+    const duplicate = createWidget(created.state, instance(timelineId, 'story.timeline'), dock(sceneId, 'stage', 0));
     expect(duplicate.ok).toBe(false);
     expect(duplicate.state).toBe(created.state);
   });
@@ -139,8 +153,8 @@ describe('atomic layout operations', () => {
   it('appends a dock shelf in a populated destination and normalizes the old shelf', () => {
     const result = placeWidget(populatedState(), notesId, dock(sceneId, 'left', 99));
     expect(result.ok).toBe(true);
-    expect(result.state.placements[summaryId]).toMatchObject({ edge: 'left', order: 0 });
-    expect(result.state.placements[notesId]).toMatchObject({ edge: 'left', order: 1 });
+    expect(result.state.placements[summaryId]).toMatchObject({ regionId: 'left', order: 0 });
+    expect(result.state.placements[notesId]).toMatchObject({ regionId: 'left', order: 1 });
   });
 
   it('inserts at a requested shelf order and keeps orders contiguous', () => {
@@ -174,10 +188,10 @@ describe('atomic layout operations', () => {
     const grouped = mergeWidgetGroup(populatedState(), notesId, summaryId, 'reading-stack');
     expect(grouped.ok).toBe(true);
     expect(grouped.state.placements[summaryId]).toMatchObject({
-      edge: 'left', shelfId: 'primary', group: { id: 'reading-stack', order: 0, active: false }
+      regionId: 'left', shelfId: 'primary', group: { id: 'reading-stack', order: 0, active: false }
     });
     expect(grouped.state.placements[notesId]).toMatchObject({
-      edge: 'left', shelfId: 'primary', group: { id: 'reading-stack', order: 1, active: true }
+      regionId: 'left', shelfId: 'primary', group: { id: 'reading-stack', order: 1, active: true }
     });
 
     const activated = activateWidgetGroup(grouped.state, summaryId);
@@ -202,7 +216,7 @@ describe('atomic layout operations', () => {
   });
 
   it('retains accepted floating geometry exactly', () => {
-    const placement: WidgetPlacement = {
+    const placement: VisibleWidgetPlacement = {
       kind: 'floating',
       panelId: libraryId,
       x: -12.5,
@@ -228,7 +242,7 @@ describe('atomic layout operations', () => {
     expect(grouped.ok).toBe(true);
     const removed = removeWidget(grouped.state, notesId);
     expect(removed.ok).toBe(true);
-    expect(removed.state.placements[summaryId]).toMatchObject({ kind: 'docked', edge: 'left' });
+    expect(removed.state.placements[summaryId]).toMatchObject({ kind: 'docked', regionId: 'left' });
     expect(removed.state.placements[summaryId]).not.toHaveProperty('group');
   });
 
@@ -260,5 +274,41 @@ describe('atomic layout operations', () => {
     const missingPanel = placeWidget(before, notesId, dock(asPanelId('missing'), 'left', 0));
     expect(missingPanel.ok).toBe(false);
     expect(!missingPanel.ok && missingPanel.error.code).toBe('MISSING_PANEL');
+  });
+
+  it('creates and resizes normalized region shelves', () => {
+    const registry = createPanelTemplateRegistry();
+    const created = createShelf(populatedState(), {
+      id: 'secondary', panelId: sceneId, regionId: 'left', order: 1, weight: 0.5
+    }, registry);
+    expect(created.ok).toBe(true);
+    expect(created.state.shelves.filter((shelf) => shelf.panelId === sceneId && shelf.regionId === 'left')).toMatchObject([
+      { id: 'primary', order: 0, weight: 2 / 3 },
+      { id: 'secondary', order: 1, weight: 1 / 3 }
+    ]);
+    const resized = resizeShelf(created.state, {
+      panelId: sceneId, regionId: 'left', shelfId: 'secondary'
+    }, 0.6);
+    expect(resized.ok).toBe(true);
+    expect(resized.state.shelves.filter((shelf) => shelf.panelId === sceneId && shelf.regionId === 'left')).toMatchObject([
+      { id: 'primary', weight: 0.4 },
+      { id: 'secondary', weight: 0.6 }
+    ]);
+  });
+
+  it('shelves a Widget without deleting it and restores its exact origin', () => {
+    const before = populatedState();
+    const shelved = shelveWidget(before, summaryId);
+    expect(shelved.ok).toBe(true);
+    expect(shelved.state.widgets[summaryId]).toBe(before.widgets[summaryId]);
+    expect(shelved.state.placements[summaryId]).toEqual({
+      kind: 'shelved', panelId: sceneId, lastVisible: before.placements[summaryId]
+    });
+    const restored = restoreWidget(shelved.state, summaryId, {
+      templates: createPanelTemplateRegistry(),
+      manifestFor: () => undefined
+    });
+    expect(restored.ok).toBe(true);
+    expect(restored.state.placements[summaryId]).toEqual(before.placements[summaryId]);
   });
 });

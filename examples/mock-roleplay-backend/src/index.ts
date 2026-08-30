@@ -30,18 +30,22 @@ export function createMockRoleplayConsumer<TBackend extends MockBackendRecord>(b
     title: 'Story Summary',
     capabilities: ['story.read'],
     defaultConfiguration: {},
-    defaultPlacement: { kind: 'docked', edge: 'main', shelfId: 'primary' }
+    defaultPlacement: { kind: 'docked', regionRole: 'stage', shelfId: 'primary' }
   });
 
   const panel = createPanel(createInitialWorkbenchState(), {
     id: panelId,
     name: 'Scene',
-    templateId: 'standard',
+    templateId: 'story-stage.v1',
     order: 0
   });
   if (!panel.ok) throw new Error(panel.error.message);
   const store = createWorkbenchStore({
-    initialState: { ...panel.state, revision: 0 },
+    initialState: {
+      ...panel.state,
+      revision: 0,
+      shelves: [{ id: 'primary', panelId, regionId: 'stage', order: 0, weight: 1 }]
+    },
     registry
   });
   const createSummaryWidgetCommand: WorkbenchCommand = {
@@ -55,7 +59,7 @@ export function createMockRoleplayConsumer<TBackend extends MockBackendRecord>(b
     placement: {
       kind: 'docked',
       panelId,
-      edge: 'main',
+      regionId: 'stage',
       shelfId: 'primary',
       order: 0
     }

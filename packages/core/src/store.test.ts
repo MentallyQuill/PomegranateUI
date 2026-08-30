@@ -23,17 +23,24 @@ function summaryManifest(): WidgetManifest {
     title: 'Story summary',
     capabilities: ['story.read'],
     defaultConfiguration: {},
-    defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+    defaultPlacement: { kind: 'docked', regionRole: 'left-instruments', shelfId: 'primary' }
   };
 }
 
 function initialState(): WorkbenchState {
   const empty = createInitialWorkbenchState();
-  const scene = createPanel(empty, { id: sceneId, name: 'Scene', templateId: 'standard', order: 0 });
+  const scene = createPanel(empty, { id: sceneId, name: 'Scene', templateId: 'story-stage.v1', order: 0 });
   if (!scene.ok) throw new Error(scene.error.message);
-  const library = createPanel(scene.state, { id: libraryId, name: 'Library', templateId: 'standard', order: 1 });
+  const library = createPanel(scene.state, { id: libraryId, name: 'Library', templateId: 'story-stage.v1', order: 1 });
   if (!library.ok) throw new Error(library.error.message);
-  return { ...library.state, revision: 0 };
+  return {
+    ...library.state,
+    revision: 0,
+    shelves: [
+      { id: 'primary', panelId: sceneId, regionId: 'left', order: 0, weight: 1 },
+      { id: 'primary', panelId: sceneId, regionId: 'stage', order: 0, weight: 1 }
+    ]
+  };
 }
 
 function fixtureStore() {
@@ -73,7 +80,7 @@ describe('Workbench store', () => {
     expect(store.dispatch({
       type: 'widget.create',
       instance: instance(),
-      placement: { kind: 'docked', panelId: sceneId, edge: 'left', shelfId: 'primary', order: 0 }
+      placement: { kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'primary', order: 0 }
     }).state.revision).toBe(3);
   });
 
@@ -85,7 +92,7 @@ describe('Workbench store', () => {
     const result = store.dispatch({
       type: 'widget.create',
       instance: instance('extension.unknown'),
-      placement: { kind: 'docked', panelId: sceneId, edge: 'left', shelfId: 'primary', order: 0 }
+      placement: { kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'primary', order: 0 }
     });
     expect(result.ok).toBe(false);
     expect(result.state).toBe(before);
@@ -101,7 +108,7 @@ describe('Workbench store', () => {
       revision: 40,
       widgets: { [summaryId]: instance('extension.not-installed') },
       placements: {
-        [summaryId]: { kind: 'docked', panelId: sceneId, edge: 'main', shelfId: 'primary', order: 0 }
+        [summaryId]: { kind: 'docked', panelId: sceneId, regionId: 'stage', shelfId: 'primary', order: 0 }
       }
     };
     const result = store.dispatch({ type: 'layout.hydrate', state: hydrated });
@@ -116,7 +123,7 @@ describe('Workbench store', () => {
     const created = store.dispatch({
       type: 'widget.create',
       instance: instance(),
-      placement: { kind: 'docked', panelId: sceneId, edge: 'left', shelfId: 'primary', order: 0 }
+      placement: { kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'primary', order: 0 }
     });
     expect(created.ok).toBe(true);
     store.registry.unregister(asWidgetType('story.summary'));

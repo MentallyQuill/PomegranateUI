@@ -76,7 +76,7 @@ export function selectPanelSurface(
   if (!activePanel) return null;
 
   const frames = Object.entries(state.placements)
-    .filter(([, placement]) => placement.panelId === activePanel.id)
+    .filter(([, placement]) => placement.panelId === activePanel.id && placement.kind !== 'shelved')
     .flatMap(([instanceId, placement]) => {
       const instance = state.widgets[instanceId];
       if (!instance) return [];
@@ -91,7 +91,7 @@ export function selectPanelSurface(
       })];
     });
   const docked = (edge: 'left' | 'main' | 'right') => Object.freeze(frames
-    .filter((frame) => frame.placement.kind === 'docked' && frame.placement.edge === edge)
+    .filter((frame) => frame.placement.kind === 'docked' && legacyDock(frame.placement.regionId) === edge)
     .sort((left, right) => {
       const leftOrder = left.placement.kind === 'docked' ? left.placement.order : 0;
       const rightOrder = right.placement.kind === 'docked' ? right.placement.order : 0;
@@ -140,7 +140,7 @@ export function createWidgetActions(
         placement: {
           kind: 'docked',
           panelId,
-          edge,
+          regionId: edge === 'main' ? 'stage' : edge,
           shelfId,
           order: Number.MAX_SAFE_INTEGER
         }
@@ -188,7 +188,7 @@ export function createWidgetActions(
         .filter(([id, placement]) => id !== instanceId
           && placement.kind === 'docked'
           && placement.panelId === current.panelId
-          && placement.edge === current.edge
+          && placement.regionId === current.regionId
           && placement.shelfId === current.shelfId
           && placement.order < current.order)
         .sort(([, left], [, right]) => (
@@ -213,4 +213,10 @@ export function createWidgetActions(
       return store.dispatch({ type: 'widget.remove', instanceId });
     }
   });
+}
+
+function legacyDock(regionId: string): 'left' | 'main' | 'right' {
+  if (regionId === 'left' || regionId === 'focus' || regionId === 'column-1') return 'left';
+  if (regionId === 'right' || regionId === 'support' || regionId === 'column-6') return 'right';
+  return 'main';
 }

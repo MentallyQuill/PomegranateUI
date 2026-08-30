@@ -48,7 +48,7 @@
         placement: {
           kind: 'docked',
           panelId,
-          edge: requestedDefinition?.family === 'systems' ? 'right' : requestedDefinition?.family === 'story' ? 'main' : 'left',
+          regionId: requestedDefinition?.family === 'systems' ? 'support' : 'focus',
           shelfId: 'primary',
           order: 0
         }
@@ -184,11 +184,16 @@
     const panelId = workbench.activePanelId;
     if (!panelId) return;
     const id = asWidgetInstanceId(`catalog-${manifest.type.replace(/[^a-z0-9]+/gi, '-')}-${workbench.revision + 1}`);
-    const edge = manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.edge : 'main';
+    const role = manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.regionRole : 'stage';
+    const regionId = activePanel?.templateId === 'focus-support.v1'
+      ? role === 'right-instruments' || role === 'support' ? 'support' : 'focus'
+      : activePanel?.templateId === 'columns.v1'
+        ? 'column-1'
+        : role === 'left-instruments' ? 'left' : role === 'right-instruments' ? 'right' : role;
     const result = store.dispatch({
       type: 'widget.create',
       instance: { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} },
-      placement: { kind: 'docked', panelId, edge, shelfId: 'primary', order: Number.MAX_SAFE_INTEGER }
+      placement: { kind: 'docked', panelId, regionId, shelfId: 'primary', order: Number.MAX_SAFE_INTEGER }
     });
     status = result.ok ? `${manifest.title} added to ${activePanel?.name ?? 'Panel'}.` : result.error.message;
   }
@@ -322,7 +327,8 @@
           data-widget-type={frame.instance.type}
           data-widget-shape={frame.manifest?.catalog?.shape}
           data-pomegranate-placement={frame.placement.kind}
-          data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.edge : undefined}
+          data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.regionId === 'stage' ? 'main' : frame.placement.regionId : undefined}
+          data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
           data-pomegranate-shelf={frame.placement.kind === 'docked' ? frame.placement.shelfId : undefined}
           data-pomegranate-order={frame.placement.kind === 'docked' ? frame.placement.order : undefined}
           style={floatingStyle(frame)}
