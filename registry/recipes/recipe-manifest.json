@@ -21,6 +21,23 @@
       }
     },
     {
+      "id": "icon-action",
+      "revision": 1,
+      "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
+      "files": [
+        "IconAction.svelte"
+      ],
+      "dependencies": [
+        "svelte"
+      ],
+      "rendererContractIds": [
+        "POM-RENDER-829EBD0745"
+      ],
+      "sha256": {
+        "IconAction.svelte": "4A98FC0DF61A0C33B04A20CE122AB9266E845AB1002843C86F35C07CA38DD873"
+      }
+    },
+    {
       "id": "panel-tabs",
       "revision": 1,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",

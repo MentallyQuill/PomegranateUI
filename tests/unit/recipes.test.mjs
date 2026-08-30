@@ -27,6 +27,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
   assert.equal(manifest.schema, 'pomegranate.ui.recipes.v1');
   assert.deepEqual(manifest.recipes.map((entry) => entry.id), [
     'error-state',
+    'icon-action',
     'panel-tabs',
     'theme-settings',
     'widget-catalog',
@@ -53,7 +54,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
 test('recipe check mode validates actual source hashes', () => {
   const result = run(['--check']);
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /Recipe registry verified: 6 recipes, 17 files\./);
+  assert.match(result.stdout, /Recipe registry verified: 7 recipes, 18 files\./);
 });
 
 test('recipe copy is clean and refuses to overwrite adopter edits', async () => {

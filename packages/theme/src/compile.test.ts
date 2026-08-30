@@ -86,11 +86,16 @@ describe('theme compiler', () => {
     const bindings = compileThemeBindings(RESOLVED_THEME);
 
     expect(css).toContain('::-webkit-slider-runnable-track');
-    expect(css).toContain('linear-gradient(to right, var(--pom-part-slider-fill-material-fill) 0 var(--pom-slider-progress, 0%)');
+    expect(css).toContain('linear-gradient(to right, color-mix(in srgb, var(--pom-part-slider-fill-material-fill)');
     expect(css).toContain('::-webkit-slider-thumb');
     expect(css).toContain('::-moz-range-track');
     expect(css).toContain('::-moz-range-progress');
     expect(css).toContain('::-moz-range-thumb');
+    expect(css).toContain('var(--pom-presentation-slider-track-opacity, 1)');
+    expect(css).toContain('var(--pom-presentation-slider-fill-opacity, 1)');
+    expect(css).toMatch(/::-webkit-slider-thumb\s*\{[^}]*opacity: var\(--pom-presentation-slider-thumb-opacity, 1\)/s);
+    expect(css).toMatch(/::-moz-range-thumb\s*\{[^}]*opacity: var\(--pom-presentation-slider-thumb-opacity, 1\)/s);
+    expect(css).not.toMatch(/slider-thumb[^}]*\b(?:width|height):\s*0/s);
     expect(bindings['--pom-control-slider-track-size']).toBe('4px');
     expect(bindings['--pom-control-slider-thumb-size']).toBe('11px');
     expect(bindings['--pom-control-slider-hit-size']).toBe('44px');
