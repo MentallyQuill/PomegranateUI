@@ -6,7 +6,7 @@ import { test, type Page } from '@playwright/test';
 
 import { AUTHORITY_BY_ID } from '../authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../compare.ts';
-import { prepareWidgetOverhaulHarness } from '../drivers/reference/widget-overhaul.ts';
+import { prepareWidgetOverhaulHarness, WIDGET_OVERHAUL_HOOK_TIMEOUT_MS } from '../drivers/reference/widget-overhaul.ts';
 import { renderWidgetOverhaulCatalog, requireCatalogHarnessCase } from '../drivers/reference/widget-overhaul-catalog.ts';
 import { renderLabCatalog } from '../drivers/workbench-lab/catalog.ts';
 import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, writeMeasurementEvidence } from '../evidence.ts';
@@ -32,7 +32,7 @@ test.describe('Deep Current Catalog conformance', () => {
   let ledger: ReturnType<typeof parseDiscrepancyLedger>;
 
   test.beforeAll(async ({ browser }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(WIDGET_OVERHAUL_HOOK_TIMEOUT_MS);
     await validateConformanceManifest(DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, {
       repositoryRoot,
       authorities: AUTHORITY_BY_ID,

@@ -18,6 +18,7 @@ import { hashReviewValue, validateFidelityRegressionReview } from '../conformanc
 import { compareLiveAuthorityFidelity, compareRecordingFrameFidelity } from '../conformance/source-fidelity.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
 import { prepareAtmosphericState } from '../conformance/drivers/reference/atmospheric.ts';
+import { WIDGET_OVERHAUL_HARNESS_TIMEOUT_MS, WIDGET_OVERHAUL_HOOK_TIMEOUT_MS } from '../conformance/drivers/reference/widget-overhaul.ts';
 import { DEEP_RECORDING_IMPLEMENTATION_STATES, prepareDeepCurrentState } from '../conformance/drivers/workbench-lab/deep-current.ts';
 import { VISIBLE_IMPLEMENTATION_REGION_IDS } from '../conformance/drivers/workbench-lab/deep-current.ts';
 
@@ -58,6 +59,20 @@ const validationOptions = Object.freeze({
 });
 
 const ledgerHeader = '| ID | Category | Severity | Authority | Scenario | Evidence | Diagnosis | Status | Regression | Deviation |';
+
+test('the preserved Widget Overhaul harness leaves loaded Windows runners scheduling margin', async () => {
+  assert.ok(WIDGET_OVERHAUL_HARNESS_TIMEOUT_MS >= 180_000);
+  assert.ok(WIDGET_OVERHAUL_HOOK_TIMEOUT_MS >= WIDGET_OVERHAUL_HARNESS_TIMEOUT_MS + 30_000);
+
+  for (const file of [
+    'deep-current-catalog.spec.ts',
+    'deep-current-interactions.spec.ts',
+    'deep-current-widgets.spec.ts'
+  ]) {
+    const source = await readFile(path.join(repositoryRoot, 'tests', 'conformance', 'specs', file), 'utf8');
+    assert.match(source, /test\.setTimeout\(WIDGET_OVERHAUL_HOOK_TIMEOUT_MS\)/, file);
+  }
+});
 
 test('manifest validation rejects preserved reference hash drift before browser setup', async () => {
   await assert.rejects(
