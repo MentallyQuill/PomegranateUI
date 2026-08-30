@@ -8,6 +8,7 @@ import {
 } from '@pomegranate-ui/contracts';
 
 import { mixHex, bestContrastingText } from './color.js';
+import { contrastRatio } from './conformance.js';
 import type { ThemeAssetRegistry } from './assets.js';
 import { resolveThemeTarget } from './resolve-target.js';
 import type { ThemeDiagnostic } from './resolve.js';
@@ -122,6 +123,23 @@ export function projectThemeDraft(
     },
     ambient: { ...parsedAmbient.data, colorRole: 'accent' }
   });
+  const unsafeBackgrounds = [
+    ['canvas', colors.canvas],
+    ['glass', colors.glass],
+    ['chrome', colors.chrome]
+  ].filter(([, background]) => (
+    contrastRatio(colors.text, background!) < candidate.theme.accessibility.minimumContrast
+  ));
+  if (unsafeBackgrounds.length > 0) {
+    return {
+      ok: false,
+      diagnostics: Object.freeze([Object.freeze({
+        code: 'THEME_CONTRAST_UNSAFE' as const,
+        path: Object.freeze(['colors', 'text']),
+        message: `Authored text does not meet the ${candidate.theme.accessibility.minimumContrast}:1 contrast floor against ${unsafeBackgrounds.map(([role]) => role).join(', ')}.`
+      })])
+    };
+  }
   const resolution = resolveThemeTarget(candidate, localAssetRegistry(candidate));
   if (!resolution.ok) return resolution;
   return { ok: true, target: deepFreeze(candidate), diagnostics: [] };

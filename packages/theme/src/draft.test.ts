@@ -74,4 +74,15 @@ describe('Theme draft projection', () => {
     expect(result.ok).toBe(false);
     expect(!result.ok && result.diagnostics.some(({ code }) => code === 'THEME_CONTRAST_UNSAFE')).toBe(true);
   });
+
+  it('rejects authored Ash text that only a derived text-on-accent fallback could rescue', () => {
+    const draft = createThemeDraft(ASH_AMBER_TARGET);
+    const unsafe = { ...draft, colors: { ...draft.colors, text: '#382D31' } };
+    const result = projectThemeDraft(ASH_AMBER_TARGET, unsafe, ASH_AMBER_TARGET.ambient);
+    expect(result.ok).toBe(false);
+    expect(result.ok ? [] : result.diagnostics).toContainEqual(expect.objectContaining({
+      code: 'THEME_CONTRAST_UNSAFE',
+      path: ['colors', 'text']
+    }));
+  });
 });
