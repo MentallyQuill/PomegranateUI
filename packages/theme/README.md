@@ -28,6 +28,12 @@ assets, success, and danger semantics. Projection validates the exact draft,
 re-runs target resolution and contrast policy, and never mutates the immutable
 base target. Material percentages remain runtime policy inputs rather than
 stored recipe mutations.
+
+Ambient resolution selects temporary scene override, target profile, then
+fallback before applying adopter/device power and capability limits.
+Reduced-motion and reduced-transparency preferences veto motion and haze last;
+the result is a complete frozen profile with an explicit source and inert
+motion block when necessary.
 `compileCanvasLayers()` participates in the same activation transaction, and
 `compileSliderProgress()` supplies the value-driven Chromium/WebKit range fill.
 Reduced-transparency policy rewrites base and interaction-state materials, not
