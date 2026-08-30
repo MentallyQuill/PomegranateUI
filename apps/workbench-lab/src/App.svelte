@@ -5,25 +5,32 @@
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import type { WidgetFrameProjection } from '@pomegranate-ui/core';
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
-  import { POM_SEMANTIC_PART_STYLE_SHEET, type CanvasPresentationLayer, type ThemeAssetRegistry } from '@pomegranate-ui/theme';
+  import { POM_SEMANTIC_PART_STYLE_SHEET, type ThemeAssetRegistry } from '@pomegranate-ui/theme';
 
-  import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
   import deepCurrentStage from './assets/deep-current-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
   import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
+  import { LAB_PANEL_IDS } from './mockup/state.js';
   import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
+  import { resolveLabWidgetMeta, resolveLabWidgetTitle } from './mockup/presentation.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
+  import PanelCreateDialog from './recipes/PanelCreateDialog.svelte';
+  import WidgetShelf from './recipes/WidgetShelf.svelte';
+  import LayoutUndo from './recipes/LayoutUndo.svelte';
+  import IconAction from './recipes/IconAction.svelte';
   import ThemeCanvas from './recipes/ThemeCanvas.svelte';
   import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
   import WorkbenchSurface from './recipes/WorkbenchSurface.svelte';
+  import WorkbenchDeveloperDrawer from './recipes/WorkbenchDeveloperDrawer.svelte';
   import { createLocalLayoutStorage, LAB_LAYOUT_KEY } from './storage.js';
   import { createLabThemeController } from './themes/controller.js';
   import type { LabMaterialControlId } from './themes/material-controls.js';
   import { LAB_THEME_PRESETS } from './themes/presets.js';
   import { createLocalThemePreference } from './themes/theme-storage.js';
+  import { createLocalThemeDraftStorage } from './themes/draft-storage.js';
 
   const runtime = createLabRuntime();
   const storage = createLocalLayoutStorage();
@@ -39,7 +46,7 @@
       const panelId = asPanelId('surface-preview');
       store.dispatch({
         type: 'panel.create',
-        panel: { id: panelId, name: 'Surface Preview', templateId: 'focus-support.v1', order: 3, configuration: { columns: 1 } }
+        panel: { id: panelId, name: 'Surface Preview', templateId: 'focus-support.v1', order: 3 }
       });
       store.dispatch({ type: 'panel.activate', panelId });
       store.dispatch({
@@ -48,7 +55,7 @@
         placement: {
           kind: 'docked',
           panelId,
-          edge: requestedDefinition?.family === 'systems' ? 'right' : requestedDefinition?.family === 'story' ? 'main' : 'left',
+          regionId: requestedDefinition?.family === 'systems' ? 'support' : 'focus',
           shelfId: 'primary',
           order: 0
         }
@@ -58,8 +65,7 @@
   const catalogState = toSvelteCatalogStore(catalog);
   const themeAssetRegistry: ThemeAssetRegistry = Object.freeze({
     'icons.minimal': { kind: 'icon-pack', source: 'icons.minimal' },
-    'image.deep-current-stage': { kind: 'image', source: deepCurrentStage },
-    'image.bunny-garden': { kind: 'image', source: bunnyGardenCanvas }
+    'image.deep-current-stage': { kind: 'image', source: deepCurrentStage }
   });
   const mediaMatches = (query: string) => typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
   const backdropFilterSupported = typeof CSS === 'undefined' || typeof CSS.supports !== 'function'
@@ -67,28 +73,34 @@
     : CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)');
   const themeController = createLabThemeController({
     preference: createLocalThemePreference(window.localStorage),
+    draftStorage: createLocalThemeDraftStorage(window.localStorage),
     assetRegistry: themeAssetRegistry,
     devicePolicy: {
       reducedTransparency: mediaMatches('(prefers-reduced-transparency: reduce)'),
       coarsePointer: mediaMatches('(pointer: coarse)'),
       backdropFilterSupported
+    },
+    ambientLimits: { enabled: true, maximumPower: 1, allowMotion: true, allowTransparency: true },
+    ambientAccessibility: {
+      reducedMotion: mediaMatches('(prefers-reduced-motion: reduce)'),
+      reducedTransparency: mediaMatches('(prefers-reduced-transparency: reduce)')
     }
   });
   const initialThemeSnapshot = themeController.getSnapshot();
   let themeSnapshot = $state(initialThemeSnapshot);
-  let canvasLayers = $state<readonly CanvasPresentationLayer[]>(initialThemeSnapshot.canvasLayers);
 
   function themeInspector(): LabThemeInspector {
+    const theme = themeSnapshot.compiled.theme;
     return {
-      colors: themeSnapshot.resolved.colors,
+      colors: theme.colors,
       typography: [
-        themeSnapshot.resolved.typography.ui.family,
-        themeSnapshot.resolved.typography.prose.family,
-        themeSnapshot.resolved.typography.technical.family
+        theme.typography.ui.family,
+        theme.typography.prose.family,
+        theme.typography.technical.family
       ],
-      geometry: `${themeSnapshot.resolved.shapes.pane?.family ?? 'resolved'} · ${themeSnapshot.resolved.shapes.pane?.radiusPx ?? 0}px`,
-      density: themeSnapshot.resolved.spacing.density,
-      iconPackId: themeSnapshot.resolved.iconPackId
+      geometry: `${theme.shapes.pane?.family ?? 'resolved'} · ${theme.shapes.pane?.radiusPx ?? 0}px`,
+      density: theme.spacing.density,
+      iconPackId: theme.iconPackId
     };
   }
 
@@ -96,7 +108,7 @@
     const result = themeController.activate(id);
     if (result.ok) {
       applyThemeSnapshot(result.snapshot);
-      status = `${result.snapshot.resolved.label} applied without changing Workbench state.`;
+      status = `${result.snapshot.resolved.theme.label} applied without changing Workbench state.`;
     } else {
       status = result.diagnostics[0]?.message ?? 'Theme activation failed.';
     }
@@ -104,17 +116,17 @@
 
   function applyThemeSnapshot(snapshot: typeof initialThemeSnapshot) {
     themeSnapshot = snapshot;
-    canvasLayers = snapshot.canvasLayers;
     hostContext.theme.activeId = snapshot.activeId;
     hostContext.theme.materialControls = snapshot.materialControls;
     hostContext.theme.inspector = themeInspector();
+    hostContext.theme.authoring = themeController.getAuthoringSnapshot();
   }
 
   function setMaterialControl(id: LabMaterialControlId, value: number) {
     const result = themeController.setMaterialControl(id, value);
     if (result.ok) {
       applyThemeSnapshot(result.snapshot);
-      status = `${result.snapshot.resolved.label} material settings updated.`;
+      status = `${result.snapshot.resolved.theme.label} material settings updated.`;
     } else {
       status = result.diagnostics[0]?.message ?? 'Theme material update failed.';
     }
@@ -124,24 +136,56 @@
     const result = themeController.resetMaterialControls();
     if (result.ok) {
       applyThemeSnapshot(result.snapshot);
-      status = `${result.snapshot.resolved.label} material settings reset.`;
+      status = `${result.snapshot.resolved.theme.label} material settings reset.`;
     } else {
       status = result.diagnostics[0]?.message ?? 'Theme material reset failed.';
     }
   }
 
+  function editThemeDraft(next: unknown) {
+    const result = themeController.editDraft(next);
+    hostContext.theme.authoring = result.authoring;
+    if (result.ok) {
+      applyThemeSnapshot(themeController.getSnapshot());
+      status = 'Theme draft applied locally.';
+    } else status = result.diagnostics[0]?.message ?? 'Theme draft is invalid.';
+    return result;
+  }
+
+  function resetThemeDraft() {
+    const result = themeController.resetDraft();
+    hostContext.theme.authoring = result.authoring;
+    if (result.ok) {
+      applyThemeSnapshot(themeController.getSnapshot());
+      status = 'Theme draft reset to the active target.';
+    }
+    return result;
+  }
+
+  async function saveThemeDraft() {
+    const result = await themeController.saveDraft();
+    hostContext.theme.authoring = result.authoring;
+    status = result.ok ? 'Theme draft saved on this device.' : result.diagnostics[0]?.message ?? 'Theme draft could not be saved.';
+    return result;
+  }
+
   let hostContext = $state(createLabHostContext({
     activeId: initialThemeSnapshot.activeId,
-    presets: LAB_THEME_PRESETS.map(({ id, definition }) => ({
+    presets: LAB_THEME_PRESETS.map(({ id, target }) => ({
       id,
-      label: definition.label,
-      description: definition.description ?? definition.label
+      label: target.theme.label,
+      description: target.theme.description ?? target.theme.label
     })),
     inspector: themeInspector(),
     materialControls: initialThemeSnapshot.materialControls,
+    authoring: themeController.getAuthoringSnapshot(),
     activate: activateTheme,
     setMaterialControl,
-    resetMaterialControls
+    resetMaterialControls,
+    openSettings: () => { store.dispatch({ type: 'panel.activate', panelId: LAB_PANEL_IDS.settings }); },
+    editDraft: editThemeDraft,
+    resetDraft: resetThemeDraft,
+    saveDraft: saveThemeDraft
   }, initialSurfaceState));
   setWorkbenchContext({ store, catalog, rendererRegistry, hostContext });
 
@@ -150,8 +194,7 @@
   let focusedFrame = $state<WidgetFrameProjection | null>(null);
   let focusReturnId: string | null = null;
   let leftCollapsed = $state(false);
-  let panelDialog: HTMLDialogElement;
-  let panelName = $state('New Panel');
+  let panelDialog: { showModal(): void; close(): void };
   let status = $state('Local mockup ready.');
   let eventLog: string[] = $state([]);
   let sequence = 0;
@@ -165,6 +208,11 @@
 
   onMount(() => {
     let current = true;
+    void themeController.loadDraft().then((loaded) => {
+      if (!current) return;
+      hostContext.theme.authoring = loaded.authoring;
+      if (loaded.ok) applyThemeSnapshot(themeController.getSnapshot());
+    });
     void loadLayout(storage, LAB_LAYOUT_KEY, store.getState()).then((loaded) => {
       if (current && loaded.ok) {
         store.dispatch({ type: 'layout.hydrate', state: loaded.state });
@@ -185,32 +233,44 @@
     const panelId = workbench.activePanelId;
     if (!panelId) return;
     const id = asWidgetInstanceId(`catalog-${manifest.type.replace(/[^a-z0-9]+/gi, '-')}-${workbench.revision + 1}`);
-    const edge = manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.edge : 'main';
+    const role = manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.regionRole : 'stage';
+    const regionId = activePanel?.templateId === 'focus-support.v1'
+      ? role === 'right-instruments' || role === 'support' ? 'support' : 'focus'
+      : activePanel?.templateId === 'columns.v1'
+        ? 'column-1'
+        : role === 'left-instruments' ? 'left'
+          : role === 'right-instruments' ? 'right'
+            : role === 'composer' ? 'composer' : 'stage';
     const result = store.dispatch({
       type: 'widget.create',
       instance: { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} },
-      placement: { kind: 'docked', panelId, edge, shelfId: 'primary', order: Number.MAX_SAFE_INTEGER }
+      placement: { kind: 'docked', panelId, regionId, shelfId: 'primary', order: Number.MAX_SAFE_INTEGER }
     });
     status = result.ok ? `${manifest.title} added to ${activePanel?.name ?? 'Panel'}.` : result.error.message;
   }
 
-  function createPanel(event: SubmitEvent) {
-    event.preventDefault();
-    const id = asPanelId(`user-panel-${workbench.panels.length - 2}`);
+  function createPanel(request: { name: string; templateId: string; columns?: number }) {
+    const id = asPanelId(`user-panel-${workbench.revision + 1}`);
     const result = store.dispatch({
       type: 'panel.create',
-      panel: { id, name: panelName.trim() || 'Untitled Panel', templateId: 'columns.v1', order: workbench.panels.length, configuration: { columns: 2 } }
+      panel: {
+        id,
+        name: request.name,
+        templateId: request.templateId,
+        order: workbench.panels.length,
+        ...(request.columns === undefined ? {} : { configuration: { columns: request.columns } })
+      }
     });
     if (result.ok) {
       store.dispatch({ type: 'panel.activate', panelId: id });
       panelDialog.close();
-      status = `${panelName} created.`;
+      status = `${request.name} created.`;
     } else status = result.error.message;
   }
 
   async function save() {
     const result = await saveLayout(storage, LAB_LAYOUT_KEY, store.getState());
-    status = result.ok ? 'Saved pomegranate.ui.layout.v1 locally.' : result.error.message;
+    status = result.ok ? 'Saved pomegranate.ui.layout.v2 locally.' : result.error.message;
   }
 
   async function reload() {
@@ -243,6 +303,17 @@
     const control = document.querySelector<HTMLElement>(selector);
     control?.focus();
   }
+
+  function frameSurfacePart(frame: WidgetFrameProjection) {
+    if (frame.placement.kind === 'floating') return 'floating.surface';
+    if (frame.placement.kind === 'docked' && frame.placement.group) return null;
+    return frame.instance.type === 'story.transcript' || frame.instance.type === 'story.composer'
+      ? null
+      : 'widget.surface';
+  }
+
+  const frameTitle = (frame: WidgetFrameProjection) => resolveLabWidgetTitle(frame.instance.type, frame.title);
+  const frameMeta = (frame: WidgetFrameProjection) => resolveLabWidgetMeta(frame.instance.type);
 </script>
 
 <svelte:head>
@@ -255,15 +326,17 @@
   class:left-collapsed={leftCollapsed}
   data-pom-theme={themeSnapshot.activeId}
   data-pom-theme-root
-  data-pom-widget-grouping={themeSnapshot.resolved.recipes.widgetGrouping}
-  data-pom-chrome-presentation={themeSnapshot.resolved.recipes.chromePresentation}
-  data-pom-action-presentation={themeSnapshot.resolved.recipes.actionPresentation}
-  data-pom-density={themeSnapshot.resolved.spacing.density}
+  data-pom-widget-grouping={themeSnapshot.compiled.theme.recipes.widgetGrouping}
+  data-pom-chrome-presentation={themeSnapshot.compiled.theme.recipes.chromePresentation}
+  data-pom-action-presentation={themeSnapshot.compiled.theme.recipes.actionPresentation}
+  data-pom-density={themeSnapshot.compiled.theme.spacing.density}
+  data-pom-ambient-source={themeSnapshot.resolvedAmbient.source}
+  data-surface-preview-family={requestedDefinition?.family}
   data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}
   style={themeSnapshot.cssText}
 >
-  <ThemeCanvas layers={canvasLayers} />
+  <ThemeCanvas layers={themeSnapshot.compiled.canvas} />
   <header class="top-shelf" data-pom-part="chrome.shelf" data-conformance-region="shelf">
     <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
     <PanelTabs {store} class="panel-tabs" />
@@ -273,23 +346,63 @@
       <small aria-label="Active story identity">{hostContext.storyId} · {hostContext.frameLabel}</small>
     </div>
     <div class="shelf-actions">
-      <button type="button" data-pom-part="button.surface" aria-label="Open Widget Catalog" aria-expanded={$catalogState.open} onclick={() => catalog.open('drawer')}>Widgets</button>
-      <button type="button" data-pom-part="button.surface" aria-pressed={focusMode} onclick={() => { focusMode = !focusMode; }}>Focus reading</button>
+      <IconAction label="Open Widget Catalog" action="open-catalog" expanded={$catalogState.open} onclick={() => catalog.open('drawer')} />
+      <WidgetShelf {store} />
+      <LayoutUndo {store} />
+      <IconAction label="Focus reading" action="focus-reading" pressed={focusMode} onclick={() => { focusMode = !focusMode; }} />
       <span class="runtime-status"><i></i>{hostContext.systemStatus}</span>
     </div>
   </header>
 
-  <section class="context-rail" data-pom-part="chrome.context" aria-label="Workbench context">
-    <p><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
+  <section id="workbench" class="workbench-shell" data-pom-part="panel.surface" aria-label="Active Workbench">
+    <WorkbenchSurface {store} titleFor={frameTitle} class="workbench-surface">
+      {#snippet renderWidget(frame)}
+        <div
+          class:widget-float={frame.placement.kind === 'floating'}
+          data-widget-type={frame.instance.type}
+          data-widget-shape={frame.manifest?.catalog?.shape}
+          data-pomegranate-placement={frame.placement.kind}
+          data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.regionId === 'stage' ? 'main' : frame.placement.regionId : undefined}
+          data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
+          data-pomegranate-shelf={frame.placement.kind === 'docked' ? frame.placement.shelfId : undefined}
+          data-pomegranate-order={frame.placement.kind === 'docked' ? frame.placement.order : undefined}
+          style={floatingStyle(frame)}
+        >
+          {#if focusedFrame?.instanceId === frame.instanceId}
+            <div
+              class="focused-widget-placeholder"
+              data-focused-widget-placeholder={frame.instanceId}
+              role="status"
+            >{frame.title} is open in Focus.</div>
+          {:else}
+            <WidgetFrame
+              {frame}
+              {store}
+              {rendererRegistry}
+              {hostContext}
+              onfocuswidget={focusWidget}
+              surfacePart={frameSurfacePart(frame)}
+              title={frameTitle(frame)}
+              meta={frameMeta(frame)}
+              class="widget-frame"
+            />
+          {/if}
+        </div>
+      {/snippet}
+    </WorkbenchSurface>
+  </section>
+
+  <WorkbenchDeveloperDrawer>
+    <p class="developer-panel-identity" aria-label="Workbench context"><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
     <div class="theme-targets" role="group" aria-label="Visual target">
       {#each LAB_THEME_PRESETS as preset (preset.id)}
         <button
           type="button"
           data-pom-part="button.surface"
-          aria-label={preset.definition.label}
+          aria-label={preset.target.theme.label}
           aria-pressed={themeSnapshot.activeId === preset.id}
           onclick={() => activateTheme(preset.id)}
-        >{preset.definition.label}</button>
+        >{preset.target.theme.label}</button>
       {/each}
     </div>
     <div class="dock-controls">
@@ -313,54 +426,18 @@
       <button type="button" data-pom-part="button.surface" onclick={() => void reload()}>Reload saved layout</button>
       <button type="button" data-pom-part="button.surface" onclick={() => void clear()}>Clear saved layout</button>
     </div>
-  </section>
-
-  <section id="workbench" class="workbench-shell" data-pom-part="panel.surface" aria-label="Active Workbench">
-    <WorkbenchSurface {store} class="workbench-surface">
-      {#snippet renderWidget(frame)}
-        <div
-          class:widget-float={frame.placement.kind === 'floating'}
-          data-widget-type={frame.instance.type}
-          data-widget-shape={frame.manifest?.catalog?.shape}
-          data-pomegranate-placement={frame.placement.kind}
-          data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.edge : undefined}
-          data-pomegranate-shelf={frame.placement.kind === 'docked' ? frame.placement.shelfId : undefined}
-          data-pomegranate-order={frame.placement.kind === 'docked' ? frame.placement.order : undefined}
-          style={floatingStyle(frame)}
-        >
-          {#if focusedFrame?.instanceId === frame.instanceId}
-            <div
-              class="focused-widget-placeholder"
-              data-focused-widget-placeholder={frame.instanceId}
-              role="status"
-            >{frame.title} is open in Focus.</div>
-          {:else}
-            <WidgetFrame
-              {frame}
-              {store}
-              {rendererRegistry}
-              {hostContext}
-              onfocuswidget={focusWidget}
-              surfacePart={frame.placement.kind === 'floating' ? 'floating.surface' : 'widget.surface'}
-              class="widget-frame"
-            />
-          {/if}
-        </div>
-      {/snippet}
-    </WorkbenchSurface>
-  </section>
-
-  <footer class="lab-footer" data-pom-part="chrome.context">
     <p role="status" aria-live="polite">{status}</p>
     <details><summary>Event log</summary><ol>{#each eventLog as entry}<li>{entry}</li>{/each}</ol></details>
     <details><summary>Native contract evidence</summary><ul>{#each FIRST_SLICE_CONTRACT_IDS as id}<li>{id}</li>{/each}</ul></details>
-  </footer>
+  </WorkbenchDeveloperDrawer>
 
   <WidgetCatalog {catalog} oncreate={addFromCatalog} class="widget-catalog" />
 
   {#if focusedFrame}
     <FocusedWidget
       frame={focusedFrame}
+      title={frameTitle(focusedFrame)}
+      meta={frameMeta(focusedFrame)}
       {store}
       {rendererRegistry}
       {hostContext}
@@ -368,12 +445,5 @@
     />
   {/if}
 
-  <dialog bind:this={panelDialog} data-pom-part="dialog.surface" aria-labelledby="panel-dialog-title">
-    <form onsubmit={createPanel}>
-      <h2 id="panel-dialog-title">Create a Panel</h2>
-      <label>Panel name<input data-pom-part="field.surface" bind:value={panelName} /></label>
-      <p>Starts as an adopter-owned two-column layout.</p>
-      <div><button type="button" data-pom-part="button.surface" onclick={() => panelDialog.close()}>Cancel</button><button type="submit" data-pom-part="button.surface">Create Panel</button></div>
-    </form>
-  </dialog>
+  <PanelCreateDialog bind:this={panelDialog} oncreate={createPanel} />
 </main>

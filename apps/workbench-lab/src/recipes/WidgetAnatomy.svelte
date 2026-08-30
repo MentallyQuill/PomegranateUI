@@ -15,12 +15,6 @@
 
   let draft = $state('Ask Mara what the bell means.');
   let selectedVariant = $state(2);
-  const materialControls = [
-    { id: 'glassDensity', label: 'Glass density' },
-    { id: 'barOpacity', label: 'Bar opacity' },
-    { id: 'selectedStrength', label: 'Selected strength' },
-    { id: 'frostLevel', label: 'Frost level' }
-  ] as const;
   const retainsContent = $derived(!['empty', 'unavailable', 'access-denied'].includes(surfaceState));
   const initials = (label: string) => label.split(/\s|→/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
   const sliderStyle = (value: number, minimum: number, maximum: number) => `--pom-slider-progress:${compileSliderProgress(value, minimum, maximum)}`;
@@ -41,10 +35,10 @@
     </dl>
     {#if fixture.presentation === 'reader'}
       <div class="widget-content transcript">
-        <p class="widget-kicker">{hostContext.location} · {hostContext.timeLabel}</p>
-        <p>The rain had thinned to silver threads by the time Mara reached the concourse.</p>
-        <p>Across the black water, the reservoir bell answered once—too early for the ferry.</p>
-        <blockquote>“That wasn’t the wind,” Ilex said.</blockquote>
+        <p class="widget-kicker">Chapter 04 · The Drowned Observatory</p>
+        <h2>The Water Remembers</h2>
+        <p>The reservoir held the last color of evening beneath its surface. Across the flooded concourse, a seam of pale light stood where no doorway had been.</p>
+        <blockquote>Mara lowered her voice. “It only opens when someone has forgotten why they came.”</blockquote>
       </div>
     {:else if fixture.presentation === 'composer'}
       <div class="widget-content composer" data-conformance-region="composer">
@@ -149,34 +143,6 @@
           <div class="surface-themes">
             {#each hostContext.theme.presets as preset (preset.id)}<button type="button" data-pom-part="button.surface" aria-pressed={hostContext.theme.activeId === preset.id} onclick={() => hostContext.theme.activate(preset.id)}><i data-theme-swatch={preset.id}></i><strong>{preset.label}</strong><small>{preset.description}</small></button>{/each}
           </div>
-          <details class="surface-theme-materials">
-            <summary>Material controls</summary>
-            <div class="surface-material-grid">
-              {#each materialControls as control (control.id)}
-                <label>
-                  <span>{control.label}</span>
-                  <output>{hostContext.theme.materialControls[control.id]}%</output>
-                  <input
-                    data-pom-part="slider.input"
-                    aria-label={control.label}
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={hostContext.theme.materialControls[control.id]}
-                    style={sliderStyle(hostContext.theme.materialControls[control.id], 0, 100)}
-                    oninput={(event) => {
-                      syncSliderProgress(event.currentTarget);
-                      hostContext.theme.setMaterialControl(control.id, Number(event.currentTarget.value));
-                    }}
-                  />
-                </label>
-              {/each}
-            </div>
-            <footer>
-              <small>Frost maps from 0–100% to 0–24px.</small>
-              <button type="button" data-pom-part="button.surface" aria-label="Reset material controls" onclick={hostContext.theme.resetMaterialControls}>Reset</button>
-            </footer>
-          </details>
         {:else if fixture.presentation === 'accessibility'}
           <div class="surface-accessibility">
             <label>Text scale <input data-pom-part="slider.input" type="range" min="80" max="160" value="100" style={sliderStyle(100, 80, 160)} oninput={(event) => syncSliderProgress(event.currentTarget)} /><output>100%</output></label>
@@ -193,7 +159,7 @@
 
         <p class="surface-boundary"><span aria-hidden="true">i</span>{fixture.boundary}</p>
         {#if fixture.actions.length}
-          <footer class="surface-actions">{#each fixture.actions as action (action)}<button type="button" data-pom-part="button.surface">{action}</button>{/each}</footer>
+          <footer class="surface-actions">{#each fixture.actions as action (action)}<button type="button" data-pom-part="button.surface" onclick={action === 'Open Theme Settings' ? hostContext.theme.openSettings : undefined}>{action}</button>{/each}</footer>
         {/if}
       </div>
     {/if}

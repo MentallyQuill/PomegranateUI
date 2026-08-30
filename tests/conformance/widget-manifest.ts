@@ -2,6 +2,7 @@ export interface WidgetSurfaceCase {
   readonly scenarioId: string;
   readonly type: string;
   readonly title: string;
+  readonly presentationTitle: string;
   readonly harnessCaseFragment: string;
 }
 
@@ -11,10 +12,17 @@ export interface CatalogCase {
   readonly harnessCaseFragment: string;
 }
 
-const surface = (scenarioId: string, type: string, title: string, harnessCaseFragment = title): WidgetSurfaceCase => Object.freeze({
+const surface = (
+  scenarioId: string,
+  type: string,
+  title: string,
+  harnessCaseFragment = title,
+  presentationTitle = title
+): WidgetSurfaceCase => Object.freeze({
   scenarioId,
   type,
   title,
+  presentationTitle,
   harnessCaseFragment
 });
 
@@ -34,15 +42,15 @@ export const DEEP_CURRENT_WIDGET_SURFACES: readonly WidgetSurfaceCase[] = Object
   surface('dc-w-turn-inspector', 'story.turn-inspector', 'Turn Inspector'),
   surface('dc-w-player-condition', 'story.player-condition', 'Player Condition'),
   surface('dc-w-cast-condition', 'story.cast-condition', 'Cast Condition'),
-  surface('dc-w-room-ambience', 'story.room-ambience', 'Room Ambience'),
+  surface('dc-w-room-ambience', 'story.room-ambience', 'Room Ambience', 'Room Ambience', 'Scene Effects'),
   surface('dc-w-scene-backdrop', 'story.scene-backdrop', 'Scene Backdrop'),
   surface('dc-w-background-work', 'runtime.background-work', 'Background Work'),
   surface('dc-w-library', 'library.workspace', 'Library', 'Library owns one typed master-detail archive'),
   surface('dc-w-stories', 'library.stories', 'Stories', 'Stories is a compact shared Library archive'),
   surface('dc-w-characters-library', 'library.characters', 'Characters (Library)', 'Characters Library is a shared reusable-card archive'),
-  surface('dc-w-characters-story', 'story.characters', 'Characters (Story)', 'Characters Story owns Story associations'),
+  surface('dc-w-characters-story', 'story.characters', 'Characters (Story)', 'Characters Story owns Story associations', 'Characters'),
   surface('dc-w-personas-library', 'library.personas', 'Personas (Library)', 'Personas Library protects primary identity'),
-  surface('dc-w-personas-story', 'story.personas', 'Personas (Story)', 'Personas Story anchors one protected primary identity'),
+  surface('dc-w-personas-story', 'story.personas', 'Personas (Story)', 'Personas Story anchors one protected primary identity', 'Personas'),
   surface('dc-w-lore-library', 'library.lore', 'Lore (Library)', 'Lore Library exposes book scope'),
   surface('dc-w-lorebooks-story', 'story.lorebooks', 'Lorebooks (Story)', 'Story Lorebooks groups ownership'),
   surface('dc-w-new-story', 'library.new-story', 'New Story'),

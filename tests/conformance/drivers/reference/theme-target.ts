@@ -15,10 +15,16 @@ export async function renderOriginalThemeReference(
     return await page.locator('body').evaluate((body, expected) => {
       const style = getComputedStyle(body);
       const shell = body.querySelector<HTMLElement>('.workbench');
+      const shelf = body.querySelector<HTMLElement>('.shelf')
+        ?? body.querySelector<HTMLElement>('.showcase');
+      const dock = body.querySelector<HTMLElement>('.dock');
       const widget = body.querySelector<HTMLElement>('.widget');
       const button = body.querySelector<HTMLElement>('.showcase button');
+      const stage = body.querySelector<HTMLElement>('.stage');
+      const reader = body.querySelector<HTMLElement>('.reader');
+      const readerBody = body.querySelector<HTMLElement>('.reader p:not(.kicker)');
       const catalog = body.querySelector<HTMLElement>('.catalog');
-      if (!shell || !widget || !button || !catalog) throw new Error('Original reference anatomy is incomplete.');
+      if (!shelf || !shell || !dock || !widget || !button || !stage || !reader || !readerBody || !catalog) throw new Error('Original reference anatomy is incomplete.');
       const visibleCatalog = getComputedStyle(catalog).display !== 'none';
       const buttons = [...body.querySelectorAll<HTMLButtonElement>('button')];
       return Object.freeze({
@@ -32,15 +38,33 @@ export async function renderOriginalThemeReference(
         }),
         structure: Object.freeze({
           panelTabs: Object.freeze([...body.querySelectorAll<HTMLButtonElement>('.tabs button')].map((control) => control.textContent?.trim() ?? '')),
-          anchorWidgets: Object.freeze([...body.querySelectorAll<HTMLElement>('[data-widget-label]')].map((node) => node.dataset.widgetLabel ?? ''))
+          anchorWidgets: Object.freeze([
+            ...(body.querySelector('[data-widget-label]') ? ['panel-widget'] : []),
+            ...(reader ? ['story-reader'] : []),
+            ...(body.querySelector('.composer') ? ['story-composer'] : [])
+          ])
         }),
         visual: Object.freeze({
           canvas: style.getPropertyValue('--canvas').trim(),
           accent: style.getPropertyValue('--accent').trim(),
           text: style.getPropertyValue('--text').trim(),
-          shellRadius: getComputedStyle(shell).borderBottomRightRadius,
-          widgetRadius: getComputedStyle(widget).borderTopLeftRadius,
-          buttonRadius: getComputedStyle(button).borderTopLeftRadius
+          shelfRadius: getComputedStyle(shelf).borderRadius,
+          shellRadius: getComputedStyle(shell).borderRadius,
+          dockRadius: getComputedStyle(dock).borderRadius,
+          widgetRadius: getComputedStyle(widget).borderRadius,
+          buttonRadius: getComputedStyle(button).borderRadius,
+          readerRadius: getComputedStyle(reader).borderRadius,
+          readerFontSize: getComputedStyle(readerBody).fontSize,
+          readerLineHeight: getComputedStyle(readerBody).lineHeight,
+          widgetHasGradient: getComputedStyle(widget).backgroundImage.includes('gradient'),
+          readerHasMaterial: getComputedStyle(reader).backgroundColor !== 'rgba(0, 0, 0, 0)',
+          readerIntersectsStage: (() => {
+            const stageBox = stage.getBoundingClientRect();
+            const readerBox = reader.getBoundingClientRect();
+            return readerBox.width > 0 && readerBox.height > 0
+              && readerBox.right > stageBox.left && readerBox.left < stageBox.right
+              && readerBox.bottom > stageBox.top && readerBox.top < stageBox.bottom;
+          })()
         }),
         trace: Object.freeze([`opened byte-hashed ${expected.target} reference`, `set ${expected.state} state`])
       });

@@ -1,7 +1,30 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ThemeDefinition, ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
-import { applyThemePolicy, collectThemeAssetIds, contrastRatio, mergeTheme, migrateTheme, resolveTheme, resolveThemeV2 } from './index.js';
+import {
+  AMBIENT_SCHEMA_VERSION,
+  CANVAS_SCHEMA_VERSION,
+  THEME_SCHEMA_VERSION_V3,
+  THEME_TARGET_SCHEMA_VERSION,
+  type AmbientProfile,
+  type ThemeDefinition,
+  type ThemeDefinitionV2,
+  type ThemeTargetBundle
+} from '@pomegranate-ui/contracts';
+import {
+  applyThemePolicy,
+  collectThemeAssetIds,
+  collectThemeTargetAssetIds,
+  compileCanvasLayers,
+  compileThemeTarget,
+  compileThemeStyleSheet,
+  contrastRatio,
+  mergeTheme,
+  migrateTheme,
+  migrateThemeTarget,
+  resolveTheme,
+  resolveThemeTarget,
+  resolveThemeV2
+} from './index.js';
 
 const material = (base: ThemeDefinition['materials']['widget']['base']) => ({
   base,
@@ -54,6 +77,36 @@ function v2Theme(): ThemeDefinitionV2 {
   const migrated = migrateTheme(VALID_THEME);
   if (!migrated.ok) throw new Error(migrated.diagnostics.map(({ message }) => message).join('; '));
   return structuredClone(migrated.theme);
+}
+
+function targetFromV2(
+  themeInput: ThemeDefinitionV2 = v2Theme(),
+  ambientInput: Partial<AmbientProfile> = {}
+): ThemeTargetBundle {
+  const theme = structuredClone(themeInput);
+  const { schemaVersion: _themeVersion, canvas, ...themeWithoutCanvas } = theme;
+  return {
+    schemaVersion: THEME_TARGET_SCHEMA_VERSION,
+    id: theme.id,
+    theme: {
+      ...themeWithoutCanvas,
+      schemaVersion: THEME_SCHEMA_VERSION_V3
+    },
+    canvas: {
+      schemaVersion: CANVAS_SCHEMA_VERSION,
+      id: theme.id,
+      layers: canvas
+    },
+    ambient: {
+      schemaVersion: AMBIENT_SCHEMA_VERSION,
+      id: theme.id,
+      colorRole: 'accent',
+      position: { x: 0.5, y: 0.5 },
+      radius: 0.5,
+      power: 0,
+      ...ambientInput
+    }
+  };
 }
 
 describe('resolveTheme', () => {
@@ -315,5 +368,161 @@ describe('resolveTheme', () => {
     expect(result.diagnostics).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: 'THEME_SCHEMA_INVALID', path: ['schemaVersion'] })
     ]));
+  });
+});
+
+describe('theme targets', () => {
+  it('migrates v1 and v2 inputs into the same frozen separated target', () => {
+    const fromV1 = migrateThemeTarget(VALID_THEME);
+    const fromV2 = migrateThemeTarget(v2Theme());
+
+    expect(fromV1.ok).toBe(true);
+    expect(fromV2.ok).toBe(true);
+    if (!fromV1.ok || !fromV2.ok) return;
+    expect(fromV1.target).toEqual(fromV2.target);
+    expect(fromV1.target).toMatchObject({
+      schemaVersion: THEME_TARGET_SCHEMA_VERSION,
+      id: VALID_THEME.id,
+      theme: { schemaVersion: THEME_SCHEMA_VERSION_V3, id: VALID_THEME.id },
+      canvas: { schemaVersion: CANVAS_SCHEMA_VERSION, id: VALID_THEME.id, layers: VALID_THEME.canvas },
+      ambient: {
+        schemaVersion: AMBIENT_SCHEMA_VERSION,
+        id: VALID_THEME.id,
+        colorRole: 'accent',
+        position: { x: 0.5, y: 0.5 },
+        radius: 0.5,
+        power: 0
+      }
+    });
+    expect(Object.isFrozen(fromV1.target)).toBe(true);
+    expect(Object.isFrozen(fromV1.target?.theme)).toBe(true);
+    expect(Object.isFrozen(fromV1.target?.canvas.layers)).toBe(true);
+    expect(Object.isFrozen(fromV1.target?.ambient.position)).toBe(true);
+  });
+
+  it('validates, clones, and freezes an already separated target', () => {
+    const input = targetFromV2();
+
+    const migrated = migrateThemeTarget(input);
+
+    expect(migrated.ok).toBe(true);
+    if (!migrated.ok) return;
+    expect(migrated.target).toEqual(input);
+    expect(migrated.target).not.toBe(input);
+    expect(Object.isFrozen(migrated.target)).toBe(true);
+  });
+
+  it('uses literal migration diagnostics for invalid or unsupported target input', () => {
+    const mismatched = targetFromV2();
+    mismatched.canvas.id = 'different-owner';
+
+    expect(migrateThemeTarget({ schemaVersion: 'pomegranate.ui.theme.v99' })).toMatchObject({
+      ok: false,
+      diagnostics: [{ code: 'THEME_MIGRATION_VERSION_UNSUPPORTED', path: ['schemaVersion'] }]
+    });
+    expect(migrateThemeTarget(mismatched)).toMatchObject({
+      ok: false,
+      diagnostics: [expect.objectContaining({ code: 'THEME_MIGRATION_INPUT_INVALID', path: ['canvas', 'id'] })]
+    });
+  });
+
+  it('resolves all owners atomically and collects local assets in stable deduplicated order', () => {
+    const source = v2Theme();
+    source.assets = [
+      { id: 'icons.minimal', kind: 'icon-pack', required: true },
+      { id: 'texture.paper', kind: 'texture', required: true },
+      { id: 'image.stage', kind: 'image', required: true }
+    ];
+    source.materials.widget = {
+      ...source.materials.widget!,
+      texture: { assetId: 'texture.paper', opacity: 0.3, blend: 'overlay' }
+    };
+    source.canvas = [
+      { kind: 'solid', color: '#111014' },
+      { kind: 'image', assetId: 'image.stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 1, blend: 'normal' },
+      { kind: 'texture', assetId: 'texture.paper', opacity: 0.2, blend: 'soft-light' }
+    ];
+    const registry = {
+      'icons.minimal': { kind: 'icon-pack' as const, source: '/assets/icons.svg' },
+      'texture.paper': { kind: 'texture' as const, source: '/assets/paper.webp' },
+      'image.stage': { kind: 'image' as const, source: '/assets/stage.webp' }
+    };
+
+    const resolved = resolveThemeTarget(targetFromV2(source), registry);
+
+    expect(resolved.ok, resolved.ok ? undefined : JSON.stringify(resolved.diagnostics)).toBe(true);
+    if (!resolved.ok) return;
+    expect(Object.isFrozen(resolved.target)).toBe(true);
+    expect(Object.isFrozen(resolved.target.theme)).toBe(true);
+    expect(Object.isFrozen(resolved.target.canvas.layers)).toBe(true);
+    expect(Object.isFrozen(resolved.target.ambient)).toBe(true);
+    expect(collectThemeTargetAssetIds(resolved.target)).toEqual([
+      'icons.minimal', 'texture.paper', 'image.stage'
+    ]);
+    expect(collectThemeTargetAssetIds(resolved.target)).toEqual(collectThemeTargetAssetIds(resolved.target));
+  });
+
+  it('fails the whole target when a required canvas asset is unavailable', () => {
+    const source = v2Theme();
+    source.assets = [
+      { id: 'icons.minimal', kind: 'icon-pack', required: true },
+      { id: 'image.stage', kind: 'image', required: true }
+    ];
+    source.canvas = [
+      { kind: 'solid', color: '#111014' },
+      { kind: 'image', assetId: 'image.stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 1, blend: 'normal' }
+    ];
+
+    const result = resolveThemeTarget(targetFromV2(source), {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/icons.svg' }
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result).not.toHaveProperty('target');
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: 'THEME_ASSET_MISSING' }));
+  });
+
+  it('compiles sorted theme and ambient bindings while policy leaves stored owners untouched', () => {
+    const input = targetFromV2(v2Theme(), {
+      colorRole: 'warning',
+      position: { x: 0.57, y: 0.97 },
+      radius: 0.6,
+      power: 0.56,
+      motion: { enabled: true, driftX: -0.1, driftY: 0.2, durationMs: 18000 }
+    });
+    const resolved = resolveThemeTarget(input, {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/icons.svg' }
+    });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    const before = structuredClone(resolved.target);
+
+    const compiled = compileThemeTarget(resolved.target, {
+      runtime: { materialOpacity: { widget: 0.31 } }
+    });
+
+    expect(compiled.theme.materials.widget?.opacity).toBe(0.31);
+    expect(compiled.styleSheet).toBe(compileThemeStyleSheet(compiled.theme));
+    expect(Object.keys(compiled.bindings)).toEqual([...Object.keys(compiled.bindings)].sort((left, right) => left.localeCompare(right)));
+    expect(compiled.bindings).toMatchObject({
+      '--pom-ambient-color': compiled.theme.colors.warning,
+      '--pom-ambient-x': '57%',
+      '--pom-ambient-y': '97%',
+      '--pom-ambient-radius': '60%',
+      '--pom-ambient-power': '0.56',
+      '--pom-ambient-motion-enabled': '1',
+      '--pom-ambient-drift-x': '-0.1',
+      '--pom-ambient-drift-y': '0.2',
+      '--pom-ambient-duration': '18000ms'
+    });
+    expect(compiled.ambient).toBe(resolved.target.ambient);
+    expect(resolved.target).toEqual(before);
+    const expectedCanvas = compileCanvasLayers(
+      { canvas: resolved.target.canvas.layers },
+      compiled.theme.assets
+    );
+    expect(expectedCanvas.ok).toBe(true);
+    if (!expectedCanvas.ok) return;
+    expect(compiled.canvas).toEqual(expectedCanvas.layers);
   });
 });

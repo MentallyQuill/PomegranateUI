@@ -7,6 +7,7 @@ const TARGETS = [
   { id: 'pom-neutral', label: 'PomOS' },
   { id: 'bunny', label: 'Bunny' }
 ] as const;
+const ASH_TARGET = { id: 'ash-amber', label: 'Ash & Amber' } as const;
 
 async function fresh(page: Page, width = 1440, height = 900) {
   await page.setViewportSize({ width, height });
@@ -19,14 +20,22 @@ async function fresh(page: Page, width = 1440, height = 900) {
   });
 }
 
-async function selectTheme(page: Page, target: (typeof TARGETS)[number]) {
+async function selectTheme(
+  page: Page,
+  target: (typeof TARGETS)[number] | typeof ASH_TARGET,
+  { closeDrawer = true }: { readonly closeDrawer?: boolean } = {}
+) {
+  const drawer = page.locator('[data-workbench-developer-drawer]');
+  if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: target.label, exact: true }).click();
   await expect(page.locator('main')).toHaveAttribute('data-pom-theme', target.id);
+  if (closeDrawer) await page.getByText('Developer tools', { exact: true }).click();
 }
 
 type MaterialSample = {
   readonly alpha: number;
   readonly backdrop: string;
+  readonly background: string;
   readonly borderRadius: string;
   readonly borderWidth: string;
   readonly boxShadow: string;
@@ -40,6 +49,7 @@ async function material(page: Page, selector: string): Promise<MaterialSample> {
     return {
       alpha: match.length === 4 ? match[3]! : 1,
       backdrop: style.backdropFilter,
+      background: style.backgroundColor,
       borderRadius: style.borderRadius,
       borderWidth: style.borderWidth,
       boxShadow: style.boxShadow,
@@ -61,7 +71,7 @@ test('the canvas remains behind every interactive Workbench surface', async ({ p
     await selectTheme(page, target);
     await expect.poll(() => page.locator('[data-pom-canvas-root]').evaluate((canvas) => Number(getComputedStyle(canvas).zIndex)))
       .toBeLessThan(0);
-    const widget = page.getByRole('article', { name: 'Characters (Story)' });
+    const widget = page.getByRole('article', { name: 'Characters' });
     const box = await widget.boundingBox();
     expect(box, `${target.label} widget bounds`).not.toBeNull();
     const painted = await page.evaluate(({ x, y }) => {
@@ -76,6 +86,55 @@ test('the canvas remains behind every interactive Workbench surface', async ({ p
   }
 });
 
+test('Ash and Amber renders neutral graphite chrome, restrained amber ambience, and rounded bevels', async ({ page }) => {
+  await fresh(page);
+  await selectTheme(page, ASH_TARGET);
+
+  const evidence = await page.locator('main').evaluate((root) => {
+    const style = getComputedStyle(root);
+    return {
+      canvas: style.getPropertyValue('--pom-color-canvas').trim(),
+      surface: style.getPropertyValue('--pom-color-surface').trim(),
+      chrome: style.getPropertyValue('--pom-color-chrome').trim(),
+      accent: style.getPropertyValue('--pom-color-accent').trim(),
+      ambient: style.getPropertyValue('--pom-ambient-color').trim(),
+      layers: [...root.querySelectorAll<HTMLElement>('[data-pom-canvas-layer]')].map((layer) => ({
+        kind: layer.dataset.pomCanvasLayer,
+        background: getComputedStyle(layer).backgroundColor,
+        filter: getComputedStyle(layer).filter,
+        opacity: getComputedStyle(layer).opacity
+      }))
+    };
+  });
+  expect(evidence).toMatchObject({
+    canvas: '#242321',
+    surface: '#302E2A',
+    chrome: '#625B52',
+    accent: '#C18A3D',
+    ambient: '#51493E',
+    layers: [
+      { kind: 'solid', background: 'rgb(36, 35, 33)' },
+      { kind: 'image', filter: 'blur(0px) saturate(0.08)', opacity: '0.48' },
+      { kind: 'linear-gradient' },
+      { kind: 'radial-gradient' },
+      { kind: 'veil', background: 'rgb(48, 46, 42)', opacity: '0.28' }
+    ]
+  });
+
+  const shelf = await material(page, '[data-pom-part="chrome.shelf"]');
+  const header = await material(page, '[data-conformance-region="left"] [data-pom-part="widget.header"]');
+  expect(shelf).toMatchObject({
+    background: 'rgba(98, 91, 82, 0.6)',
+    borderRadius: '4px',
+    clipPath: 'none'
+  });
+  expect(header).toMatchObject({
+    background: 'rgba(98, 91, 82, 0.74)',
+    borderRadius: '4px 4px 0px 0px',
+    clipPath: 'none'
+  });
+});
+
 test('composition metadata and icon art survive data-only theme compilation', async ({ page }) => {
   await fresh(page);
 
@@ -84,13 +143,13 @@ test('composition metadata and icon art survive data-only theme compilation', as
     const root = page.locator('main');
     await expect(root).toHaveAttribute('data-pom-widget-grouping', /^(individual|unified)$/);
     await expect(root).toHaveAttribute('data-pom-chrome-presentation', /^(compact|overlay|full)$/);
-    await expect(root).toHaveAttribute('data-pom-action-presentation', /^(compact|hover-focus|full)$/);
-    const image = await page.getByRole('article', { name: 'Characters (Story)' })
+    await expect(root).toHaveAttribute('data-pom-action-presentation', /^(compact|hover-focus|full|always)$/);
+    const image = await page.getByRole('article', { name: 'Characters' })
       .getByRole('button', { name: 'Drag Widget' })
       .evaluate((button) => getComputedStyle(button).backgroundImage);
     expect(image, `${target.label} icon image`).toContain('url(');
-    const pseudoContent = await page.getByRole('article', { name: 'Characters (Story)' })
-      .locator('header')
+    const pseudoContent = await page.getByRole('article', { name: 'Characters' })
+      .locator(':scope > header')
       .evaluate((header) => [getComputedStyle(header, '::before').content, getComputedStyle(header, '::after').content]);
     expect(pseudoContent, `${target.label} decorative stoplights`).toEqual(['none', 'none']);
   }
@@ -139,19 +198,34 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
     expect(hitSurface.borderWidth, `${edge} resize artifact`).toBe('0px');
   }
 
-  const factRows = page.getByRole('article', { name: 'World State' }).locator('.surface-facts > div');
+  const factRows = page.getByRole('article', { name: 'Characters' }).locator('.recording-characters li');
   expect(await factRows.count()).toBeGreaterThan(1);
   for (const row of await factRows.all()) {
     await expect(row).toHaveAttribute('data-pom-part', 'row.surface');
     expect(await row.evaluate((element) => getComputedStyle(element).borderRadius)).not.toBe('0px');
   }
 
-  const worldWindow = page.getByRole('article', { name: 'World State' });
-  const unusedTail = await worldWindow.evaluate((article) => {
-    const content = article.querySelector('.surface-facts')!;
+  const characterWindow = page.getByRole('article', { name: 'Characters' });
+  const unusedTail = await characterWindow.evaluate((article) => {
+    const content = article.querySelector('.recording-characters li:last-child')!;
     return article.getBoundingClientRect().bottom - content.getBoundingClientRect().bottom;
   });
   expect(unusedTail, 'individual window dead space').toBeLessThanOrEqual(32);
+
+  const effectsWindow = page.getByRole('article', { name: 'Scene Effects' });
+  const effectsSlot = page.locator(
+    '[data-conformance-region="right"] > .dock-shelf > [data-widget-type="story.room-ambience"]',
+  );
+  const effectsBox = await effectsWindow.boundingBox();
+  const effectsSlotBox = await effectsSlot.boundingBox();
+  const finalEffectBox = await effectsWindow.getByRole('slider', { name: 'Reading Veil' }).boundingBox();
+  expect(effectsBox).not.toBeNull();
+  expect(effectsSlotBox).not.toBeNull();
+  expect(finalEffectBox).not.toBeNull();
+  expect(effectsBox!.y + effectsBox!.height, 'PomOS Scene Effects window stays inside its shelf slot')
+    .toBeLessThanOrEqual(effectsSlotBox!.y + effectsSlotBox!.height + 1);
+  expect(finalEffectBox!.y + finalEffectBox!.height, 'PomOS exposes all four Scene Effects controls inside the window')
+    .toBeLessThanOrEqual(effectsBox!.y + effectsBox!.height + 1);
 
   for (const target of TARGETS.slice(1)) {
     await selectTheme(page, target);
@@ -167,18 +241,205 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
   }
 });
 
+test('Bunny matches the stationery reference through reusable expression bindings', async ({ page }) => {
+  await fresh(page);
+  await selectTheme(page, TARGETS[2]);
+
+  await expect(page.locator('[data-pom-canvas-layer]')).toHaveCount(2);
+  await expect(page.locator('main')).toHaveAttribute('data-pom-action-presentation', 'always');
+  expect(await page.locator('[data-pom-canvas-layer]').evaluateAll((layers) => layers.map((layer) => ({
+    kind: layer.getAttribute('data-pom-canvas-layer'),
+    image: getComputedStyle(layer).backgroundImage
+  })))).toEqual([
+    { kind: 'solid', image: 'none' },
+    { kind: 'four-corner', image: expect.stringContaining('radial-gradient') }
+  ]);
+
+  const evidence = await page.locator('main').evaluate((root) => {
+    const style = (selector: string) => {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing Bunny evidence selector: ${selector}`);
+      const computed = getComputedStyle(element);
+      return {
+        radius: computed.borderRadius,
+        backgroundImage: computed.backgroundImage,
+        backdrop: computed.backdropFilter,
+        fontSize: computed.fontSize,
+        textTransform: computed.textTransform,
+        height: element.getBoundingClientRect().height
+      };
+    };
+    const computed = getComputedStyle(root);
+    const stage = root.querySelector<HTMLElement>('[data-conformance-region="stage"]');
+    const reader = root.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .widget-frame > [data-pom-part="widget.content"]');
+    const readerBody = root.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .transcript');
+    const composer = root.querySelector<HTMLElement>('[data-widget-type="story.composer"] .widget-frame > [data-pom-part="widget.content"]');
+    if (!stage || !reader || !readerBody || !composer) throw new Error('Missing Bunny story presentation evidence.');
+    const stageBox = stage.getBoundingClientRect();
+    const readerBox = reader.getBoundingClientRect();
+    return {
+      colors: {
+        canvas: computed.getPropertyValue('--pom-color-canvas').trim(),
+        accent: computed.getPropertyValue('--pom-color-accent').trim(),
+        text: computed.getPropertyValue('--pom-color-text').trim()
+      },
+      shelf: style('.top-shelf'),
+      shell: style('.workbench-shell'),
+      dock: style('[data-conformance-region="left"]'),
+      widget: style('[data-conformance-region="left"] .widget-frame'),
+      header: style('[data-conformance-region="left"] .widget-frame > header'),
+      icon: style('[data-conformance-region="left"] .widget-frame nav button'),
+      row: style('[data-widget-type="story.characters"] [data-pom-part="row.surface"]'),
+      button: style('.top-shelf [data-pom-part="button.surface"]'),
+      reader: {
+        ...style('[data-widget-type="story.transcript"] .widget-frame > [data-pom-part="widget.content"]'),
+        lineHeight: getComputedStyle(readerBody).lineHeight,
+        bodyFontSize: getComputedStyle(readerBody).fontSize,
+        intersectsStage: readerBox.right > stageBox.left && readerBox.left < stageBox.right
+          && readerBox.bottom > stageBox.top && readerBox.top < stageBox.bottom
+      },
+      composer: style('[data-widget-type="story.composer"] .widget-frame > [data-pom-part="widget.content"]')
+    };
+  });
+
+  expect(evidence.colors).toEqual({ canvas: '#faeef6', accent: '#ed75aa', text: '#45364d' });
+  expect(evidence.shelf).toMatchObject({ radius: '24px 24px 12px 12px', height: 52, fontSize: '12px', textTransform: 'none' });
+  expect(evidence.shelf.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.shell.radius).toBe('12px 12px 26px 26px');
+  expect(evidence.dock.radius).toBe('20px');
+  expect(evidence.widget).toMatchObject({
+    radius: '17px',
+    backdrop: 'blur(22px) saturate(1.08) brightness(1.03)',
+    fontSize: '12px'
+  });
+  expect(evidence.widget.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.header).toMatchObject({ radius: '17px 17px 0px 0px', fontSize: '12px', textTransform: 'none' });
+  expect(evidence.icon).toMatchObject({ fontSize: '0px', textTransform: 'none' });
+  expect(evidence.icon.backgroundImage).not.toBe('none');
+  expect(evidence.row.radius).toBe('999px');
+  expect(evidence.row.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.button).toMatchObject({ radius: '999px', fontSize: '11px', textTransform: 'none' });
+  expect(evidence.reader).toMatchObject({
+    radius: '18px', bodyFontSize: '17px', lineHeight: '26.35px', intersectsStage: true
+  });
+  expect(evidence.reader.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.composer.radius).toBe('18px');
+  expect(evidence.composer.backgroundImage).toContain('linear-gradient(150deg');
+
+  const catalogButton = page.getByRole('button', { name: 'Open Widget Catalog' });
+  await catalogButton.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(catalogButton).toBeFocused();
+  expect(await catalogButton.evaluate((button) => {
+    const style = getComputedStyle(button);
+    return { focusVisible: button.matches(':focus-visible'), color: style.outlineColor, width: style.outlineWidth };
+  })).toEqual({ focusVisible: true, color: 'rgb(105, 81, 161)', width: '2px' });
+});
+
+test('Bunny keeps the compact reader expressive, contained, and responsive', async ({ page }) => {
+  await fresh(page, 390, 844);
+  await selectTheme(page, TARGETS[2]);
+
+  const evidence = await page.locator('main').evaluate((root) => {
+    const stage = root.querySelector<HTMLElement>('[data-conformance-region="stage"]');
+    const reader = root.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .widget-frame > [data-pom-part="widget.content"]');
+    const readerBody = root.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .transcript');
+    const composer = root.querySelector<HTMLElement>('[data-widget-type="story.composer"] .composer');
+    const textarea = root.querySelector<HTMLTextAreaElement>('[data-widget-type="story.composer"] textarea');
+    const send = root.querySelector<HTMLButtonElement>('[data-widget-type="story.composer"] .composer > button');
+    const leftDock = root.querySelector<HTMLElement>('[data-conformance-region="left"]');
+    const rightDock = root.querySelector<HTMLElement>('[data-conformance-region="right"]');
+    if (!stage || !reader || !readerBody || !composer || !textarea || !send || !leftDock || !rightDock) {
+      throw new Error('Missing compact Bunny evidence.');
+    }
+    const stageBox = stage.getBoundingClientRect();
+    const readerBox = reader.getBoundingClientRect();
+    const composerBox = composer.getBoundingClientRect();
+    const textareaBox = textarea.getBoundingClientRect();
+    const sendBox = send.getBoundingClientRect();
+    const readerStyle = getComputedStyle(reader);
+    const typeStyle = getComputedStyle(readerBody);
+    return {
+      scrollWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+      leftDisplay: getComputedStyle(leftDock).display,
+      rightDisplay: getComputedStyle(rightDock).display,
+      readerRadius: readerStyle.borderRadius,
+      readerImage: readerStyle.backgroundImage,
+      fontSize: typeStyle.fontSize,
+      lineHeight: typeStyle.lineHeight,
+      intersectsStage: readerBox.right > stageBox.left && readerBox.left < stageBox.right
+        && readerBox.bottom > stageBox.top && readerBox.top < stageBox.bottom,
+      composerControlsContained: textareaBox.top >= composerBox.top && textareaBox.bottom <= composerBox.bottom
+        && sendBox.top >= composerBox.top && sendBox.bottom <= composerBox.bottom,
+      composerDraft: textarea.value,
+      sendLabel: send.textContent?.trim()
+    };
+  });
+
+  expect(evidence).toMatchObject({
+    viewportWidth: 390,
+    scrollWidth: 390,
+    leftDisplay: 'none',
+    rightDisplay: 'none',
+    readerRadius: '18px',
+    fontSize: '14px',
+    lineHeight: '21.7px',
+    intersectsStage: true,
+    composerControlsContained: true,
+    composerDraft: 'Ask Mara what the bell means.',
+    sendLabel: 'Send action'
+  });
+  expect(evidence.readerImage).toContain('linear-gradient(150deg');
+});
+
+test('Bunny removes decorative gradients under reduced transparency without losing shape', async ({ page }) => {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Emulation.setEmulatedMedia', {
+    features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }]
+  });
+  await fresh(page);
+  await selectTheme(page, TARGETS[2]);
+
+  expect(await page.locator('[data-conformance-region="left"] .widget-frame').first().evaluate((widget) => {
+    const style = getComputedStyle(widget);
+    return {
+      radius: style.borderRadius,
+      image: style.backgroundImage,
+      backdrop: style.backdropFilter,
+      alpha: style.backgroundColor.match(/[\d.]+/g)?.map(Number)[3] ?? 1
+    };
+  })).toEqual({ radius: '17px', image: 'none', backdrop: 'none', alpha: 1 });
+});
+
+test('Bunny action rails stop decorative motion when reduced motion is requested', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await fresh(page);
+  await selectTheme(page, TARGETS[2]);
+
+  expect(await page.locator('[data-conformance-region="left"] .widget-frame nav').first().evaluate((actions) => {
+    const style = getComputedStyle(actions);
+    return {
+      animation: style.animationName,
+      transitionDuration: style.transitionDuration,
+      transitionProperty: style.transitionProperty
+    };
+  })).toEqual({ animation: 'none', transitionDuration: '0s', transitionProperty: 'none' });
+});
+
 test('unified compositions allocate rail space to functional content', async ({ page }) => {
   await fresh(page);
   await selectTheme(page, TARGETS[0]);
 
-  const ambience = page.getByRole('article', { name: 'Room Ambience' });
-  const action = ambience.getByRole('button', { name: 'Pause ambience' });
-  const ambienceBox = await ambience.boundingBox();
-  const actionBox = await action.boundingBox();
-  expect(ambienceBox).not.toBeNull();
-  expect(actionBox).not.toBeNull();
-  expect(actionBox!.y + actionBox!.height, 'ambience action stays inside its assigned unified row')
-    .toBeLessThanOrEqual(ambienceBox!.y + ambienceBox!.height + 1);
+  const effects = page.getByRole('article', { name: 'Scene Effects' });
+  const finalControl = effects.getByRole('slider', { name: 'Reading Veil' });
+  const effectsBox = await effects.boundingBox();
+  const controlBox = await finalControl.boundingBox();
+  expect(effectsBox).not.toBeNull();
+  expect(controlBox).not.toBeNull();
+  expect(controlBox!.y + controlBox!.height, 'final effect control stays inside its assigned unified row')
+    .toBeLessThanOrEqual(effectsBox!.y + effectsBox!.height + 1);
 });
 
 test('each target keeps one glass owner per Widget and a seamless structural dock', async ({ page }) => {
@@ -203,10 +464,10 @@ test('material controls have refined geometry and visibly control glass', async 
   for (const target of TARGETS) {
     await fresh(page);
     await selectTheme(page, target);
-    const library = page.getByRole('article', { name: 'Theme Library' });
-    await library.getByText('Material controls', { exact: true }).click();
-    const glass = library.getByRole('slider', { name: 'Glass density' });
-    const frost = library.getByRole('slider', { name: 'Frost level' });
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    const settings = page.locator('[data-widget-type="settings.custom-theme"]');
+    const glass = settings.getByRole('slider', { name: 'Glass Density' });
+    const frost = settings.getByRole('slider', { name: 'Frost Level' });
     const geometry = await glass.evaluate((input) => {
       const root = input.closest('[data-pom-theme-root]')!;
       const style = getComputedStyle(root);
@@ -222,7 +483,8 @@ test('material controls have refined geometry and visibly control glass', async 
     expect(geometry.thumb).toBeGreaterThanOrEqual(10);
     expect(geometry.thumb).toBeLessThanOrEqual(12);
     expect(geometry.hit).toBeGreaterThanOrEqual(44);
-    expect(geometry.height).toBeGreaterThanOrEqual(geometry.hit);
+    expect(geometry.height, 'native range geometry may quantize below its CSS size by a subpixel')
+      .toBeGreaterThanOrEqual(geometry.hit - 0.01);
 
     const progress = await glass.evaluate((input) => ({
       authored: getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim(),
@@ -235,13 +497,13 @@ test('material controls have refined geometry and visibly control glass', async 
     await glass.fill('0');
     await expect.poll(() => glass.evaluate((input) => getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim())).toBe('0%');
     await frost.fill('0');
-    expect((await material(page, '[data-conformance-region="left"] .widget-frame')).alpha).toBe(0);
-    expect(blurPx((await material(page, '[data-conformance-region="left"] .widget-frame')).backdrop)).toBe(0);
+    expect((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).alpha).toBe(0);
+    expect(blurPx((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).backdrop)).toBe(0);
     await glass.fill('100');
     await expect.poll(() => glass.evaluate((input) => getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim())).toBe('100%');
     await frost.fill('100');
-    expect((await material(page, '[data-conformance-region="left"] .widget-frame')).alpha).toBe(1);
-    expect(blurPx((await material(page, '[data-conformance-region="left"] .widget-frame')).backdrop)).toBe(40);
+    expect((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).alpha).toBe(1);
+    expect(blurPx((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).backdrop)).toBe(40);
   }
 });
 
@@ -252,13 +514,16 @@ test('reduced transparency selects an opaque no-blur semantic fallback', async (
   });
   await fresh(page);
   await selectTheme(page, TARGETS[1]);
-  for (const selector of ['.top-shelf', '.context-rail', '[data-conformance-region="left"] .widget-frame']) {
+  await page.getByText('Developer tools', { exact: true }).click();
+  for (const selector of ['.top-shelf', '.developer-drawer-surface', '[data-conformance-region="left"] .widget-frame']) {
     const sample = await material(page, selector);
     expect(sample.alpha, `${selector} opacity`).toBe(1);
     expect(blurPx(sample.backdrop), `${selector} blur`).toBe(0);
   }
+  await expect(page.locator('[data-pom-ambient-layer]')).toHaveCSS('opacity', '0');
   const selectedTheme = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: 'PomOS', exact: true });
   expect((await material(page, '.theme-targets button[aria-pressed="true"]')).alpha).toBe(1);
+  await selectedTheme.focus();
   await page.keyboard.press('Tab');
   await page.keyboard.press('Shift+Tab');
   await expect(selectedTheme).toBeFocused();
@@ -297,6 +562,31 @@ test('reduced transparency selects an opaque no-blur semantic fallback', async (
   await page.mouse.down();
   expect(await stateSample('pressed')).toEqual({ opacity: 1, alpha: 1, backdrop: 'none' });
   await page.mouse.up();
+});
+
+test('Ash and Amber reduced transparency resolves every elevated owner to neutral opaque ash', async ({ page }) => {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Emulation.setEmulatedMedia', {
+    features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }]
+  });
+  await fresh(page);
+  await selectTheme(page, ASH_TARGET);
+  await page.getByText('Developer tools', { exact: true }).click();
+
+  for (const selector of [
+    '[data-pom-part="chrome.shelf"]',
+    '.developer-drawer-surface',
+    '[data-conformance-region="left"] .widget-frame',
+    '[data-conformance-region="left"] [data-pom-part="widget.header"]'
+  ]) {
+    const sample = await material(page, selector);
+    expect(sample).toMatchObject({
+      alpha: 1,
+      backdrop: 'none',
+      background: 'rgb(48, 46, 42)'
+    });
+  }
+  await expect(page.locator('[data-pom-ambient-layer]')).toHaveCSS('opacity', '0');
 });
 
 test('an external non-preset definition renders the same live Workbench tree', async ({ page }) => {
@@ -346,7 +636,7 @@ test('an external non-preset definition renders the same live Workbench tree', a
     revision: root.getAttribute('data-workbench-revision'),
     widgets: [...root.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
   }))).toEqual(before);
-  expect(await page.getByRole('article', { name: 'Characters (Story)' }).evaluate((article) => {
+  expect(await page.getByRole('article', { name: 'Characters' }).evaluate((article) => {
     const style = getComputedStyle(article);
     return { radius: style.borderRadius, family: style.fontFamily, color: style.color };
   })).toMatchObject({ radius: '0px' });
@@ -360,7 +650,7 @@ test('an external non-preset definition renders the same live Workbench tree', a
 test('focused and floating compositions retain exactly one elevated material owner', async ({ page }) => {
   await fresh(page);
   await selectTheme(page, TARGETS[1]);
-  const world = page.getByRole('article', { name: 'World State' });
+  const world = page.getByRole('article', { name: 'Scene Effects' });
 
   await world.getByRole('button', { name: 'Focus Widget' }).click();
   const dialog = await material(page, '.focused-widget-dialog');
@@ -386,7 +676,7 @@ test('theme changes retain the Workbench tree and keyboard focus', async ({ page
     widgets: [...element.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))
   }));
   for (const target of TARGETS) {
-    await selectTheme(page, target);
+    await selectTheme(page, target, { closeDrawer: false });
     await expect(page.getByRole('button', { name: target.label, exact: true })).toBeFocused();
     expect(await root.evaluate((element) => ({
       revision: element.getAttribute('data-workbench-revision'),

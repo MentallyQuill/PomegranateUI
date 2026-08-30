@@ -15,6 +15,9 @@
     hostContext,
     onfocuswidget,
     surfacePart = 'widget.surface',
+    contentPart = 'widget.content',
+    title,
+    meta,
     class: className = ''
   }: {
     frame: WidgetFrameProjection;
@@ -22,11 +25,15 @@
     rendererRegistry: WidgetRendererRegistry<THostContext>;
     hostContext: THostContext;
     onfocuswidget?: (frame: WidgetFrameProjection) => void;
-    surfacePart?: 'widget.surface' | 'floating.surface' | null;
+    surfacePart?: 'widget.surface' | 'widget.content' | 'floating.surface' | null;
+    contentPart?: 'widget.content' | null;
+    title?: string;
+    meta?: string | undefined;
     class?: string;
   } = $props();
 
   const actions = $derived(createWidgetActions(store, frame.instanceId));
+  const displayTitle = $derived(title ?? frame.title);
   const Renderer = $derived(rendererRegistry.get(frame.instance.type));
   const dispatch = (command: WorkbenchCommand) => store.dispatch(command);
   let dragging = $state(false);
@@ -39,15 +46,19 @@
 
 <article
   class={className}
-  aria-label={frame.title}
+  aria-label={displayTitle}
   data-pomegranate-widget={frame.instanceIdAttribute}
   data-pom-part={surfacePart ?? undefined}
   data-pomegranate-placement={frame.placement.kind}
-  data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.edge : 'floating'}
+  data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.regionId === 'stage' ? 'main' : frame.placement.regionId : 'floating'}
+  data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
 >
   <header class:is-dragging={dragging} data-pom-part="widget.header">
-    <h2>{frame.title}</h2>
-    <nav aria-label={`${frame.title} placement`} data-pom-part="widget.actions">
+    <div class="widget-frame-heading">
+      <h2>{displayTitle}</h2>
+      {#if meta}<span class="widget-frame-meta">{meta}</span>{/if}
+    </div>
+    <nav aria-label={`${displayTitle} placement`} data-pom-part="widget.actions">
       <button
         class="action-drag"
         data-pom-part="button.icon"
@@ -72,10 +83,10 @@
           onclick={() => onfocuswidget?.(frame)}
         >Focus Widget</button>
       {/if}
-      <button class="action-remove" data-pom-part="button.icon" type="button" onclick={() => actions.remove()}>Remove</button>
+      <button class="action-remove" data-pom-part="button.icon" type="button" onclick={() => actions.shelve()}>Move to Widget Shelf</button>
     </nav>
   </header>
-  <div data-pom-part="widget.content">
+  <div data-pom-part={contentPart ?? undefined}>
     {#if Renderer}
       <svelte:boundary>
       <Renderer
@@ -85,14 +96,14 @@
         {dispatch}
       />
       {#snippet failed()}
-        <p role="alert" data-pom-part="row.surface" aria-label={`${frame.title} renderer failed`}>
-          {frame.title} failed to render.
+        <p role="alert" data-pom-part="row.surface" aria-label={`${displayTitle} renderer failed`}>
+          {displayTitle} failed to render.
         </p>
       {/snippet}
       </svelte:boundary>
     {:else}
-      <p role="status" data-pom-part="row.surface" aria-label={`${frame.title} renderer unavailable`}>
-        Renderer unavailable for {frame.title}.
+      <p role="status" data-pom-part="row.surface" aria-label={`${displayTitle} renderer unavailable`}>
+        Renderer unavailable for {displayTitle}.
       </p>
     {/if}
   </div>

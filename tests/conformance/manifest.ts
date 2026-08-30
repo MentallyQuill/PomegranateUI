@@ -18,6 +18,8 @@ const pomosReferencePath = 'design/theme-targets/pomos-reference.html';
 const pomosReferenceSha256 = 'a46dc956b0664643506b5023836cd02fb2e9f64ca538acff1aca7cc7c34a7af9';
 const bunnyReferencePath = 'design/theme-targets/bunny-reference.html';
 const bunnyReferenceSha256 = 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59';
+const ashAmberReferencePath = 'design/theme-targets/ash-amber/sonderui-rw2-1-t80.png';
+const ashAmberReferenceSha256 = '6403a7bcfd8f43195fa42c5d9715cc79964c8b7569f47c22fdeefd1b89804997';
 
 function createMacroScenario(id: string, title: string, viewport: string): ConformanceScenario {
   return Object.freeze({
@@ -150,8 +152,8 @@ function createThemeTargetScenario(
     referenceState: state,
     implementationState: state,
     capture: Object.freeze({ kind: 'viewport' as const }),
-    measurementProfile: 'theme-target-behavior',
-    assertionProfile: 'theme-target-behavior',
+    measurementProfile: target === 'bunny' && viewport === 'wide' ? 'bunny-fidelity' : 'theme-target-behavior',
+    assertionProfile: target === 'bunny' && viewport === 'wide' ? 'bunny-fidelity' : 'theme-target-behavior',
     allowedDeviationIds: Object.freeze([])
   });
 }
@@ -166,6 +168,133 @@ export const BUNNY_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
   createThemeTargetScenario('bn-scene-wide', 'Bunny wide Scene', 'bunny', 'bunny-original-reference', bunnyReferencePath, bunnyReferenceSha256, 'scene', 'wide'),
   createThemeTargetScenario('bn-scene-compact', 'Bunny compact Scene', 'bunny', 'bunny-original-reference', bunnyReferencePath, bunnyReferenceSha256, 'scene', 'compact-small'),
   createThemeTargetScenario('bn-catalog-wide', 'Bunny wide Catalog', 'bunny', 'bunny-original-reference', bunnyReferencePath, bunnyReferenceSha256, 'catalog', 'wide')
+]);
+
+function createAshAmberScenario(
+  id: string,
+  title: string,
+  state: 'scene' | 'catalog',
+  viewport: 'recording-wide' | 'compact-small' | 'standard'
+): ConformanceScenario {
+  return Object.freeze({
+    id,
+    title,
+    target: 'ash-amber',
+    authority: 'ash-amber-recording-frame',
+    authorityPath: ashAmberReferencePath,
+    authoritySha256: ashAmberReferenceSha256,
+    viewport,
+    inputModes: Object.freeze(viewport === 'compact-small'
+      ? ['coarse-pointer', 'keyboard'] as const
+      : ['fine-pointer', 'keyboard'] as const),
+    referenceState: state,
+    implementationState: state,
+    capture: Object.freeze({ kind: 'viewport' as const }),
+    measurementProfile: 'theme-target-behavior',
+    assertionProfile: 'theme-target-behavior',
+    allowedDeviationIds: Object.freeze([])
+  });
+}
+
+export const ASH_AMBER_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
+  createAshAmberScenario('aa-scene-wide', 'Ash & Amber recording-frame Scene', 'scene', 'recording-wide'),
+  createAshAmberScenario('aa-scene-compact', 'Ash & Amber compact Scene', 'scene', 'compact-small'),
+  createAshAmberScenario('aa-catalog-wide', 'Ash & Amber wide Catalog', 'catalog', 'standard')
+]);
+
+function createThemeAuthoringScenario(id: string, title: string, state: string): ConformanceScenario {
+  return Object.freeze({
+    id,
+    title,
+    target: 'ash-amber',
+    authority: 'ash-amber-recording-frame',
+    authorityPath: ashAmberReferencePath,
+    authoritySha256: ashAmberReferenceSha256,
+    viewport: 'standard',
+    inputModes: Object.freeze(['fine-pointer', 'keyboard'] as const),
+    referenceState: state,
+    implementationState: state,
+    capture: Object.freeze({ kind: 'viewport' as const }),
+    measurementProfile: 'theme-authoring',
+    assertionProfile: 'theme-authoring',
+    allowedDeviationIds: Object.freeze([])
+  });
+}
+
+export const THEME_AUTHORING_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
+  createThemeAuthoringScenario('theme-authoring-ash-seed', 'Theme authoring reproduces Ash & Amber', 'ash-seed'),
+  createThemeAuthoringScenario('theme-authoring-last-valid', 'Theme authoring preserves the last valid target', 'last-valid'),
+  createThemeAuthoringScenario('theme-authoring-ambient-precedence', 'Ambient precedence remains exact', 'ambient-precedence'),
+  createThemeAuthoringScenario('theme-authoring-round-trip', 'Theme drafts round-trip independently of layout', 'round-trip')
+]);
+
+const deepFidelityRecordingFrames = Object.freeze([
+  ['deep-base-scene', 'deep-recording-base-scene', 'rw2-t52.png', '7eac0f71b594ce5860d8a93eed8a3fce129074933a981f33a6300833e81f5856'],
+  ['deep-floating-connections', 'deep-recording-floating-connections', 'rw2-t59.png', 'dedb153ccc0119db01a5653b1c7d6463725c877a456c2271062f92fb7f71a8dd'],
+  ['deep-right-stack', 'deep-recording-right-stack', 'rw2-t67.png', 'f365b4a925be6d0aae43c7d18c17d446edbb6e2e06956466811307f7106f5dcc'],
+  ['deep-widget-shelf', 'deep-recording-widget-shelf', 'rw2-t76.png', 'c1cf2d281a2c900056c7b5bdb3507e7f4caeae77619129b75f068421bf3b0ac6'],
+  ['deep-restored-theme-tab', 'deep-recording-restored-theme-tab', 'rw2-t84.png', '5f8313d53802fe9a783a684616bc685c752325e4bd039e94d6a75cc708b5f7d9'],
+  ['deep-canvas-ink', 'deep-recording-canvas-ink', 'rw2-1-t2.png', '343267f966a3d1a7e0c8dace8adfc886792708e45ca2dd472a79539f6f23f11b'],
+  ['deep-control-chrome', 'deep-recording-control-chrome', 'rw2-1-t14.png', '131540f086240423291473b0cd5ec0106ac0054e5a9df3e3b524123580853aa7'],
+  ['deep-ambient-chrome', 'deep-recording-ambient-chrome', 'rw2-1-t26.png', 'c36e7ad1a28660c2dae68fafc84880887016cbeb1843d530ec347ad2b88b2653'],
+  ['deep-interface-text', 'deep-recording-interface-text', 'rw2-1-t39.png', '1f2f08a310ff15c9f9b53b1ab9e66ed7e774270f9df66db59ce44ccd6872a735'],
+  ['deep-muted-chrome', 'deep-recording-muted-chrome', 'rw2-1-t60.png', '61e80edc61d6cd78b853e86474486470abdf6c2d27c29eafb5445b6c227d9520'],
+  ['ash-amber-final', 'ash-amber-recording-frame', '../ash-amber/sonderui-rw2-1-t80.png', '6403a7bcfd8f43195fa42c5d9715cc79964c8b7569f47c22fdeefd1b89804997']
+] as const);
+
+function createDeepFidelityScenario(
+  id: string,
+  title: string,
+  authority: string,
+  authorityPath: string,
+  authoritySha256: string,
+  state: string
+): ConformanceScenario {
+  return Object.freeze({
+    id,
+    title,
+    target: 'deep-current',
+    authority,
+    authorityPath,
+    authoritySha256,
+    viewport: 'recording-wide',
+    inputModes: Object.freeze(['fine-pointer', 'coarse-pointer', 'keyboard'] as const),
+    referenceState: state,
+    implementationState: state,
+    capture: Object.freeze({ kind: 'viewport' as const }),
+    measurementProfile: 'deep-fidelity',
+    assertionProfile: 'deep-fidelity',
+    allowedDeviationIds: Object.freeze([])
+  });
+}
+
+export const DEEP_FIDELITY_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
+  createDeepFidelityScenario(
+    'dc-fidelity-atmospheric',
+    'Atmospheric Workbench exact composition',
+    'atmospheric-workbench',
+    atmosphericPath,
+    atmosphericSha256,
+    'scene-ready'
+  ),
+  createDeepFidelityScenario(
+    'dc-fidelity-widget-overhaul',
+    'Widget Overhaul exact shared behaviors',
+    'widget-overhaul',
+    widgetOverhaulPath,
+    widgetOverhaulSha256,
+    'scene-ready'
+  ),
+  ...deepFidelityRecordingFrames.map(([state, authority, fileName, sha256]) => createDeepFidelityScenario(
+    `dc-fidelity-${state}`,
+    `Recording evidence: ${state}`,
+    authority,
+    authority === 'ash-amber-recording-frame'
+      ? 'design/theme-targets/ash-amber/sonderui-rw2-1-t80.png'
+      : `design/theme-targets/deep-current/recordings/${fileName}`,
+    sha256,
+    state
+  ))
 ]);
 
 export const ORIGINAL_THEME_TARGET_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([

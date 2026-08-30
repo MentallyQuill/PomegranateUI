@@ -3212,7 +3212,13 @@ export function createCatalogManifests(): readonly WidgetManifest[] {
     defaultConfiguration: {},
     defaultPlacement: {
       kind: 'docked',
-      edge: definition.category === 'story' ? 'main' : definition.category === 'systems' ? 'right' : 'left',
+      regionRole: definition.category === 'story'
+        ? 'stage'
+        : definition.category === 'systems'
+          ? 'right-instruments'
+          : definition.category === 'settings'
+            ? 'column'
+            : 'left-instruments',
       shelfId: 'primary'
     },
     catalog: {

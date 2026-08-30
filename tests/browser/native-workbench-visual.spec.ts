@@ -10,12 +10,18 @@ async function fresh(page: Page, width: number, height: number) {
   await page.evaluate(() => document.fonts.ready);
 }
 
-type ThemeLabel = 'Deep Current' | 'PomOS' | 'Bunny';
+type ThemeLabel = 'Deep Current' | 'PomOS' | 'Bunny' | 'Ash & Amber';
 
 async function selectTheme(page: Page, label: ThemeLabel) {
+  const drawer = page.locator('[data-workbench-developer-drawer]');
+  if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: label, exact: true }).click();
-  const themeId = label === 'Deep Current' ? 'deep-current' : label === 'PomOS' ? 'pom-neutral' : 'bunny';
+  const themeId = label === 'Deep Current' ? 'deep-current'
+    : label === 'PomOS' ? 'pom-neutral'
+      : label === 'Bunny' ? 'bunny'
+        : 'ash-amber';
   await expect(page.locator('main')).toHaveAttribute('data-pom-theme', themeId);
+  await page.getByText('Developer tools', { exact: true }).click();
   await page.getByRole('tab', { name: 'Scene' }).click();
   await page.evaluate(async () => {
     await document.fonts.ready;
@@ -25,19 +31,27 @@ async function selectTheme(page: Page, label: ThemeLabel) {
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 }
 
+async function invokeCompactChromeAction(page: Page, name: string) {
+  const action = page.getByRole('button', { name });
+  await action.focus();
+  await expect(action).toBeVisible();
+  await action.press('Enter');
+}
+
 async function setMaterialControls(page: Page, values: readonly [number, number, number, number]) {
-  const themeLibrary = page.getByRole('article', { name: 'Theme Library' });
-  await themeLibrary.getByText('Material controls', { exact: true }).click();
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  const themeSettings = page.getByRole('article', { name: 'Custom Theme' });
   for (const [label, value] of [
-    ['Glass density', values[0]],
-    ['Bar opacity', values[1]],
-    ['Selected strength', values[2]],
-    ['Frost level', values[3]]
+    ['Glass Density', values[0]],
+    ['Bar Opacity', values[1]],
+    ['Selected Strength', values[2]],
+    ['Frost Level', values[3]]
   ] as const) {
-    const control = themeLibrary.getByRole('slider', { name: label });
+    const control = themeSettings.getByRole('slider', { name: label });
     await control.fill(String(value));
     await expect(control).toHaveValue(String(value));
   }
+  await page.getByRole('tab', { name: 'Scene' }).click();
   await page.evaluate(async () => {
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     window.scrollTo(0, 0);
@@ -54,19 +68,19 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);
   await shot(page, 'wide-scene.png');
 
-  const materialControls = page.getByRole('article', { name: 'Theme Library' }).getByText('Material controls', { exact: true });
-  await materialControls.click();
+  await page.getByRole('tab', { name: 'Settings' }).click();
   await shot(page, 'wide-material-controls.png');
-  await materialControls.click();
+  await page.getByRole('tab', { name: 'Scene' }).click();
 
-  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  await invokeCompactChromeAction(page, 'Open Widget Catalog');
   await shot(page, 'wide-catalog-drawer.png');
   const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
   await catalog.getByRole('button', { name: 'Expanded' }).click();
   await shot(page, 'wide-catalog-expanded.png');
   await catalog.getByRole('button', { name: 'Close Catalog' }).click();
 
-  await page.getByRole('button', { name: 'Focus reading' }).click();
+  await invokeCompactChromeAction(page, 'Focus reading');
+  await page.getByRole('button', { name: 'Focus reading' }).evaluate((button: HTMLButtonElement) => button.blur());
   await shot(page, 'focus-transcript.png');
 
   await fresh(page, 390, 844);
@@ -75,10 +89,24 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await shot(page, 'compact-settings.png');
 
   await fresh(page, 1440, 900);
-  await page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Float' }).click();
+  await page.getByRole('article', { name: 'Scene Effects' }).getByRole('button', { name: 'Float' }).click();
   await shot(page, 'floating-widget.png');
   await page.getByRole('tab', { name: 'Library' }).click();
   await shot(page, 'renderer-error.png');
+});
+
+test('Theme Settings freezes the focused wide and compact authoring surfaces', async ({ page }) => {
+  await fresh(page, 1440, 900);
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await shot(page, 'wide-theme-settings.png');
+
+  await fresh(page, 390, 844);
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.locator('[data-widget-type="settings.custom-theme"]')
+    .getByRole('button', { name: 'Focus Widget' })
+    .evaluate((button: HTMLButtonElement) => button.click());
+  await expect(page.getByRole('dialog', { name: 'Focused Custom Theme' })).toBeVisible();
+  await shot(page, 'compact-theme-settings.png');
 });
 
 test('native workbench exposes the two original visual flexibility targets', async ({ page }) => {
@@ -94,6 +122,21 @@ test('native workbench exposes the two original visual flexibility targets', asy
     await selectTheme(page, theme.label);
     await shot(page, `compact-${theme.name}.png`);
   }
+});
+
+test('Ash and Amber freezes the reviewed wide, compact, and Catalog target states', async ({ page }) => {
+  await fresh(page, 1920, 1280);
+  await selectTheme(page, 'Ash & Amber');
+  await shot(page, 'wide-ash-amber.png');
+
+  await fresh(page, 390, 844);
+  await selectTheme(page, 'Ash & Amber');
+  await shot(page, 'compact-ash-amber.png');
+
+  await fresh(page, 1440, 900);
+  await selectTheme(page, 'Ash & Amber');
+  await invokeCompactChromeAction(page, 'Open Widget Catalog');
+  await shot(page, 'wide-catalog-ash-amber.png');
 });
 
 test('material stress states stay coherent at wide and compact viewports', async ({ page }) => {

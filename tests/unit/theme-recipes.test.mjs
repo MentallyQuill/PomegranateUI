@@ -19,6 +19,13 @@ function sourceFiles(directory) {
   });
 }
 
+function semanticPartLiterals(source) {
+  return [
+    ...source.matchAll(/data-pom-part=["']([^"']+)["']/g),
+    ...source.matchAll(/\bsurfacePart\s*=\s*["']([^"']+)["']/g)
+  ].map((match) => match[1]);
+}
+
 test('production theme consumers contain no concrete theme-id selectors', () => {
   const files = [
     ...sourceFiles(join(root, 'apps', 'workbench-lab', 'src')),
@@ -40,8 +47,7 @@ test('Pom-owned Svelte recipes use only the public semantic part vocabulary', ()
   const invalid = [];
   for (const path of files) {
     const source = readFileSync(path, 'utf8');
-    for (const match of source.matchAll(/data-pom-part=["']([^"']+)["']/g)) {
-      const part = match[1];
+    for (const part of semanticPartLiterals(source)) {
       if (!allowedParts.has(part)) invalid.push(`${relative(root, path)}:${part}`);
       seen.add(part);
     }
@@ -51,6 +57,12 @@ test('Pom-owned Svelte recipes use only the public semantic part vocabulary', ()
     'canvas.surface', 'dock.surface', 'group.surface', 'widget.surface', 'widget.header',
     'widget.content', 'widget.actions', 'button.icon', 'menu.surface'
   ]) assert.ok(seen.has(required), `missing recipe annotation for ${required}`);
+});
+
+test('semantic part audit recognizes typed optional-prop defaults', () => {
+  const source = `<script lang="ts">let { surfacePart = 'dock.surface' }: { surfacePart?: 'dock.surface' | null } = $props();</script>
+    <section data-pom-part={surfacePart ?? undefined}></section>`;
+  assert.deepEqual(semanticPartLiterals(source), ['dock.surface']);
 });
 
 test('the fixed compiler owns a rule for every allowed semantic part', () => {

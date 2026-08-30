@@ -12,7 +12,9 @@ import {
 import {
   createInitialWorkbenchState,
   createPanel,
+  createPanelTemplateRegistry,
   createWidget,
+  BUILT_IN_PANEL_TEMPLATES,
   type LayoutResult
 } from '@pomegranate-ui/layout';
 
@@ -43,7 +45,7 @@ function manifest(type: typeof CONFORMANCE_IDS.summaryType, title: string): Widg
     title,
     capabilities: ['story.read'],
     defaultConfiguration: {},
-    defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+    defaultPlacement: { kind: 'docked', regionRole: 'left-instruments', shelfId: 'primary' }
   };
 }
 
@@ -52,15 +54,22 @@ export function createConformanceFixture(): ConformanceFixture {
   state = requireState(createPanel(state, {
     id: CONFORMANCE_IDS.scenePanel,
     name: 'Scene',
-    templateId: 'standard',
+    templateId: 'story-stage.v1',
     order: 0
   }));
   state = requireState(createPanel(state, {
     id: CONFORMANCE_IDS.libraryPanel,
     name: 'Library',
-    templateId: 'library',
+    templateId: 'focus-support.v1',
     order: 1
   }));
+  state = {
+    ...state,
+    shelves: [
+      { id: 'primary', panelId: CONFORMANCE_IDS.scenePanel, regionId: 'left', order: 0, weight: 1 },
+      { id: 'primary', panelId: CONFORMANCE_IDS.scenePanel, regionId: 'right', order: 0, weight: 1 }
+    ]
+  };
   state = requireState(createWidget(state, {
     id: CONFORMANCE_IDS.summaryWidget,
     type: CONFORMANCE_IDS.summaryType,
@@ -69,7 +78,7 @@ export function createConformanceFixture(): ConformanceFixture {
   }, {
     kind: 'docked',
     panelId: CONFORMANCE_IDS.scenePanel,
-    edge: 'left',
+    regionId: 'left',
     shelfId: 'primary',
     order: 0
   }));
@@ -81,7 +90,7 @@ export function createConformanceFixture(): ConformanceFixture {
   }, {
     kind: 'docked',
     panelId: CONFORMANCE_IDS.scenePanel,
-    edge: 'right',
+    regionId: 'right',
     shelfId: 'primary',
     order: 0
   }));
@@ -90,9 +99,22 @@ export function createConformanceFixture(): ConformanceFixture {
   const registry = createWidgetRegistry();
   registry.register(manifest(CONFORMANCE_IDS.summaryType, 'Summary'));
   registry.register(manifest(CONFORMANCE_IDS.notesType, 'Notes'));
+  const templates = createPanelTemplateRegistry([
+    ...BUILT_IN_PANEL_TEMPLATES,
+    {
+      id: 'user.custom',
+      label: 'Custom Panel',
+      family: 'columns',
+      regions: [
+        { id: 'column-1', label: 'Column 1', role: 'column', order: 0, acceptedShapes: ['narrow', 'medium', 'wide', 'stage', 'strip'], minimumWidth: 160, minimumHeight: 120, enabledWhen: { option: 'columns', minimum: 2 } },
+        { id: 'column-2', label: 'Column 2', role: 'column', order: 1, acceptedShapes: ['narrow', 'medium', 'wide', 'stage', 'strip'], minimumWidth: 160, minimumHeight: 120, enabledWhen: { option: 'columns', minimum: 2 } }
+      ],
+      options: { columns: { minimum: 2, maximum: 6, default: 2 } }
+    }
+  ]);
 
   return Object.freeze({
-    storeOptions: Object.freeze({ initialState: state, registry }),
+    storeOptions: Object.freeze({ initialState: state, registry, templates }),
     hostContext: Object.freeze({ storyId: 'story-7' })
   });
 }

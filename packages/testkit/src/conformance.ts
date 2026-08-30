@@ -68,7 +68,7 @@ function occupiedDock(factory: WorkbenchStoreFactory): readonly ConformanceResul
       placement: {
         kind: 'docked',
         panelId: CONFORMANCE_IDS.scenePanel,
-        edge: 'left',
+        regionId: 'left',
         shelfId: 'primary',
         order: Number.MAX_SAFE_INTEGER
       }
@@ -78,10 +78,10 @@ function occupiedDock(factory: WorkbenchStoreFactory): readonly ConformanceResul
     const notes = state.placements[CONFORMANCE_IDS.notesWidget];
     const passed = dispatched.ok
       && summary?.kind === 'docked'
-      && summary.edge === 'left'
+      && summary.regionId === 'left'
       && summary.order === 0
       && notes?.kind === 'docked'
-      && notes.edge === 'left'
+      && notes.regionId === 'left'
       && notes.order === 1;
     return paired(
       [FIRST_SLICE_CONTRACT_IDS[2], FIRST_SLICE_CONTRACT_IDS[3]],
@@ -127,7 +127,7 @@ function userPanelPersistence(factory: WorkbenchStoreFactory): readonly Conforma
       [FIRST_SLICE_CONTRACT_IDS[4], FIRST_SLICE_CONTRACT_IDS[5]],
       passed,
       passed
-        ? 'The user Panel restored its template, configuration, and order from pomegranate.ui.layout.v1.'
+        ? 'The user Panel restored its template, configuration, and order from pomegranate.ui.layout.v2.'
         : 'Expected the user Panel template, configuration, and order 2 to survive encode and restore.'
     );
   } catch (error) {

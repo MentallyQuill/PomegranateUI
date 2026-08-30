@@ -1,0 +1,5041 @@
+{
+  "schemaVersion": "pomegranate.ui.deep-fidelity.v1",
+  "scenarios": {
+    "dc-fidelity-atmospheric": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "test-results/conformance/dc-fidelity-atmospheric/dc-fidelity-atmospheric.reference.png",
+      "actualPng": "test-results/conformance/dc-fidelity-atmospheric/dc-fidelity-atmospheric.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-atmospheric/dc-fidelity-atmospheric.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-atmospheric/dc-fidelity-atmospheric.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(20px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(11, 18, 19, 0.6)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(167, 184, 178, 1)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(4, 7, 8, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(11, 18, 19, 0.6)",
+            "blur": 20,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(16, 25, 26, 0.2)",
+            "blur": 20,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(11, 18, 19, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.room-ambience",
+            "story.personas"
+          ],
+          "widgetLocations": {
+            "settings.custom-theme": "left",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.room-ambience": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-001",
+        "authority": {
+          "id": "atmospheric-workbench",
+          "path": "prototypes/sonder-baseline/atmospheric-workbench/sonder-workbench-calibration.html",
+          "sha256": "38878d2cf8a86f5e879faba4b41a214e4293f22ed755975023e02c962d61b913"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": null,
+        "expectedSha256": "cb4f3403182a8d1b20caeccc7f90d97383db1a81499843467e2606bdeccc0949",
+        "reviewSha256": "6c018d5f25f418513427aec5d80617abb82bf6d75be32210bfd3404a250ce07a"
+      }
+    },
+    "dc-fidelity-widget-overhaul": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "test-results/conformance/dc-fidelity-widget-overhaul/dc-fidelity-widget-overhaul.reference.png",
+      "actualPng": "test-results/conformance/dc-fidelity-widget-overhaul/dc-fidelity-widget-overhaul.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-widget-overhaul/dc-fidelity-widget-overhaul.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-widget-overhaul/dc-fidelity-widget-overhaul.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(20px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(11, 18, 19, 0.6)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(167, 184, 178, 1)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(4, 7, 8, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(11, 18, 19, 0.6)",
+            "blur": 20,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(16, 25, 26, 0.2)",
+            "blur": 20,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(11, 18, 19, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.room-ambience",
+            "story.personas"
+          ],
+          "widgetLocations": {
+            "settings.custom-theme": "left",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.room-ambience": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-002",
+        "authority": {
+          "id": "widget-overhaul",
+          "path": "prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul.html",
+          "sha256": "043167ad75c07fa5ff8661fbe8a86943a9c0b38eeea9811739309cb866e8a2a5"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": null,
+        "expectedSha256": "cb4f3403182a8d1b20caeccc7f90d97383db1a81499843467e2606bdeccc0949",
+        "reviewSha256": "66270640fa4e8701efdfa76f4726f1ad0a44dd4060a55967d0393e7aaa29eeef"
+      }
+    },
+    "dc-fidelity-deep-base-scene": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/deep-current/recordings/rw2-t52.png",
+      "actualPng": "test-results/conformance/dc-fidelity-deep-base-scene/dc-fidelity-deep-base-scene.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-deep-base-scene/dc-fidelity-deep-base-scene.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-deep-base-scene/dc-fidelity-deep-base-scene.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(8.8px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(11, 18, 19, 0.39)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(167, 184, 178, 1)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(4, 7, 8, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(11, 18, 19, 0.39)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(16, 25, 26, 0.2)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(11, 18, 19, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.room-ambience",
+            "story.personas"
+          ],
+          "widgetLocations": {
+            "settings.custom-theme": "left",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.room-ambience": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-003",
+        "authority": {
+          "id": "deep-recording-base-scene",
+          "path": "design/theme-targets/deep-current/recordings/rw2-t52.png",
+          "sha256": "7eac0f71b594ce5860d8a93eed8a3fce129074933a981f33a6300833e81f5856"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "5dc0b4fdf2fe6e9d36deaed98081d75186870f4264e0dcb40b302a7c9cd77899",
+        "expectedSha256": "80e32ffa6fc0725df0aa4f710e246b3fc88c529fad98732c1b12d308464ace6c",
+        "reviewSha256": "62c52580a0792f7c05c41a198166e4d0a265f3d22414d4d72aae83e264a7d08e"
+      }
+    },
+    "dc-fidelity-deep-floating-connections": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/deep-current/recordings/rw2-t59.png",
+      "actualPng": "test-results/conformance/dc-fidelity-deep-floating-connections/dc-fidelity-deep-floating-connections.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-deep-floating-connections/dc-fidelity-deep-floating-connections.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-deep-floating-connections/dc-fidelity-deep-floating-connections.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 482.08,
+              "height": 276.08,
+              "right": 1440,
+              "width": 360,
+              "x": 1080,
+              "y": 206
+            },
+            "overflow": {
+              "clientHeight": 276,
+              "clientWidth": 360,
+              "scrollHeight": 276,
+              "scrollWidth": 360,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(8.8px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(11, 18, 19, 0.39)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(167, 184, 178, 1)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(4, 7, 8, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "rgba(16, 25, 26, 0.2)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.44)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.1) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.54) 0px 16px 64px -6px"
+          },
+          "header": {
+            "background": "rgba(11, 18, 19, 0.39)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(16, 25, 26, 0.2)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(11, 18, 19, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.personas",
+            "settings.connections"
+          ],
+          "widgetLocations": {
+            "settings.connections": "floating",
+            "settings.custom-theme": "left",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-004",
+        "authority": {
+          "id": "deep-recording-floating-connections",
+          "path": "design/theme-targets/deep-current/recordings/rw2-t59.png",
+          "sha256": "dedb153ccc0119db01a5653b1c7d6463725c877a456c2271062f92fb7f71a8dd"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "5dc0b4fdf2fe6e9d36deaed98081d75186870f4264e0dcb40b302a7c9cd77899",
+        "expectedSha256": "9e36369cd44fd3a53fdb4323542c265b37780fcf1d53a9c3051c0d5444dcb267",
+        "reviewSha256": "565f30759c313b65ce81db47dd7f4a01439efd36c2b958db656a2a8ed1226b8e"
+      }
+    },
+    "dc-fidelity-deep-right-stack": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/deep-current/recordings/rw2-t67.png",
+      "actualPng": "test-results/conformance/dc-fidelity-deep-right-stack/dc-fidelity-deep-right-stack.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-deep-right-stack/dc-fidelity-deep-right-stack.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-deep-right-stack/dc-fidelity-deep-right-stack.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(8.8px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(11, 18, 19, 0.39)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(167, 184, 178, 1)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(4, 7, 8, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(11, 18, 19, 0.39)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(16, 25, 26, 0.2)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(11, 18, 19, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.characters",
+            "settings.connections"
+          ],
+          "widgetLocations": {
+            "settings.connections": "right",
+            "settings.custom-theme": "left",
+            "story.characters": "right",
+            "story.composer": "composer",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-005",
+        "authority": {
+          "id": "deep-recording-right-stack",
+          "path": "design/theme-targets/deep-current/recordings/rw2-t67.png",
+          "sha256": "f365b4a925be6d0aae43c7d18c17d446edbb6e2e06956466811307f7106f5dcc"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "97417e9ad8ab0f2023e53591d82e34e2687554fa6a001e11605350fe3455b2b1",
+        "expectedSha256": "23c77256572d2b86d5733304d8f57feed23a1cc02f5b51056e8abf63cd297325",
+        "reviewSha256": "610eeca15425cb9b1c4aecfb88adf1f54422ea5543155d7e8082f19ee15c0f74"
+      }
+    },
+    "dc-fidelity-deep-widget-shelf": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/deep-current/recordings/rw2-t76.png",
+      "actualPng": "test-results/conformance/dc-fidelity-deep-widget-shelf/dc-fidelity-deep-widget-shelf.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-deep-widget-shelf/dc-fidelity-deep-widget-shelf.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-deep-widget-shelf/dc-fidelity-deep-widget-shelf.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 115,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": true
+            },
+            "styles": {
+              "backdropFilter": "blur(8.8px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(11, 18, 19, 0.39)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(167, 184, 178, 1)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 40.5,
+              "height": 35,
+              "right": 1789.22,
+              "width": 152.3,
+              "x": 1636.92,
+              "y": 5.5
+            },
+            "overflow": {
+              "clientHeight": 35,
+              "clientWidth": 152,
+              "scrollHeight": 110,
+              "scrollWidth": 152,
+              "x": false,
+              "y": true
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(4, 7, 8, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(11, 18, 19, 0.39)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(16, 25, 26, 0.2)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(11, 18, 19, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "story.transcript",
+            "story.composer",
+            "story.personas",
+            "settings.connections"
+          ],
+          "widgetLocations": {
+            "settings.connections": "right",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-006",
+        "authority": {
+          "id": "deep-recording-widget-shelf",
+          "path": "design/theme-targets/deep-current/recordings/rw2-t76.png",
+          "sha256": "c1cf2d281a2c900056c7b5bdb3507e7f4caeae77619129b75f068421bf3b0ac6"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "5dc0b4fdf2fe6e9d36deaed98081d75186870f4264e0dcb40b302a7c9cd77899",
+        "expectedSha256": "b3489f7d6ada1a5f6b4a2eb88139617969601ab63c00a8cdda47789bc99a548c",
+        "reviewSha256": "fa2ee5f4933fc176cf6676038ac38a0aef3c67134100fcf346fdb99dca55cdcd"
+      }
+    },
+    "dc-fidelity-deep-restored-theme-tab": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/deep-current/recordings/rw2-t84.png",
+      "actualPng": "test-results/conformance/dc-fidelity-deep-restored-theme-tab/dc-fidelity-deep-restored-theme-tab.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-deep-restored-theme-tab/dc-fidelity-deep-restored-theme-tab.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-deep-restored-theme-tab/dc-fidelity-deep-restored-theme-tab.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(8.8px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(11, 18, 19, 0.39)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(167, 184, 178, 1)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(4, 7, 8, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(11, 18, 19, 0.39)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "widgetHeader": {
+            "background": "rgba(11, 18, 19, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.personas"
+          ],
+          "widgetLocations": {
+            "settings.custom-theme": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-007",
+        "authority": {
+          "id": "deep-recording-restored-theme-tab",
+          "path": "design/theme-targets/deep-current/recordings/rw2-t84.png",
+          "sha256": "5f8313d53802fe9a783a684616bc685c752325e4bd039e94d6a75cc708b5f7d9"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "97417e9ad8ab0f2023e53591d82e34e2687554fa6a001e11605350fe3455b2b1",
+        "expectedSha256": "665b940b290e320f77edd11a0dc105bb22425b38698c0f9d5abb38c4e7ad76ec",
+        "reviewSha256": "eaf734ac7ab43e1c8079c535f2a5eceaa1ce59c0cf6fe4dec7ea2fb7d3179da8"
+      }
+    },
+    "dc-fidelity-deep-canvas-ink": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/deep-current/recordings/rw2-1-t2.png",
+      "actualPng": "test-results/conformance/dc-fidelity-deep-canvas-ink/dc-fidelity-deep-canvas-ink.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-deep-canvas-ink/dc-fidelity-deep-canvas-ink.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-deep-canvas-ink/dc-fidelity-deep-canvas-ink.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(165, 178, 174, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(8.8px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(11, 18, 19, 0.39)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(165, 178, 174, 1)",
+              "color": "rgba(165, 178, 174, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(16, 34, 39, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(11, 18, 19, 0.39)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(29, 36, 37, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(29, 36, 37, 0.2)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(29, 36, 37, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(11, 18, 19, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.room-ambience",
+            "story.personas"
+          ],
+          "widgetLocations": {
+            "settings.custom-theme": "left",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.room-ambience": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-008",
+        "authority": {
+          "id": "deep-recording-canvas-ink",
+          "path": "design/theme-targets/deep-current/recordings/rw2-1-t2.png",
+          "sha256": "343267f966a3d1a7e0c8dace8adfc886792708e45ca2dd472a79539f6f23f11b"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "f9b22bf057ae4ea2644b07bebe474af350507b5edf214c3f0e1faa90bf7f6af2",
+        "expectedSha256": "4b08416eca9c4626435798b5976c42d38fbd16e222f6ff4663215789f9b97692",
+        "reviewSha256": "812c45564c57fa4b370b579b31dd27469fe2d0a1e430a7f27adccee45d78e58b"
+      }
+    },
+    "dc-fidelity-deep-control-chrome": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/deep-current/recordings/rw2-1-t14.png",
+      "actualPng": "test-results/conformance/dc-fidelity-deep-control-chrome/dc-fidelity-deep-control-chrome.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-deep-control-chrome/dc-fidelity-deep-control-chrome.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-deep-control-chrome/dc-fidelity-deep-control-chrome.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(165, 178, 174, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(8.8px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(54, 3, 8, 0.39)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(165, 178, 174, 1)",
+              "color": "rgba(165, 178, 174, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(16, 34, 39, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(54, 3, 8, 0.39)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(29, 36, 37, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(29, 36, 37, 0.2)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(29, 36, 37, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(54, 3, 8, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.room-ambience",
+            "story.personas"
+          ],
+          "widgetLocations": {
+            "settings.custom-theme": "left",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.room-ambience": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-009",
+        "authority": {
+          "id": "deep-recording-control-chrome",
+          "path": "design/theme-targets/deep-current/recordings/rw2-1-t14.png",
+          "sha256": "131540f086240423291473b0cd5ec0106ac0054e5a9df3e3b524123580853aa7"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "b96c53b977307d96598c4467c29df5b171578d0141f9d7a1a4408c167d1815e9",
+        "expectedSha256": "8d1b4507e537a63eb6a642c02d0485d174cac120b963f89879e2abe0ee465da1",
+        "reviewSha256": "605415cd98fb2fe8f50f1598fcbc0199cc75f21e4066b74b141b84ccaa14fe59"
+      }
+    },
+    "dc-fidelity-deep-ambient-chrome": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/deep-current/recordings/rw2-1-t26.png",
+      "actualPng": "test-results/conformance/dc-fidelity-deep-ambient-chrome/dc-fidelity-deep-ambient-chrome.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-deep-ambient-chrome/dc-fidelity-deep-ambient-chrome.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-deep-ambient-chrome/dc-fidelity-deep-ambient-chrome.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(165, 178, 174, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(20px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(54, 3, 8, 0.6)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(255, 255, 255, 1)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(255, 255, 255, 1)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(255, 255, 255, 1)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(165, 178, 174, 1)",
+              "color": "rgba(165, 178, 174, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(16, 34, 39, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(54, 3, 8, 0.6)",
+            "blur": 20,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(29, 36, 37, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(255, 255, 255)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(29, 36, 37, 0.2)",
+            "blur": 20,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(29, 36, 37, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(54, 3, 8, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.room-ambience",
+            "story.personas"
+          ],
+          "widgetLocations": {
+            "settings.custom-theme": "left",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.room-ambience": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-010",
+        "authority": {
+          "id": "deep-recording-ambient-chrome",
+          "path": "design/theme-targets/deep-current/recordings/rw2-1-t26.png",
+          "sha256": "c36e7ad1a28660c2dae68fafc84880887016cbeb1843d530ec347ad2b88b2653"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "eea1e5c97576578283aa3c88dd1bffe0a1a8e512dd9c2b9cd1714b38028158d6",
+        "expectedSha256": "2abd65386bd943279b0b06494568e6544e66705035cc422ba04510b3449fa489",
+        "reviewSha256": "41ce7ec4bc93b4b8fe301fa62c9630d9008c0631bd7796ad1ddf750454d27590"
+      }
+    },
+    "dc-fidelity-deep-interface-text": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/deep-current/recordings/rw2-1-t39.png",
+      "actualPng": "test-results/conformance/dc-fidelity-deep-interface-text/dc-fidelity-deep-interface-text.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-deep-interface-text/dc-fidelity-deep-interface-text.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-deep-interface-text/dc-fidelity-deep-interface-text.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(165, 178, 174, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(20px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(54, 3, 8, 0.6)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(255, 255, 255, 1)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(255, 255, 255, 1)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(255, 255, 255, 1)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(165, 178, 174, 1)",
+              "color": "rgba(165, 178, 174, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(16, 34, 39, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(54, 3, 8, 0.6)",
+            "blur": 20,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(29, 36, 37, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(255, 255, 255)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(29, 36, 37, 0.2)",
+            "blur": 20,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(29, 36, 37, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(54, 3, 8, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.room-ambience",
+            "story.personas"
+          ],
+          "widgetLocations": {
+            "settings.custom-theme": "left",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.room-ambience": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-011",
+        "authority": {
+          "id": "deep-recording-interface-text",
+          "path": "design/theme-targets/deep-current/recordings/rw2-1-t39.png",
+          "sha256": "1f2f08a310ff15c9f9b53b1ab9e66ed7e774270f9df66db59ce44ccd6872a735"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "ed73a172b4321f80d7c331ee38a7f3b49af1562a6cc3d812c348e44b71bba278",
+        "expectedSha256": "2abd65386bd943279b0b06494568e6544e66705035cc422ba04510b3449fa489",
+        "reviewSha256": "3a972d4faf302c9bdb58bfe04b714bb3d46eba35d40b0d9e3ff0b9db588c93b9"
+      }
+    },
+    "dc-fidelity-deep-muted-chrome": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/deep-current/recordings/rw2-1-t60.png",
+      "actualPng": "test-results/conformance/dc-fidelity-deep-muted-chrome/dc-fidelity-deep-muted-chrome.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-deep-muted-chrome/dc-fidelity-deep-muted-chrome.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-deep-muted-chrome/dc-fidelity-deep-muted-chrome.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(165, 178, 174, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(20px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(54, 3, 8, 0.6)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(255, 255, 255, 1)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(16, 34, 39, 0)",
+              "borderTopColor": "rgba(255, 255, 255, 1)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(255, 255, 255, 1)",
+              "color": "rgba(255, 255, 255, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(165, 178, 174, 1)",
+              "color": "rgba(165, 178, 174, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(16, 34, 39, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(54, 3, 8, 0.6)",
+            "blur": 20,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(29, 36, 37, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(255, 255, 255)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(29, 36, 37, 0.2)",
+            "blur": 20,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(29, 36, 37, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(54, 3, 8, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.room-ambience",
+            "story.personas"
+          ],
+          "widgetLocations": {
+            "settings.custom-theme": "left",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.room-ambience": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-012",
+        "authority": {
+          "id": "deep-recording-muted-chrome",
+          "path": "design/theme-targets/deep-current/recordings/rw2-1-t60.png",
+          "sha256": "61e80edc61d6cd78b853e86474486470abdf6c2d27c29eafb5445b6c227d9520"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "4d8a1897bb2188d95e37d56be224b5965d191d2a281e2572649bb61205cfcfde",
+        "expectedSha256": "2abd65386bd943279b0b06494568e6544e66705035cc422ba04510b3449fa489",
+        "reviewSha256": "a060559dbb7a741387c6f1a1cb2886c5d75d7f31483ec64e9a59d3782c4ddd8e"
+      }
+    },
+    "dc-fidelity-ash-amber-final": {
+      "viewport": {
+        "width": 1920,
+        "height": 1280
+      },
+      "referencePng": "design/theme-targets/ash-amber/sonderui-rw2-1-t80.png",
+      "actualPng": "test-results/conformance/dc-fidelity-ash-amber-final/dc-fidelity-ash-amber-final.actual.png",
+      "overlayPng": "test-results/conformance/dc-fidelity-ash-amber-final/dc-fidelity-ash-amber-final.overlay.png",
+      "diffPng": "test-results/conformance/dc-fidelity-ash-amber-final/dc-fidelity-ash-amber-final.diff.png",
+      "expected": {
+        "functional": {
+          "identityStable": true,
+          "keyboardAccessible": true,
+          "noOverflow": true,
+          "stateReached": true
+        },
+        "geometry": {
+          "composer": {
+            "box": {
+              "bottom": 1257,
+              "height": 56,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1201
+            },
+            "overflow": {
+              "clientHeight": 54,
+              "clientWidth": 798,
+              "scrollHeight": 54,
+              "scrollWidth": 798,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(12px) saturate(0.8)",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 0.14)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "floating": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          },
+          "header": {
+            "box": {
+              "bottom": 46,
+              "height": 46,
+              "right": 1920,
+              "width": 1920,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 44,
+              "clientWidth": 1918,
+              "scrollHeight": 44,
+              "scrollWidth": 1918,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "blur(8.8px) saturate(0.9) brightness(1)",
+              "backgroundColor": "rgba(11, 18, 19, 0.39)",
+              "borderTopColor": "rgba(95, 128, 123, 0.3)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "left": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 334,
+              "width": 334,
+              "x": 0,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 334,
+              "scrollHeight": 1234,
+              "scrollWidth": 334,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "right": {
+            "box": {
+              "bottom": 1280,
+              "height": 1234,
+              "right": 1920,
+              "width": 335,
+              "x": 1585,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1234,
+              "clientWidth": 335,
+              "scrollHeight": 1234,
+              "scrollWidth": 335,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(4, 7, 8, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "stage": {
+            "box": {
+              "bottom": 1216,
+              "height": 1170,
+              "right": 1585,
+              "width": 1251,
+              "x": 334,
+              "y": 46
+            },
+            "overflow": {
+              "clientHeight": 1170,
+              "clientWidth": 1251,
+              "scrollHeight": 1170,
+              "scrollWidth": 1251,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(231, 246, 240, 1)",
+              "color": "rgba(231, 246, 240, 1)",
+              "fontFamily": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif"
+            },
+            "visible": true
+          },
+          "story": {
+            "box": {
+              "bottom": 1156,
+              "height": 150.5,
+              "right": 1359.5,
+              "width": 800,
+              "x": 559.5,
+              "y": 1005.5
+            },
+            "overflow": {
+              "clientHeight": 151,
+              "clientWidth": 800,
+              "scrollHeight": 151,
+              "scrollWidth": 800,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "none",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "rgba(167, 184, 178, 1)",
+              "color": "rgba(167, 184, 178, 1)",
+              "fontFamily": "\"Pomegranate Serif\", ui-serif, serif"
+            },
+            "visible": true
+          },
+          "widgetShelf": {
+            "box": {
+              "bottom": 0,
+              "height": 0,
+              "right": 0,
+              "width": 0,
+              "x": 0,
+              "y": 0
+            },
+            "overflow": {
+              "clientHeight": 0,
+              "clientWidth": 0,
+              "scrollHeight": 0,
+              "scrollWidth": 0,
+              "x": false,
+              "y": false
+            },
+            "styles": {
+              "backdropFilter": "",
+              "backgroundColor": "",
+              "borderTopColor": "",
+              "color": "",
+              "fontFamily": ""
+            },
+            "visible": false
+          }
+        },
+        "materials": {
+          "composer": {
+            "background": "rgba(4, 7, 8, 0)",
+            "blur": 12,
+            "border": "1px solid rgba(231, 246, 240, 0.14)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "dialog": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "floating": {
+            "background": "",
+            "blur": 0,
+            "border": "",
+            "opacity": 0,
+            "radius": 0,
+            "shadow": ""
+          },
+          "header": {
+            "background": "rgba(11, 18, 19, 0.39)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.3)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.34) 0px 16px 44px -6px"
+          },
+          "storyVeil": {
+            "background": "rgba(0, 0, 0, 0)",
+            "blur": 0,
+            "border": "0px none rgb(231, 246, 240)",
+            "opacity": 1,
+            "radius": 0,
+            "shadow": "none"
+          },
+          "widget": {
+            "background": "rgba(16, 25, 26, 0.2)",
+            "blur": 8.8,
+            "border": "1px solid rgba(95, 128, 123, 0.34)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "rgba(16, 25, 26, 0.08) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 38px -6px"
+          },
+          "widgetHeader": {
+            "background": "rgba(11, 18, 19, 0.34)",
+            "blur": 0,
+            "border": "0px solid rgba(40, 65, 63, 0.55)",
+            "opacity": 1,
+            "radius": 4,
+            "shadow": "none"
+          }
+        },
+        "structure": {
+          "panelTabs": [
+            "Scene",
+            "Library",
+            "Settings"
+          ],
+          "regions": [
+            "shelf",
+            "left",
+            "stage",
+            "composer",
+            "right"
+          ],
+          "visibleWidgets": [
+            "story.characters",
+            "settings.custom-theme",
+            "story.transcript",
+            "story.composer",
+            "story.room-ambience",
+            "story.personas"
+          ],
+          "widgetLocations": {
+            "settings.custom-theme": "left",
+            "story.characters": "left",
+            "story.composer": "composer",
+            "story.personas": "right",
+            "story.room-ambience": "right",
+            "story.transcript": "stage"
+          }
+        },
+        "typography": {
+          "composer": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 12,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "navigation": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 13.2,
+            "size": 11,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "storyBody": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "storyHeading": {
+            "family": "\"Pomegranate Serif\", ui-serif, serif",
+            "lineHeight": 28.44,
+            "size": 18,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 400
+          },
+          "technical": {
+            "family": "\"Pomegranate Mono\", ui-monospace, monospace",
+            "lineHeight": 10.8,
+            "size": 9,
+            "tracking": 0.36,
+            "transform": "uppercase",
+            "weight": 400
+          },
+          "widgetTitle": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 19.2,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          },
+          "wordmark": {
+            "family": "\"Pomegranate Sans\", ui-sans-serif, system-ui, sans-serif",
+            "lineHeight": 16,
+            "size": 16,
+            "tracking": 0,
+            "transform": "none",
+            "weight": 450
+          }
+        }
+      },
+      "review": {
+        "schemaVersion": "pomegranate.ui.deep-fidelity-toolkit-regression-review.v1",
+        "critic": "source-gated-toolkit-regression",
+        "ledgerId": "DC-FID-013",
+        "authority": {
+          "id": "ash-amber-recording-frame",
+          "path": "design/theme-targets/ash-amber/sonderui-rw2-1-t80.png",
+          "sha256": "6403a7bcfd8f43195fa42c5d9715cc79964c8b7569f47c22fdeefd1b89804997"
+        },
+        "authorityMeasurementSha256": "5a82fa33917e7d3af5e731aac89509b345781ead7552f6f2942ad18da8be1bbd",
+        "recordingLandmarksSha256": "440c812b12baf691d30126bec79563b4bd299958a9308528d5852b6457c7bb5d",
+        "expectedSha256": "80e32ffa6fc0725df0aa4f710e246b3fc88c529fad98732c1b12d308464ace6c",
+        "reviewSha256": "523d8ed25fab98f8f3a09e4afffff864d72815f9bd4eda9b587e4c051c133870"
+      }
+    }
+  }
+}

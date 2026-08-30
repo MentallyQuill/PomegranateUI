@@ -99,7 +99,10 @@ export function validateDiscrepancyLedger(
         { discrepancyId: entry.id, reason: `unknown scenario ${entry.scenario}` }
       );
     }
-    const expectedPrefix = scenario.target === 'deep-current' ? 'DC-' : scenario.target === 'pom-neutral' ? 'PN-' : 'BN-';
+    const expectedPrefix = scenario.target === 'deep-current' ? 'DC-'
+      : scenario.target === 'pom-neutral' ? 'PN-'
+        : scenario.target === 'bunny' ? 'BN-'
+          : 'AA-';
     if (!entry.id.startsWith(expectedPrefix)) entryError(entry, `identity must use ${expectedPrefix}`);
     if (!allowedCategories.has(entry.category)) entryError(entry, `unknown category ${entry.category}`);
     if (!allowedSeverities.has(entry.severity)) entryError(entry, `unknown severity ${entry.severity}`);

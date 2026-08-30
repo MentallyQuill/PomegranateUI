@@ -27,7 +27,9 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
   assert.equal(manifest.schema, 'pomegranate.ui.recipes.v1');
   assert.deepEqual(manifest.recipes.map((entry) => entry.id), [
     'error-state',
+    'icon-action',
     'panel-tabs',
+    'theme-settings',
     'widget-catalog',
     'widget-frame',
     'workbench-surface'
@@ -52,7 +54,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
 test('recipe check mode validates actual source hashes', () => {
   const result = run(['--check']);
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /Recipe registry verified: 5 recipes, 5 files\./);
+  assert.match(result.stdout, /Recipe registry verified: 7 recipes, 18 files\./);
 });
 
 test('recipe copy is clean and refuses to overwrite adopter edits', async () => {
@@ -84,6 +86,20 @@ test('recipe hashes treat LF and CRLF as the same source-owned text', async () =
 
   const refreshed = run(['--copy', 'panel-tabs', '--to', target]);
   assert.equal(refreshed.status, 0, refreshed.stderr || refreshed.stdout);
+});
+
+test('copy-owned Workbench recipes carry optional host title and metadata presentation', async () => {
+  const widgetFrame = await readFile(path.join(root, 'registry', 'recipes', 'widget-frame', 'WidgetFrame.svelte'), 'utf8');
+  assert.match(widgetFrame, /title\?: string/);
+  assert.match(widgetFrame, /meta\?: string/);
+  assert.match(widgetFrame, /class="widget-frame-meta"/);
+
+  for (const file of ['WorkbenchSurface.svelte', 'PanelTemplateSurface.svelte', 'DockRegion.svelte', 'DockShelf.svelte', 'WidgetGroup.svelte']) {
+    const source = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', file), 'utf8');
+    assert.match(source, /titleFor/, `${file} does not carry the host title resolver.`);
+  }
+  const group = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'WidgetGroup.svelte'), 'utf8');
+  assert.match(group, /titleFor\?\.\(frame\) \?\? frame\.title/);
 });
 
 test('recipe copy preflights every destination before writing an upgrade', async () => {

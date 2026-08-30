@@ -11,12 +11,14 @@ import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../conformance/compare.ts';
 import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, writeMeasurementEvidence } from '../conformance/evidence.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
-import { BUNNY_SCENARIOS, DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, hashAuthorityFile, ORIGINAL_THEME_TARGET_SCENARIOS, POM_NEUTRAL_SCENARIOS, validateConformanceManifest } from '../conformance/manifest.ts';
+import { BUNNY_SCENARIOS, DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, DEEP_FIDELITY_SCENARIOS, hashAuthorityFile, ORIGINAL_THEME_TARGET_SCENARIOS, POM_NEUTRAL_SCENARIOS, THEME_AUTHORING_SCENARIOS, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
 import { applyCanonicalShellGeometry, assertScenarioResolution } from '../conformance/runner.ts';
+import { hashReviewValue, validateFidelityRegressionReview } from '../conformance/review.ts';
+import { compareLiveAuthorityFidelity, compareRecordingFrameFidelity } from '../conformance/source-fidelity.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
 import { prepareAtmosphericState } from '../conformance/drivers/reference/atmospheric.ts';
-import { prepareDeepCurrentState } from '../conformance/drivers/workbench-lab/deep-current.ts';
+import { DEEP_RECORDING_IMPLEMENTATION_STATES, prepareDeepCurrentState } from '../conformance/drivers/workbench-lab/deep-current.ts';
 import { VISIBLE_IMPLEMENTATION_REGION_IDS } from '../conformance/drivers/workbench-lab/deep-current.ts';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -164,10 +166,22 @@ test('conformance authorities and viewports expose the independently recorded co
       'prototypes/sonder-baseline/widget-overhaul/sonder-widget-overhaul-regression.html': '79aa122abae1d51dff5d1cf292590efe03a53641b2ff44008e6a165beb3db8b3',
       'design/theme-targets/pom-neutral-reference.html': '6a188907925f0af7157f66017a2015e07dbe599d14413d2a590e390f0d97bd50',
       'design/theme-targets/pomos-reference.html': 'a46dc956b0664643506b5023836cd02fb2e9f64ca538acff1aca7cc7c34a7af9',
-      'design/theme-targets/bunny-reference.html': 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59'
+      'design/theme-targets/bunny-reference.html': 'b718de3bbd9788ff7dd6efb19f11fd12fee12575fc6018f0e2537061625f7a59',
+      'design/theme-targets/ash-amber/sonderui-rw2-1-t80.png': '6403a7bcfd8f43195fa42c5d9715cc79964c8b7569f47c22fdeefd1b89804997',
+      'design/theme-targets/deep-current/recordings/rw2-t52.png': '7eac0f71b594ce5860d8a93eed8a3fce129074933a981f33a6300833e81f5856',
+      'design/theme-targets/deep-current/recordings/rw2-t59.png': 'dedb153ccc0119db01a5653b1c7d6463725c877a456c2271062f92fb7f71a8dd',
+      'design/theme-targets/deep-current/recordings/rw2-t67.png': 'f365b4a925be6d0aae43c7d18c17d446edbb6e2e06956466811307f7106f5dcc',
+      'design/theme-targets/deep-current/recordings/rw2-t76.png': 'c1cf2d281a2c900056c7b5bdb3507e7f4caeae77619129b75f068421bf3b0ac6',
+      'design/theme-targets/deep-current/recordings/rw2-t84.png': '5f8313d53802fe9a783a684616bc685c752325e4bd039e94d6a75cc708b5f7d9',
+      'design/theme-targets/deep-current/recordings/rw2-1-t2.png': '343267f966a3d1a7e0c8dace8adfc886792708e45ca2dd472a79539f6f23f11b',
+      'design/theme-targets/deep-current/recordings/rw2-1-t14.png': '131540f086240423291473b0cd5ec0106ac0054e5a9df3e3b524123580853aa7',
+      'design/theme-targets/deep-current/recordings/rw2-1-t26.png': 'c36e7ad1a28660c2dae68fafc84880887016cbeb1843d530ec347ad2b88b2653',
+      'design/theme-targets/deep-current/recordings/rw2-1-t39.png': '1f2f08a310ff15c9f9b53b1ab9e66ed7e774270f9df66db59ce44ccd6872a735',
+      'design/theme-targets/deep-current/recordings/rw2-1-t60.png': '61e80edc61d6cd78b853e86474486470abdf6c2d27c29eafb5445b6c227d9520'
     }
   );
   assert.deepEqual(Object.fromEntries(CONFORMANCE_VIEWPORTS), {
+    'recording-wide': { width: 1920, height: 1280 },
     wide: { width: 1600, height: 900 },
     standard: { width: 1440, height: 900 },
     medium: { width: 1180, height: 800 },
@@ -270,8 +284,8 @@ test('the target manifest freezes both visual identities across Scene and Catalo
     authorities: new Map(AUTHORITY_RECORDS.map((record) => [record.id, record])),
     viewports: CONFORMANCE_VIEWPORTS,
     driverIds: new Set(['pomos-reference', 'bunny-original-reference', 'workbench-lab']),
-    measurementProfileIds: new Set(['theme-target-behavior']),
-    assertionProfileIds: new Set(['theme-target-behavior']),
+    measurementProfileIds: new Set(['theme-target-behavior', 'bunny-fidelity']),
+    assertionProfileIds: new Set(['theme-target-behavior', 'bunny-fidelity']),
     deviationIds: new Set(),
     hashFile: hashAuthorityFile
   });
@@ -556,6 +570,38 @@ test('the original target profile compares identity and accessibility without fr
   ]);
 });
 
+test('Bunny wide scenarios compare the approved expressive reference vocabulary exactly', () => {
+  assert.deepEqual(BUNNY_SCENARIOS.map(({ measurementProfile }) => measurementProfile), [
+    'bunny-fidelity',
+    'theme-target-behavior',
+    'bunny-fidelity'
+  ]);
+  assert.deepEqual(MEASUREMENT_PROFILES.get('bunny-fidelity')?.map(({ path }) => path), [
+    'functional.targetApplied',
+    'functional.identityStable',
+    'functional.instant',
+    'functional.noHorizontalOverflow',
+    'functional.keyboardAccessible',
+    'functional.scenarioStateReached',
+    'structure.panelTabs',
+    'structure.anchorWidgets',
+    'visual.canvas',
+    'visual.accent',
+    'visual.text',
+    'visual.shelfRadius',
+    'visual.shellRadius',
+    'visual.dockRadius',
+    'visual.widgetRadius',
+    'visual.buttonRadius',
+    'visual.readerRadius',
+    'visual.readerFontSize',
+    'visual.readerLineHeight',
+    'visual.widgetHasGradient',
+    'visual.readerHasMaterial',
+    'visual.readerIntersectsStage'
+  ]);
+});
+
 test('Widget and Catalog profiles gate stable rendered qualities and every lifecycle stage', () => {
   assert.deepEqual(MEASUREMENT_PROFILES.get('deep-current-widget-surface')?.map(({ path }) => path).slice(-3), [
     'visual.darkSurface',
@@ -833,7 +879,10 @@ test('the reviewed theme baseline freezes every target scenario and authority ha
     'utf8'
   ));
   assert.equal(baseline.schemaVersion, 'pomegranate.ui.conformance-baseline.v1');
-  assert.equal(baseline.measurementProfile, 'theme-target-behavior');
+  assert.deepEqual(baseline.measurementProfiles, {
+    default: 'theme-target-behavior',
+    bunnyWide: 'bunny-fidelity'
+  });
   assert.deepEqual(baseline.authorities, {
     'pomos-reference': AUTHORITY_RECORDS.find(({ id }) => id === 'pomos-reference').sha256,
     'bunny-original-reference': AUTHORITY_RECORDS.find(({ id }) => id === 'bunny-original-reference').sha256
@@ -849,11 +898,265 @@ test('the reviewed theme baseline freezes every target scenario and authority ha
   }
 });
 
+test('the exact Deep fidelity contract covers every geometry, typography, material, structure, and functional path', () => {
+  const profile = MEASUREMENT_PROFILES.get('deep-fidelity');
+  assert.ok(profile);
+  const paths = new Set(profile.map(({ path }) => path));
+  for (const region of ['header', 'left', 'stage', 'right', 'story', 'composer', 'floating', 'widgetShelf']) {
+    for (const field of ['x', 'y', 'width', 'height', 'right', 'bottom']) {
+      assert.ok(paths.has(`geometry.${region}.box.${field}`), `missing geometry.${region}.box.${field}`);
+    }
+    for (const field of ['x', 'y']) {
+      const definition = profile.find(({ path }) => path === `geometry.${region}.overflow.${field}`);
+      assert.equal(definition?.comparator, 'equal');
+      assert.equal(definition?.tolerance ?? 0, 0);
+      assert.equal(definition?.category, 'structure');
+      assert.equal(definition?.severity, 'P1');
+    }
+    for (const field of ['scrollWidth', 'clientWidth', 'scrollHeight', 'clientHeight']) {
+      assert.deepEqual(
+        profile.find(({ path }) => path === `geometry.${region}.overflow.${field}`),
+        { path: `geometry.${region}.overflow.${field}`, comparator: 'within', tolerance: 1, category: 'geometry', severity: 'P1' }
+      );
+    }
+  }
+  for (const role of ['wordmark', 'navigation', 'widgetTitle', 'technical', 'storyHeading', 'storyBody', 'composer']) {
+    for (const field of ['family', 'size', 'weight', 'lineHeight', 'tracking', 'transform']) {
+      assert.ok(paths.has(`typography.${role}.${field}`), `missing typography.${role}.${field}`);
+    }
+  }
+  for (const material of ['header', 'widget', 'widgetHeader', 'storyVeil', 'composer', 'floating', 'dialog']) {
+    for (const field of ['background', 'opacity', 'blur', 'border', 'radius', 'shadow']) {
+      assert.ok(paths.has(`materials.${material}.${field}`), `missing materials.${material}.${field}`);
+    }
+  }
+  assert.deepEqual(
+    ['structure.panelTabs', 'structure.regions', 'structure.visibleWidgets', 'structure.widgetLocations', 'functional.stateReached', 'functional.identityStable', 'functional.noOverflow', 'functional.keyboardAccessible']
+      .filter((path) => !paths.has(path)),
+    []
+  );
+});
+
+test('exact Deep fidelity scenarios retain both executable authorities and every recording frame hash', async () => {
+  const recordingManifest = JSON.parse(await readFile(
+    path.join(repositoryRoot, 'design/theme-targets/deep-current/recordings/reference.json'),
+    'utf8'
+  ));
+  const scenariosByAuthorityPath = new Map(DEEP_FIDELITY_SCENARIOS.map((scenario) => [scenario.authorityPath, scenario]));
+
+  assert.equal(DEEP_FIDELITY_SCENARIOS.some(({ authority }) => authority === 'atmospheric-workbench'), true);
+  assert.equal(DEEP_FIDELITY_SCENARIOS.some(({ authority }) => authority === 'widget-overhaul'), true);
+  for (const frame of recordingManifest.frames) {
+    const scenario = scenariosByAuthorityPath.get(frame.file);
+    assert.ok(scenario, `missing exact-fidelity scenario for ${frame.file}`);
+    assert.equal(scenario.authoritySha256, frame.sha256.toLowerCase());
+    assert.equal(scenario.viewport, 'recording-wide');
+    assert.equal(scenario.measurementProfile, 'deep-fidelity');
+  }
+});
+
+test('the Lab fidelity driver has one explicit implementation state for every Deep recording', () => {
+  const recordingStates = DEEP_FIDELITY_SCENARIOS
+    .filter(({ authorityPath }) => authorityPath.includes('deep-current/recordings/'))
+    .map(({ implementationState }) => implementationState);
+  assert.deepEqual([...DEEP_RECORDING_IMPLEMENTATION_STATES], recordingStates);
+});
+
+test('exact Deep fidelity stores an inspectable original-resolution baseline and ledger', async () => {
+  const baseline = JSON.parse(await readFile(
+    path.join(repositoryRoot, 'tests/conformance/baselines/deep-fidelity.json'),
+    'utf8'
+  ));
+  assert.equal(baseline.schemaVersion, 'pomegranate.ui.deep-fidelity.v1');
+  assert.deepEqual(Object.keys(baseline.scenarios), DEEP_FIDELITY_SCENARIOS.map(({ id }) => id));
+  for (const [scenarioId, scenario] of Object.entries(baseline.scenarios)) {
+    const manifestScenario = DEEP_FIDELITY_SCENARIOS.find(({ id }) => id === scenarioId);
+    assert.ok(manifestScenario);
+    assert.equal(scenario.viewport.width, 1920);
+    assert.equal(scenario.viewport.height, 1280);
+    assert.match(scenario.referencePng, /\.png$/);
+    assert.match(scenario.actualPng, /\.png$/);
+    assert.match(scenario.overlayPng, /\.png$/);
+    assert.match(scenario.diffPng, /\.png$/);
+    assert.ok(scenario.expected, 'missing reviewed normalized fidelity measurement');
+    assert.equal(scenario.review.schemaVersion, 'pomegranate.ui.deep-fidelity-toolkit-regression-review.v1');
+    assert.deepEqual(scenario.review.authority, {
+      id: manifestScenario.authority,
+      path: manifestScenario.authorityPath,
+      sha256: manifestScenario.authoritySha256
+    });
+    assert.equal(scenario.review.expectedSha256, hashReviewValue(scenario.expected));
+    assert.deepEqual(Object.keys(scenario.expected).sort(), [
+      'functional',
+      'geometry',
+      'materials',
+      'structure',
+      'typography'
+    ]);
+  }
+  const ledger = await readFile(path.join(repositoryRoot, 'docs/conformance/deep-fidelity-ledger.md'), 'utf8');
+  assert.match(ledger, /Deep exact-fidelity discrepancy ledger/);
+});
+
+test('source-gated Deep toolkit regression review rejects authority, expected, and critic drift', () => {
+  const scenario = DEEP_FIDELITY_SCENARIOS[0];
+  const reference = { source: 'fresh authority measurement' };
+  const expected = { target: 'reviewed normalized target' };
+  const review = {
+    schemaVersion: 'pomegranate.ui.deep-fidelity-toolkit-regression-review.v1',
+    critic: 'source-gated-toolkit-regression',
+    ledgerId: 'DC-FID-001',
+    authority: { id: scenario.authority, path: scenario.authorityPath, sha256: scenario.authoritySha256 },
+    authorityMeasurementSha256: hashReviewValue(reference),
+    recordingLandmarksSha256: null,
+    expectedSha256: hashReviewValue(expected)
+  };
+  review.reviewSha256 = hashReviewValue(review);
+
+  assert.doesNotThrow(() => validateFidelityRegressionReview({
+    scenario,
+    ledgerId: 'DC-FID-001',
+    expected,
+    reference,
+    recordingLandmarks: null,
+    review
+  }));
+  assert.throws(() => validateFidelityRegressionReview({
+    scenario,
+    ledgerId: 'DC-FID-001',
+    expected: { target: 'self-approved replacement' },
+    reference,
+    recordingLandmarks: null,
+    review
+  }), (error) => error.code === 'MANIFEST_INVALID' && /expected measurement hash drifted/.test(error.message));
+  assert.throws(() => validateFidelityRegressionReview({
+    scenario,
+    ledgerId: 'DC-FID-001',
+    expected,
+    reference: { source: 'different authority measurement' },
+    recordingLandmarks: null,
+    review
+  }), (error) => error.code === 'REFERENCE_HASH_DRIFT' && /authority measurement hash drifted/.test(error.message));
+});
+
+test('Deep exact fidelity is independently gated by live authority structure and recording pixels', () => {
+  const region = (width, height) => ({
+    box: { x: 0, y: 0, width, height, right: width, bottom: height },
+    visible: true,
+    overflow: { x: false, y: false, scrollWidth: width, clientWidth: width, scrollHeight: height, clientHeight: height },
+    styles: { backgroundColor: 'rgba(0, 0, 0, 1)', borderTopColor: 'rgba(255, 255, 255, 1)', color: 'rgba(255, 255, 255, 1)', fontFamily: 'sans-serif', backdropFilter: 'none' }
+  });
+  const measurement = (scale = 1) => ({
+    functional: { identityStable: true, keyboardAccessible: true, noOverflow: true, stateReached: true },
+    geometry: {
+      header: region(1920, 40 * scale), left: region(286 * scale, 1165), stage: region(1300 * scale, 1165), right: region(286 * scale, 1165),
+      story: region(680 * scale, 140), composer: region(680 * scale, 64), floating: region(0, 0), widgetShelf: region(0, 0)
+    },
+    materials: { header: { radius: 4 } },
+    structure: { panelTabs: ['Scene', 'Library', 'Settings'] },
+    typography: { storyBody: { size: 15 * scale } }
+  });
+  assert.equal(compareLiveAuthorityFidelity(measurement(), measurement(1.15)).pass, true);
+  assert.equal(compareLiveAuthorityFidelity(measurement(), measurement(1.8)).pass, false);
+
+  const authority = new PNG({ width: 192, height: 128 });
+  for (let y = 0; y < authority.height; y += 1) {
+    for (let x = 0; x < authority.width; x += 1) {
+      const offset = (y * authority.width + x) * 4;
+      const value = (x * 3 + y * 2) % 256;
+      authority.data[offset] = value;
+      authority.data[offset + 1] = value;
+      authority.data[offset + 2] = value;
+      authority.data[offset + 3] = 255;
+    }
+  }
+  const matching = PNG.sync.write(authority);
+  const unrelated = new PNG({ width: 192, height: 128 });
+  unrelated.data.fill(0);
+  for (let offset = 3; offset < unrelated.data.length; offset += 4) unrelated.data[offset] = 255;
+  assert.equal(compareRecordingFrameFidelity(matching, matching).pass, true);
+  assert.equal(compareRecordingFrameFidelity(matching, PNG.sync.write(unrelated)).pass, false);
+});
+
+test('Theme authoring exposes four literal fail-closed scenarios', async () => {
+  assert.deepEqual(THEME_AUTHORING_SCENARIOS.map(({ id, implementationState }) => [id, implementationState]), [
+    ['theme-authoring-ash-seed', 'ash-seed'],
+    ['theme-authoring-last-valid', 'last-valid'],
+    ['theme-authoring-ambient-precedence', 'ambient-precedence'],
+    ['theme-authoring-round-trip', 'round-trip']
+  ]);
+  assert.equal(THEME_AUTHORING_SCENARIOS.every((scenario) => (
+    scenario.target === 'ash-amber'
+      && scenario.authority === 'ash-amber-recording-frame'
+      && scenario.measurementProfile === 'theme-authoring'
+      && scenario.assertionProfile === 'theme-authoring'
+  )), true);
+  const validated = await validateConformanceManifest(THEME_AUTHORING_SCENARIOS, {
+    repositoryRoot,
+    authorities: new Map(AUTHORITY_RECORDS.map((record) => [record.id, record])),
+    viewports: CONFORMANCE_VIEWPORTS,
+    driverIds: new Set(['ash-amber-recording-frame', 'workbench-lab']),
+    measurementProfileIds: new Set(['theme-authoring']),
+    assertionProfileIds: new Set(['theme-authoring']),
+    deviationIds: new Set(),
+    hashFile: hashAuthorityFile
+  });
+  assert.equal(validated.scenarios.length, 4);
+});
+
+test('Theme authoring baseline freezes approved literals without importing the target', async () => {
+  const baselineText = await readFile(path.join(repositoryRoot, 'tests/conformance/baselines/theme-authoring.json'), 'utf8');
+  const baseline = JSON.parse(baselineText);
+  assert.equal(baseline.schemaVersion, 'pomegranate.ui.conformance-baseline.v1');
+  assert.equal(baseline.authority, 'approved-theme-authoring-spec');
+  assert.equal(baseline.measurementProfile, 'theme-authoring');
+  assert.deepEqual(Object.keys(baseline.scenarios), THEME_AUTHORING_SCENARIOS.map(({ id }) => id));
+  assert.deepEqual(baseline.scenarios['theme-authoring-ash-seed'].outcome.editable.colors, {
+    canvas: '#242321', glass: '#302E2A', chrome: '#625B52', ambient: '#51493E', text: '#F3F0EA', source: '#D2B57A'
+  });
+  assert.deepEqual(baseline.scenarios['theme-authoring-ash-seed'].outcome.editable.materials, {
+    glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50
+  });
+  assert.deepEqual(baseline.scenarios['theme-authoring-ash-seed'].outcome.editable.ambient, {
+    x: 57, y: 97, radius: 60, power: 56
+  });
+  assert.equal(baseline.scenarios['theme-authoring-ash-seed'].outcome.applied.colors.accent, '#C18A3D');
+  assert.doesNotMatch(baselineText, /ASH_AMBER_TARGET|ash-amber\.ts|presets/);
+});
+
+test('Theme authoring driver measures editable and applied state independently', async () => {
+  const driver = await readFile(path.join(repositoryRoot, 'tests/conformance/drivers/workbench-lab/theme-authoring.ts'), 'utf8');
+  assert.match(driver, /Hex color/);
+  assert.match(driver, /--pom-color-canvas/);
+  assert.match(driver, /--pom-color-accent/);
+  assert.match(driver, /pomegranate-ui\.workbench-lab\.theme-draft\.v1/);
+  assert.match(driver, /resolveAmbientProfile/);
+  assert.doesNotMatch(driver, /ASH_AMBER_TARGET|ash-amber\.ts|presets|drivers\/reference/);
+});
+
+test('Theme authoring profile and ledger gate every required outcome', async () => {
+  assert.deepEqual(MEASUREMENT_PROFILES.get('theme-authoring')?.map(({ path }) => path), [
+    'functional.controlsPresent',
+    'functional.targetApplied',
+    'functional.appliedEditableIndependent',
+    'functional.workbenchIdentityStable',
+    'functional.layoutIndependent',
+    'outcome'
+  ]);
+  const ledger = parseDiscrepancyLedger(await readFile(
+    path.join(repositoryRoot, 'docs/conformance/theme-authoring-ledger.md'),
+    'utf8'
+  ));
+  assert.deepEqual(validateDiscrepancyLedger(ledger, THEME_AUTHORING_SCENARIOS).entries, []);
+});
+
 test('inspection requires one exact known scenario without permitting update mode', () => {
   assert.equal(parseInspectionArguments(['--scenario', 'dc-shell-wide']).id, 'dc-shell-wide');
   assert.equal(parseInspectionArguments(['--scenario', 'dc-int-tab-merge']).id, 'dc-int-tab-merge');
   assert.equal(parseInspectionArguments(['--scenario', 'pn-scene-compact']).id, 'pn-scene-compact');
   assert.equal(parseInspectionArguments(['--scenario', 'bn-catalog-wide']).id, 'bn-catalog-wide');
+  assert.equal(parseInspectionArguments(['--scenario', 'aa-scene-wide']).id, 'aa-scene-wide');
+  assert.equal(parseInspectionArguments(['--scenario', 'theme-authoring-round-trip']).id, 'theme-authoring-round-trip');
   assert.throws(() => parseInspectionArguments([]), /--scenario <id> is required/);
   assert.throws(() => parseInspectionArguments(['--scenario', 'unknown']), /Unknown conformance scenario/);
   assert.throws(() => parseInspectionArguments(['--scenario', 'dc-shell-wide', '--update-snapshots']), /Unexpected inspection argument/);

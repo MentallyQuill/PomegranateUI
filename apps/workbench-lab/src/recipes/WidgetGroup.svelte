@@ -5,11 +5,13 @@
   let {
     frames,
     store,
-    renderWidget
+    renderWidget,
+    titleFor
   }: {
     frames: readonly WidgetFrameProjection[];
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
+    titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
   } = $props();
 
   const ordered = $derived([...frames].sort((left, right) => {
@@ -42,6 +44,7 @@
 <section class="widget-group" role="group" aria-label="Widget group" data-widget-group data-pom-part="group.surface">
   <div class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets" data-pom-part="widget.header">
     {#each ordered as frame, index (frame.instanceId)}
+      {@const title = titleFor?.(frame) ?? frame.title}
       <span>
         <button
           type="button"
@@ -52,12 +55,12 @@
           tabindex={frame.instanceId === active?.instanceId ? 0 : -1}
           onclick={() => activate(frame)}
           onkeydown={(event) => tabKeyDown(event, frame)}
-        >{frame.title}</button>
+        >{title}</button>
         <button
           type="button"
           class="widget-group-move"
           data-pom-part="button.icon"
-          aria-label={`Move ${frame.title} left`}
+          aria-label={`Move ${title} left`}
           disabled={index === 0}
           onclick={() => move(frame, -1)}
         >Move left</button>
@@ -65,7 +68,7 @@
           type="button"
           class="widget-group-move"
           data-pom-part="button.icon"
-          aria-label={`Move ${frame.title} right`}
+          aria-label={`Move ${title} right`}
           disabled={index === ordered.length - 1}
           onclick={() => move(frame, 1)}
         >Move right</button>

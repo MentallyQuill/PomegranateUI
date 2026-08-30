@@ -20,12 +20,16 @@ const libraryPanel = asPanelId('library');
 
 function state(): WorkbenchState {
   return {
-    schema: 'pomegranate.ui.state.v1',
+    schema: 'pomegranate.ui.state.v2',
     revision: 0,
     activePanelId: scenePanel,
     panels: [
       { id: scenePanel, name: 'Scene', templateId: 'story-stage.v1', order: 1 },
       { id: libraryPanel, name: 'Library', templateId: 'columns.v1', order: 0 }
+    ],
+    shelves: [
+      { id: 'primary', panelId: scenePanel, regionId: 'left', order: 0, weight: 1 },
+      { id: 'primary', panelId: scenePanel, regionId: 'stage', order: 0, weight: 1 }
     ],
     widgets: {},
     placements: {}
@@ -100,7 +104,7 @@ describe('framework-neutral view projections', () => {
       title: 'Story Summary',
       capabilities: [],
       defaultConfiguration: {},
-      defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+      defaultPlacement: { kind: 'docked', regionRole: 'left-instruments', shelfId: 'primary' }
     });
     const summaryId = asWidgetInstanceId('summary');
     const notesId = asWidgetInstanceId('notes');
@@ -115,9 +119,9 @@ describe('framework-neutral view projections', () => {
         [floatingId]: { id: floatingId, type: asWidgetType('story.summary'), manifestVersion: '1.0.0', configuration: {} }
       },
       placements: {
-        [summaryId]: { kind: 'docked', panelId: scenePanel, edge: 'left', shelfId: 'primary', order: 1 },
-        [notesId]: { kind: 'docked', panelId: scenePanel, edge: 'left', shelfId: 'primary', order: 0 },
-        [missingId]: { kind: 'docked', panelId: scenePanel, edge: 'main', shelfId: 'primary', order: 0 },
+        [summaryId]: { kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'primary', order: 1 },
+        [notesId]: { kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'primary', order: 0 },
+        [missingId]: { kind: 'docked', panelId: scenePanel, regionId: 'stage', shelfId: 'primary', order: 0 },
         [floatingId]: { kind: 'floating', panelId: scenePanel, x: 24, y: 28, width: 360, height: 240, z: 2 }
       }
     }, registry);
@@ -126,6 +130,9 @@ describe('framework-neutral view projections', () => {
     expect(surface?.docks.main[0]).toMatchObject({ instanceId: missingId, title: 'missing.renderer' });
     expect(surface?.docks.right).toEqual([]);
     expect(surface?.floating.map((entry) => entry.instanceId)).toEqual([floatingId]);
+    expect(surface?.regions.map((region) => region.region.id)).toEqual(['left', 'stage', 'composer', 'right']);
+    expect(surface?.regions.find((region) => region.region.id === 'left')?.shelves[0]?.frames.map((frame) => frame.instanceId)).toEqual([notesId, summaryId]);
+    expect(surface?.unavailableTemplateId).toBeNull();
     expect(surface).toMatchObject({
       panelId: scenePanel,
       tabId: 'pomegranate-panel-tab-scene',
@@ -142,7 +149,7 @@ describe('framework-neutral view projections', () => {
       title: 'Story Summary',
       capabilities: [],
       defaultConfiguration: {},
-      defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+      defaultPlacement: { kind: 'docked', regionRole: 'left-instruments', shelfId: 'primary' }
     });
     const firstId = asWidgetInstanceId('first');
     const targetId = asWidgetInstanceId('target');
@@ -155,8 +162,8 @@ describe('framework-neutral view projections', () => {
           [targetId]: { id: targetId, type: asWidgetType('story.summary'), manifestVersion: '1.0.0', configuration: {} }
         },
         placements: {
-          [firstId]: { kind: 'docked', panelId: scenePanel, edge: 'left', shelfId: 'primary', order: 0 },
-          [targetId]: { kind: 'docked', panelId: scenePanel, edge: 'main', shelfId: 'primary', order: 0 }
+          [firstId]: { kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'primary', order: 0 },
+          [targetId]: { kind: 'docked', panelId: scenePanel, regionId: 'stage', shelfId: 'primary', order: 0 }
         }
       }
     });
@@ -164,7 +171,7 @@ describe('framework-neutral view projections', () => {
     const result = createWidgetActions(store, targetId).dock('left');
     expect(result.ok).toBe(true);
     expect(store.getState().placements[targetId]).toEqual({
-      kind: 'docked', panelId: scenePanel, edge: 'left', shelfId: 'primary', order: 1
+      kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'primary', order: 1
     });
   });
 
@@ -176,7 +183,7 @@ describe('framework-neutral view projections', () => {
       title: 'Story Summary',
       capabilities: [],
       defaultConfiguration: {},
-      defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+      defaultPlacement: { kind: 'docked', regionRole: 'left-instruments', shelfId: 'primary' }
     });
     const targetId = asWidgetInstanceId('target');
     const existingId = asWidgetInstanceId('existing-float');
@@ -189,7 +196,7 @@ describe('framework-neutral view projections', () => {
           [existingId]: { id: existingId, type: asWidgetType('story.summary'), manifestVersion: '1.0.0', configuration: {} }
         },
         placements: {
-          [targetId]: { kind: 'docked', panelId: scenePanel, edge: 'left', shelfId: 'primary', order: 0 },
+          [targetId]: { kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'primary', order: 0 },
           [existingId]: { kind: 'floating', panelId: scenePanel, x: 10, y: 12, width: 300, height: 180, z: 4 }
         }
       }
@@ -210,7 +217,7 @@ describe('framework-neutral view projections', () => {
       title: 'Story Summary',
       capabilities: [],
       defaultConfiguration: {},
-      defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+      defaultPlacement: { kind: 'docked', regionRole: 'left-instruments', shelfId: 'primary' }
     });
     const firstId = asWidgetInstanceId('first');
     const secondId = asWidgetInstanceId('second');
@@ -223,8 +230,8 @@ describe('framework-neutral view projections', () => {
           [secondId]: { id: secondId, type: asWidgetType('story.summary'), manifestVersion: '1.0.0', configuration: {} }
         },
         placements: {
-          [firstId]: { kind: 'docked', panelId: scenePanel, edge: 'left', shelfId: 'primary', order: 0 },
-          [secondId]: { kind: 'docked', panelId: scenePanel, edge: 'left', shelfId: 'primary', order: 1 }
+          [firstId]: { kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'primary', order: 0 },
+          [secondId]: { kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'primary', order: 1 }
         }
       }
     });
@@ -243,7 +250,7 @@ describe('framework-neutral view projections', () => {
       title: 'Story Summary',
       capabilities: [],
       defaultConfiguration: {},
-      defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' }
+      defaultPlacement: { kind: 'docked', regionRole: 'left-instruments', shelfId: 'primary' }
     });
     const targetId = asWidgetInstanceId('target');
     const store = createWorkbenchStore({
@@ -254,7 +261,7 @@ describe('framework-neutral view projections', () => {
           [targetId]: { id: targetId, type: asWidgetType('story.summary'), manifestVersion: '1.0.0', configuration: {} }
         },
         placements: {
-          [targetId]: { kind: 'docked', panelId: scenePanel, edge: 'left', shelfId: 'primary', order: 0 }
+          [targetId]: { kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'primary', order: 0 }
         }
       }
     });

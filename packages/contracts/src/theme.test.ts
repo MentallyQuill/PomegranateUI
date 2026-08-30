@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { AmbientProfileSchema } from './ambient.js';
+import { CanvasDefinitionSchema } from './canvas-definition.js';
 import {
   THEME_PART_IDS,
   THEME_SCHEMA_VERSION_V2,
@@ -9,6 +11,12 @@ import {
   type ThemeDefinition,
   type ThemeDefinitionV1
 } from './theme.js';
+import { ThemeTargetBundleSchema } from './theme-target.js';
+import {
+  PersistedThemeDraftSchema,
+  ThemeDraftSchema
+} from './theme-draft.js';
+import { ThemeDefinitionV3Schema } from './theme-v3.js';
 
 const material = (base: string, fallback = base) => ({
   base,
@@ -329,4 +337,164 @@ describe('ThemeDefinitionSchema', () => {
       }
     }
   );
+});
+
+function validThemeTargetFixture() {
+  const v2 = structuredClone(VALID_THEME_V2) as Record<string, any>;
+  const { canvas, schemaVersion: _schemaVersion, ...theme } = v2;
+  return {
+    schemaVersion: 'pomegranate.ui.theme-target.v1',
+    id: 'ash-amber',
+    theme: {
+      ...theme,
+      schemaVersion: 'pomegranate.ui.theme.v3',
+      id: 'ash-amber',
+      label: 'Ash & Amber'
+    },
+    canvas: {
+      schemaVersion: 'pomegranate.ui.canvas.v1',
+      id: 'ash-amber',
+      layers: canvas
+    },
+    ambient: {
+      schemaVersion: 'pomegranate.ui.ambient.v1',
+      id: 'ash-amber',
+      colorRole: 'accent',
+      position: { x: 0.57, y: 0.97 },
+      radius: 0.60,
+      power: 0.56
+    }
+  };
+}
+
+describe('Theme target owner schemas', () => {
+  it('parses one complete bundle while keeping theme, canvas, and ambient owners separate', () => {
+    expect(ThemeDefinitionV3Schema).toBeDefined();
+    expect(CanvasDefinitionSchema).toBeDefined();
+    expect(AmbientProfileSchema).toBeDefined();
+    const parsed = ThemeTargetBundleSchema.parse(validThemeTargetFixture());
+
+    expect(parsed).toMatchObject({
+      schemaVersion: 'pomegranate.ui.theme-target.v1',
+      id: 'ash-amber',
+      theme: { schemaVersion: 'pomegranate.ui.theme.v3', id: 'ash-amber' },
+      canvas: { schemaVersion: 'pomegranate.ui.canvas.v1', id: 'ash-amber' },
+      ambient: {
+        schemaVersion: 'pomegranate.ui.ambient.v1',
+        id: 'ash-amber',
+        colorRole: 'accent',
+        position: { x: 0.57, y: 0.97 },
+        radius: 0.60,
+        power: 0.56
+      }
+    });
+    expect(parsed.theme).not.toHaveProperty('canvas');
+    expect(parsed.theme).not.toHaveProperty('ambient');
+    expect(parsed.canvas).not.toHaveProperty('materials');
+    expect(parsed.ambient).not.toHaveProperty('css');
+  });
+
+  it.each([
+    ['mismatched owner ids', (target: Record<string, any>) => { target.canvas.id = 'other-target'; }],
+    ['a remote image URL', (target: Record<string, any>) => {
+      target.canvas.layers = [{
+        kind: 'image', assetId: 'https://example.test/a.png', fit: 'cover', x: 0.5, y: 0.5,
+        opacity: 1, blurPx: 0, saturation: 1, blend: 'normal'
+      }];
+    }],
+    ['an invalid semantic color', (target: Record<string, any>) => { target.theme.colors.accent = '#oops'; }],
+    ['an out-of-range ambient radius', (target: Record<string, any>) => { target.ambient.radius = 1.01; }],
+    ['a non-finite ambient coordinate', (target: Record<string, any>) => { target.ambient.position.x = Number.NaN; }],
+    ['an empty canvas', (target: Record<string, any>) => { target.canvas.layers = []; }],
+    ['more than twelve canvas layers', (target: Record<string, any>) => {
+      target.canvas.layers = Array.from({ length: 13 }, () => ({ kind: 'solid', color: '#111014' }));
+    }],
+    ['theme-owned canvas data', (target: Record<string, any>) => { target.theme.canvas = target.canvas.layers; }],
+    ['canvas-owned material data', (target: Record<string, any>) => { target.canvas.materials = target.theme.materials; }],
+    ['an unresolved v3 recipe material', (target: Record<string, any>) => {
+      target.theme.recipes.parts['widget.surface'].material = 'missing-material';
+    }],
+    ['arbitrary ambient CSS', (target: Record<string, any>) => { target.ambient.css = '* { display: none }'; }],
+    ['an executable target field', (target: Record<string, any>) => { target.script = '<script>alert(1)</script>'; }]
+  ])('rejects %s', (_name, mutate) => {
+    const target = validThemeTargetFixture();
+    mutate(target);
+    expect(ThemeTargetBundleSchema.safeParse(target).success).toBe(false);
+  });
+
+  it('accepts bounded ambient motion and rejects unsafe drift or duration values', () => {
+    const valid = validThemeTargetFixture() as Record<string, any>;
+    valid.ambient.motion = {
+      enabled: true,
+      driftX: -0.25,
+      driftY: 0.5,
+      durationMs: 24000
+    };
+    expect(ThemeTargetBundleSchema.safeParse(valid).success).toBe(true);
+
+    for (const mutate of [
+      (target: Record<string, any>) => { target.ambient.motion.driftX = -1.01; },
+      (target: Record<string, any>) => { target.ambient.motion.driftY = 1.01; },
+      (target: Record<string, any>) => { target.ambient.motion.durationMs = 249; },
+      (target: Record<string, any>) => { target.ambient.motion.durationMs = 120001; },
+      (target: Record<string, any>) => { target.ambient.motion.durationMs = 1000.5; }
+    ]) {
+      const candidate = structuredClone(valid);
+      mutate(candidate);
+      expect(ThemeTargetBundleSchema.safeParse(candidate).success).toBe(false);
+    }
+  });
+});
+
+const validPersistedDraft = () => ({
+  schemaVersion: 'pomegranate.ui.persisted-theme-draft.v1',
+  draft: {
+    schemaVersion: 'pomegranate.ui.theme-draft.v1',
+    baseTargetId: 'ash-amber',
+    colors: {
+      canvas: '#242321',
+      glass: '#302E2A',
+      chrome: '#625B52',
+      ambient: '#51493E',
+      text: '#F3F0EA',
+      source: '#D2B57A'
+    },
+    materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 }
+  },
+  ambient: {
+    schemaVersion: 'pomegranate.ui.ambient.v1',
+    id: 'ash-amber',
+    colorRole: 'selection',
+    position: { x: 0.57, y: 0.97 },
+    radius: 0.6,
+    power: 0.56
+  }
+});
+
+describe('Theme draft authoring schemas', () => {
+  it('round-trips all six Ash and Amber roles and bounded material controls exactly', () => {
+    const input = validPersistedDraft();
+    expect(PersistedThemeDraftSchema.parse(input)).toEqual(input);
+    expect(ThemeDraftSchema.parse(input.draft).colors).toEqual(input.draft.colors);
+  });
+
+  it.each([
+    ['alpha color', (value: any) => { value.draft.colors.canvas = '#242321FF'; }],
+    ['shorthand color', (value: any) => { value.draft.colors.canvas = '#234'; }],
+    ['named color', (value: any) => { value.draft.colors.canvas = 'black'; }],
+    ['CSS URL', (value: any) => { value.draft.colors.glass = 'url(javascript:alert(1))'; }],
+    ['padded color', (value: any) => { value.draft.colors.text = ' #F3F0EA'; }],
+    ['non-finite control', (value: any) => { value.draft.materials.frostLevel = Number.NaN; }],
+    ['decimal control', (value: any) => { value.draft.materials.frostLevel = 50.5; }],
+    ['low control', (value: any) => { value.draft.materials.glassDensity = -1; }],
+    ['high control', (value: any) => { value.draft.materials.barOpacity = 101; }],
+    ['mismatched target IDs', (value: any) => { value.ambient.id = 'deep-current'; }],
+    ['unknown role', (value: any) => { value.draft.colors.selector = '*'; }],
+    ['missing role', (value: any) => { delete value.draft.colors.source; }],
+    ['executable field', (value: any) => { value.script = '<script>alert(1)</script>'; }]
+  ])('rejects %s', (_name, mutate) => {
+    const input = validPersistedDraft();
+    mutate(input);
+    expect(PersistedThemeDraftSchema.safeParse(input).success).toBe(false);
+  });
 });

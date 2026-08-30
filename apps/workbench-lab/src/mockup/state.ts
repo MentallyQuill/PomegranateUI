@@ -5,9 +5,11 @@ import {
   type WorkbenchState
 } from '@pomegranate-ui/contracts';
 import {
+  activateWidgetGroup,
   createInitialWorkbenchState,
   createPanel,
   createWidget,
+  mergeWidgetGroup,
   type LayoutResult
 } from '@pomegranate-ui/layout';
 
@@ -23,11 +25,14 @@ export const LAB_WIDGET_TYPES = Object.freeze({
   composer: asWidgetType('story.composer'),
   worldState: asWidgetType('systems.world-state'),
   ambience: asWidgetType('story.room-ambience'),
+  personas: asWidgetType('story.personas'),
+  connections: asWidgetType('settings.connections'),
   characterRelationships: asWidgetType('systems.character-relationships'),
   library: asWidgetType('library.workspace'),
   characterCard: asWidgetType('library.character-card'),
   loreEntries: asWidgetType('library.lore-entries'),
   themeLibrary: asWidgetType('settings.theme'),
+  themeSettings: asWidgetType('settings.custom-theme'),
   accessibility: asWidgetType('settings.accessibility'),
   promptEditor: asWidgetType('settings.prompt-editor')
 });
@@ -40,48 +45,60 @@ function requireState(result: LayoutResult): WorkbenchState {
 export function createLabState(): WorkbenchState {
   let state = createInitialWorkbenchState();
   for (const panel of [
-    { id: LAB_PANEL_IDS.scene, name: 'Scene', templateId: 'story-stage.v1', order: 0, configuration: { columns: 3 } },
+    { id: LAB_PANEL_IDS.scene, name: 'Scene', templateId: 'story-stage.v1', order: 0, configuration: { columns: 3, dockWidths: { left: 334, right: 335 } } },
     { id: LAB_PANEL_IDS.library, name: 'Library', templateId: 'focus-support.v1', order: 1, configuration: { columns: 2 } },
     { id: LAB_PANEL_IDS.settings, name: 'Settings', templateId: 'columns.v1', order: 2, configuration: { columns: 3 } }
   ]) state = requireState(createPanel(state, panel));
+  state = {
+    ...state,
+    shelves: [
+      { id: 'primary', panelId: LAB_PANEL_IDS.scene, regionId: 'left', order: 0, weight: 1 },
+      { id: 'primary', panelId: LAB_PANEL_IDS.scene, regionId: 'stage', order: 0, weight: 1 },
+      { id: 'primary', panelId: LAB_PANEL_IDS.scene, regionId: 'composer', order: 0, weight: 1 },
+      { id: 'primary', panelId: LAB_PANEL_IDS.scene, regionId: 'right', order: 0, weight: 1 },
+      { id: 'primary', panelId: LAB_PANEL_IDS.library, regionId: 'focus', order: 0, weight: 1 },
+      { id: 'primary', panelId: LAB_PANEL_IDS.library, regionId: 'support', order: 0, weight: 1 },
+      { id: 'primary', panelId: LAB_PANEL_IDS.settings, regionId: 'column-1', order: 0, weight: 1 },
+      { id: 'primary', panelId: LAB_PANEL_IDS.settings, regionId: 'column-2', order: 0, weight: 1 },
+      { id: 'primary', panelId: LAB_PANEL_IDS.settings, regionId: 'column-3', order: 0, weight: 1 }
+    ]
+  };
 
   const fixtures = [
-    ['scene-characters', LAB_WIDGET_TYPES.characters, LAB_PANEL_IDS.scene, 'left', 0, {}],
-    ['scene-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.scene, 'left', 1, {}],
-    ['scene-transcript', LAB_WIDGET_TYPES.transcript, LAB_PANEL_IDS.scene, 'main', 0, {}],
-    ['scene-composer', LAB_WIDGET_TYPES.composer, LAB_PANEL_IDS.scene, 'main', 1, {}],
-    ['scene-world', LAB_WIDGET_TYPES.worldState, LAB_PANEL_IDS.scene, 'right', 0, {}],
-    ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 1, {}],
-    ['scene-relationships', LAB_WIDGET_TYPES.characterRelationships, LAB_PANEL_IDS.scene, 'right', 2, {}],
-    ['library-main', LAB_WIDGET_TYPES.library, LAB_PANEL_IDS.library, 'main', 0, {}],
-    ['library-character', LAB_WIDGET_TYPES.characterCard, LAB_PANEL_IDS.library, 'right', 0, { fixtureMode: 'failure' }],
-    ['library-lore', LAB_WIDGET_TYPES.loreEntries, LAB_PANEL_IDS.library, 'right', 1, {}],
-    ['settings-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.settings, 'left', 0, {}],
-    ['settings-accessibility', LAB_WIDGET_TYPES.accessibility, LAB_PANEL_IDS.settings, 'main', 0, {}]
+    ['scene-characters', LAB_WIDGET_TYPES.characters, LAB_PANEL_IDS.scene, 'left', 0, { presentation: 'recording' }],
+    ['scene-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.scene, 'left', 1, { presentation: 'compact' }],
+    ['scene-transcript', LAB_WIDGET_TYPES.transcript, LAB_PANEL_IDS.scene, 'stage', 0, {}],
+    ['scene-composer', LAB_WIDGET_TYPES.composer, LAB_PANEL_IDS.scene, 'composer', 0, {}],
+    ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 0, { presentation: 'recording' }],
+    ['scene-personas', LAB_WIDGET_TYPES.personas, LAB_PANEL_IDS.scene, 'right', 1, { presentation: 'recording' }],
+    ['scene-connections', LAB_WIDGET_TYPES.connections, LAB_PANEL_IDS.scene, 'right', 2, { presentation: 'recording' }],
+    ['library-main', LAB_WIDGET_TYPES.library, LAB_PANEL_IDS.library, 'focus', 0, {}],
+    ['library-character', LAB_WIDGET_TYPES.characterCard, LAB_PANEL_IDS.library, 'support', 0, { fixtureMode: 'failure' }],
+    ['library-lore', LAB_WIDGET_TYPES.loreEntries, LAB_PANEL_IDS.library, 'support', 1, {}],
+    ['settings-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
+    ['settings-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.settings, 'column-1', 1, {}],
+    ['settings-accessibility', LAB_WIDGET_TYPES.accessibility, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
+    ['settings-world', LAB_WIDGET_TYPES.worldState, LAB_PANEL_IDS.settings, 'column-2', 1, {}],
+    ['settings-prompt-editor', LAB_WIDGET_TYPES.promptEditor, LAB_PANEL_IDS.settings, 'column-3', 0, {}],
+    ['settings-relationships', LAB_WIDGET_TYPES.characterRelationships, LAB_PANEL_IDS.settings, 'column-3', 1, {}]
   ] as const;
-  for (const [id, type, panelId, edge, order, configuration] of fixtures) {
+  for (const [id, type, panelId, regionId, order, configuration] of fixtures) {
     state = requireState(createWidget(state, {
       id: asWidgetInstanceId(id),
       type,
       manifestVersion: '1.0.0',
       configuration
     }, {
-      kind: 'docked', panelId, edge, shelfId: 'primary', order
+      kind: 'docked', panelId, regionId, shelfId: 'primary', order
     }));
   }
-  state = requireState(createWidget(state, {
-    id: asWidgetInstanceId('settings-prompt-editor'),
-    type: LAB_WIDGET_TYPES.promptEditor,
-    manifestVersion: '1.0.0',
-    configuration: {}
-  }, {
-    kind: 'floating',
-    panelId: LAB_PANEL_IDS.settings,
-    x: 72,
-    y: 68,
-    width: 420,
-    height: 520,
-    z: 2
-  }));
+  const personasId = asWidgetInstanceId('scene-personas');
+  state = requireState(mergeWidgetGroup(
+    state,
+    asWidgetInstanceId('scene-connections'),
+    personasId,
+    'scene-perspective'
+  ));
+  state = requireState(activateWidgetGroup(state, personasId));
   return { ...state, revision: 0 };
 }

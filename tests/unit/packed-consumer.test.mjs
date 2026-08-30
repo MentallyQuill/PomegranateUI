@@ -70,13 +70,18 @@ test('packed verifier proves an isolated Svelte recipe consumer', async () => {
     "assertLocalResolutions"
   ]) assert.match(verifier, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), expected);
   assert.doesNotMatch(verifier, /renderer-dom-harness\.mjs/);
+  assert.doesNotMatch(verifier, /defaultPlacement: \{ kind: 'docked', edge|panelId, edge/);
+  assert.match(verifier, /regionRole: 'stage'/);
+  assert.match(verifier, /panelId, regionId/);
+  assert.match(verifier, /data-pomegranate-region-surface/);
+  assert.doesNotMatch(verifier, /data-pomegranate-dock=/);
   assert.match(verifier, /const temporaryBase = await realpath\(os\.tmpdir\(\)\)/);
   assert.match(verifier, /mkdtemp\(path\.join\(temporaryBase, 'pomegranate-ui-pack-'\)\)/);
   assert.doesNotMatch(verifier, /path\.resolve\(os\.tmpdir\(\)\)/);
 
   const manifest = JSON.parse(await readFile(path.join(root, 'registry', 'recipes', 'recipe-manifest.json'), 'utf8'));
   assert.equal(manifest.schema, 'pomegranate.ui.recipes.v1');
-  assert.equal(manifest.recipes.length, 5);
+  assert.equal(manifest.recipes.length, 7);
   for (const recipe of manifest.recipes) {
     assert.ok(recipe.files.length > 0, recipe.id);
     assert.deepEqual(Object.keys(recipe.sha256), recipe.files, recipe.id);

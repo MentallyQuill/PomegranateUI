@@ -1,5 +1,6 @@
 import type { LabThemeId } from '../themes/presets.js';
 import type { LabMaterialControlId, LabMaterialControls } from '../themes/material-controls.js';
+import type { LabThemeAuthoringSnapshot, ThemeDraftEditResult, ThemeDraftSaveResult } from '../themes/controller.js';
 
 export interface LabThemeInspector {
   readonly colors: Readonly<Record<string, string>>;
@@ -18,9 +19,14 @@ export interface LabThemeHostContext {
   }[];
   inspector: LabThemeInspector;
   materialControls: LabMaterialControls;
+  authoring: LabThemeAuthoringSnapshot;
   readonly activate: (id: string) => void;
   readonly setMaterialControl: (id: LabMaterialControlId, value: number) => void;
   readonly resetMaterialControls: () => void;
+  readonly openSettings: () => void;
+  readonly editDraft: (next: unknown) => ThemeDraftEditResult;
+  readonly resetDraft: () => ThemeDraftEditResult;
+  readonly saveDraft: () => Promise<ThemeDraftSaveResult>;
 }
 
 export interface LabHostContext {

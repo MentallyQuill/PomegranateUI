@@ -11,3 +11,25 @@ geometry, ordered canvas descriptors, declared local assets, and accessibility
 policy data. It accepts no CSS, selectors, markup, scripts, executable
 expressions, or remote asset URLs. Resolution and CSS compilation remain owned
 by `@pomegranate-ui/theme`; see [theme authoring](../../docs/theme-authoring.md).
+
+Additive target contracts keep art-direction owners separate:
+
+- `ThemeDefinitionV3` owns semantic colors, typography, materials, shapes,
+  recipes, controls, and declared local assets.
+- `CanvasDefinition` owns one to twelve validated background-composition
+  layers.
+- `AmbientProfile` owns bounded light position, radius, power, and optional
+  motion.
+- `ThemeTargetBundle` atomically associates those owners under one matching
+  lower-case target ID.
+
+The exact V1 and V2 schemas remain compatibility contracts. Target contracts
+reject arbitrary CSS, executable fields, remote asset URLs, unknown keys,
+owner-ID drift, non-finite controls, and cross-owner data.
+
+Theme authoring crosses the strict `ThemeDraft` and `PersistedThemeDraft`
+schemas. Drafts contain exactly six `#RRGGBB` semantic inputs and four integer
+material controls from zero through one hundred. Persisted drafts pair one
+matching ambient profile with one base target and reject CSS, markup, scripts,
+remote URLs, unknown roles, and owner-ID drift. Browser storage remains a host
+adapter behind the framework-neutral `ThemeDraftStorage` interface.

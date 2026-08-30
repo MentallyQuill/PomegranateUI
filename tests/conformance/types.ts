@@ -25,7 +25,7 @@ export class ConformanceError extends Error {
   }
 }
 
-export type ThemeTarget = 'deep-current' | 'pom-neutral' | 'bunny';
+export type ThemeTarget = 'deep-current' | 'pom-neutral' | 'bunny' | 'ash-amber';
 export type InputMode = 'fine-pointer' | 'coarse-pointer' | 'keyboard';
 
 export interface AuthorityRecord {
@@ -101,6 +101,51 @@ export interface ShellMeasurement {
     readonly clientWidth: number;
     readonly scrollHeight: number;
     readonly clientHeight: number;
+  };
+}
+
+export interface TypographyMeasurement {
+  readonly family: string;
+  readonly size: number;
+  readonly weight: number;
+  readonly lineHeight: number;
+  readonly tracking: number;
+  readonly transform: string;
+}
+
+export interface MaterialMeasurement {
+  readonly background: string;
+  readonly opacity: number;
+  readonly blur: number;
+  readonly border: string;
+  readonly radius: number;
+  readonly shadow: string;
+}
+
+export interface FidelityMeasurement {
+  readonly geometry: Readonly<Record<
+    'header' | 'left' | 'stage' | 'right' | 'story' | 'composer' | 'floating' | 'widgetShelf',
+    RegionMeasurement
+  >>;
+  readonly typography: Readonly<Record<
+    'wordmark' | 'navigation' | 'widgetTitle' | 'technical' | 'storyHeading' | 'storyBody' | 'composer',
+    TypographyMeasurement
+  >>;
+  readonly materials: Readonly<Record<
+    'header' | 'widget' | 'widgetHeader' | 'storyVeil' | 'composer' | 'floating' | 'dialog',
+    MaterialMeasurement
+  >>;
+  readonly structure: {
+    readonly panelTabs: readonly string[];
+    readonly regions: readonly string[];
+    readonly visibleWidgets: readonly string[];
+    readonly widgetLocations: Readonly<Record<string, string>>;
+  };
+  readonly functional: {
+    readonly stateReached: true;
+    readonly identityStable: true;
+    readonly noOverflow: true;
+    readonly keyboardAccessible: true;
   };
 }
 

@@ -14,18 +14,33 @@ export async function renderLabThemeTarget(
     await page.reload({ waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
     const beforeIds = await widgetIds(page);
-    const label = scenario.target === 'pom-neutral' ? 'PomOS' : 'Bunny';
+    const label = scenario.target === 'pom-neutral' ? 'PomOS'
+      : scenario.target === 'bunny' ? 'Bunny'
+        : scenario.target === 'ash-amber' ? 'Ash & Amber'
+          : 'Deep Current';
+    await page.getByText('Developer tools', { exact: true }).click();
     await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: label, exact: true }).click();
-    if (scenario.implementationState === 'catalog') await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+    await page.getByText('Developer tools', { exact: true }).click();
+    if (scenario.implementationState === 'catalog') {
+      const catalogLauncher = page.getByRole('button', { name: 'Open Widget Catalog' });
+      await catalogLauncher.focus();
+      await catalogLauncher.press('Enter');
+    }
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const afterIds = await widgetIds(page);
     return await page.locator('main').evaluate((root, expected) => {
       const style = getComputedStyle(root);
+      const shelf = root.querySelector<HTMLElement>('.top-shelf');
       const shell = root.querySelector<HTMLElement>('.workbench-shell');
+      const dock = root.querySelector<HTMLElement>('[data-conformance-region="left"]');
       const widget = root.querySelector<HTMLElement>('[data-conformance-region="left"] .widget-frame');
       const activeButton = root.querySelector<HTMLElement>('.theme-targets button[aria-pressed="true"]');
+      const stage = root.querySelector<HTMLElement>('[data-conformance-region="stage"]');
+      const readerHost = root.querySelector<HTMLElement>('[data-widget-type="story.transcript"]');
+      const reader = readerHost?.querySelector<HTMLElement>('.widget-frame > [data-pom-part="widget.content"]');
+      const readerBody = readerHost?.querySelector<HTMLElement>('.transcript');
       const catalog = document.querySelector<HTMLElement>('.widget-catalog');
-      if (!shell || !widget || !activeButton) throw new Error('Lab theme anatomy is incomplete.');
+      if (!shelf || !shell || !dock || !widget || !activeButton || !stage || !reader || !readerBody) throw new Error('Lab theme anatomy is incomplete.');
       const visibleCatalog = Boolean(catalog && getComputedStyle(catalog).display !== 'none');
       const visibleButtons = [...document.querySelectorAll<HTMLButtonElement>('button')].filter((control) => control.getClientRects().length > 0);
       const transitionNodes = [root, shell, widget, ...(catalog ? [catalog] : [])];
@@ -39,16 +54,35 @@ export async function renderLabThemeTarget(
           scenarioStateReached: (visibleCatalog === (expected.state === 'catalog')) as true
         }),
         structure: Object.freeze({
-          panelTabs: Object.freeze([...root.querySelectorAll<HTMLElement>('[role="tab"]')].map((control) => control.textContent?.trim() ?? '')),
-          anchorWidgets: Object.freeze([...root.querySelectorAll<HTMLElement>('.widget-frame[aria-label]')].map((node) => node.getAttribute('aria-label') ?? ''))
+          panelTabs: Object.freeze([...root.querySelectorAll<HTMLElement>('.panel-tabs [role="tab"]')].map((control) => control.textContent?.trim() ?? '')),
+          anchorWidgets: Object.freeze([
+            ...(root.querySelector('.widget-frame[aria-label]') ? ['panel-widget'] : []),
+            ...(reader ? ['story-reader'] : []),
+            ...(root.querySelector('[data-pomegranate-region-surface="composer"]') ? ['story-composer'] : [])
+          ])
         }),
         visual: Object.freeze({
           canvas: style.getPropertyValue('--pom-color-canvas').trim(),
           accent: style.getPropertyValue('--pom-color-accent').trim(),
           text: style.getPropertyValue('--pom-color-text').trim(),
-          shellRadius: getComputedStyle(shell).borderBottomRightRadius,
-          widgetRadius: getComputedStyle(widget).borderTopLeftRadius,
-          buttonRadius: getComputedStyle(activeButton).borderTopLeftRadius
+          shelfRadius: getComputedStyle(shelf).borderRadius,
+          shellRadius: getComputedStyle(shell).borderRadius,
+          dockRadius: getComputedStyle(dock).borderRadius,
+          widgetRadius: getComputedStyle(widget).borderRadius,
+          buttonRadius: getComputedStyle(activeButton).borderRadius,
+          readerRadius: getComputedStyle(reader).borderRadius,
+          readerFontSize: getComputedStyle(readerBody).fontSize,
+          readerLineHeight: getComputedStyle(readerBody).lineHeight,
+          widgetHasGradient: getComputedStyle(widget).backgroundImage.includes('gradient'),
+          readerHasMaterial: getComputedStyle(reader).backgroundColor !== 'rgba(0, 0, 0, 0)'
+            || getComputedStyle(reader).backgroundImage !== 'none',
+          readerIntersectsStage: (() => {
+            const stageBox = stage.getBoundingClientRect();
+            const readerBox = reader.getBoundingClientRect();
+            return readerBox.width > 0 && readerBox.height > 0
+              && readerBox.right > stageBox.left && readerBox.left < stageBox.right
+              && readerBox.bottom > stageBox.top && readerBox.top < stageBox.bottom;
+          })()
         }),
         trace: Object.freeze([`activated ${expected.target} atomically`, `verified ${expected.state} state without replacing Widget identities`])
       });

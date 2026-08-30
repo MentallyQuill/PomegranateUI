@@ -76,6 +76,13 @@ describe('theme compiler', () => {
     expect(first).toContain('[data-pom-theme-root] [data-pom-part="widget.surface"]');
     expect(first).not.toContain('compiler-fixture');
     expect(first).toContain('background-color: var(--pom-part-widget-surface-material-fill)');
+    expect(first).toContain('background-image: var(--pom-expression-widget-surface-background-image, var(--pom-part-widget-surface-texture-image))');
+    expect(first).toContain('border-radius: var(--pom-expression-widget-surface-radius, var(--pom-part-widget-surface-radius))');
+    expect(first).toContain(':where([data-pom-theme-root] [data-pom-part="widget.surface"])');
+    expect(first).toContain('font-size: var(--pom-expression-widget-surface-font-size, inherit)');
+    expect(first).toContain('line-height: var(--pom-expression-widget-surface-line-height, inherit)');
+    expect(first).toContain('letter-spacing: var(--pom-expression-widget-surface-letter-spacing, inherit)');
+    expect(first).toContain('text-transform: var(--pom-expression-widget-surface-text-transform, inherit)');
     expect(first).toContain('[data-pom-part="button.surface"][aria-pressed="true"]');
     expect(first).not.toMatch(/\[data-pom-part="button\.icon"\][^{]*\{[^}]*\bbackground:/s);
     expect(bindings['--pom-part-widget-surface-material-fill']).toBe('rgba(255, 255, 255, 0.38)');
@@ -86,11 +93,16 @@ describe('theme compiler', () => {
     const bindings = compileThemeBindings(RESOLVED_THEME);
 
     expect(css).toContain('::-webkit-slider-runnable-track');
-    expect(css).toContain('linear-gradient(to right, var(--pom-part-slider-fill-material-fill) 0 var(--pom-slider-progress, 0%)');
+    expect(css).toContain('linear-gradient(to right, color-mix(in srgb, var(--pom-part-slider-fill-material-fill)');
     expect(css).toContain('::-webkit-slider-thumb');
     expect(css).toContain('::-moz-range-track');
     expect(css).toContain('::-moz-range-progress');
     expect(css).toContain('::-moz-range-thumb');
+    expect(css).toContain('var(--pom-presentation-slider-track-opacity, 1)');
+    expect(css).toContain('var(--pom-presentation-slider-fill-opacity, 1)');
+    expect(css).toMatch(/::-webkit-slider-thumb\s*\{[^}]*opacity: var\(--pom-presentation-slider-thumb-opacity, 1\)/s);
+    expect(css).toMatch(/::-moz-range-thumb\s*\{[^}]*opacity: var\(--pom-presentation-slider-thumb-opacity, 1\)/s);
+    expect(css).not.toMatch(/slider-thumb[^}]*\b(?:width|height):\s*0/s);
     expect(bindings['--pom-control-slider-track-size']).toBe('4px');
     expect(bindings['--pom-control-slider-thumb-size']).toBe('11px');
     expect(bindings['--pom-control-slider-hit-size']).toBe('44px');
@@ -126,7 +138,7 @@ describe('theme compiler', () => {
     expect(css).toContain('border-width: var(--pom-part-widget-surface-joined-border-width)');
     expect(css).toContain('border-block-end-width: var(--pom-part-widget-surface-separator-width)');
     expect(css).toContain('[aria-current]:not([aria-current="false"])');
-    expect(css).toContain('background-image: var(--pom-part-widget-surface-texture-image)');
+    expect(css).toContain('background-image: var(--pom-expression-widget-surface-background-image, var(--pom-part-widget-surface-texture-image))');
   });
 
   it('isolates a changed recipe to that semantic part bindings', () => {

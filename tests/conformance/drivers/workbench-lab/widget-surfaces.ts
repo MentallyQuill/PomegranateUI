@@ -12,7 +12,7 @@ export async function renderLabWidgetSurface(
   try {
     await page.goto(`${labOrigin}/?surface=${encodeURIComponent(surfaceCase.type)}`, { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
-    const article = page.getByRole('article', { name: surfaceCase.title });
+    const article = page.locator(`[data-widget-type="${surfaceCase.type}"] > article`);
     const surface = article.locator(`[data-surface-type="${surfaceCase.type}"]`);
     await surface.waitFor({ state: 'visible' });
     const evidence = await surface.evaluate((root) => {
@@ -83,7 +83,7 @@ export async function renderLabWidgetSurface(
       }
     });
     const focus = article.getByRole('button', { name: 'Focus Widget' });
-    const named = await article.getAttribute('aria-label') === surfaceCase.title;
+    const named = await article.getAttribute('aria-label') === surfaceCase.presentationTitle;
     const functional = {
       authorityCasePassed: true as const,
       rendered: true as const,

@@ -97,6 +97,9 @@ const totals = Object.fromEntries(['story', 'library', 'systems', 'settings', 'e
 if (definitions.length !== 94 || JSON.stringify(totals) !== JSON.stringify({ story: 12, library: 19, systems: 21, settings: 39, extensions: 3 })) {
   throw new Error(`Catalog extraction count mismatch: ${definitions.length} ${JSON.stringify(totals)}`);
 }
+if (!definitions.some(({ type, title }) => type === 'settings.custom-theme' && title === 'Theme Settings')) {
+  throw new Error('Catalog extraction is missing the canonical settings.custom-theme authoring owner.');
+}
 
 const output = `// Generated from the preserved Widget Overhaul catalog by scripts/generate-lab-catalog.mjs.\n`
   + `// The Lab owns this translated fixture; the preserved prototype remains the executable oracle.\n\n`

@@ -233,14 +233,14 @@ function partRule(part: ThemePartId): string {
   color: var(${prefix}-foreground);
   background-color: var(${prefix}-material-fallback);
   background-color: var(${prefix}-material-fill);
-  background-image: var(${prefix}-texture-image);
+  background-image: var(--pom-expression-${key}-background-image, var(${prefix}-texture-image));
   background-blend-mode: var(${prefix}-texture-blend);
   border: var(${prefix}-material-border);
   border-width: var(${prefix}-joined-border-width);
   border-block-end-width: var(${prefix}-separator-width);
   border-block-end-color: var(${prefix}-separator-color);
   margin-block-end: var(${prefix}-separator-space);
-  border-radius: var(${prefix}-radius);
+  border-radius: var(--pom-expression-${key}-radius, var(${prefix}-radius));
   -webkit-backdrop-filter: var(${prefix}-material-backdrop);
   backdrop-filter: var(${prefix}-material-backdrop);
   box-shadow: var(${prefix}-material-shadow);
@@ -249,6 +249,12 @@ function partRule(part: ThemePartId): string {
   font-weight: var(${prefix}-font-weight);
   overflow: var(${prefix}-overflow);
   z-index: var(${prefix}-elevation);
+}
+:where(${selector}) {
+  font-size: var(--pom-expression-${key}-font-size, inherit);
+  line-height: var(--pom-expression-${key}-line-height, inherit);
+  letter-spacing: var(--pom-expression-${key}-letter-spacing, inherit);
+  text-transform: var(--pom-expression-${key}-text-transform, inherit);
 }
 ${selector}[data-pom-spacing="recipe"] { gap: var(${prefix}-spacing); padding: var(${prefix}-spacing); }
 ${selector}:hover { color: var(${prefix}-state-hover-foreground); background-color: var(${prefix}-state-hover-fill); opacity: var(${prefix}-state-hover-opacity); }
@@ -267,7 +273,7 @@ export const POM_SEMANTIC_PART_STYLE_SHEET = `${THEME_PART_IDS.map(partRule).joi
   box-sizing: border-box;
   min-height: var(--pom-control-slider-hit-size);
   background-color: transparent;
-  background-image: linear-gradient(to right, var(--pom-part-slider-fill-material-fill) 0 var(--pom-slider-progress, 0%), var(--pom-part-slider-track-material-fill) var(--pom-slider-progress, 0%) 100%);
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--pom-part-slider-fill-material-fill) calc(var(--pom-presentation-slider-fill-opacity, 1) * 100%), transparent) 0 var(--pom-slider-progress, 0%), color-mix(in srgb, var(--pom-part-slider-track-material-fill) calc(var(--pom-presentation-slider-track-opacity, 1) * 100%), transparent) var(--pom-slider-progress, 0%) 100%);
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100% var(--pom-control-slider-track-size);
@@ -289,16 +295,17 @@ export const POM_SEMANTIC_PART_STYLE_SHEET = `${THEME_PART_IDS.map(partRule).joi
   border: var(--pom-part-slider-thumb-material-border);
   border-radius: var(--pom-part-slider-thumb-radius);
   box-shadow: var(--pom-part-slider-thumb-material-shadow);
+  opacity: var(--pom-presentation-slider-thumb-opacity, 1);
 }
 [data-pom-theme-root] [data-pom-part="slider.input"]::-moz-range-track {
   height: var(--pom-control-slider-track-size);
-  background: var(--pom-part-slider-track-material-fill);
+  background: color-mix(in srgb, var(--pom-part-slider-track-material-fill) calc(var(--pom-presentation-slider-track-opacity, 1) * 100%), transparent);
   border: var(--pom-part-slider-track-material-border);
   border-radius: var(--pom-part-slider-track-radius);
 }
 [data-pom-theme-root] [data-pom-part="slider.input"]::-moz-range-progress {
   height: var(--pom-control-slider-track-size);
-  background: var(--pom-part-slider-fill-material-fill);
+  background: color-mix(in srgb, var(--pom-part-slider-fill-material-fill) calc(var(--pom-presentation-slider-fill-opacity, 1) * 100%), transparent);
   border-radius: var(--pom-part-slider-fill-radius);
 }
 [data-pom-theme-root] [data-pom-part="slider.input"]::-moz-range-thumb {
@@ -308,6 +315,7 @@ export const POM_SEMANTIC_PART_STYLE_SHEET = `${THEME_PART_IDS.map(partRule).joi
   border: var(--pom-part-slider-thumb-material-border);
   border-radius: var(--pom-part-slider-thumb-radius);
   box-shadow: var(--pom-part-slider-thumb-material-shadow);
+  opacity: var(--pom-presentation-slider-thumb-opacity, 1);
 }`;
 
 export function compileThemeStyleSheet(theme: ResolvedThemeV2): string {

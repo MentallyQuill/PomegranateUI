@@ -21,6 +21,23 @@
       }
     },
     {
+      "id": "icon-action",
+      "revision": 1,
+      "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
+      "files": [
+        "IconAction.svelte"
+      ],
+      "dependencies": [
+        "svelte"
+      ],
+      "rendererContractIds": [
+        "POM-RENDER-829EBD0745"
+      ],
+      "sha256": {
+        "IconAction.svelte": "EA29F35FADFBB2EC2190EBEBECCD567F28217337FB2B7870240FB6796B51FED0"
+      }
+    },
+    {
       "id": "panel-tabs",
       "revision": 1,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
@@ -41,6 +58,32 @@
       ],
       "sha256": {
         "PanelTabs.svelte": "5CC9C8491D3339BADCB158579BC4784C8AF9D8677F28F40946EAC1C45F50A2E8"
+      }
+    },
+    {
+      "id": "theme-settings",
+      "revision": 1,
+      "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
+      "files": [
+        "AmbientPosition.svelte",
+        "ColorPlane.svelte",
+        "HueControl.svelte",
+        "ThemeSettings.svelte"
+      ],
+      "dependencies": [
+        "@pomegranate-ui/contracts",
+        "@pomegranate-ui/theme",
+        "svelte"
+      ],
+      "rendererContractIds": [
+        "POM-RENDER-829EBD0745",
+        "POM-RENDER-A4B0DF2967"
+      ],
+      "sha256": {
+        "AmbientPosition.svelte": "C3B6C929BDB704E606F184D961C70D10414AA4BC381C8CB855C7F133D3BAF3AF",
+        "ColorPlane.svelte": "C68F0A836D3A4F5A70E7DA83DC5E9EBFBE1E5561F9492F5F14B955AB13213A60",
+        "HueControl.svelte": "0804D5BDBE0AA7B29FD8260E900DEE0855079F3926F7DF6F51CC7EE6A548E6E3",
+        "ThemeSettings.svelte": "63BD0E38B9212ED66763BB7F44FDE09DEFE434F33931AA492BECF0AE72153BE2"
       }
     },
     {
@@ -82,7 +125,7 @@
         "POM-RENDER-A4B0DF2967"
       ],
       "sha256": {
-        "WidgetFrame.svelte": "ED0EB69365B2C815D3676B087373642BB7CBA4B5B4CB323ED88E219BB860C2A8"
+        "WidgetFrame.svelte": "C00B1003707ECDDFBAAD0282316F0A6F2D9E02E77C7ED31743BAE8FD41A402FE"
       }
     },
     {
@@ -90,9 +133,18 @@
       "revision": 1,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
       "files": [
+        "DockRegion.svelte",
+        "DockShelf.svelte",
+        "PanelTemplateSurface.svelte",
+        "ShelfResizeHandle.svelte",
+        "StoryComposer.svelte",
+        "StoryStage.svelte",
+        "UnavailableTemplate.svelte",
+        "WidgetGroup.svelte",
         "WorkbenchSurface.svelte"
       ],
       "dependencies": [
+        "@pomegranate-ui/contracts",
         "@pomegranate-ui/core",
         "svelte"
       ],
@@ -102,7 +154,15 @@
         "POM-RENDER-A4B0DF2967"
       ],
       "sha256": {
-        "WorkbenchSurface.svelte": "DAA196C4DABD264E4EFEA0A3FB0B940C92947ED1FD8514A4646D0DF39A9F5E28"
+        "DockRegion.svelte": "4DF1263EB7677B7EA2CEA3BFDAC83386DFFB9F6A284235D966CE923B3618BD4A",
+        "DockShelf.svelte": "FCE1C3AAA0B71F951477820A1C178A93274BFA4144BE45C7A173D5EF77EF4043",
+        "PanelTemplateSurface.svelte": "44B37D7D1E94D6D6AB3B9315ED637FF60890CA46795321C7B7E9C9FC6E24071C",
+        "ShelfResizeHandle.svelte": "05992E3C29C2F833B11A3FCA96EF69A6F5E29E07F14311814670ABB776E5A997",
+        "StoryComposer.svelte": "BACB8A8113A1BEA855621AA36863E98F7DFF0ECA79342B86EA23B10E39FC4A84",
+        "StoryStage.svelte": "4DA0799EB7223BB6E5DBC5E70549EE087E5C2850A1374C7148B4C1618EF5D5FD",
+        "UnavailableTemplate.svelte": "D37B9C22B03942229BFBAF7469E5C3631E5775ABB809D9AFB2171AF3D581875B",
+        "WidgetGroup.svelte": "3E833CE7A4D6DF2FE7E68FEE51B5497F80EFB30B7E5AFE69D42B308C086B5AE8",
+        "WorkbenchSurface.svelte": "9C8C5E036AF8D1ADC332638A48A6A5C4438349E07456019E0D06462233F06D97"
       }
     }
   ]

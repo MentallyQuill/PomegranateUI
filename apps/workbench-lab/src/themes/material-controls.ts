@@ -19,9 +19,10 @@ export interface LabMaterialControls {
 }
 
 const DEFAULTS: Readonly<Record<LabThemeId, LabMaterialControls>> = Object.freeze({
-  'deep-current': Object.freeze({ glassDensity: 30, barOpacity: 60, selectedStrength: 6, frostLevel: 30 }),
+  'deep-current': Object.freeze({ glassDensity: 20, barOpacity: 39, selectedStrength: 6, frostLevel: 22 }),
   'pom-neutral': Object.freeze({ glassDensity: 42, barOpacity: 30, selectedStrength: 56, frostLevel: 70 }),
-  bunny: Object.freeze({ glassDensity: 24, barOpacity: 28, selectedStrength: 62, frostLevel: 54 })
+  bunny: Object.freeze({ glassDensity: 92, barOpacity: 80, selectedStrength: 62, frostLevel: 55 }),
+  'ash-amber': Object.freeze({ glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 })
 });
 
 const GLASS_MATERIALS = ['pane', 'menu', 'dialog', 'floating'] as const;

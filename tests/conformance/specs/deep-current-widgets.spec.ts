@@ -70,7 +70,7 @@ test.describe('Deep Current Widget surface conformance', () => {
       const reference = await renderWidgetOverhaulSurface(referencePage, surfaceCase);
       await referencePage.locator('[data-conformance-surface-host] > *').screenshot({ path: paths.referencePng, animations: 'disabled', caret: 'hide' });
       const implementation = await renderLabWidgetSurface(labPage, labOrigin, surfaceCase);
-      await labPage.getByRole('article', { name: surfaceCase.title }).screenshot({ path: paths.actualPng, animations: 'disabled', caret: 'hide' });
+      await labPage.locator(`[data-widget-type="${surfaceCase.type}"] > article`).screenshot({ path: paths.actualPng, animations: 'disabled', caret: 'hide' });
       await writeMeasurementEvidence(paths, { implementation, reference });
       const comparison = compareMeasurements(reference, implementation, profile);
       const diagnosticImages = await createDiagnosticImages(paths.referencePng, paths.actualPng, paths);

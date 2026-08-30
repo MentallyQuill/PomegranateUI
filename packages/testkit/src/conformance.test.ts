@@ -31,7 +31,7 @@ describe('first-slice conformance', () => {
   it('passes every contract against the native store through public APIs', () => {
     const results = runCoreConformance(nativeStore);
     expect(results).toHaveLength(8);
-    expect(results.every((result) => result.passed)).toBe(true);
+    expect(results.filter((result) => !result.passed)).toEqual([]);
     expect(results.map((result) => result.contractId)).toEqual(FIRST_SLICE_CONTRACT_IDS);
     expect(Object.isFrozen(results)).toBe(true);
     expect(results.every(Object.isFrozen)).toBe(true);
@@ -43,6 +43,8 @@ describe('first-slice conformance', () => {
       const store = nativeStore();
       return {
         registry: store.registry,
+        templates: store.templates,
+        canUndo: store.canUndo,
         getState: store.getState,
         subscribe: store.subscribe,
         dispatch(command: unknown) {

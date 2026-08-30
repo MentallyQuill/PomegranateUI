@@ -6,7 +6,10 @@ composition, material, and responsive staging and the Widget Overhaul for
 Panel, Widget, Catalog, geometry, and audited state behavior. Pom Neutral and
 Bunny use the independent, byte-hashed original frames in
 `design/theme-targets/`. All three targets preserve one mounted Panel and
-Widget tree; only theme-owned tokens and presentation change.
+Widget tree; only theme-owned tokens and presentation change. Ash & Amber uses
+the byte-hashed SonderUI_RW2_1 frame at 80 seconds for its reviewed atmospheric
+identity, with compact and Catalog states frozen as explicitly bounded Lab
+implementation regressions.
 
 Current Lab screenshots are implementation evidence. They are not reference
 authority and cannot be refreshed to close a discrepancy.
@@ -69,6 +72,7 @@ The executable interface is
 `npm.cmd run test:conformance:unit`,
 `npm.cmd run test:conformance:deep-current`,
 `npm.cmd run test:conformance:theme-targets`,
+`npm.cmd run test:conformance:ash-amber`,
 `npm.cmd run test:conformance`, and
 `npm.cmd run inspect:conformance -- --scenario <id>`.
 

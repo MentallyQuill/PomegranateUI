@@ -2,6 +2,8 @@ import type {
   CommandResult,
   PanelEdge,
   PanelId,
+  PanelRegionDefinition,
+  ShelfState,
   WidgetInstance,
   WidgetInstanceId,
   WidgetManifest,
@@ -11,6 +13,7 @@ import type {
 
 import type { WidgetRegistry } from './registry.js';
 import type { WorkbenchStore } from './store.js';
+import { createPanelTemplateRegistry, type PanelTemplateRegistry } from '@pomegranate-ui/layout';
 
 export interface PanelTabProjection {
   readonly panelId: PanelId;
@@ -37,13 +40,28 @@ export interface PanelSurfaceProjection {
   readonly tabId: string;
   readonly surfaceId: string;
   readonly docks: Readonly<Record<'left' | 'main' | 'right', readonly WidgetFrameProjection[]>>;
+  readonly regions: readonly PanelRegionProjection[];
+  readonly templateFamily: 'story-stage' | 'focus-support' | 'columns' | null;
+  readonly unavailableTemplateId: string | null;
+  readonly widgetShelf: readonly WidgetFrameProjection[];
   readonly floating: readonly WidgetFrameProjection[];
+}
+
+export interface PanelShelfProjection {
+  readonly shelf: ShelfState;
+  readonly frames: readonly WidgetFrameProjection[];
+}
+
+export interface PanelRegionProjection {
+  readonly region: PanelRegionDefinition;
+  readonly shelves: readonly PanelShelfProjection[];
 }
 
 export interface WidgetActions {
   dock(edge: PanelEdge): CommandResult;
   float(): CommandResult;
   groupWithPrevious(): CommandResult;
+  shelve(): CommandResult;
   remove(): CommandResult;
 }
 
@@ -70,12 +88,13 @@ export function selectPanelTabs(state: WorkbenchState): readonly PanelTabProject
 
 export function selectPanelSurface(
   state: WorkbenchState,
-  registry: WidgetRegistry
+  registry: WidgetRegistry,
+  templates: PanelTemplateRegistry = createPanelTemplateRegistry()
 ): PanelSurfaceProjection | null {
   const activePanel = state.panels.find((panel) => panel.id === state.activePanelId);
   if (!activePanel) return null;
 
-  const frames = Object.entries(state.placements)
+  const allFrames = Object.entries(state.placements)
     .filter(([, placement]) => placement.panelId === activePanel.id)
     .flatMap(([instanceId, placement]) => {
       const instance = state.widgets[instanceId];
@@ -90,8 +109,9 @@ export function selectPanelSurface(
         placement
       })];
     });
+  const frames = allFrames.filter((frame) => frame.placement.kind !== 'shelved');
   const docked = (edge: 'left' | 'main' | 'right') => Object.freeze(frames
-    .filter((frame) => frame.placement.kind === 'docked' && frame.placement.edge === edge)
+    .filter((frame) => frame.placement.kind === 'docked' && legacyDock(frame.placement.regionId) === edge)
     .sort((left, right) => {
       const leftOrder = left.placement.kind === 'docked' ? left.placement.order : 0;
       const rightOrder = right.placement.kind === 'docked' ? right.placement.order : 0;
@@ -105,12 +125,38 @@ export function selectPanelSurface(
       return leftZ - rightZ || left.instanceId.localeCompare(right.instanceId);
     }));
   const suffix = panelDomSuffix(activePanel.id);
+  const template = templates.resolve(activePanel);
+  const regions = template.ok ? Object.freeze(template.template.regions.map((region) => Object.freeze({
+    region,
+    shelves: Object.freeze(state.shelves
+      .filter((shelf) => shelf.panelId === activePanel.id && shelf.regionId === region.id)
+      .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))
+      .map((shelf) => Object.freeze({
+        shelf,
+        frames: Object.freeze(frames
+          .filter((frame) => frame.placement.kind === 'docked'
+            && frame.placement.regionId === region.id
+            && frame.placement.shelfId === shelf.id)
+          .sort((left, right) => {
+            const leftOrder = left.placement.kind === 'docked' ? left.placement.order : 0;
+            const rightOrder = right.placement.kind === 'docked' ? right.placement.order : 0;
+            return leftOrder - rightOrder || left.instanceId.localeCompare(right.instanceId);
+          }))
+      })))
+  }))) : Object.freeze([]);
+  const widgetShelf = Object.freeze(allFrames
+    .filter((frame) => frame.placement.kind === 'shelved')
+    .sort((left, right) => left.title.localeCompare(right.title) || left.instanceId.localeCompare(right.instanceId)));
 
   return Object.freeze({
     panelId: activePanel.id,
     tabId: `pomegranate-panel-tab-${suffix}`,
     surfaceId: `pomegranate-panel-${suffix}`,
     docks: Object.freeze({ left: docked('left'), main: docked('main'), right: docked('right') }),
+    regions,
+    templateFamily: template.ok ? template.template.family : null,
+    unavailableTemplateId: template.ok ? null : activePanel.templateId,
+    widgetShelf,
     floating
   });
 }
@@ -140,7 +186,7 @@ export function createWidgetActions(
         placement: {
           kind: 'docked',
           panelId,
-          edge,
+          regionId: edge === 'main' ? 'stage' : edge,
           shelfId,
           order: Number.MAX_SAFE_INTEGER
         }
@@ -188,7 +234,7 @@ export function createWidgetActions(
         .filter(([id, placement]) => id !== instanceId
           && placement.kind === 'docked'
           && placement.panelId === current.panelId
-          && placement.edge === current.edge
+          && placement.regionId === current.regionId
           && placement.shelfId === current.shelfId
           && placement.order < current.order)
         .sort(([, left], [, right]) => (
@@ -209,8 +255,17 @@ export function createWidgetActions(
         groupId
       });
     },
+    shelve(): CommandResult {
+      return store.dispatch({ type: 'widget.shelve', instanceId });
+    },
     remove(): CommandResult {
       return store.dispatch({ type: 'widget.remove', instanceId });
     }
   });
+}
+
+function legacyDock(regionId: string): 'left' | 'main' | 'right' {
+  if (regionId === 'left' || regionId === 'focus' || regionId === 'column-1') return 'left';
+  if (regionId === 'right' || regionId === 'support' || regionId === 'column-6') return 'right';
+  return 'main';
 }

@@ -14,7 +14,7 @@ function manifest(type = 'story.summary'): WidgetManifest {
     title: 'Story summary',
     capabilities: ['story.read'],
     defaultConfiguration: { presentation: { density: 'compact' } },
-    defaultPlacement: { kind: 'docked', edge: 'left', shelfId: 'primary' },
+    defaultPlacement: { kind: 'docked', regionRole: 'left-instruments', shelfId: 'primary' },
     catalog: {
       category: 'story',
       purpose: 'Read a story summary.',

@@ -12,8 +12,10 @@ export interface ImplementedSurfaceDefinition {
 
 const IMPLEMENTED_TYPES = Object.freeze([
   'settings.provider-credentials',
+  'settings.connections',
   'settings.model-assignments',
   'settings.theme',
+  'settings.custom-theme',
   'settings.accessibility',
   'settings.maintenance',
   'settings.prompt-editor',
