@@ -27,6 +27,7 @@
   import type { LabMaterialControlId } from './themes/material-controls.js';
   import { LAB_THEME_PRESETS } from './themes/presets.js';
   import { createLocalThemePreference } from './themes/theme-storage.js';
+  import { createLocalThemeDraftStorage } from './themes/draft-storage.js';
 
   const runtime = createLabRuntime();
   const storage = createLocalLayoutStorage();
@@ -70,6 +71,7 @@
     : CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)');
   const themeController = createLabThemeController({
     preference: createLocalThemePreference(window.localStorage),
+    draftStorage: createLocalThemeDraftStorage(window.localStorage),
     assetRegistry: themeAssetRegistry,
     devicePolicy: {
       reducedTransparency: mediaMatches('(prefers-reduced-transparency: reduce)'),
@@ -110,6 +112,7 @@
     hostContext.theme.activeId = snapshot.activeId;
     hostContext.theme.materialControls = snapshot.materialControls;
     hostContext.theme.inspector = themeInspector();
+    hostContext.theme.authoring = themeController.getAuthoringSnapshot();
   }
 
   function setMaterialControl(id: LabMaterialControlId, value: number) {
@@ -132,6 +135,33 @@
     }
   }
 
+  function editThemeDraft(next: unknown) {
+    const result = themeController.editDraft(next);
+    hostContext.theme.authoring = result.authoring;
+    if (result.ok) {
+      applyThemeSnapshot(themeController.getSnapshot());
+      status = 'Theme draft applied locally.';
+    } else status = result.diagnostics[0]?.message ?? 'Theme draft is invalid.';
+    return result;
+  }
+
+  function resetThemeDraft() {
+    const result = themeController.resetDraft();
+    hostContext.theme.authoring = result.authoring;
+    if (result.ok) {
+      applyThemeSnapshot(themeController.getSnapshot());
+      status = 'Theme draft reset to the active target.';
+    }
+    return result;
+  }
+
+  async function saveThemeDraft() {
+    const result = await themeController.saveDraft();
+    hostContext.theme.authoring = result.authoring;
+    status = result.ok ? 'Theme draft saved on this device.' : result.diagnostics[0]?.message ?? 'Theme draft could not be saved.';
+    return result;
+  }
+
   let hostContext = $state(createLabHostContext({
     activeId: initialThemeSnapshot.activeId,
     presets: LAB_THEME_PRESETS.map(({ id, target }) => ({
@@ -141,9 +171,13 @@
     })),
     inspector: themeInspector(),
     materialControls: initialThemeSnapshot.materialControls,
+    authoring: themeController.getAuthoringSnapshot(),
     activate: activateTheme,
     setMaterialControl,
-    resetMaterialControls
+    resetMaterialControls,
+    editDraft: editThemeDraft,
+    resetDraft: resetThemeDraft,
+    saveDraft: saveThemeDraft
   }, initialSurfaceState));
   setWorkbenchContext({ store, catalog, rendererRegistry, hostContext });
 
@@ -166,6 +200,11 @@
 
   onMount(() => {
     let current = true;
+    void themeController.loadDraft().then((loaded) => {
+      if (!current) return;
+      hostContext.theme.authoring = loaded.authoring;
+      if (loaded.ok) applyThemeSnapshot(themeController.getSnapshot());
+    });
     void loadLayout(storage, LAB_LAYOUT_KEY, store.getState()).then((loaded) => {
       if (current && loaded.ok) {
         store.dispatch({ type: 'layout.hydrate', state: loaded.state });
