@@ -69,3 +69,15 @@ export interface ThemeTargetMeasurement {
   };
   readonly trace: readonly string[];
 }
+
+export interface ThemeAuthoringMeasurement {
+  readonly functional: {
+    readonly controlsPresent: true;
+    readonly targetApplied: true;
+    readonly appliedEditableIndependent: true;
+    readonly workbenchIdentityStable: true;
+    readonly layoutIndependent: true;
+  };
+  readonly outcome: Readonly<Record<string, unknown>>;
+  readonly trace: readonly string[];
+}

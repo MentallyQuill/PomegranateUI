@@ -11,7 +11,7 @@ import { AUTHORITY_RECORDS } from '../conformance/authorities.ts';
 import { compareMeasurements, MEASUREMENT_PROFILES } from '../conformance/compare.ts';
 import { createDiagnosticImages, createEvidencePaths, writeComparisonReport, writeMeasurementEvidence } from '../conformance/evidence.ts';
 import { parseDiscrepancyLedger, validateDiscrepancyLedger } from '../conformance/ledger.ts';
-import { BUNNY_SCENARIOS, DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, hashAuthorityFile, ORIGINAL_THEME_TARGET_SCENARIOS, POM_NEUTRAL_SCENARIOS, validateConformanceManifest } from '../conformance/manifest.ts';
+import { BUNNY_SCENARIOS, DEEP_CURRENT_CATALOG_CONFORMANCE_SCENARIOS, DEEP_CURRENT_INTERACTION_SCENARIOS, DEEP_CURRENT_MACRO_SCENARIOS, DEEP_CURRENT_WIDGET_SCENARIOS, hashAuthorityFile, ORIGINAL_THEME_TARGET_SCENARIOS, POM_NEUTRAL_SCENARIOS, THEME_AUTHORING_SCENARIOS, validateConformanceManifest } from '../conformance/manifest.ts';
 import { normalizeMeasurement } from '../conformance/normalize.ts';
 import { applyCanonicalShellGeometry, assertScenarioResolution } from '../conformance/runner.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
@@ -851,12 +851,83 @@ test('the reviewed theme baseline freezes every target scenario and authority ha
   }
 });
 
+test('Theme authoring exposes four literal fail-closed scenarios', async () => {
+  assert.deepEqual(THEME_AUTHORING_SCENARIOS.map(({ id, implementationState }) => [id, implementationState]), [
+    ['theme-authoring-ash-seed', 'ash-seed'],
+    ['theme-authoring-last-valid', 'last-valid'],
+    ['theme-authoring-ambient-precedence', 'ambient-precedence'],
+    ['theme-authoring-round-trip', 'round-trip']
+  ]);
+  assert.equal(THEME_AUTHORING_SCENARIOS.every((scenario) => (
+    scenario.target === 'ash-amber'
+      && scenario.authority === 'ash-amber-recording-frame'
+      && scenario.measurementProfile === 'theme-authoring'
+      && scenario.assertionProfile === 'theme-authoring'
+  )), true);
+  const validated = await validateConformanceManifest(THEME_AUTHORING_SCENARIOS, {
+    repositoryRoot,
+    authorities: new Map(AUTHORITY_RECORDS.map((record) => [record.id, record])),
+    viewports: CONFORMANCE_VIEWPORTS,
+    driverIds: new Set(['ash-amber-recording-frame', 'workbench-lab']),
+    measurementProfileIds: new Set(['theme-authoring']),
+    assertionProfileIds: new Set(['theme-authoring']),
+    deviationIds: new Set(),
+    hashFile: hashAuthorityFile
+  });
+  assert.equal(validated.scenarios.length, 4);
+});
+
+test('Theme authoring baseline freezes approved literals without importing the target', async () => {
+  const baselineText = await readFile(path.join(repositoryRoot, 'tests/conformance/baselines/theme-authoring.json'), 'utf8');
+  const baseline = JSON.parse(baselineText);
+  assert.equal(baseline.schemaVersion, 'pomegranate.ui.conformance-baseline.v1');
+  assert.equal(baseline.authority, 'approved-theme-authoring-spec');
+  assert.equal(baseline.measurementProfile, 'theme-authoring');
+  assert.deepEqual(Object.keys(baseline.scenarios), THEME_AUTHORING_SCENARIOS.map(({ id }) => id));
+  assert.deepEqual(baseline.scenarios['theme-authoring-ash-seed'].outcome.editable.colors, {
+    canvas: '#2C2938', glass: '#382D31', chrome: '#716667', ambient: '#84008E', text: '#FFFFFF', source: '#D2B57A'
+  });
+  assert.deepEqual(baseline.scenarios['theme-authoring-ash-seed'].outcome.editable.materials, {
+    glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50
+  });
+  assert.deepEqual(baseline.scenarios['theme-authoring-ash-seed'].outcome.editable.ambient, {
+    x: 57, y: 97, radius: 60, power: 56
+  });
+  assert.doesNotMatch(baselineText, /ASH_AMBER_TARGET|ash-amber\.ts|presets/);
+});
+
+test('Theme authoring driver measures editable and applied state independently', async () => {
+  const driver = await readFile(path.join(repositoryRoot, 'tests/conformance/drivers/workbench-lab/theme-authoring.ts'), 'utf8');
+  assert.match(driver, /Hex color/);
+  assert.match(driver, /--pom-color-canvas/);
+  assert.match(driver, /pomegranate-ui\.workbench-lab\.theme-draft\.v1/);
+  assert.match(driver, /resolveAmbientProfile/);
+  assert.doesNotMatch(driver, /ASH_AMBER_TARGET|ash-amber\.ts|presets|drivers\/reference/);
+});
+
+test('Theme authoring profile and ledger gate every required outcome', async () => {
+  assert.deepEqual(MEASUREMENT_PROFILES.get('theme-authoring')?.map(({ path }) => path), [
+    'functional.controlsPresent',
+    'functional.targetApplied',
+    'functional.appliedEditableIndependent',
+    'functional.workbenchIdentityStable',
+    'functional.layoutIndependent',
+    'outcome'
+  ]);
+  const ledger = parseDiscrepancyLedger(await readFile(
+    path.join(repositoryRoot, 'docs/conformance/theme-authoring-ledger.md'),
+    'utf8'
+  ));
+  assert.deepEqual(validateDiscrepancyLedger(ledger, THEME_AUTHORING_SCENARIOS).entries, []);
+});
+
 test('inspection requires one exact known scenario without permitting update mode', () => {
   assert.equal(parseInspectionArguments(['--scenario', 'dc-shell-wide']).id, 'dc-shell-wide');
   assert.equal(parseInspectionArguments(['--scenario', 'dc-int-tab-merge']).id, 'dc-int-tab-merge');
   assert.equal(parseInspectionArguments(['--scenario', 'pn-scene-compact']).id, 'pn-scene-compact');
   assert.equal(parseInspectionArguments(['--scenario', 'bn-catalog-wide']).id, 'bn-catalog-wide');
   assert.equal(parseInspectionArguments(['--scenario', 'aa-scene-wide']).id, 'aa-scene-wide');
+  assert.equal(parseInspectionArguments(['--scenario', 'theme-authoring-round-trip']).id, 'theme-authoring-round-trip');
   assert.throws(() => parseInspectionArguments([]), /--scenario <id> is required/);
   assert.throws(() => parseInspectionArguments(['--scenario', 'unknown']), /Unknown conformance scenario/);
   assert.throws(() => parseInspectionArguments(['--scenario', 'dc-shell-wide', '--update-snapshots']), /Unexpected inspection argument/);

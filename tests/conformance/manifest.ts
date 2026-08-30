@@ -202,6 +202,32 @@ export const ASH_AMBER_SCENARIOS: readonly ConformanceScenario[] = Object.freeze
   createAshAmberScenario('aa-catalog-wide', 'Ash & Amber wide Catalog', 'catalog', 'standard')
 ]);
 
+function createThemeAuthoringScenario(id: string, title: string, state: string): ConformanceScenario {
+  return Object.freeze({
+    id,
+    title,
+    target: 'ash-amber',
+    authority: 'ash-amber-recording-frame',
+    authorityPath: ashAmberReferencePath,
+    authoritySha256: ashAmberReferenceSha256,
+    viewport: 'standard',
+    inputModes: Object.freeze(['fine-pointer', 'keyboard'] as const),
+    referenceState: state,
+    implementationState: state,
+    capture: Object.freeze({ kind: 'viewport' as const }),
+    measurementProfile: 'theme-authoring',
+    assertionProfile: 'theme-authoring',
+    allowedDeviationIds: Object.freeze([])
+  });
+}
+
+export const THEME_AUTHORING_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
+  createThemeAuthoringScenario('theme-authoring-ash-seed', 'Theme authoring reproduces Ash & Amber', 'ash-seed'),
+  createThemeAuthoringScenario('theme-authoring-last-valid', 'Theme authoring preserves the last valid target', 'last-valid'),
+  createThemeAuthoringScenario('theme-authoring-ambient-precedence', 'Ambient precedence remains exact', 'ambient-precedence'),
+  createThemeAuthoringScenario('theme-authoring-round-trip', 'Theme drafts round-trip independently of layout', 'round-trip')
+]);
+
 export const ORIGINAL_THEME_TARGET_SCENARIOS: readonly ConformanceScenario[] = Object.freeze([
   ...POM_NEUTRAL_SCENARIOS,
   ...BUNNY_SCENARIOS

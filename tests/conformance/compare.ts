@@ -148,13 +148,23 @@ const themeTargetBehaviorProfile: readonly ComparisonDefinition[] = Object.freez
   Object.freeze({ path: 'structure.anchorWidgets', comparator: 'contains', category: 'structure', severity: 'P1' })
 ]);
 
+const themeAuthoringProfile: readonly ComparisonDefinition[] = Object.freeze([
+  exact('functional.controlsPresent'),
+  exact('functional.targetApplied'),
+  exact('functional.appliedEditableIndependent'),
+  exact('functional.workbenchIdentityStable'),
+  exact('functional.layoutIndependent'),
+  exact('outcome')
+]);
+
 export const MEASUREMENT_PROFILES: ReadonlyMap<string, readonly ComparisonDefinition[]> = new Map([
   ['deep-current-shell', shellProfile],
   ['deep-current-shell-behavior', shellBehaviorProfile],
   ['deep-current-interaction', interactionProfile],
   ['deep-current-widget-surface', widgetSurfaceProfile],
   ['deep-current-catalog', catalogProfile],
-  ['theme-target-behavior', themeTargetBehaviorProfile]
+  ['theme-target-behavior', themeTargetBehaviorProfile],
+  ['theme-authoring', themeAuthoringProfile]
 ]);
 
 function valueAtPath(root: NormalizedValue, evidencePath: string): NormalizedValue {

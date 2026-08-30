@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "pomegranate.ui.conformance-baseline.v1",
+  "authority": "approved-theme-authoring-spec",
+  "authoritySha256": "6403a7bcfd8f43195fa42c5d9715cc79964c8b7569f47c22fdeefd1b89804997",
+  "measurementProfile": "theme-authoring",
+  "scenarios": {
+    "theme-authoring-ash-seed": {
+      "pass": true,
+      "target": "ash-amber",
+      "state": "ash-seed",
+      "functional": {
+        "controlsPresent": true,
+        "targetApplied": true,
+        "appliedEditableIndependent": true,
+        "workbenchIdentityStable": true,
+        "layoutIndependent": true
+      },
+      "outcome": {
+        "editable": {
+          "colors": {
+            "canvas": "#2C2938",
+            "glass": "#382D31",
+            "chrome": "#716667",
+            "ambient": "#84008E",
+            "text": "#FFFFFF",
+            "source": "#D2B57A"
+          },
+          "materials": {
+            "glassDensity": 20,
+            "barOpacity": 60,
+            "selectedStrength": 6,
+            "frostLevel": 50
+          },
+          "ambient": { "x": 57, "y": 97, "radius": 60, "power": 56 }
+        },
+        "applied": {
+          "colors": {
+            "canvas": "#2c2938",
+            "glass": "#382d31",
+            "chrome": "#716667",
+            "ambient": "#84008e",
+            "text": "#ffffff",
+            "source": "#d2b57a"
+          },
+          "ambient": { "x": "57%", "y": "97%", "radius": "60%", "power": "0.56", "source": "target" },
+          "diagnostics": 0
+        }
+      }
+    },
+    "theme-authoring-last-valid": {
+      "pass": true,
+      "target": "ash-amber",
+      "state": "last-valid",
+      "functional": {
+        "controlsPresent": true,
+        "targetApplied": true,
+        "appliedEditableIndependent": true,
+        "workbenchIdentityStable": true,
+        "layoutIndependent": true
+      },
+      "outcome": {
+        "invalidRaw": "url(javascript:unsafe)",
+        "invalidRejected": true,
+        "unsafeRaw": "#382D31",
+        "unsafeRejected": true,
+        "appliedAfterInvalid": "#FFFFFF",
+        "appliedAfterUnsafe": "#FFFFFF"
+      }
+    },
+    "theme-authoring-ambient-precedence": {
+      "pass": true,
+      "target": "ash-amber",
+      "state": "ambient-precedence",
+      "functional": {
+        "controlsPresent": true,
+        "targetApplied": true,
+        "appliedEditableIndependent": true,
+        "workbenchIdentityStable": true,
+        "layoutIndependent": true
+      },
+      "outcome": {
+        "order": ["fallback", "target", "scene", "device", "accessibility"],
+        "cases": {
+          "fallback": { "source": "fallback", "id": "fallback", "power": 0.2, "motion": true, "transparency": true },
+          "target": { "source": "target", "id": "target", "power": 0.4, "motion": true, "transparency": true },
+          "scene": { "source": "scene", "id": "scene", "power": 0.8, "motion": true, "transparency": true },
+          "device": { "source": "scene", "id": "scene", "power": 0.5, "motion": false, "transparency": false },
+          "accessibility": { "source": "scene", "id": "scene", "power": 0.8, "motion": false, "transparency": false }
+        },
+        "runtime": { "source": "target", "motion": "0", "transparency": "0", "opacity": 0 }
+      }
+    },
+    "theme-authoring-round-trip": {
+      "pass": true,
+      "target": "ash-amber",
+      "state": "round-trip",
+      "functional": {
+        "controlsPresent": true,
+        "targetApplied": true,
+        "appliedEditableIndependent": true,
+        "workbenchIdentityStable": true,
+        "layoutIndependent": true
+      },
+      "outcome": {
+        "saved": {
+          "schemaVersion": "pomegranate.ui.persisted-theme-draft.v1",
+          "baseTargetId": "ash-amber",
+          "canvas": "#312d3b"
+        },
+        "restored": {
+          "canvasBinding": "#312d3b",
+          "canvasInput": "#312d3b",
+          "diagnostics": 0
+        },
+        "storage": { "draftPresent": true, "layoutPresent": false }
+      }
+    }
+  }
+}
