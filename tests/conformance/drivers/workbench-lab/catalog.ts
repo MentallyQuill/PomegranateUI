@@ -19,7 +19,7 @@ export async function renderLabCatalog(
     const catalogLauncher = page.getByRole('button', { name: 'Open Widget Catalog' });
     await catalogLauncher.focus();
     await catalogLauncher.press('Enter');
-    const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
+    const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
     await catalog.waitFor({ state: 'visible' });
     const inventory = await measureInventory(catalog);
 

@@ -354,6 +354,25 @@ describe('Workbench Lab theme conformance', () => {
     expect(controller.getSnapshot().cssText).not.toContain('--pom-expression-');
   });
 
+  it('projects Ash readability through target expression data without changing Deep rail defaults', () => {
+    const controller = createLabThemeController({ initialId: 'deep-current' });
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-widget-header-font-size');
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-row-surface-font-size');
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-slider-input-font-size');
+
+    expect(controller.activate('ash-amber').ok).toBe(true);
+    expect(controller.getSnapshot().expressionBindings).toMatchObject({
+      '--pom-expression-widget-header-font-size': '11px',
+      '--pom-expression-row-surface-font-size': '11px',
+      '--pom-expression-slider-input-font-size': '11px'
+    });
+
+    expect(controller.activate('deep-current').ok).toBe(true);
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-widget-header-font-size');
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-row-surface-font-size');
+    expect(controller.getSnapshot().expressionBindings).not.toHaveProperty('--pom-expression-slider-input-font-size');
+  });
+
   it('compiles Bunny expression after reduced-transparency policy redirects decorative materials', () => {
     const controller = createLabThemeController({
       initialId: 'bunny',

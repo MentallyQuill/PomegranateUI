@@ -113,7 +113,10 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(launcher).toHaveAttribute('aria-expanded', 'false');
     await user.click(launcher);
     expect(launcher).toHaveAttribute('aria-expanded', 'true');
-    const catalog = screen.getByLabelText('Widget Catalog');
+    const catalog = screen.getByRole('dialog', { name: 'Widget Catalog' });
+    expect(catalog).toHaveAttribute('open');
+    expect(within(catalog).getByRole('button', { name: 'Close Catalog' }))
+      .toHaveAttribute('data-pom-part', 'button.surface');
     expect(within(catalog).getAllByRole('listitem')).toHaveLength(94);
     await user.click(within(catalog).getByRole('button', { name: 'story' }));
     for (const category of ['extensions', 'library', 'settings', 'story', 'systems']) {

@@ -75,7 +75,7 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
 
   await invokeCompactChromeAction(page, 'Open Widget Catalog');
   await shot(page, 'wide-catalog-drawer.png');
-  const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
   await catalog.getByRole('button', { name: 'Expanded' }).click();
   await shot(page, 'wide-catalog-expanded.png');
   await catalog.getByRole('button', { name: 'Close Catalog' }).click();
@@ -122,6 +122,11 @@ test('native workbench exposes the two original visual flexibility targets', asy
     await fresh(page, 390, 844);
     await selectTheme(page, theme.label);
     await shot(page, `compact-${theme.name}.png`);
+
+    await fresh(page, 1440, 900);
+    await selectTheme(page, theme.label);
+    await invokeCompactChromeAction(page, 'Open Widget Catalog');
+    await shot(page, `wide-catalog-${theme.name}.png`);
   }
 });
 

@@ -177,8 +177,13 @@ async function exerciseScenario(page: Page, scenarioId: string, trace: string[])
     case 'dc-int-catalog-place':
       await page.getByRole('button', { name: 'Open Widget Catalog' }).focus();
       await page.getByRole('button', { name: 'Open Widget Catalog' }).press('Enter');
-      await page.getByRole('complementary', { name: 'Widget Catalog' }).getByRole('button', { name: 'Compact' }).click();
-      await page.getByRole('complementary', { name: 'Widget Catalog' }).getByRole('button', { name: 'Add Accessibility', exact: true }).press('Enter');
+      {
+        const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+        await catalog.getByRole('button', { name: 'Compact' }).click();
+        await catalog.getByRole('button', { name: 'Add Accessibility', exact: true }).press('Enter');
+        await page.keyboard.press('Escape');
+        await catalog.waitFor({ state: 'hidden' });
+      }
       trace.push('keyboard Catalog placement created Accessibility');
       await saveAndReload(page);
       requireOutcome(await page.getByRole('article', { name: 'Accessibility' }).count() === 1, 'Catalog placement did not persist.');

@@ -62,6 +62,33 @@ function blurPx(filter: string): number {
   return Number(filter.match(/blur\(([\d.]+)px\)/)?.[1] ?? 0);
 }
 
+function technicalRailPresentation(page: Page) {
+  return page.locator('main[data-pom-theme-root]').evaluate((root) => {
+    const sceneLabel = root.querySelector<HTMLElement>('.scene-effects label > span')!;
+    const authoring = root.querySelector<HTMLElement>('.compact-theme')!;
+    const left = root.querySelector<HTMLElement>('[data-conformance-region="left"]')!.getBoundingClientRect();
+    const stage = root.querySelector<HTMLElement>('[data-conformance-region="stage"]')!.getBoundingClientRect();
+    const right = root.querySelector<HTMLElement>('[data-conformance-region="right"]')!.getBoundingClientRect();
+    const rootBox = root.getBoundingClientRect();
+    const shell = root.querySelector<HTMLElement>('.workbench-shell')!.getBoundingClientRect();
+    const style = getComputedStyle(root);
+    return {
+      expressionRowSize: style.getPropertyValue('--pom-expression-row-surface-font-size').trim(),
+      expressionSliderSize: style.getPropertyValue('--pom-expression-slider-input-font-size').trim(),
+      sceneLabelSize: getComputedStyle(sceneLabel).fontSize,
+      authoringSize: getComputedStyle(authoring).fontSize,
+      geometry: {
+        root: { x: rootBox.x, right: rootBox.right, width: rootBox.width },
+        shell: { x: shell.x, right: shell.right, width: shell.width },
+        left: { x: left.x, right: left.right, width: left.width },
+        stage: { x: stage.x, right: stage.right, width: stage.width },
+        right: { x: right.x, right: right.right, width: right.width },
+        viewportWidth: innerWidth
+      }
+    };
+  });
+}
+
 test('the canvas remains behind every interactive Workbench surface', async ({ page }) => {
   await fresh(page);
 
@@ -621,8 +648,56 @@ test('Ash and Amber reduced transparency resolves every elevated owner to neutra
   await expect(page.locator('[data-pom-ambient-layer]')).toHaveCSS('opacity', '0');
 });
 
+test('Catalog keeps an opaque neutral modal and no-blur backdrop under reduced transparency', async ({ page }) => {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Emulation.setEmulatedMedia', {
+    features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }]
+  });
+  await fresh(page);
+  await selectTheme(page, ASH_TARGET);
+  const launcher = page.getByRole('button', { name: 'Open Widget Catalog' });
+  await launcher.focus();
+  await launcher.press('Enter');
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  await expect(catalog).toBeVisible();
+
+  const surface = await material(page, '.widget-catalog');
+  expect(surface).toMatchObject({ alpha: 1, backdrop: 'none', background: 'rgb(48, 46, 42)' });
+  const backdrop = await catalog.evaluate((dialog) => {
+    const style = getComputedStyle(dialog, '::backdrop');
+    const channels = style.backgroundColor.match(/[\d.]+/g)?.map(Number) ?? [];
+    return {
+      alpha: channels.length === 4 ? channels[3] : 1,
+      backdrop: style.backdropFilter
+    };
+  });
+  expect(backdrop).toEqual({ alpha: 1, backdrop: 'none' });
+});
+
+test('Ash readability expression leaves Deep compact technical rail defaults unchanged', async ({ page }) => {
+  await fresh(page);
+  const deepRail = await technicalRailPresentation(page);
+  expect(deepRail).toMatchObject({
+    expressionRowSize: '',
+    expressionSliderSize: '',
+    sceneLabelSize: '8px',
+    authoringSize: '9px'
+  });
+  await selectTheme(page, ASH_TARGET);
+  expect(await technicalRailPresentation(page)).toMatchObject({
+    expressionRowSize: '11px',
+    expressionSliderSize: '11px',
+    sceneLabelSize: '11px',
+    authoringSize: '11px'
+  });
+  await selectTheme(page, TARGETS[0]);
+  expect(await technicalRailPresentation(page)).toEqual(deepRail);
+});
+
 test('an external non-preset definition renders the same live Workbench tree', async ({ page }) => {
   await fresh(page);
+  const deepRail = await technicalRailPresentation(page);
+
   const registry = {
     'icons.external-fixture': { kind: 'icon-pack' as const, source: 'icons.external-fixture' }
   };
@@ -664,6 +739,21 @@ test('an external non-preset definition renders the same live Workbench tree', a
   await expect(page.locator('main')).toHaveAttribute('data-pom-widget-grouping', resolution.theme.recipes.widgetGrouping);
   await expect(page.locator('main')).toHaveAttribute('data-pom-chrome-presentation', resolution.theme.recipes.chromePresentation);
   await expect(page.locator('main')).toHaveAttribute('data-pom-action-presentation', resolution.theme.recipes.actionPresentation);
+  const copperRail = await technicalRailPresentation(page);
+  expect(copperRail).toMatchObject({
+    expressionRowSize: '',
+    expressionSliderSize: '',
+    sceneLabelSize: deepRail.sceneLabelSize,
+    authoringSize: deepRail.authoringSize
+  });
+  expect(copperRail.geometry.left.x).toBeGreaterThanOrEqual(copperRail.geometry.shell.x);
+  expect(copperRail.geometry.right.right).toBeLessThanOrEqual(copperRail.geometry.shell.right);
+  expect(copperRail.geometry.left.x - copperRail.geometry.shell.x)
+    .toBeCloseTo(copperRail.geometry.shell.right - copperRail.geometry.right.right, 0);
+  expect(copperRail.geometry.root.right).toBeLessThanOrEqual(copperRail.geometry.viewportWidth);
+  expect(copperRail.geometry.left.right).toBeCloseTo(copperRail.geometry.stage.x, 0);
+  expect(copperRail.geometry.stage.right).toBeCloseTo(copperRail.geometry.right.x, 0);
+  expect(Math.abs(copperRail.geometry.left.width - copperRail.geometry.right.width)).toBeLessThanOrEqual(1);
   expect(await page.locator('main').evaluate((root) => ({
     revision: root.getAttribute('data-workbench-revision'),
     widgets: [...root.querySelectorAll('[data-pomegranate-widget]')].map((widget) => widget.getAttribute('data-pomegranate-widget'))

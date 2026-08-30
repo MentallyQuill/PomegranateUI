@@ -361,7 +361,7 @@ test('native workbench applies complete themes without replacing live Workbench 
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem('pomegranate-ui.workbench-lab.theme.v1'))).toBe('ash-amber');
   await page.getByText('Developer tools', { exact: true }).click();
   await openWidgetCatalog(page);
-  await expect(page.getByRole('complementary', { name: 'Widget Catalog' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Widget Catalog' })).toBeVisible();
 });
 
 test('all theme targets remain readable, transition-free, and contained at wide and compact sizes', async ({ page }) => {
@@ -513,7 +513,7 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
 
   await closeDeveloperTools(page);
   await openWidgetCatalog(page);
-  const catalog = page.getByRole('complementary', { name: 'Widget Catalog' });
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
   const results = catalog.getByRole('listitem');
   await expect(results).toHaveCount(94);
   await expect(catalog.locator('.catalog-miniature')).toHaveCount(94);

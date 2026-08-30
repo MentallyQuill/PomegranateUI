@@ -15,24 +15,39 @@
   } = $props();
 
   let state = $state<CatalogState>();
+  let dialog: HTMLDialogElement;
   $effect(() => {
     const current = catalog;
     state = current.getState();
     return current.subscribe((next) => { state = next; });
   });
+
+  $effect(() => {
+    if (!dialog) return;
+    if (state?.open && !dialog.open) dialog.showModal();
+    if (!state?.open && dialog.open) dialog.close();
+  });
+
+  function cancel(event: Event) {
+    event.preventDefault();
+    catalog.close();
+  }
 </script>
 
-{#if state?.open}
-  <aside
-    class={className}
-    aria-label="Widget Catalog"
-    data-pom-part="menu.surface"
-    data-presentation={state.presentation}
-    data-result-mode={state.resultMode}
-  >
+<dialog
+  bind:this={dialog}
+  class={className}
+  aria-label="Widget Catalog"
+  aria-describedby="widget-catalog-scroll-status"
+  data-pom-part="dialog.surface"
+  data-presentation={state?.presentation}
+  data-result-mode={state?.resultMode}
+  oncancel={cancel}
+>
+  {#if state?.open}
     <header data-pom-part="widget.header">
       <h2>Widget Catalog</h2>
-      <button type="button" data-pom-part="button.icon" onclick={() => catalog.close()}>Close Catalog</button>
+      <button type="button" data-pom-part="button.surface" onclick={() => catalog.close()}>Close Catalog</button>
     </header>
     <label>
       Search Widgets
@@ -81,5 +96,6 @@
         </li>
       {/each}
     </ul>
-  </aside>
-{/if}
+    <p id="widget-catalog-scroll-status" class="catalog-scroll-status">Scroll results · {state.results.length} widgets</p>
+  {/if}
+</dialog>
