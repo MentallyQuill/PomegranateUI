@@ -1975,7 +1975,7 @@ const DEFINITIONS = [
     "type": "settings.model-assignments",
     "title": "Model Assignments",
     "category": "settings",
-    "purpose": "Assign models to Sonder roles with explicit inheritance and cost context.",
+    "purpose": "Assign models to host roles with explicit inheritance and cost context.",
     "keywords": [
       "Model Assignments",
       "model",
@@ -2252,7 +2252,7 @@ const DEFINITIONS = [
     "type": "settings.prompt-editor",
     "title": "Prompt Editor",
     "category": "settings",
-    "purpose": "Inspect, compare, edit, validate, save, and activate Sonder prompt presets through one recoverable draft.",
+    "purpose": "Inspect, compare, edit, validate, save, and activate host prompt presets through one recoverable draft.",
     "keywords": [
       "Prompt Editor",
       "prompt",
@@ -2880,13 +2880,13 @@ const DEFINITIONS = [
     ]
   },
   {
-    "type": "settings.sonder-updates",
-    "title": "Sonder Updates",
+    "type": "settings.host-updates",
+    "title": "Host Updates",
     "category": "settings",
-    "purpose": "Check and apply Sonder updates through one maintenance coordinator.",
+    "purpose": "Check and apply host updates through one maintenance coordinator.",
     "keywords": [
-      "Sonder Updates",
-      "sonder",
+      "Host Updates",
+      "host",
       "updates",
       "version"
     ],

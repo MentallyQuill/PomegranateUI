@@ -6,10 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const packageNames = ['contracts', 'core', 'layout', 'svelte', 'testkit', 'theme'];
-const temporaryReleaseDocuments = new Set([
-  'docs/superpowers/plans/2026-08-30-pomegranateui-public-release.md',
-  'docs/superpowers/specs/2026-08-30-pomegranateui-public-release-design.md'
-]);
+const retiredHostName = new RegExp(['son', 'der'].join(''), 'i');
 const ignoredDirectories = new Set([
   '.git',
   '.worktrees',
@@ -53,11 +50,10 @@ test('current source tree contains no retired host-specific material', async () 
   const files = await walk(root);
   for (const file of files) {
     const relativePath = path.relative(root, file).replaceAll('\\', '/');
-    if (temporaryReleaseDocuments.has(relativePath)) continue;
-    assert.doesNotMatch(relativePath, /sonder/i, relativePath);
+    assert.doesNotMatch(relativePath, retiredHostName, relativePath);
     const extension = path.extname(file).toLowerCase();
     if (!textExtensions.has(extension) && path.basename(file) !== '.gitattributes') continue;
-    assert.doesNotMatch(await readFile(file, 'utf8'), /sonder/i, relativePath);
+    assert.doesNotMatch(await readFile(file, 'utf8'), retiredHostName, relativePath);
   }
 });
 

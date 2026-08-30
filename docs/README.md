@@ -20,11 +20,10 @@ Pom is a modular UI toolkit for teams building AI roleplay frontends. These docu
 - [Testkit](../packages/testkit/README.md) — public conformance fixtures and drivers.
 - [Workbench Lab](../apps/workbench-lab/README.md) — the demanding Svelte reference consumer.
 
-## Understand the evidence boundary
+## Understand the public boundary
 
-- [Preservation and provenance](../provenance/README.md) explains how extracted behavior remains accountable.
-- [Preserved Sonder baseline](../prototypes/sonder-baseline/README.md) contains executable evidence oracles, not production package authority.
-- [Design foundations](../design/foundations/README.md) and [Widget specifications](../design/widget-specifications/README.md) preserve the source design records that inform the toolkit.
+- [Design foundations](../design/foundations/README.md) and [Widget specifications](../design/widget-specifications/README.md) reserve public, PomegranateUI-owned design records.
+- [Workbench Lab](../apps/workbench-lab/README.md) is an example consumer, not mandatory product structure.
 
 ## Documentation principles
 
@@ -32,4 +31,4 @@ Pom is a modular UI toolkit for teams building AI roleplay frontends. These docu
 - Keep the adopter's branding, information architecture, markup, backend, persistence, and domain semantics explicit.
 - Distinguish current package behavior from reserved or future work.
 - Use SillyTavern-class applications to clarify the problem space without implying a dependency, clone, endorsement, or completed integration.
-- Treat the Workbench Lab and preserved prototypes as examples and evidence, not mandatory product structure.
+- Treat the Workbench Lab as an example and evidence surface, not mandatory product structure.

@@ -57,12 +57,10 @@ Pom is not a complete frontend waiting for a logo and API key. It does not provi
 
 Those are application and ecosystem decisions. Pom defines a narrower, reusable boundary: how modular workspace surfaces declare capabilities, move through layout states, communicate, render through an adopter, and prove their behavior.
 
-## Relationship to the reference work
+## Relationship to the Workbench Lab
 
-Sonder Engine is Pom's first demanding consumer and the source of the preserved baseline. Its prototypes and design records are evidence that Pom's contracts cover a real AI roleplay workspace. They are not a hidden Sonder data model inside Pom, and Sonder server code is prohibited from Pom packages and examples.
-
-The Svelte Workbench Lab rebuilds the approved reference direction as an inspectable consumer. It demonstrates one composition of Pom; it does not define the only composition.
+The Svelte Workbench Lab is an inspectable consumer of the public packages and recipes. It demonstrates one demanding composition of Pom; it does not define the only composition or introduce a hidden host data model.
 
 ## Current maturity
 
-Pom is currently a private incubator. Its packages have not been published to npm, the theme package remains reserved, production hosting is outside the present scope, and no Sonder cutover has occurred. The repository's tests, packed-consumer checks, and preserved browser evidence establish the current development boundary; they are not a claim of a finished public release.
+Pom's source repository and Workbench Lab are public under the MIT License. Its packages remain private to npm and have not been published. Unit, type, native, packed-consumer, build, recipe, and browser checks establish the current development boundary.

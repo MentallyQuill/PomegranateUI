@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packageNames = ['contracts', 'theme', 'layout', 'core', 'svelte', 'testkit'];
-const exampleNames = ['mock-roleplay-backend', 'sonder-integration'];
+const exampleNames = ['mock-roleplay-backend'];
 const npmCli = process.env.npm_execpath;
 const npmCommand = process.platform === 'win32' ? process.execPath : 'npm';
 const npmPrefix = process.platform === 'win32'
