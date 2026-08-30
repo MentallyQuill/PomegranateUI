@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 test.skip(process.platform !== 'win32', 'Visual baselines are reviewed on Windows; functional browser coverage remains cross-platform.');
 
 async function fresh(page: Page, width: number, height: number) {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width, height });
   await page.goto('http://127.0.0.1:4174');
   await page.evaluate(() => window.localStorage.clear());
