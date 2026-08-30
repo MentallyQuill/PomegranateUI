@@ -22,6 +22,12 @@ resolves the complete bundle or returns no partial target, and
 asset, and canvas compilers while adding only bounded `--pom-ambient-*`
 bindings.
 
+Six-role `ThemeDraft` authoring is projected deterministically into the full
+semantic palette while preserving target-owned recipes, typography, shapes,
+assets, success, and danger semantics. Projection validates the exact draft,
+re-runs target resolution and contrast policy, and never mutates the immutable
+base target. Material percentages remain runtime policy inputs rather than
+stored recipe mutations.
 `compileCanvasLayers()` participates in the same activation transaction, and
 `compileSliderProgress()` supplies the value-driven Chromium/WebKit range fill.
 Reduced-transparency policy rewrites base and interaction-state materials, not
