@@ -282,8 +282,8 @@ test('the target manifest freezes both visual identities across Scene and Catalo
     authorities: new Map(AUTHORITY_RECORDS.map((record) => [record.id, record])),
     viewports: CONFORMANCE_VIEWPORTS,
     driverIds: new Set(['pomos-reference', 'bunny-original-reference', 'workbench-lab']),
-    measurementProfileIds: new Set(['theme-target-behavior']),
-    assertionProfileIds: new Set(['theme-target-behavior']),
+    measurementProfileIds: new Set(['theme-target-behavior', 'bunny-fidelity']),
+    assertionProfileIds: new Set(['theme-target-behavior', 'bunny-fidelity']),
     deviationIds: new Set(),
     hashFile: hashAuthorityFile
   });
@@ -568,6 +568,38 @@ test('the original target profile compares identity and accessibility without fr
   ]);
 });
 
+test('Bunny wide scenarios compare the approved expressive reference vocabulary exactly', () => {
+  assert.deepEqual(BUNNY_SCENARIOS.map(({ measurementProfile }) => measurementProfile), [
+    'bunny-fidelity',
+    'theme-target-behavior',
+    'bunny-fidelity'
+  ]);
+  assert.deepEqual(MEASUREMENT_PROFILES.get('bunny-fidelity')?.map(({ path }) => path), [
+    'functional.targetApplied',
+    'functional.identityStable',
+    'functional.instant',
+    'functional.noHorizontalOverflow',
+    'functional.keyboardAccessible',
+    'functional.scenarioStateReached',
+    'structure.panelTabs',
+    'structure.anchorWidgets',
+    'visual.canvas',
+    'visual.accent',
+    'visual.text',
+    'visual.shelfRadius',
+    'visual.shellRadius',
+    'visual.dockRadius',
+    'visual.widgetRadius',
+    'visual.buttonRadius',
+    'visual.readerRadius',
+    'visual.readerFontSize',
+    'visual.readerLineHeight',
+    'visual.widgetHasGradient',
+    'visual.readerHasMaterial',
+    'visual.readerIntersectsStage'
+  ]);
+});
+
 test('Widget and Catalog profiles gate stable rendered qualities and every lifecycle stage', () => {
   assert.deepEqual(MEASUREMENT_PROFILES.get('deep-current-widget-surface')?.map(({ path }) => path).slice(-3), [
     'visual.darkSurface',
@@ -845,7 +877,10 @@ test('the reviewed theme baseline freezes every target scenario and authority ha
     'utf8'
   ));
   assert.equal(baseline.schemaVersion, 'pomegranate.ui.conformance-baseline.v1');
-  assert.equal(baseline.measurementProfile, 'theme-target-behavior');
+  assert.deepEqual(baseline.measurementProfiles, {
+    default: 'theme-target-behavior',
+    bunnyWide: 'bunny-fidelity'
+  });
   assert.deepEqual(baseline.authorities, {
     'pomos-reference': AUTHORITY_RECORDS.find(({ id }) => id === 'pomos-reference').sha256,
     'bunny-original-reference': AUTHORITY_RECORDS.find(({ id }) => id === 'bunny-original-reference').sha256

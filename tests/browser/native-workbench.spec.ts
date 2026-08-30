@@ -396,6 +396,8 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
     await page.evaluate(() => document.fonts.ready);
     expect(await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches)).toBe(true);
     await openDeveloperTools(page);
+    await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: 'Bunny', exact: true }).click();
+    await expect(page.locator('main')).toHaveAttribute('data-pom-theme', 'bunny');
     for (const control of [
       page.getByRole('tab', { name: 'Scene' }),
       page.getByRole('button', { name: 'Open Widget Catalog' }),

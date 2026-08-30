@@ -21,8 +21,7 @@ import { createLocalThemePreference, LAB_THEME_KEY } from './theme-storage.js';
 
 const assetRegistry = {
   'icons.minimal': { kind: 'icon-pack' as const, source: 'icons.minimal' },
-  'image.deep-current-stage': { kind: 'image' as const, source: '/assets/deep-current.jpg' },
-  'image.bunny-garden': { kind: 'image' as const, source: '/assets/bunny.webp' }
+  'image.deep-current-stage': { kind: 'image' as const, source: '/assets/deep-current.jpg' }
 };
 
 const EXPECTED_ASH_CONSTRAINTS = [
@@ -259,6 +258,51 @@ describe('Workbench Lab theme conformance', () => {
     expect(POM_NEUTRAL_THEME.canvas.every((layer) => layer.kind !== 'image')).toBe(true);
   });
 
+  it('pins Bunny to the executable stationery reference instead of the garden-image shell', () => {
+    const preset = LAB_THEME_PRESETS.find(({ id }) => id === 'bunny');
+
+    expect(preset).toBeDefined();
+    expect(BUNNY_THEME).toMatchObject({
+      colors: {
+        canvas: '#faeef6',
+        accent: '#ed75aa',
+        text: '#45364d',
+        border: '#e8cddd',
+        borderStrong: '#c891ae'
+      },
+      shapes: {
+        chrome: { radiusPx: 24 },
+        shell: { radiusPx: 26 },
+        dock: { radiusPx: 20 },
+        pane: { radiusPx: 17 },
+        reader: { radiusPx: 18, joinedEdges: [] }
+      },
+      recipes: { widgetGrouping: 'individual', chromePresentation: 'full', actionPresentation: 'always' }
+    });
+    expect(BUNNY_THEME.assets).toEqual([{ id: 'icons.minimal', kind: 'icon-pack', required: true }]);
+    expect(BUNNY_THEME.canvas).toEqual([
+      { kind: 'solid', color: '#faeef6' },
+      {
+        kind: 'four-corner',
+        topLeft: '#ffd8e8',
+        topRight: '#e4dcff',
+        bottomLeft: '#d5f3e9',
+        bottomRight: '#fff0bd'
+      }
+    ]);
+    expect(preset?.surfaceExpression).toMatchObject({
+      schemaVersion: 'pomegranate.ui.surface-expression.v1',
+      id: 'bunny-stationery',
+      shapes: {
+        chrome: { cornerRadiiPx: { topLeft: 24, topRight: 24, bottomRight: 12, bottomLeft: 12 } },
+        shell: { cornerRadiiPx: { topLeft: 12, topRight: 12, bottomRight: 26, bottomLeft: 26 } }
+      },
+      parts: {
+        'widget.content': { typeScale: 'lg', textTransform: 'none' }
+      }
+    });
+  });
+
   it.each(LAB_THEME_IDS)('keeps opaque semantic text pairings readable in %s', (id) => {
     const theme = LAB_THEME_PRESETS.find((candidate) => candidate.id === id)!.target.theme;
     for (const background of [theme.colors.surface, theme.colors.surfaceElevated, theme.colors.surfaceInset]) {
@@ -274,16 +318,16 @@ describe('Workbench Lab theme conformance', () => {
     if (!result.ok) return;
     const bindings = compileThemeBindings(result.theme);
     expect(bindings['--pom-color-text']).toBe('#45364d');
-    expect(bindings['--pom-radius-widget']).toContain('20px');
+    expect(bindings['--pom-radius-widget']).toContain('17px');
     expect(Object.values(bindings).join(';')).not.toContain('data-pom-theme');
     expect(Object.values(bindings).join(';')).not.toContain('transition');
   });
 
-  it('declares each photographic canvas through local semantic asset IDs', () => {
+  it('keeps photographic canvas assets local and leaves Bunny image-free', () => {
     expect(DEEP_CURRENT_THEME.assets).toContainEqual({ id: 'image.deep-current-stage', kind: 'image', required: true });
     expect(DEEP_CURRENT_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({ assetId: 'image.deep-current-stage', fit: 'cover' });
-    expect(BUNNY_THEME.assets).toContainEqual({ id: 'image.bunny-garden', kind: 'image', required: true });
-    expect(BUNNY_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({ assetId: 'image.bunny-garden', fit: 'cover' });
+    expect(BUNNY_THEME.assets.some(({ kind }) => kind === 'image')).toBe(false);
+    expect(BUNNY_THEME.canvas.some((layer) => layer.kind === 'image')).toBe(false);
   });
 
   it('switches one complete binding and persists only after validation succeeds', () => {
@@ -298,6 +342,55 @@ describe('Workbench Lab theme conformance', () => {
     expect(writes).toEqual(['bunny']);
   });
 
+  it('atomically compiles Bunny expression bindings with an empty non-Bunny fallback', () => {
+    const controller = createLabThemeController({ initialId: 'pom-neutral' });
+    expect(controller.getSnapshot().cssText).not.toContain('--pom-expression-');
+
+    const result = controller.activate('bunny');
+    expect(result.ok).toBe(true);
+    expect(controller.getSnapshot().cssText).toContain('--pom-expression-panel-surface-radius:12px 12px 26px 26px');
+    expect(controller.getSnapshot().cssText).toContain('--pom-expression-widget-content-radius:18px 18px 18px 18px');
+    expect(controller.getSnapshot().cssText).toContain('--pom-expression-widget-content-font-size:17px');
+    expect(controller.getSnapshot().cssText).toContain('--pom-expression-widget-surface-background-image:linear-gradient(150deg');
+
+    expect(controller.activate('deep-current').ok).toBe(true);
+    expect(controller.getSnapshot().cssText).not.toContain('--pom-expression-');
+  });
+
+  it('compiles Bunny expression after reduced-transparency policy redirects decorative materials', () => {
+    const controller = createLabThemeController({
+      initialId: 'bunny',
+      devicePolicy: { reducedTransparency: true }
+    });
+
+    expect(controller.getSnapshot().compiled.theme.recipes.parts['widget.surface'].material).toBe('opaque');
+    expect(controller.getSnapshot().cssText).not.toContain('--pom-expression-widget-surface-background-image');
+    expect(controller.getSnapshot().cssText).toContain('--pom-expression-widget-surface-radius:17px 17px 17px 17px');
+  });
+
+  it('retains the last complete snapshot when a preset carries an invalid expression profile', () => {
+    const presets = LAB_THEME_PRESETS.map((preset) => preset.id === 'bunny'
+      ? { ...preset, surfaceExpression: { ...preset.surfaceExpression, unexpected: true } }
+      : preset);
+    const writes: string[] = [];
+    const controller = createLabThemeController({
+      presets,
+      initialId: 'deep-current',
+      preference: { read: () => null, write: (id) => writes.push(id) }
+    });
+    const before = controller.getSnapshot();
+
+    const result = controller.activate('bunny');
+
+    expect(result.ok).toBe(false);
+    expect(controller.getSnapshot()).toBe(before);
+    expect(writes).toEqual([]);
+    if (!result.ok) expect(result.diagnostics[0]).toMatchObject({
+      code: 'THEME_SCHEMA_INVALID',
+      path: ['surfaceExpression']
+    });
+  });
+
   it('projects recovered controls through bounded public theme policy', () => {
     const controller = createLabThemeController();
     expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 20, barOpacity: 39, selectedStrength: 6, frostLevel: 22 });
@@ -306,9 +399,9 @@ describe('Workbench Lab theme conformance', () => {
     expect(controller.getSnapshot().compiled.theme.materials.pane?.backdrop.blurPx).toBe(8.8);
 
     expect(controller.activate('bunny').ok).toBe(true);
-    expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 24, barOpacity: 28, selectedStrength: 62, frostLevel: 54 });
-    expect(controller.getSnapshot().compiled.theme.materials.pane?.opacity).toBe(0.24);
-    expect(controller.getSnapshot().compiled.theme.materials.pane?.backdrop.blurPx).toBe(21.6);
+    expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 92, barOpacity: 80, selectedStrength: 62, frostLevel: 55 });
+    expect(controller.getSnapshot().compiled.theme.materials.pane?.opacity).toBe(0.92);
+    expect(controller.getSnapshot().compiled.theme.materials.pane?.backdrop.blurPx).toBe(22);
   });
 
   it('applies the host device policy before compiling a snapshot', () => {
@@ -342,7 +435,7 @@ describe('Workbench Lab theme conformance', () => {
     expect(controller.activate('bunny').ok).toBe(true);
     expect(controller.getSnapshot().materialControls).toMatchObject({ glassDensity: 38, frostLevel: 45 });
     expect(controller.resetMaterialControls().ok).toBe(true);
-    expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 24, barOpacity: 28, selectedStrength: 62, frostLevel: 54 });
+    expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 92, barOpacity: 80, selectedStrength: 62, frostLevel: 55 });
   });
 
   it('retains the last valid snapshot for an invalid preset or unavailable required asset', () => {
@@ -354,9 +447,9 @@ describe('Workbench Lab theme conformance', () => {
     expect(invalidController.getSnapshot()).toBe(beforeInvalid);
     if (!invalid.ok) expect(invalid.diagnostics[0]).toMatchObject({ code: 'THEME_MIGRATION_VERSION_UNSUPPORTED' });
 
-    const missingController = createLabThemeController({ availableAssets: new Set(['icons.minimal', 'image.deep-current-stage']) });
+    const missingController = createLabThemeController({ initialId: 'bunny', availableAssets: new Set(['icons.minimal']) });
     const beforeMissing = missingController.getSnapshot();
-    const missing = missingController.activate('bunny');
+    const missing = missingController.activate('deep-current');
     expect(missing.ok).toBe(false);
     expect(missingController.getSnapshot()).toBe(beforeMissing);
     if (!missing.ok) expect(missing.diagnostics[0]).toMatchObject({ code: 'THEME_ASSET_MISSING' });

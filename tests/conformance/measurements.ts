@@ -63,9 +63,17 @@ export interface ThemeTargetMeasurement {
     readonly canvas: string;
     readonly accent: string;
     readonly text: string;
+    readonly shelfRadius?: string;
     readonly shellRadius: string;
+    readonly dockRadius?: string;
     readonly widgetRadius: string;
     readonly buttonRadius: string;
+    readonly readerRadius?: string;
+    readonly readerFontSize?: string;
+    readonly readerLineHeight?: string;
+    readonly widgetHasGradient?: boolean;
+    readonly readerHasMaterial?: boolean;
+    readonly readerIntersectsStage?: boolean;
   };
   readonly trace: readonly string[];
 }

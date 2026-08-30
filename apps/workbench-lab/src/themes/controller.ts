@@ -1,5 +1,6 @@
 import {
   PersistedThemeDraftSchema,
+  DEFAULT_SURFACE_EXPRESSION,
   type PersistedThemeDraft,
   type PresentationProfileDefinition,
   type ThemeDraftStorage,
@@ -8,6 +9,7 @@ import {
 import {
   compilePresentationProfile,
   compileThemeTarget,
+  compileSurfaceExpressionBindings,
   createThemeDraft,
   projectThemeDraft,
   resolveAmbientProfile,
@@ -52,6 +54,7 @@ export interface LabThemeSnapshot {
   readonly resolvedAmbient: ResolvedAmbientProfile;
   readonly presentation: PresentationProfileDefinition;
   readonly presentationBindings: PresentationBindings;
+  readonly expressionBindings: Readonly<Record<string, string>>;
   readonly cssText: string;
   readonly diagnostics: readonly LabThemeDiagnostic[];
 }
@@ -124,6 +127,7 @@ function createSnapshot(
   target: ResolvedThemeTarget,
   presentationInput: unknown | undefined,
   materialControls: LabMaterialControls,
+  surfaceExpressionInput: unknown,
   devicePolicy: ThemeDevicePolicy | undefined,
   ambientOptions: {
     readonly fallback?: PersistedThemeDraft['ambient'];
@@ -146,9 +150,20 @@ function createSnapshot(
     ...materialControlPolicy(materialControls),
     ...(devicePolicy ? { device: devicePolicy } : {})
   });
+  const surfaceExpression = surfaceExpressionInput ?? DEFAULT_SURFACE_EXPRESSION;
+  const expression = compileSurfaceExpressionBindings(compiled.theme, surfaceExpression);
+  if (!expression.ok) return {
+    ok: false,
+    diagnostics: Object.freeze(expression.diagnostics.map((entry) => Object.freeze({
+      code: 'THEME_SCHEMA_INVALID' as const,
+      path: Object.freeze(['surfaceExpression', ...entry.path]),
+      message: entry.message
+    })))
+  };
   const cssBindings = {
     ...compiled.bindings,
     ...presentation.bindings,
+    ...expression.bindings,
     '--pom-ambient-transparency-enabled': resolvedAmbient.transparencyEnabled ? '1' : '0'
   };
   return {
@@ -161,6 +176,7 @@ function createSnapshot(
       resolvedAmbient,
       presentation: presentation.profile,
       presentationBindings: presentation.bindings,
+      expressionBindings: expression.bindings,
       cssText: serializeBindings(cssBindings),
       diagnostics: Object.freeze([])
     })
@@ -226,10 +242,18 @@ export function createLabThemeController(options: {
 
   const resolveRawPreset = (id: string): ThemeActivationResult => {
     if (!isLabThemeId(id) || !byId.has(id)) return { ok: false, diagnostics: unknownPresetDiagnostic(id) };
-    const preset = byId.get(id);
-    const resolution = resolveThemeTarget(preset?.target, assetRegistry);
+    const preset = byId.get(id)!;
+    const resolution = resolveThemeTarget(preset.target, assetRegistry);
     if (!resolution.ok) return resolution;
-    return createSnapshot(id, resolution.target, preset?.presentation, defaultMaterialControls(id), options.devicePolicy, snapshotAmbientOptions);
+    return createSnapshot(
+      id,
+      resolution.target,
+      preset.presentation,
+      defaultMaterialControls(id),
+      preset.surfaceExpression,
+      options.devicePolicy,
+      snapshotAmbientOptions
+    );
   };
 
   const applyPersisted = (id: LabThemeId, persisted: PersistedThemeDraft): ThemeActivationResult => {
@@ -246,7 +270,15 @@ export function createLabThemeController(options: {
     }
     const resolution = resolveThemeTarget(candidate, assetRegistry);
     if (!resolution.ok) return resolution;
-    return createSnapshot(id, resolution.target, byId.get(id)?.presentation, persisted.draft.materials, options.devicePolicy, snapshotAmbientOptions);
+    return createSnapshot(
+      id,
+      resolution.target,
+      byId.get(id)?.presentation,
+      persisted.draft.materials,
+      byId.get(id)?.surfaceExpression,
+      options.devicePolicy,
+      snapshotAmbientOptions
+    );
   };
 
   let storedId: string | null = null;

@@ -994,8 +994,7 @@ main[data-pom-action-presentation="compact"] .widget-frame:is(:hover, :focus-wit
   transform: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  main[data-pom-action-presentation="hover-focus"] .widget-frame nav,
-  main[data-pom-action-presentation="compact"] .widget-frame nav { transition: none; }
+  main[data-pom-theme-root] .widget-frame nav { transition: none; }
 }
 
 main[data-pom-widget-grouping="individual"] [data-conformance-region="left"],

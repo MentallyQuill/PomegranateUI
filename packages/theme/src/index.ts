@@ -15,3 +15,4 @@ export * from './presentation.js';
 export * from './resolve.js';
 export * from './resolve-target.js';
 export * from './semantic-canvas.js';
+export * from './surface-expression.js';

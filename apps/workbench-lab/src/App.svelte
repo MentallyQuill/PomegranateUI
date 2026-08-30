@@ -7,7 +7,6 @@
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
   import { POM_SEMANTIC_PART_STYLE_SHEET, type ThemeAssetRegistry } from '@pomegranate-ui/theme';
 
-  import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
   import deepCurrentStage from './assets/deep-current-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
   import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
@@ -65,8 +64,7 @@
   const catalogState = toSvelteCatalogStore(catalog);
   const themeAssetRegistry: ThemeAssetRegistry = Object.freeze({
     'icons.minimal': { kind: 'icon-pack', source: 'icons.minimal' },
-    'image.deep-current-stage': { kind: 'image', source: deepCurrentStage },
-    'image.bunny-garden': { kind: 'image', source: bunnyGardenCanvas }
+    'image.deep-current-stage': { kind: 'image', source: deepCurrentStage }
   });
   const mediaMatches = (query: string) => typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
   const backdropFilterSupported = typeof CSS === 'undefined' || typeof CSS.supports !== 'function'

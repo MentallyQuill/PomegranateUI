@@ -233,14 +233,14 @@ function partRule(part: ThemePartId): string {
   color: var(${prefix}-foreground);
   background-color: var(${prefix}-material-fallback);
   background-color: var(${prefix}-material-fill);
-  background-image: var(${prefix}-texture-image);
+  background-image: var(--pom-expression-${key}-background-image, var(${prefix}-texture-image));
   background-blend-mode: var(${prefix}-texture-blend);
   border: var(${prefix}-material-border);
   border-width: var(${prefix}-joined-border-width);
   border-block-end-width: var(${prefix}-separator-width);
   border-block-end-color: var(${prefix}-separator-color);
   margin-block-end: var(${prefix}-separator-space);
-  border-radius: var(${prefix}-radius);
+  border-radius: var(--pom-expression-${key}-radius, var(${prefix}-radius));
   -webkit-backdrop-filter: var(${prefix}-material-backdrop);
   backdrop-filter: var(${prefix}-material-backdrop);
   box-shadow: var(${prefix}-material-shadow);
@@ -249,6 +249,12 @@ function partRule(part: ThemePartId): string {
   font-weight: var(${prefix}-font-weight);
   overflow: var(${prefix}-overflow);
   z-index: var(${prefix}-elevation);
+}
+:where(${selector}) {
+  font-size: var(--pom-expression-${key}-font-size, inherit);
+  line-height: var(--pom-expression-${key}-line-height, inherit);
+  letter-spacing: var(--pom-expression-${key}-letter-spacing, inherit);
+  text-transform: var(--pom-expression-${key}-text-transform, inherit);
 }
 ${selector}[data-pom-spacing="recipe"] { gap: var(${prefix}-spacing); padding: var(${prefix}-spacing); }
 ${selector}:hover { color: var(${prefix}-state-hover-foreground); background-color: var(${prefix}-state-hover-fill); opacity: var(${prefix}-state-hover-opacity); }

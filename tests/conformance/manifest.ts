@@ -152,8 +152,8 @@ function createThemeTargetScenario(
     referenceState: state,
     implementationState: state,
     capture: Object.freeze({ kind: 'viewport' as const }),
-    measurementProfile: 'theme-target-behavior',
-    assertionProfile: 'theme-target-behavior',
+    measurementProfile: target === 'bunny' && viewport === 'wide' ? 'bunny-fidelity' : 'theme-target-behavior',
+    assertionProfile: target === 'bunny' && viewport === 'wide' ? 'bunny-fidelity' : 'theme-target-behavior',
     allowedDeviationIds: Object.freeze([])
   });
 }

@@ -148,6 +148,24 @@ const themeTargetBehaviorProfile: readonly ComparisonDefinition[] = Object.freez
   Object.freeze({ path: 'structure.anchorWidgets', comparator: 'contains', category: 'structure', severity: 'P1' })
 ]);
 
+const bunnyFidelityProfile: readonly ComparisonDefinition[] = Object.freeze([
+  ...themeTargetBehaviorProfile,
+  exact('visual.canvas', 'visual'),
+  exact('visual.accent', 'visual'),
+  exact('visual.text', 'visual'),
+  exact('visual.shelfRadius', 'visual'),
+  exact('visual.shellRadius', 'visual'),
+  exact('visual.dockRadius', 'visual'),
+  exact('visual.widgetRadius', 'visual'),
+  exact('visual.buttonRadius', 'visual'),
+  exact('visual.readerRadius', 'visual'),
+  exact('visual.readerFontSize', 'visual'),
+  exact('visual.readerLineHeight', 'visual'),
+  exact('visual.widgetHasGradient', 'visual'),
+  exact('visual.readerHasMaterial', 'visual'),
+  exact('visual.readerIntersectsStage', 'visual')
+]);
+
 const themeAuthoringProfile: readonly ComparisonDefinition[] = Object.freeze([
   exact('functional.controlsPresent'),
   exact('functional.targetApplied'),
@@ -206,6 +224,7 @@ export const MEASUREMENT_PROFILES: ReadonlyMap<string, readonly ComparisonDefini
   ['deep-current-widget-surface', widgetSurfaceProfile],
   ['deep-current-catalog', catalogProfile],
   ['theme-target-behavior', themeTargetBehaviorProfile],
+  ['bunny-fidelity', bunnyFidelityProfile],
   ['theme-authoring', themeAuthoringProfile],
   ['deep-fidelity', fidelityProfile]
 ]);

@@ -226,6 +226,193 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
   }
 });
 
+test('Bunny matches the stationery reference through reusable expression bindings', async ({ page }) => {
+  await fresh(page);
+  await selectTheme(page, TARGETS[2]);
+
+  await expect(page.locator('[data-pom-canvas-layer]')).toHaveCount(2);
+  await expect(page.locator('main')).toHaveAttribute('data-pom-action-presentation', 'always');
+  expect(await page.locator('[data-pom-canvas-layer]').evaluateAll((layers) => layers.map((layer) => ({
+    kind: layer.getAttribute('data-pom-canvas-layer'),
+    image: getComputedStyle(layer).backgroundImage
+  })))).toEqual([
+    { kind: 'solid', image: 'none' },
+    { kind: 'four-corner', image: expect.stringContaining('radial-gradient') }
+  ]);
+
+  const evidence = await page.locator('main').evaluate((root) => {
+    const style = (selector: string) => {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing Bunny evidence selector: ${selector}`);
+      const computed = getComputedStyle(element);
+      return {
+        radius: computed.borderRadius,
+        backgroundImage: computed.backgroundImage,
+        backdrop: computed.backdropFilter,
+        fontSize: computed.fontSize,
+        textTransform: computed.textTransform,
+        height: element.getBoundingClientRect().height
+      };
+    };
+    const computed = getComputedStyle(root);
+    const stage = root.querySelector<HTMLElement>('[data-conformance-region="stage"]');
+    const reader = root.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .widget-frame > [data-pom-part="widget.content"]');
+    const readerBody = root.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .transcript');
+    const composer = root.querySelector<HTMLElement>('[data-widget-type="story.composer"] .widget-frame > [data-pom-part="widget.content"]');
+    if (!stage || !reader || !readerBody || !composer) throw new Error('Missing Bunny story presentation evidence.');
+    const stageBox = stage.getBoundingClientRect();
+    const readerBox = reader.getBoundingClientRect();
+    return {
+      colors: {
+        canvas: computed.getPropertyValue('--pom-color-canvas').trim(),
+        accent: computed.getPropertyValue('--pom-color-accent').trim(),
+        text: computed.getPropertyValue('--pom-color-text').trim()
+      },
+      shelf: style('.top-shelf'),
+      shell: style('.workbench-shell'),
+      dock: style('[data-conformance-region="left"]'),
+      widget: style('[data-conformance-region="left"] .widget-frame'),
+      header: style('[data-conformance-region="left"] .widget-frame > header'),
+      icon: style('[data-conformance-region="left"] .widget-frame nav button'),
+      row: style('[data-widget-type="systems.world-state"] [data-pom-part="row.surface"]'),
+      button: style('.top-shelf [data-pom-part="button.surface"]'),
+      reader: {
+        ...style('[data-widget-type="story.transcript"] .widget-frame > [data-pom-part="widget.content"]'),
+        lineHeight: getComputedStyle(readerBody).lineHeight,
+        bodyFontSize: getComputedStyle(readerBody).fontSize,
+        intersectsStage: readerBox.right > stageBox.left && readerBox.left < stageBox.right
+          && readerBox.bottom > stageBox.top && readerBox.top < stageBox.bottom
+      },
+      composer: style('[data-widget-type="story.composer"] .widget-frame > [data-pom-part="widget.content"]')
+    };
+  });
+
+  expect(evidence.colors).toEqual({ canvas: '#faeef6', accent: '#ed75aa', text: '#45364d' });
+  expect(evidence.shelf).toMatchObject({ radius: '24px 24px 12px 12px', height: 52, fontSize: '12px', textTransform: 'none' });
+  expect(evidence.shelf.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.shell.radius).toBe('12px 12px 26px 26px');
+  expect(evidence.dock.radius).toBe('20px');
+  expect(evidence.widget).toMatchObject({
+    radius: '17px',
+    backdrop: 'blur(22px) saturate(1.08) brightness(1.03)',
+    fontSize: '12px'
+  });
+  expect(evidence.widget.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.header).toMatchObject({ radius: '17px 17px 0px 0px', fontSize: '12px', textTransform: 'none' });
+  expect(evidence.icon).toMatchObject({ fontSize: '0px', textTransform: 'none' });
+  expect(evidence.icon.backgroundImage).not.toBe('none');
+  expect(evidence.row.radius).toBe('999px');
+  expect(evidence.row.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.button).toMatchObject({ radius: '999px', fontSize: '11px', textTransform: 'none' });
+  expect(evidence.reader).toMatchObject({
+    radius: '18px', bodyFontSize: '17px', lineHeight: '26.35px', intersectsStage: true
+  });
+  expect(evidence.reader.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.composer.radius).toBe('18px');
+  expect(evidence.composer.backgroundImage).toContain('linear-gradient(150deg');
+
+  const catalogButton = page.getByRole('button', { name: 'Open Widget Catalog' });
+  await catalogButton.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(catalogButton).toBeFocused();
+  expect(await catalogButton.evaluate((button) => {
+    const style = getComputedStyle(button);
+    return { focusVisible: button.matches(':focus-visible'), color: style.outlineColor, width: style.outlineWidth };
+  })).toEqual({ focusVisible: true, color: 'rgb(105, 81, 161)', width: '2px' });
+});
+
+test('Bunny keeps the compact reader expressive, contained, and responsive', async ({ page }) => {
+  await fresh(page, 390, 844);
+  await selectTheme(page, TARGETS[2]);
+
+  const evidence = await page.locator('main').evaluate((root) => {
+    const stage = root.querySelector<HTMLElement>('[data-conformance-region="stage"]');
+    const reader = root.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .widget-frame > [data-pom-part="widget.content"]');
+    const readerBody = root.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .transcript');
+    const composer = root.querySelector<HTMLElement>('[data-widget-type="story.composer"] .composer');
+    const textarea = root.querySelector<HTMLTextAreaElement>('[data-widget-type="story.composer"] textarea');
+    const send = root.querySelector<HTMLButtonElement>('[data-widget-type="story.composer"] .composer > button');
+    const leftDock = root.querySelector<HTMLElement>('[data-conformance-region="left"]');
+    const rightDock = root.querySelector<HTMLElement>('[data-conformance-region="right"]');
+    if (!stage || !reader || !readerBody || !composer || !textarea || !send || !leftDock || !rightDock) {
+      throw new Error('Missing compact Bunny evidence.');
+    }
+    const stageBox = stage.getBoundingClientRect();
+    const readerBox = reader.getBoundingClientRect();
+    const composerBox = composer.getBoundingClientRect();
+    const textareaBox = textarea.getBoundingClientRect();
+    const sendBox = send.getBoundingClientRect();
+    const readerStyle = getComputedStyle(reader);
+    const typeStyle = getComputedStyle(readerBody);
+    return {
+      scrollWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+      leftDisplay: getComputedStyle(leftDock).display,
+      rightDisplay: getComputedStyle(rightDock).display,
+      readerRadius: readerStyle.borderRadius,
+      readerImage: readerStyle.backgroundImage,
+      fontSize: typeStyle.fontSize,
+      lineHeight: typeStyle.lineHeight,
+      intersectsStage: readerBox.right > stageBox.left && readerBox.left < stageBox.right
+        && readerBox.bottom > stageBox.top && readerBox.top < stageBox.bottom,
+      composerControlsContained: textareaBox.top >= composerBox.top && textareaBox.bottom <= composerBox.bottom
+        && sendBox.top >= composerBox.top && sendBox.bottom <= composerBox.bottom,
+      composerDraft: textarea.value,
+      sendLabel: send.textContent?.trim()
+    };
+  });
+
+  expect(evidence).toMatchObject({
+    viewportWidth: 390,
+    scrollWidth: 390,
+    leftDisplay: 'none',
+    rightDisplay: 'none',
+    readerRadius: '18px',
+    fontSize: '14px',
+    lineHeight: '21.7px',
+    intersectsStage: true,
+    composerControlsContained: true,
+    composerDraft: 'Ask Mara what the bell means.',
+    sendLabel: 'Send action'
+  });
+  expect(evidence.readerImage).toContain('linear-gradient(150deg');
+});
+
+test('Bunny removes decorative gradients under reduced transparency without losing shape', async ({ page }) => {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Emulation.setEmulatedMedia', {
+    features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }]
+  });
+  await fresh(page);
+  await selectTheme(page, TARGETS[2]);
+
+  expect(await page.locator('[data-conformance-region="left"] .widget-frame').first().evaluate((widget) => {
+    const style = getComputedStyle(widget);
+    return {
+      radius: style.borderRadius,
+      image: style.backgroundImage,
+      backdrop: style.backdropFilter,
+      alpha: style.backgroundColor.match(/[\d.]+/g)?.map(Number)[3] ?? 1
+    };
+  })).toEqual({ radius: '17px', image: 'none', backdrop: 'none', alpha: 1 });
+});
+
+test('Bunny action rails stop decorative motion when reduced motion is requested', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await fresh(page);
+  await selectTheme(page, TARGETS[2]);
+
+  expect(await page.locator('[data-conformance-region="left"] .widget-frame nav').first().evaluate((actions) => {
+    const style = getComputedStyle(actions);
+    return {
+      animation: style.animationName,
+      transitionDuration: style.transitionDuration,
+      transitionProperty: style.transitionProperty
+    };
+  })).toEqual({ animation: 'none', transitionDuration: '0s', transitionProperty: 'none' });
+});
+
 test('unified compositions allocate rail space to functional content', async ({ page }) => {
   await fresh(page);
   await selectTheme(page, TARGETS[0]);
