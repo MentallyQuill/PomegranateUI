@@ -1,4 +1,7 @@
 <script lang="ts">
+  import type { LabCharacterPortraitAtlas } from '../showcase-media.js';
+
+  let { portraitAtlas }: { portraitAtlas?: LabCharacterPortraitAtlas | undefined } = $props();
   let portraitScale = $state(2);
 
   const characters = [
@@ -35,10 +38,20 @@
   </header>
 
   <ul aria-label="Characters roster" data-portrait-scale={portraitScale}>
-    {#each characters as character (character.name)}
+    {#each characters as character, index (character.name)}
       <li data-pom-part="row.surface">
-        <span class="recording-character-portrait" role="img" aria-label={`Portrait of ${character.name}`}>
-          {character.initials}
+        <span class="recording-character-portrait">
+          {#if portraitAtlas}
+            <img
+              src={portraitAtlas.source}
+              alt={`Portrait of ${character.name}`}
+              style={`--portrait-column:${index % portraitAtlas.columns};--portrait-row:${Math.floor(index / portraitAtlas.columns)}`}
+            />
+          {:else}
+            <span class="recording-character-fallback" role="img" aria-label={`Portrait of ${character.name}`}>
+              {character.initials}
+            </span>
+          {/if}
         </span>
         <span class="recording-character-copy">
           <strong>{character.name}</strong>

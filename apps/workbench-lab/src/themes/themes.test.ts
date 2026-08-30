@@ -21,7 +21,9 @@ import { createLocalThemePreference, LAB_THEME_KEY } from './theme-storage.js';
 
 const assetRegistry = {
   'icons.minimal': { kind: 'icon-pack' as const, source: 'icons.minimal' },
-  'image.deep-current-stage': { kind: 'image' as const, source: '/assets/deep-current.jpg' }
+  'image.deep-current-stage': { kind: 'image' as const, source: '/assets/deep-current.jpg' },
+  'image.bunny-garden': { kind: 'image' as const, source: '/assets/bunny-garden.webp' },
+  'image.ash-amber-stage': { kind: 'image' as const, source: '/assets/ash-amber-stage.webp' }
 };
 
 const EXPECTED_ASH_CONSTRAINTS = [
@@ -127,7 +129,7 @@ describe('Workbench Lab theme conformance', () => {
     expect(ash?.theme.recipes.parts['chrome.shelf'].material).toBe('shelf');
     expect(ash?.canvas.layers).toEqual([
       { kind: 'solid', color: '#242321' },
-      expect.objectContaining({ kind: 'image', assetId: 'image.deep-current-stage', opacity: 0.48, saturation: 0.08 }),
+      expect.objectContaining({ kind: 'image', assetId: 'image.ash-amber-stage', opacity: 0.72, saturation: 0.82 }),
       {
         kind: 'linear-gradient',
         angle: 90,
@@ -258,7 +260,7 @@ describe('Workbench Lab theme conformance', () => {
     expect(POM_NEUTRAL_THEME.canvas.every((layer) => layer.kind !== 'image')).toBe(true);
   });
 
-  it('pins Bunny to the executable stationery reference instead of the garden-image shell', () => {
+  it('pins Bunny to the expressive stationery target with its local garden canvas', () => {
     const preset = LAB_THEME_PRESETS.find(({ id }) => id === 'bunny');
 
     expect(preset).toBeDefined();
@@ -279,17 +281,10 @@ describe('Workbench Lab theme conformance', () => {
       },
       recipes: { widgetGrouping: 'individual', chromePresentation: 'full', actionPresentation: 'always' }
     });
-    expect(BUNNY_THEME.assets).toEqual([{ id: 'icons.minimal', kind: 'icon-pack', required: true }]);
-    expect(BUNNY_THEME.canvas).toEqual([
-      { kind: 'solid', color: '#faeef6' },
-      {
-        kind: 'four-corner',
-        topLeft: '#ffd8e8',
-        topRight: '#e4dcff',
-        bottomLeft: '#d5f3e9',
-        bottomRight: '#fff0bd'
-      }
-    ]);
+    expect(BUNNY_THEME.assets).toContainEqual({ id: 'image.bunny-garden', kind: 'image', required: true });
+    expect(BUNNY_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({
+      assetId: 'image.bunny-garden', fit: 'cover', opacity: 1, saturation: 1
+    });
     expect(preset?.surfaceExpression).toMatchObject({
       schemaVersion: 'pomegranate.ui.surface-expression.v1',
       id: 'bunny-stationery',
@@ -323,11 +318,13 @@ describe('Workbench Lab theme conformance', () => {
     expect(Object.values(bindings).join(';')).not.toContain('transition');
   });
 
-  it('keeps photographic canvas assets local and leaves Bunny image-free', () => {
+  it('keeps every photographic canvas local and gives Bunny and Ash independent target imagery', () => {
     expect(DEEP_CURRENT_THEME.assets).toContainEqual({ id: 'image.deep-current-stage', kind: 'image', required: true });
     expect(DEEP_CURRENT_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({ assetId: 'image.deep-current-stage', fit: 'cover' });
-    expect(BUNNY_THEME.assets.some(({ kind }) => kind === 'image')).toBe(false);
-    expect(BUNNY_THEME.canvas.some((layer) => layer.kind === 'image')).toBe(false);
+    expect(BUNNY_THEME.assets).toContainEqual({ id: 'image.bunny-garden', kind: 'image', required: true });
+    expect(BUNNY_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({ assetId: 'image.bunny-garden', fit: 'cover' });
+    expect(ASH_AMBER_THEME.assets).toContainEqual({ id: 'image.ash-amber-stage', kind: 'image', required: true });
+    expect(ASH_AMBER_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({ assetId: 'image.ash-amber-stage', fit: 'cover' });
   });
 
   it('switches one complete binding and persists only after validation succeeds', () => {
@@ -399,9 +396,9 @@ describe('Workbench Lab theme conformance', () => {
     expect(controller.getSnapshot().compiled.theme.materials.pane?.backdrop.blurPx).toBe(8.8);
 
     expect(controller.activate('bunny').ok).toBe(true);
-    expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 92, barOpacity: 80, selectedStrength: 62, frostLevel: 55 });
-    expect(controller.getSnapshot().compiled.theme.materials.pane?.opacity).toBe(0.92);
-    expect(controller.getSnapshot().compiled.theme.materials.pane?.backdrop.blurPx).toBe(22);
+    expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 24, barOpacity: 72, selectedStrength: 62, frostLevel: 24 });
+    expect(controller.getSnapshot().compiled.theme.materials.pane?.opacity).toBe(0.24);
+    expect(controller.getSnapshot().compiled.theme.materials.pane?.backdrop.blurPx).toBe(9.6);
   });
 
   it('applies the host device policy before compiling a snapshot', () => {
@@ -435,7 +432,7 @@ describe('Workbench Lab theme conformance', () => {
     expect(controller.activate('bunny').ok).toBe(true);
     expect(controller.getSnapshot().materialControls).toMatchObject({ glassDensity: 38, frostLevel: 45 });
     expect(controller.resetMaterialControls().ok).toBe(true);
-    expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 92, barOpacity: 80, selectedStrength: 62, frostLevel: 55 });
+    expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 24, barOpacity: 72, selectedStrength: 62, frostLevel: 24 });
   });
 
   it('retains the last valid snapshot for an invalid preset or unavailable required asset', () => {
@@ -447,7 +444,10 @@ describe('Workbench Lab theme conformance', () => {
     expect(invalidController.getSnapshot()).toBe(beforeInvalid);
     if (!invalid.ok) expect(invalid.diagnostics[0]).toMatchObject({ code: 'THEME_MIGRATION_VERSION_UNSUPPORTED' });
 
-    const missingController = createLabThemeController({ initialId: 'bunny', availableAssets: new Set(['icons.minimal']) });
+    const missingController = createLabThemeController({
+      initialId: 'bunny',
+      availableAssets: new Set(['icons.minimal', 'image.bunny-garden'])
+    });
     const beforeMissing = missingController.getSnapshot();
     const missing = missingController.activate('deep-current');
     expect(missing.ok).toBe(false);

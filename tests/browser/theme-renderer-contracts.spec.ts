@@ -86,6 +86,36 @@ test('the canvas remains behind every interactive Workbench surface', async ({ p
   }
 });
 
+test('the Lab loads theme-appropriate character art and independent ambient imagery', async ({ page }) => {
+  await fresh(page);
+
+  await selectTheme(page, TARGETS[0]);
+  await expect(page.getByRole('article', { name: 'Characters' }).locator('.recording-character-portrait > img')).toHaveCount(0);
+
+  for (const target of [
+    { ...TARGETS[1], portraitAsset: 'pomos-character-atlas', canvasAsset: null },
+    { ...TARGETS[2], portraitAsset: 'bunny-character-atlas', canvasAsset: 'bunny-garden-canvas' },
+    { ...ASH_TARGET, portraitAsset: 'ash-amber-character-atlas', canvasAsset: 'ash-amber-stage' }
+  ]) {
+    await selectTheme(page, target);
+    await expect(page.getByRole('article', { name: 'Custom Theme' }).getByText(target.label, { exact: true })).toBeVisible();
+    const portraits = page.getByRole('article', { name: 'Characters' }).locator('.recording-character-portrait > img');
+    await expect(portraits).toHaveCount(4);
+    expect(await portraits.evaluateAll((images: HTMLImageElement[], portraitAsset) => images.every((image) => (
+      image.complete && image.naturalWidth > 0 && image.currentSrc.includes(portraitAsset)
+    )), target.portraitAsset), `${target.label} portrait atlas`).toBe(true);
+
+    const imageLayer = page.locator('[data-pom-canvas-layer="image"]');
+    if (target.canvasAsset === null) {
+      await expect(imageLayer).toHaveCount(0);
+    } else {
+      await expect(imageLayer).toHaveCount(1);
+      expect(await imageLayer.evaluate((layer) => getComputedStyle(layer).backgroundImage), `${target.label} canvas asset`)
+        .toContain(target.canvasAsset);
+    }
+  }
+});
+
 test('Ash and Amber renders neutral graphite chrome, restrained amber ambience, and rounded bevels', async ({ page }) => {
   await fresh(page);
   await selectTheme(page, ASH_TARGET);
@@ -114,7 +144,7 @@ test('Ash and Amber renders neutral graphite chrome, restrained amber ambience, 
     ambient: '#51493E',
     layers: [
       { kind: 'solid', background: 'rgb(36, 35, 33)' },
-      { kind: 'image', filter: 'blur(0px) saturate(0.08)', opacity: '0.48' },
+      { kind: 'image', filter: 'blur(0px) saturate(0.82)', opacity: '0.72' },
       { kind: 'linear-gradient' },
       { kind: 'radial-gradient' },
       { kind: 'veil', background: 'rgb(48, 46, 42)', opacity: '0.28' }
@@ -245,14 +275,16 @@ test('Bunny matches the stationery reference through reusable expression binding
   await fresh(page);
   await selectTheme(page, TARGETS[2]);
 
-  await expect(page.locator('[data-pom-canvas-layer]')).toHaveCount(2);
+  await expect(page.locator('[data-pom-canvas-layer]')).toHaveCount(4);
   await expect(page.locator('main')).toHaveAttribute('data-pom-action-presentation', 'always');
   expect(await page.locator('[data-pom-canvas-layer]').evaluateAll((layers) => layers.map((layer) => ({
     kind: layer.getAttribute('data-pom-canvas-layer'),
     image: getComputedStyle(layer).backgroundImage
   })))).toEqual([
     { kind: 'solid', image: 'none' },
-    { kind: 'four-corner', image: expect.stringContaining('radial-gradient') }
+    { kind: 'image', image: expect.stringContaining('bunny-garden-canvas') },
+    { kind: 'four-corner', image: expect.stringContaining('radial-gradient') },
+    { kind: 'veil', image: 'none' }
   ]);
 
   const evidence = await page.locator('main').evaluate((root) => {
@@ -309,7 +341,7 @@ test('Bunny matches the stationery reference through reusable expression binding
   expect(evidence.dock.radius).toBe('20px');
   expect(evidence.widget).toMatchObject({
     radius: '17px',
-    backdrop: 'blur(22px) saturate(1.08) brightness(1.03)',
+    backdrop: 'blur(9.6px) saturate(1.08) brightness(1.03)',
     fontSize: '12px'
   });
   expect(evidence.widget.backgroundImage).toContain('linear-gradient(150deg');

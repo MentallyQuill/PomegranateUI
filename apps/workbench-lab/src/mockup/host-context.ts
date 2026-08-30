@@ -1,6 +1,7 @@
 import type { LabThemeId } from '../themes/presets.js';
 import type { LabMaterialControlId, LabMaterialControls } from '../themes/material-controls.js';
 import type { LabThemeAuthoringSnapshot, ThemeDraftEditResult, ThemeDraftSaveResult } from '../themes/controller.js';
+import type { LabShowcaseMediaProfile } from './showcase-media.js';
 
 export interface LabThemeInspector {
   readonly colors: Readonly<Record<string, string>>;
@@ -38,6 +39,7 @@ export interface LabHostContext {
   readonly systemStatus: string;
   surfaceState: string;
   readonly theme: LabThemeHostContext;
+  visualMedia: LabShowcaseMediaProfile;
 }
 
 const LAB_STORY_CONTEXT = Object.freeze({
@@ -49,6 +51,10 @@ const LAB_STORY_CONTEXT = Object.freeze({
   systemStatus: 'Local fixture ready'
 });
 
-export function createLabHostContext(theme: LabThemeHostContext, surfaceState = 'ready'): LabHostContext {
-  return { ...LAB_STORY_CONTEXT, surfaceState, theme };
+export function createLabHostContext(
+  theme: LabThemeHostContext,
+  surfaceState = 'ready',
+  visualMedia: LabShowcaseMediaProfile = {}
+): LabHostContext {
+  return { ...LAB_STORY_CONTEXT, surfaceState, theme, visualMedia };
 }

@@ -21,6 +21,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(drawer).not.toBeNull();
     expect(drawer).not.toHaveAttribute('open');
     expect(screen.getByText('Developer tools')).toBeVisible();
+    expect(drawer?.closest('.top-shelf')).not.toBeNull();
 
     const transcript = container.querySelector('[data-widget-type="story.transcript"]');
     expect(transcript).not.toBeNull();

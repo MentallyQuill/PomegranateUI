@@ -49,22 +49,15 @@
         onclick={() => activate(tab.panelId)}
         onkeydown={(event) => handleKey(event, tab.panelId, index)}
       >{tab.name}</button>
-      <button
-        type="button"
-        data-pom-part="button.icon"
-        aria-label={`Move ${tab.name} left`}
-        disabled={tab.moveLeftDisabled}
-        onclick={() => reorder(tab.panelId, index - 1)}
-      >←</button>
-      <button
-        type="button"
-        data-pom-part="button.icon"
-        aria-label={`Move ${tab.name} right`}
-        disabled={tab.moveRightDisabled}
-        onclick={() => reorder(tab.panelId, index + 1)}
-      >→</button>
       {#each state?.panels.filter((panel) => panel.id === tab.panelId) ?? [] as panel (panel.id)}
-        <PanelMenu {panel} {store} />
+        <PanelMenu
+          {panel}
+          {store}
+          moveLeft={() => reorder(tab.panelId, index - 1)}
+          moveRight={() => reorder(tab.panelId, index + 1)}
+          moveLeftDisabled={tab.moveLeftDisabled}
+          moveRightDisabled={tab.moveRightDisabled}
+        />
       {/each}
     </div>
   {/each}

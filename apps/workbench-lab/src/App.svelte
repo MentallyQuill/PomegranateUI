@@ -7,8 +7,11 @@
   import { FIRST_SLICE_CONTRACT_IDS } from '@pomegranate-ui/testkit';
   import { POM_SEMANTIC_PART_STYLE_SHEET, type ThemeAssetRegistry } from '@pomegranate-ui/theme';
 
+  import ashAmberStage from './assets/ash-amber-stage.webp';
+  import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
   import deepCurrentStage from './assets/deep-current-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
+  import { resolveLabShowcaseMediaProfile } from './mockup/showcase-media.js';
   import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
   import { LAB_PANEL_IDS } from './mockup/state.js';
   import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
@@ -65,7 +68,9 @@
   const catalogState = toSvelteCatalogStore(catalog);
   const themeAssetRegistry: ThemeAssetRegistry = Object.freeze({
     'icons.minimal': { kind: 'icon-pack', source: 'icons.minimal' },
-    'image.deep-current-stage': { kind: 'image', source: deepCurrentStage }
+    'image.deep-current-stage': { kind: 'image', source: deepCurrentStage },
+    'image.bunny-garden': { kind: 'image', source: bunnyGardenCanvas },
+    'image.ash-amber-stage': { kind: 'image', source: ashAmberStage }
   });
   const mediaMatches = (query: string) => typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
   const backdropFilterSupported = typeof CSS === 'undefined' || typeof CSS.supports !== 'function'
@@ -117,6 +122,7 @@
   function applyThemeSnapshot(snapshot: typeof initialThemeSnapshot) {
     themeSnapshot = snapshot;
     hostContext.theme.activeId = snapshot.activeId;
+    hostContext.visualMedia = resolveLabShowcaseMediaProfile(snapshot.activeId);
     hostContext.theme.materialControls = snapshot.materialControls;
     hostContext.theme.inspector = themeInspector();
     hostContext.theme.authoring = themeController.getAuthoringSnapshot();
@@ -186,7 +192,7 @@
     editDraft: editThemeDraft,
     resetDraft: resetThemeDraft,
     saveDraft: saveThemeDraft
-  }, initialSurfaceState));
+  }, initialSurfaceState, resolveLabShowcaseMediaProfile(initialThemeSnapshot.activeId)));
   setWorkbenchContext({ store, catalog, rendererRegistry, hostContext });
 
   let workbench: WorkbenchState = $state(store.getState());
@@ -350,7 +356,45 @@
       <WidgetShelf {store} />
       <LayoutUndo {store} />
       <IconAction label="Focus reading" action="focus-reading" pressed={focusMode} onclick={() => { focusMode = !focusMode; }} />
-      <span class="runtime-status"><i></i>{hostContext.systemStatus}</span>
+      <span class="runtime-status" aria-label={hostContext.systemStatus}><i></i><span aria-hidden="true">Ready</span></span>
+      <WorkbenchDeveloperDrawer>
+        <p class="developer-panel-identity" aria-label="Workbench context"><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
+        <div class="theme-targets" role="group" aria-label="Visual target">
+          {#each LAB_THEME_PRESETS as preset (preset.id)}
+            <button
+              type="button"
+              data-pom-part="button.surface"
+              aria-label={preset.target.theme.label}
+              aria-pressed={themeSnapshot.activeId === preset.id}
+              onclick={() => activateTheme(preset.id)}
+            >{preset.target.theme.label}</button>
+          {/each}
+        </div>
+        <div class="dock-controls">
+          {#if requestedFixture}
+            <label class="surface-preview-control">State
+              <select
+                data-pom-part="field.surface"
+                aria-label="Surface preview state"
+                value={hostContext.surfaceState}
+                onchange={(event) => { hostContext.surfaceState = event.currentTarget.value; }}
+              >
+                {#each requestedFixture.states as fixtureState}<option value={fixtureState}>{fixtureState}</option>{/each}
+              </select>
+            </label>
+          {/if}
+          <button type="button" data-pom-part="button.surface" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
+          <button type="button" data-pom-part="button.surface" onclick={openPanelDialog}>Create Panel</button>
+        </div>
+        <div class="persistence-actions">
+          <button type="button" data-pom-part="button.surface" onclick={() => void save()}>Save layout</button>
+          <button type="button" data-pom-part="button.surface" onclick={() => void reload()}>Reload saved layout</button>
+          <button type="button" data-pom-part="button.surface" onclick={() => void clear()}>Clear saved layout</button>
+        </div>
+        <p role="status" aria-live="polite">{status}</p>
+        <details><summary>Event log</summary><ol>{#each eventLog as entry}<li>{entry}</li>{/each}</ol></details>
+        <details><summary>Native contract evidence</summary><ul>{#each FIRST_SLICE_CONTRACT_IDS as id}<li>{id}</li>{/each}</ul></details>
+      </WorkbenchDeveloperDrawer>
     </div>
   </header>
 
@@ -391,45 +435,6 @@
       {/snippet}
     </WorkbenchSurface>
   </section>
-
-  <WorkbenchDeveloperDrawer>
-    <p class="developer-panel-identity" aria-label="Workbench context"><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
-    <div class="theme-targets" role="group" aria-label="Visual target">
-      {#each LAB_THEME_PRESETS as preset (preset.id)}
-        <button
-          type="button"
-          data-pom-part="button.surface"
-          aria-label={preset.target.theme.label}
-          aria-pressed={themeSnapshot.activeId === preset.id}
-          onclick={() => activateTheme(preset.id)}
-        >{preset.target.theme.label}</button>
-      {/each}
-    </div>
-    <div class="dock-controls">
-      {#if requestedFixture}
-        <label class="surface-preview-control">State
-          <select
-            data-pom-part="field.surface"
-            aria-label="Surface preview state"
-            value={hostContext.surfaceState}
-            onchange={(event) => { hostContext.surfaceState = event.currentTarget.value; }}
-          >
-            {#each requestedFixture.states as fixtureState}<option value={fixtureState}>{fixtureState}</option>{/each}
-          </select>
-        </label>
-      {/if}
-      <button type="button" data-pom-part="button.surface" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
-      <button type="button" data-pom-part="button.surface" onclick={openPanelDialog}>Create Panel</button>
-    </div>
-    <div class="persistence-actions">
-      <button type="button" data-pom-part="button.surface" onclick={() => void save()}>Save layout</button>
-      <button type="button" data-pom-part="button.surface" onclick={() => void reload()}>Reload saved layout</button>
-      <button type="button" data-pom-part="button.surface" onclick={() => void clear()}>Clear saved layout</button>
-    </div>
-    <p role="status" aria-live="polite">{status}</p>
-    <details><summary>Event log</summary><ol>{#each eventLog as entry}<li>{entry}</li>{/each}</ol></details>
-    <details><summary>Native contract evidence</summary><ul>{#each FIRST_SLICE_CONTRACT_IDS as id}<li>{id}</li>{/each}</ul></details>
-  </WorkbenchDeveloperDrawer>
 
   <WidgetCatalog {catalog} oncreate={addFromCatalog} class="widget-catalog" />
 

@@ -9,11 +9,12 @@ addition to the shared functional and structural measurements.
 |---|---|---|---|---|---|---|---|---|---|
 
 The `bn-scene-wide`, `bn-scene-compact`, and `bn-catalog-wide` scenarios are
-closed by executable theme-target profiles. Wide evidence freezes the
-four-corner image-free canvas, semantic colors, asymmetric shelf and shell
-geometry, 17px/1.55 reader type, material gradients, and reader-stage
+closed by executable theme-target profiles. Wide evidence freezes the local
+garden canvas beneath a translucent four-corner wash and reading veil, semantic
+colors, asymmetric shelf and shell geometry, 17px/1.55 reader type, material
+gradients, the theme-specific anime portrait atlas, and reader-stage
 intersection. Compact evidence keeps the shared responsive behavior profile
 and is supplemented by browser coverage for 14px reader type, touch-safe
-controls, stage intersection, reduced motion, and reduced transparency. The
-implementation preserves mounted Panel and Widget identities while applying
-the target immediately.
+controls, stage intersection, reduced motion, reduced transparency, and loaded
+local media. The implementation preserves mounted Panel and Widget identities
+while applying the target immediately.
