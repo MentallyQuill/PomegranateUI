@@ -5,9 +5,11 @@ import {
   type WorkbenchState
 } from '@pomegranate-ui/contracts';
 import {
+  activateWidgetGroup,
   createInitialWorkbenchState,
   createPanel,
   createWidget,
+  mergeWidgetGroup,
   type LayoutResult
 } from '@pomegranate-ui/layout';
 
@@ -23,6 +25,8 @@ export const LAB_WIDGET_TYPES = Object.freeze({
   composer: asWidgetType('story.composer'),
   worldState: asWidgetType('systems.world-state'),
   ambience: asWidgetType('story.room-ambience'),
+  personas: asWidgetType('story.personas'),
+  connections: asWidgetType('settings.connections'),
   characterRelationships: asWidgetType('systems.character-relationships'),
   library: asWidgetType('library.workspace'),
   characterCard: asWidgetType('library.character-card'),
@@ -62,19 +66,21 @@ export function createLabState(): WorkbenchState {
 
   const fixtures = [
     ['scene-characters', LAB_WIDGET_TYPES.characters, LAB_PANEL_IDS.scene, 'left', 0, {}],
-    ['scene-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.scene, 'left', 1, {}],
+    ['scene-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.scene, 'left', 1, {}],
     ['scene-transcript', LAB_WIDGET_TYPES.transcript, LAB_PANEL_IDS.scene, 'stage', 0, {}],
     ['scene-composer', LAB_WIDGET_TYPES.composer, LAB_PANEL_IDS.scene, 'composer', 0, {}],
-    ['scene-world', LAB_WIDGET_TYPES.worldState, LAB_PANEL_IDS.scene, 'right', 0, {}],
-    ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 1, {}],
-    ['scene-relationships', LAB_WIDGET_TYPES.characterRelationships, LAB_PANEL_IDS.scene, 'right', 2, {}],
+    ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 0, {}],
+    ['scene-personas', LAB_WIDGET_TYPES.personas, LAB_PANEL_IDS.scene, 'right', 1, {}],
+    ['scene-connections', LAB_WIDGET_TYPES.connections, LAB_PANEL_IDS.scene, 'right', 2, {}],
     ['library-main', LAB_WIDGET_TYPES.library, LAB_PANEL_IDS.library, 'focus', 0, {}],
     ['library-character', LAB_WIDGET_TYPES.characterCard, LAB_PANEL_IDS.library, 'support', 0, { fixtureMode: 'failure' }],
     ['library-lore', LAB_WIDGET_TYPES.loreEntries, LAB_PANEL_IDS.library, 'support', 1, {}],
     ['settings-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
     ['settings-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.settings, 'column-1', 1, {}],
     ['settings-accessibility', LAB_WIDGET_TYPES.accessibility, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
-    ['settings-prompt-editor', LAB_WIDGET_TYPES.promptEditor, LAB_PANEL_IDS.settings, 'column-3', 0, {}]
+    ['settings-world', LAB_WIDGET_TYPES.worldState, LAB_PANEL_IDS.settings, 'column-2', 1, {}],
+    ['settings-prompt-editor', LAB_WIDGET_TYPES.promptEditor, LAB_PANEL_IDS.settings, 'column-3', 0, {}],
+    ['settings-relationships', LAB_WIDGET_TYPES.characterRelationships, LAB_PANEL_IDS.settings, 'column-3', 1, {}]
   ] as const;
   for (const [id, type, panelId, regionId, order, configuration] of fixtures) {
     state = requireState(createWidget(state, {
@@ -86,5 +92,13 @@ export function createLabState(): WorkbenchState {
       kind: 'docked', panelId, regionId, shelfId: 'primary', order
     }));
   }
+  const personasId = asWidgetInstanceId('scene-personas');
+  state = requireState(mergeWidgetGroup(
+    state,
+    asWidgetInstanceId('scene-connections'),
+    personasId,
+    'scene-perspective'
+  ));
+  state = requireState(activateWidgetGroup(state, personasId));
   return { ...state, revision: 0 };
 }

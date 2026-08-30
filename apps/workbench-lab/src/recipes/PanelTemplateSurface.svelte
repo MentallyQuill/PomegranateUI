@@ -5,10 +5,11 @@
   import StoryComposer from './StoryComposer.svelte';
   import StoryStage from './StoryStage.svelte';
 
-  let { surface, store, renderWidget }: {
+  let { surface, store, renderWidget, titleFor }: {
     surface: PanelSurfaceProjection;
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
+    titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
   } = $props();
 </script>
 
@@ -19,11 +20,11 @@
 >
   {#each surface.regions as region (region.region.id)}
     {#if surface.templateFamily === 'story-stage' && region.region.role === 'stage'}
-      <StoryStage><DockRegion projection={region} {store} {renderWidget} surfacePart={null} /></StoryStage>
+      <StoryStage><DockRegion projection={region} {store} {renderWidget} {titleFor} surfacePart={null} /></StoryStage>
     {:else if surface.templateFamily === 'story-stage' && region.region.role === 'composer'}
-      <StoryComposer><DockRegion projection={region} {store} {renderWidget} surfacePart={null} /></StoryComposer>
+      <StoryComposer><DockRegion projection={region} {store} {renderWidget} {titleFor} surfacePart={null} /></StoryComposer>
     {:else}
-      <DockRegion projection={region} {store} {renderWidget} />
+      <DockRegion projection={region} {store} {renderWidget} {titleFor} />
     {/if}
   {/each}
 </div>

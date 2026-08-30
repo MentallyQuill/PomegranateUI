@@ -6,6 +6,7 @@ import { asWidgetInstanceId, asWidgetType, type WidgetType } from '@pomegranate-
 import type { WidgetRendererProps } from '@pomegranate-ui/svelte';
 
 import type { LabHostContext } from '../host-context.js';
+import { IMPLEMENTED_SURFACE_TYPES } from '../implemented-surfaces.js';
 import ImplementedWidget from './ImplementedWidget.svelte';
 
 afterEach(cleanup);
@@ -76,5 +77,20 @@ describe('recording-visible Deep Current Widget anatomy', () => {
     const facts = screen.getByRole('list', { name: 'Persona facts' });
     expect(within(facts).getAllByRole('term').map((term) => term.textContent)).toEqual(['Voice', 'Memory lens', 'Agency', 'Private context']);
     expect(within(facts).getAllByRole('definition').map((value) => value.textContent)).toEqual(['Measured', 'Close', 'Player', '6 notes']);
+  });
+
+  it('renders AI Connections as the recorded inference-route status surface', () => {
+    expect(IMPLEMENTED_SURFACE_TYPES).toContain(asWidgetType('settings.connections'));
+    renderSurface('settings.connections');
+
+    expect(screen.getByText('Inference route')).toBeVisible();
+    expect(screen.getAllByText('Ready')).toHaveLength(1);
+    const routes = screen.getByRole('list', { name: 'Inference routes' });
+    expect(within(routes).getAllByRole('listitem').map((row) => row.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      'Director Connected',
+      'Narrator Connected',
+      'Characters 6 routes',
+      'Latency 742 ms'
+    ]);
   });
 });

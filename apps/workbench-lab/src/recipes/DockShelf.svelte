@@ -4,10 +4,11 @@
   import ShelfResizeHandle from './ShelfResizeHandle.svelte';
   import WidgetGroup from './WidgetGroup.svelte';
 
-  let { projection, store, renderWidget, resizable = false }: {
+  let { projection, store, renderWidget, titleFor, resizable = false }: {
     projection: PanelShelfProjection;
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
+    titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
     resizable?: boolean;
   } = $props();
 
@@ -42,7 +43,7 @@
 >
   {#each items as item (item.id)}
     {#if item.kind === 'group'}
-      <WidgetGroup frames={item.frames} {store} {renderWidget} />
+      <WidgetGroup frames={item.frames} {store} {renderWidget} {titleFor} />
     {:else}
       {@render renderWidget(item.frame)}
     {/if}

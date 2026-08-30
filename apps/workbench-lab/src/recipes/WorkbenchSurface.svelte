@@ -13,10 +13,12 @@
   let {
     store,
     renderWidget,
+    titleFor,
     class: className = ''
   }: {
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
+    titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
     class?: string;
   } = $props();
 
@@ -53,7 +55,7 @@
     {#if surface.unavailableTemplateId}
       <UnavailableTemplate templateId={surface.unavailableTemplateId} />
     {:else}
-      <PanelTemplateSurface {surface} {store} {renderWidget} />
+      <PanelTemplateSurface {surface} {store} {renderWidget} {titleFor} />
     {/if}
     <div data-shelf-insertion="left" aria-hidden="true"></div>
     <div data-shelf-insertion="right" aria-hidden="true"></div>

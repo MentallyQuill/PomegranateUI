@@ -13,6 +13,7 @@
     rendererRegistry,
     hostContext,
     surfacePart = 'widget.surface',
+    contentPart = 'widget.content',
     class: className = ''
   }: {
     frame: WidgetFrameProjection;
@@ -20,6 +21,7 @@
     rendererRegistry: WidgetRendererRegistry<THostContext>;
     hostContext: THostContext;
     surfacePart?: 'widget.surface' | 'widget.content' | 'floating.surface' | null;
+    contentPart?: 'widget.content' | null;
     class?: string;
   } = $props();
 
@@ -45,7 +47,7 @@
       <button type="button" data-pom-part="button.icon" onclick={() => actions.remove()}>Remove</button>
     </nav>
   </header>
-  <div data-pom-part="widget.content">
+  <div data-pom-part={contentPart ?? undefined}>
     {#if Renderer}
       <svelte:boundary>
       <Renderer

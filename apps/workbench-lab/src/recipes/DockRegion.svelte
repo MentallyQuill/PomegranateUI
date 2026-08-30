@@ -3,10 +3,11 @@
   import type { PanelRegionProjection, WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core';
   import DockShelf from './DockShelf.svelte';
 
-  let { projection, store, renderWidget, surfacePart = 'dock.surface' }: {
+  let { projection, store, renderWidget, titleFor, surfacePart = 'dock.surface' }: {
     projection: PanelRegionProjection;
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
+    titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
     surfacePart?: 'dock.surface' | null;
   } = $props();
 
@@ -28,6 +29,6 @@
   aria-label={`${projection.region.label} region`}
 >
   {#each projection.shelves as shelf, index (`${shelf.shelf.regionId}:${shelf.shelf.id}`)}
-    <DockShelf projection={shelf} {store} {renderWidget} resizable={index < projection.shelves.length - 1} />
+    <DockShelf projection={shelf} {store} {renderWidget} {titleFor} resizable={index < projection.shelves.length - 1} />
   {/each}
 </section>

@@ -25,9 +25,16 @@ describe('Svelte Workbench Lab mockup', () => {
     const transcript = container.querySelector('[data-widget-type="story.transcript"]');
     expect(transcript).not.toBeNull();
     expect(transcript?.querySelector('[data-pom-part="widget.surface"]')).toBeNull();
-    expect(transcript?.closest('[data-story-stage]')).not.toBeNull();
+    const stage = transcript?.closest('[data-story-stage]');
+    expect(stage).not.toBeNull();
+    expect(stage).toHaveAttribute('data-pom-part', 'widget.content');
+    expect(stage?.querySelectorAll('[data-pom-part="widget.content"]')).toHaveLength(0);
+    expect(stage?.querySelectorAll('[data-pom-part="dock.surface"]')).toHaveLength(0);
     const composer = screen.getByRole('textbox', { name: /Next action/ });
-    expect(composer.closest('[data-story-composer]')).not.toBeNull();
+    const composerInstrument = composer.closest('[data-story-composer]');
+    expect(composerInstrument).toHaveAttribute('data-pom-part', 'widget.content');
+    expect(composerInstrument?.querySelectorAll('[data-pom-part="widget.content"]')).toHaveLength(0);
+    expect(composerInstrument?.querySelectorAll('[data-pom-part="dock.surface"]')).toHaveLength(0);
 
     const stageRegion = container.querySelector('[data-conformance-region="stage"]');
     const composerRegion = container.querySelector('[data-conformance-region="composer"]');
@@ -57,15 +64,20 @@ describe('Svelte Workbench Lab mockup', () => {
     expect([...stage?.querySelectorAll<HTMLElement>('*') ?? []].some((node) => node.style.backgroundImage !== '')).toBe(false);
   });
 
-  it('renders the atmospheric shell, story lockup, Panels, and seven seeded Scene Widgets', () => {
+  it('renders the atmospheric shell and the exact recording-visible Scene stack', () => {
     const { container } = render(App);
     expect(screen.getByText('PomegranateUI')).toBeVisible();
     expect(screen.getByText('The Reservoir at Blue Hour')).toBeVisible();
     expect(screen.getByLabelText('Active story identity')).toHaveTextContent('story-lab-reservoir');
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Library', 'Settings']);
-    for (const title of ['Characters (Story)', 'Theme Library', 'Transcript', 'Composer', 'World State', 'Room Ambience', 'Character Relationships']) {
+    expect(within(screen.getByRole('tablist', { name: 'Panels' })).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Library', 'Settings']);
+    for (const title of ['Characters', 'Custom Theme', 'Transcript', 'Composer', 'Scene Effects', 'Personas']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();
     }
+    expect(screen.queryByRole('article', { name: 'World State' })).toBeNull();
+    expect(screen.queryByRole('article', { name: 'Character Relationships' })).toBeNull();
+    expect(screen.getByRole('group', { name: 'Widget group' }).querySelectorAll('[role="tab"]')).toHaveLength(2);
+    expect(screen.getByRole('tab', { name: 'Personas' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'AI Connections' })).toHaveAttribute('aria-selected', 'false');
     expect([...container.querySelectorAll('[data-conformance-region="shelf"], [data-pomegranate-region-surface]')].map((region) => region.getAttribute('data-conformance-region') ?? region.getAttribute('data-pomegranate-region-surface'))).toEqual([
       'shelf', 'left', 'stage', 'composer', 'right'
     ]);
@@ -125,13 +137,13 @@ describe('Svelte Workbench Lab mockup', () => {
     const user = userEvent.setup();
     render(App);
     await user.click(screen.getByRole('button', { name: 'Move Settings left' }));
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Settings', 'Library']);
-    const world = screen.getByRole('article', { name: 'World State' });
-    await user.click(within(world).getByRole('button', { name: 'Dock left' }));
-    const dockedWorld = screen.getByRole('article', { name: 'World State' });
-    expect(dockedWorld.closest('[data-pomegranate-dock]')).toHaveAttribute('data-pomegranate-dock', 'left');
-    await user.click(within(dockedWorld).getByRole('button', { name: 'Float' }));
-    expect(screen.getByRole('article', { name: 'World State' })).toHaveAttribute('data-pomegranate-placement', 'floating');
+    expect(within(screen.getByRole('tablist', { name: 'Panels' })).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Settings', 'Library']);
+    const effects = screen.getByRole('article', { name: 'Scene Effects' });
+    await user.click(within(effects).getByRole('button', { name: 'Dock left' }));
+    const dockedEffects = screen.getByRole('article', { name: 'Scene Effects' });
+    expect(dockedEffects.closest('[data-pomegranate-dock]')).toHaveAttribute('data-pomegranate-dock', 'left');
+    await user.click(within(dockedEffects).getByRole('button', { name: 'Float' }));
+    expect(screen.getByRole('article', { name: 'Scene Effects' })).toHaveAttribute('data-pomegranate-placement', 'floating');
   });
 
   it('exposes persistence, focus, dock, and Panel creation controls without credential-shaped fixture text', () => {
@@ -220,10 +232,11 @@ describe('Svelte Workbench Lab mockup', () => {
   it('authors one shared Theme Settings draft with synchronized color, material, and ambient controls', async () => {
     const user = userEvent.setup();
     const { container } = render(App);
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
     await user.click(within(screen.getByRole('article', { name: 'Theme Library' })).getByRole('button', { name: 'Open Theme Settings' }));
     expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
 
-    const settings = screen.getByRole('article', { name: 'Theme Settings' });
+    const settings = screen.getByRole('article', { name: 'Custom Theme' });
     for (const role of ['Canvas', 'Glass', 'Chrome', 'Ambient', 'Text', 'Source']) {
       expect(within(settings).getByRole('button', { name: role })).toBeVisible();
     }

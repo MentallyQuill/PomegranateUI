@@ -4,6 +4,6 @@
   let { children }: { children: Snippet } = $props();
 </script>
 
-<section class="story-stage" data-story-stage aria-label="Story reading stage">
+<section class="story-stage" data-story-stage data-pom-part="widget.content" aria-label="Story reading stage">
   {@render children()}
 </section>

@@ -6,6 +6,7 @@
   import { createEyeDropperAdapter } from '../../themes/eyedropper.js';
   import type { LabHostContext } from '../host-context.js';
   import { getSurfaceFixture, resolveSurfaceState } from '../surface-fixtures.js';
+  import AIConnectionsWidget from './AIConnectionsWidget.svelte';
   import PersonasWidget from './PersonasWidget.svelte';
   import RecordingCharactersWidget from './RecordingCharactersWidget.svelte';
   import SceneEffectsWidget from './SceneEffectsWidget.svelte';
@@ -39,6 +40,8 @@
       <SceneEffectsWidget />
     {:else if instance.type === 'story.personas' && contentVisible}
       <PersonasWidget />
+    {:else if instance.type === 'settings.connections' && contentVisible}
+      <AIConnectionsWidget />
     {:else}
       <WidgetAnatomy {fixture} {state} {hostContext} />
     {/if}

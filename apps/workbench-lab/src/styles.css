@@ -1173,7 +1173,11 @@ main[data-pom-theme-root] .workbench-surface,
 main[data-pom-theme-root].left-collapsed .workbench-surface { display: block; position: relative; height: 100%; min-height: 0; padding: 7px; }
 main[data-pom-theme-root] .panel-template-surface { display: grid; gap: 7px; min-width: 0; height: 100%; min-height: 0; }
 .story-stage,
-.story-composer { display: contents; }
+.story-composer { display: grid; min-width: 0; min-height: 0; }
+.story-stage { grid-column: 2; grid-row: 1; }
+.story-composer { grid-column: 2; grid-row: 2; }
+.story-stage > .dock-region,
+.story-composer > .dock-region { min-width: 0; min-height: 0; }
 main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="story-stage"] {
   grid-template-columns: minmax(0, var(--pom-left-width, var(--pom-side-width))) minmax(0, 1fr) minmax(0, var(--pom-right-width, var(--pom-side-width)));
   grid-template-rows: minmax(0, 1fr) auto;

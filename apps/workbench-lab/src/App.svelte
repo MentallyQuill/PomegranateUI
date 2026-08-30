@@ -13,6 +13,7 @@
   import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
   import { LAB_PANEL_IDS } from './mockup/state.js';
   import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
+  import { resolveLabWidgetTitle } from './mockup/presentation.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
   import PanelCreateDialog from './recipes/PanelCreateDialog.svelte';
@@ -307,9 +308,18 @@
   function frameSurfacePart(frame: WidgetFrameProjection) {
     if (frame.placement.kind === 'floating') return 'floating.surface';
     return frame.instance.type === 'story.transcript' || frame.instance.type === 'story.composer'
-      ? 'widget.content'
+      ? null
       : 'widget.surface';
   }
+
+  function frameContentPart(frame: WidgetFrameProjection) {
+    if (frame.placement.kind === 'floating') return 'widget.content';
+    return frame.instance.type === 'story.transcript' || frame.instance.type === 'story.composer'
+      ? null
+      : 'widget.content';
+  }
+
+  const frameTitle = (frame: WidgetFrameProjection) => resolveLabWidgetTitle(frame.instance.type, frame.title);
 </script>
 
 <svelte:head>
@@ -351,7 +361,7 @@
   </header>
 
   <section id="workbench" class="workbench-shell" data-pom-part="panel.surface" aria-label="Active Workbench">
-    <WorkbenchSurface {store} class="workbench-surface">
+    <WorkbenchSurface {store} titleFor={frameTitle} class="workbench-surface">
       {#snippet renderWidget(frame)}
         <div
           class:widget-float={frame.placement.kind === 'floating'}
@@ -378,6 +388,8 @@
               {hostContext}
               onfocuswidget={focusWidget}
               surfacePart={frameSurfacePart(frame)}
+              contentPart={frameContentPart(frame)}
+              title={frameTitle(frame)}
               class="widget-frame"
             />
           {/if}
