@@ -16,7 +16,7 @@
 </script>
 
 <details class="widget-shelf" data-widget-shelf data-empty={(surface?.widgetShelf.length ?? 0) === 0}>
-  <summary aria-label="Open Widget Shelf" data-pom-icon-action data-pom-action="open-shelf">
+  <summary aria-label="Open Widget Shelf" data-pom-part="button.icon" data-pom-icon-action data-pom-action="open-shelf">
     <span data-pom-action-icon aria-hidden="true">
       <svg viewBox="0 0 24 24"><path d="M4 7h16v12H4zM3 4h18v3H3zM9 11h6" /></svg>
     </span>

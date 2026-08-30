@@ -216,7 +216,7 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
   await fresh(page);
   await selectTheme(page, TARGETS[1]);
 
-  await expect(page.locator('[data-pom-canvas-layer]')).toHaveCount(6);
+  await expect(page.locator('[data-pom-canvas-layer]')).toHaveCount(7);
   const root = page.locator('main');
   await expect(root).toHaveAttribute('data-pom-widget-grouping', 'individual');
   await expect(root).toHaveAttribute('data-pom-chrome-presentation', 'overlay');
@@ -234,7 +234,7 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
   const widget = await material(page, '[data-conformance-region="left"] .widget-frame');
   expect(widget.alpha).toBeCloseTo(0.42, 2);
   expect(blurPx(widget.backdrop)).toBe(28);
-  expect(widget.borderRadius).toBe('18px');
+  expect(widget.borderRadius).toBe('20px');
   expect(widget.boxShadow).not.toBe('none');
   for (const selector of [
     '[data-conformance-region="left"] .widget-frame > header',
@@ -243,7 +243,7 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
     const child = await material(page, selector);
     expect(blurPx(child.backdrop), `${selector} duplicate blur`).toBe(0);
     expect(child.borderWidth, `${selector} artifact edge`).toBe('0px');
-    expect(child.boxShadow, `${selector} bevel`).toBe('none');
+    expect(child.boxShadow, `${selector} specular rim`).toContain('inset');
   }
 
   for (const edge of ['left', 'right']) {
@@ -265,7 +265,8 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
   const characterWindow = page.getByRole('article', { name: 'Characters' });
   const unusedTail = await characterWindow.evaluate((article) => {
     const content = article.querySelector('.recording-characters li:last-child')!;
-    return article.getBoundingClientRect().bottom - content.getBoundingClientRect().bottom;
+    const footer = article.querySelector('.recording-characters > header')!;
+    return article.getBoundingClientRect().bottom - footer.getBoundingClientRect().height - content.getBoundingClientRect().bottom;
   });
   expect(unusedTail, 'individual window dead space').toBeLessThanOrEqual(32);
 

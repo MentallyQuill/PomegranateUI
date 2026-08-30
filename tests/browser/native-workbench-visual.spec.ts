@@ -2,10 +2,12 @@ import { expect, test, type Page } from '@playwright/test';
 
 test.skip(process.platform !== 'win32', 'Visual baselines are reviewed on Windows; functional browser coverage remains cross-platform.');
 
+const labOrigin = process.env.POM_LAB_ORIGIN ?? 'http://127.0.0.1:4174';
+
 async function fresh(page: Page, width: number, height: number) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width, height });
-  await page.goto('http://127.0.0.1:4174');
+  await page.goto(labOrigin);
   await page.evaluate(() => window.localStorage.clear());
   await page.reload();
   await page.evaluate(() => document.fonts.ready);
@@ -127,6 +129,18 @@ test('native workbench exposes the two original visual flexibility targets', asy
     await selectTheme(page, theme.label);
     await invokeCompactChromeAction(page, 'Open Widget Catalog');
     await shot(page, `wide-catalog-${theme.name}.png`);
+  }
+});
+
+test('PomOS freezes short desktop, landscape, and zoom-equivalent fidelity', async ({ page }) => {
+  for (const viewport of [
+    { name: 'short-desktop-pom-neutral.png', width: 1280, height: 720 },
+    { name: 'short-landscape-pom-neutral.png', width: 844, height: 390 },
+    { name: 'zoom-200-pom-neutral.png', width: 800, height: 450 }
+  ]) {
+    await fresh(page, viewport.width, viewport.height);
+    await selectTheme(page, 'PomOS');
+    await shot(page, viewport.name);
   }
 });
 

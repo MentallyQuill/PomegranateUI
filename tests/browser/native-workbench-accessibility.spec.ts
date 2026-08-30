@@ -1,8 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
+const labOrigin = process.env.POM_LAB_ORIGIN ?? 'http://127.0.0.1:4174';
+
 async function openFresh(page: Page, width: number, height: number) {
   await page.setViewportSize({ width, height });
-  await page.goto('http://127.0.0.1:4174');
+  await page.goto(labOrigin);
   await page.evaluate(() => window.localStorage.clear());
   await page.reload();
   await page.evaluate(() => document.fonts.ready);
@@ -17,6 +19,359 @@ async function selectTheme(page: Page, theme: ThemeLabel) {
     .click();
   await page.getByText('Developer tools', { exact: true }).click();
 }
+
+async function activatePomOS(page: Page) {
+  await page.getByText('Developer tools', { exact: true }).click();
+  await page.getByRole('group', { name: 'Visual target' })
+    .getByRole('button', { name: 'PomOS', exact: true })
+    .click();
+  await page.getByText('Developer tools', { exact: true }).click();
+  await expect(page.locator('main[data-pom-theme-root]')).toHaveAttribute('data-pom-theme', 'pom-neutral');
+}
+
+for (const viewport of [
+  { name: 'wide', width: 1440, height: 900 },
+  { name: 'short desktop', width: 1280, height: 720 },
+  { name: 'compact portrait', width: 390, height: 844 },
+  { name: 'short landscape', width: 844, height: 390 },
+  { name: '200-percent zoom equivalent', width: 800, height: 450 }
+]) {
+test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside their owners`, async ({ page }) => {
+  await openFresh(page, viewport.width, viewport.height);
+  await activatePomOS(page);
+
+  const evidence = await page.evaluate(() => {
+    const rect = (element: Element | null, label: string) => {
+      if (!(element instanceof HTMLElement)) throw new Error(`Missing ${label}.`);
+      const box = element.getBoundingClientRect();
+      return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
+    };
+    const stack = (selector: string) => {
+      const owner = document.querySelector(selector);
+      if (!(owner instanceof HTMLElement)) throw new Error(`Missing ${selector}.`);
+      return {
+        bounds: rect(owner, selector),
+        children: [...owner.children]
+        .filter((element): element is HTMLElement => element instanceof HTMLElement && getComputedStyle(element).display !== 'none')
+        .map((element, index) => ({
+          bounds: rect(element, `${selector} child ${index}`),
+          internals: [...element.querySelectorAll('.widget-frame, .widget-frame > [data-pom-part="widget.content"]')]
+            .filter((descendant): descendant is HTMLElement => descendant instanceof HTMLElement && getComputedStyle(descendant).display !== 'none')
+            .map((descendant, descendantIndex) => rect(descendant, `${selector} child ${index} internal ${descendantIndex}`))
+        }))
+      };
+    };
+    const visibleShelfChildren = [...document.querySelectorAll('.top-shelf > *')]
+      .filter((element): element is HTMLElement => element instanceof HTMLElement && getComputedStyle(element).display !== 'none')
+      .map((element, index) => rect(element, `shelf child ${index}`));
+    const visibleShelfInternals = [...document.querySelectorAll('.top-shelf :is([role="tab"], .story-lockup > *, .shelf-actions > *)')]
+      .filter((element): element is HTMLElement => {
+        if (!(element instanceof HTMLElement)) return false;
+        const bounds = element.getBoundingClientRect();
+        return bounds.width > 0 && bounds.height > 0 && getComputedStyle(element).visibility !== 'hidden';
+      })
+      .map((element, index) => rect(element, `shelf internal ${index}`));
+
+    return {
+      viewport: { width: innerWidth, height: innerHeight },
+      shelf: rect(document.querySelector('.top-shelf'), 'top shelf'),
+      shelfChildren: visibleShelfChildren,
+      shelfInternals: visibleShelfInternals,
+      panelTabs: rect(document.querySelector('.panel-tabs'), 'panel tabs'),
+      tabs: [...document.querySelectorAll('.panel-tabs [role="tab"]')].map((element, index) => rect(element, `panel tab ${index}`)),
+      shelfActions: rect(document.querySelector('.shelf-actions'), 'shelf actions'),
+      wordmarkCopy: [...document.querySelectorAll<HTMLElement>('.wordmark > :is(strong, small)')].map((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth
+      })),
+      developerLauncher: rect(document.querySelector('[data-workbench-developer-drawer] > summary'), 'developer launcher'),
+      workbench: rect(document.querySelector('.workbench-shell'), 'workbench'),
+      leftDock: rect(document.querySelector('[data-conformance-region="left"]'), 'left dock'),
+      leftStack: stack('[data-conformance-region="left"] > .dock-shelf'),
+      rightDock: rect(document.querySelector('[data-conformance-region="right"]'), 'right dock'),
+      rightStack: stack('[data-conformance-region="right"] > .dock-shelf'),
+      stage: rect(document.querySelector('[data-conformance-region="stage"]'), 'stage'),
+      transcript: rect(document.querySelector('[data-widget-type="story.transcript"]'), 'transcript'),
+      transcriptHeader: rect(document.querySelector('[data-widget-type="story.transcript"] .widget-frame > header'), 'transcript header'),
+      transcriptContent: rect(document.querySelector('[data-widget-type="story.transcript"] .widget-frame > [data-pom-part="widget.content"]'), 'transcript content'),
+      composer: rect(document.querySelector('[data-conformance-region="composer"]'), 'composer region'),
+      composerSurface: rect(document.querySelector('[data-widget-type="story.composer"] .composer'), 'composer surface'),
+      textarea: rect(document.querySelector('[data-widget-type="story.composer"] textarea'), 'composer textarea'),
+      submit: rect(document.querySelector('[data-widget-type="story.composer"] .composer > button'), 'composer submit')
+    };
+  });
+
+  const expectContained = (
+    child: { top: number; right: number; bottom: number; left: number },
+    owner: { top: number; right: number; bottom: number; left: number },
+    label: string
+  ) => {
+    expect(child.top, `${label} top`).toBeGreaterThanOrEqual(owner.top - 1);
+    expect(child.right, `${label} right`).toBeLessThanOrEqual(owner.right + 1);
+    expect(child.bottom, `${label} bottom`).toBeLessThanOrEqual(owner.bottom + 1);
+    expect(child.left, `${label} left`).toBeGreaterThanOrEqual(owner.left - 1);
+  };
+  const expectSeparated = (
+    siblings: Array<{ top: number; bottom: number }>,
+    label: string
+  ) => {
+    for (let index = 1; index < siblings.length; index += 1) {
+      expect(siblings[index]!.top, `${label} ${index - 1}/${index} boundary`).toBeGreaterThanOrEqual(siblings[index - 1]!.bottom - 1);
+    }
+  };
+
+  for (const [index, child] of evidence.shelfChildren.entries()) expectContained(child, evidence.shelf, `shelf child ${index}`);
+  for (const [index, child] of evidence.shelfInternals.entries()) expectContained(child, evidence.shelf, `shelf internal ${index}`);
+  expectContained(evidence.developerLauncher, evidence.shelf, 'developer launcher');
+  for (const [index, tab] of evidence.tabs.entries()) expectContained(tab, evidence.panelTabs, `panel tab ${index}`);
+  if (viewport.width <= 680) {
+    expect(evidence.panelTabs.right, 'panel tabs end before compact shelf actions').toBeLessThanOrEqual(evidence.shelfActions.left + 1);
+    expect(evidence.shelfActions.right, 'compact shelf actions end before developer launcher').toBeLessThanOrEqual(evidence.developerLauncher.left + 1);
+  } else if (viewport.width <= 860) {
+    for (const [index, copy] of evidence.wordmarkCopy.entries()) {
+      expect(copy.scrollWidth, `wordmark line ${index} remains unclipped`).toBeLessThanOrEqual(copy.clientWidth + 1);
+    }
+  }
+  if (viewport.width <= 860) {
+    expect(evidence.leftDock.width, 'hidden left dock width').toBeLessThanOrEqual(1);
+    expect(evidence.rightDock.width, 'hidden right dock width').toBeLessThanOrEqual(1);
+  } else {
+    expectContained(evidence.leftStack.bounds, evidence.leftDock, 'left stack');
+    for (const [index, child] of evidence.leftStack.children.entries()) {
+      expectContained(child.bounds, evidence.leftStack.bounds, `left stack child ${index}`);
+      for (const [internalIndex, internal] of child.internals.entries()) {
+        expectContained(internal, child.bounds, `left stack child ${index} internal ${internalIndex}`);
+      }
+    }
+    expectSeparated(evidence.leftStack.children.map((child) => child.bounds), 'left stack');
+    expectContained(evidence.rightStack.bounds, evidence.rightDock, 'right stack');
+    for (const [index, child] of evidence.rightStack.children.entries()) {
+      expectContained(child.bounds, evidence.rightStack.bounds, `right stack child ${index}`);
+      for (const [internalIndex, internal] of child.internals.entries()) {
+        expectContained(internal, child.bounds, `right stack child ${index} internal ${internalIndex}`);
+      }
+    }
+    expectSeparated(evidence.rightStack.children.map((child) => child.bounds), 'right stack');
+  }
+  expectContained(evidence.composer, evidence.workbench, 'composer region');
+  expectContained(evidence.transcript, evidence.stage, 'transcript');
+  expect(evidence.transcriptContent.top, 'transcript content begins after its visible header')
+    .toBeGreaterThanOrEqual(evidence.transcriptHeader.bottom - 1);
+  expect(evidence.composer.left).toBeGreaterThanOrEqual(evidence.stage.left - 1);
+  expect(evidence.composer.right).toBeLessThanOrEqual(evidence.stage.right + 1);
+  expectContained(evidence.composerSurface, evidence.composer, 'composer surface');
+  expectContained(evidence.textarea, evidence.composerSurface, 'composer textarea');
+  expectContained(evidence.submit, evidence.composerSurface, 'composer submit');
+  expect(evidence.composer.bottom).toBeLessThanOrEqual(evidence.viewport.height);
+});
+}
+
+test('PomOS Scene Effects keeps compact labels and 44px knobless range interactions', async ({ page }) => {
+  await openFresh(page, 1280, 720);
+  await activatePomOS(page);
+
+  const controls = page.getByRole('group', { name: 'Scene Effects controls' }).locator(':scope > label');
+  await expect(page.getByRole('group', { name: 'Scene Effects controls' })).toHaveAttribute('data-pom-part', 'group.surface');
+  await expect(controls).toHaveCount(4);
+  const geometry = await controls.evaluateAll((labels) => labels.map((label) => {
+    const rect = (element: Element | null) => {
+      if (!(element instanceof HTMLElement)) throw new Error('Missing Scene Effects control part.');
+      const box = element.getBoundingClientRect();
+      return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height, centerY: (box.top + box.bottom) / 2 };
+    };
+    return {
+      label: rect(label),
+      name: rect(label.querySelector('span')),
+      output: rect(label.querySelector('output')),
+      input: rect(label.querySelector('input'))
+    };
+  }));
+  for (const [index, control] of geometry.entries()) {
+    expect(control.name.top, `control ${index} name top`).toBeGreaterThanOrEqual(control.label.top);
+    expect(control.output.right, `control ${index} output right`).toBeLessThanOrEqual(control.label.right);
+    expect(control.input.left, `control ${index} input left`).toBeGreaterThanOrEqual(control.label.left);
+    expect(control.input.right, `control ${index} input right`).toBeLessThanOrEqual(control.label.right);
+    expect(control.input.bottom, `control ${index} input bottom`).toBeLessThanOrEqual(control.label.bottom);
+    expect(Math.abs(control.name.centerY - control.output.centerY), `control ${index} label/value alignment`).toBeLessThanOrEqual(1);
+    expect(control.input.height, `control ${index} range target`).toBeGreaterThanOrEqual(44);
+  }
+
+  const atmosphere = page.getByRole('slider', { name: 'Atmosphere' });
+  await atmosphere.focus();
+  await atmosphere.press('ArrowRight');
+  await expect(atmosphere).toHaveValue('63');
+  const focus = await atmosphere.evaluate((input) => ({
+    focusVisible: input.matches(':focus-visible'),
+    outlineWidth: Number.parseFloat(getComputedStyle(input).outlineWidth),
+    thumbSize: Number.parseFloat(getComputedStyle(input.closest('[data-pom-theme-root]')!).getPropertyValue('--pom-control-slider-thumb-size')),
+    thumbGeometryRules: [...document.styleSheets].flatMap((sheet) => [...sheet.cssRules])
+      .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule && /::-(?:webkit-slider-thumb|moz-range-thumb)/.test(rule.selectorText))
+      .map((rule) => ({ width: rule.style.width, height: rule.style.height }))
+  }));
+  expect(focus.focusVisible).toBe(true);
+  expect(focus.outlineWidth).toBeGreaterThanOrEqual(2);
+  expect(focus.thumbSize).toBe(11);
+  expect(focus.thumbGeometryRules).toContainEqual({
+    width: 'var(--pom-control-slider-thumb-size)',
+    height: 'var(--pom-control-slider-thumb-size)'
+  });
+  expect(focus.thumbGeometryRules.every((rule) => !rule.width || rule.width === 'var(--pom-control-slider-thumb-size)')).toBe(true);
+  expect(focus.thumbGeometryRules.every((rule) => !rule.height || rule.height === 'var(--pom-control-slider-thumb-size)')).toBe(true);
+  const range = await atmosphere.boundingBox();
+  if (!range) throw new Error('Atmosphere range has no pointer geometry.');
+  await page.mouse.click(range.x + (range.width * 0.8), range.y + (range.height / 2));
+  expect(Number(await atmosphere.inputValue())).toBeGreaterThan(63);
+});
+
+test('PomOS constrained side stacks expose deterministic internal scroll owners', async ({ page }) => {
+  await openFresh(page, 1280, 450);
+  await activatePomOS(page);
+
+  const evidence = await page.evaluate(() => {
+    const scrollOwner = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing scroll owner: ${selector}`);
+      return {
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        overflowY: getComputedStyle(element).overflowY,
+        before: element.scrollTop,
+        after: (() => {
+          element.scrollTop = element.scrollHeight;
+          return element.scrollTop;
+        })()
+      };
+    };
+    return {
+      characters: scrollOwner('[data-widget-type="story.characters"] .recording-characters > ul'),
+      theme: scrollOwner('[data-widget-type="settings.custom-theme"] .compact-theme'),
+      effects: scrollOwner('[data-widget-type="story.room-ambience"] .scene-effects'),
+      perspective: scrollOwner('[data-widget-type="story.personas"] .recording-persona')
+    };
+  });
+
+  for (const [name, owner] of Object.entries(evidence)) {
+    expect(owner.overflowY, `${name} overflow policy`).toBe('auto');
+    expect(owner.scrollHeight, `${name} has constrained content`).toBeGreaterThan(owner.clientHeight);
+    expect(owner.after, `${name} scroll position advances`).toBeGreaterThan(owner.before);
+  }
+});
+
+test('PomOS grouped controls keep one translucent material owner and transparent nested rows', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+  await activatePomOS(page);
+
+  const evidence = await page.evaluate(() => {
+    const group = document.querySelector<HTMLElement>('.scene-effects');
+    if (!group) throw new Error('Missing Scene Effects group.');
+    const nestedRow = group.querySelector<HTMLElement>(':scope > [data-pom-part="row.surface"]');
+    if (!nestedRow) throw new Error('Missing Scene Effects row.');
+    const groupStyle = getComputedStyle(group);
+    const rowStyle = getComputedStyle(nestedRow);
+    const alpha = (color: string) => Number(color.match(/[\d.]+(?=\))/g)?.at(-1) ?? (color.startsWith('rgb(') ? 1 : 0));
+    return {
+      groupPart: group.dataset.pomPart,
+      groupAlpha: alpha(groupStyle.backgroundColor),
+      groupBackdrop: groupStyle.backdropFilter,
+      rowAlpha: alpha(rowStyle.backgroundColor),
+      rowShadow: rowStyle.boxShadow,
+      rowBackdrop: rowStyle.backdropFilter
+    };
+  });
+
+  expect(evidence.groupPart).toBe('group.surface');
+  expect(evidence.groupAlpha).toBeGreaterThanOrEqual(0.3);
+  expect(evidence.groupAlpha).toBeLessThanOrEqual(0.6);
+  expect(evidence.groupBackdrop).toContain('blur(');
+  expect(evidence.rowAlpha).toBe(0);
+  expect(evidence.rowShadow).toBe('none');
+  expect(evidence.rowBackdrop).toBe('none');
+});
+
+test('PomOS metadata remains legible and the compact composer retains its complete status line', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+  await activatePomOS(page);
+
+  const wideType = await page.evaluate(() => {
+    const fontSize = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing typography sample: ${selector}`);
+      return Number.parseFloat(getComputedStyle(element).fontSize);
+    };
+    return {
+      wordmark: fontSize('.wordmark small'),
+      storyLabel: fontSize('.story-lockup span'),
+      storyMeta: fontSize('.story-lockup small'),
+      transcriptKicker: fontSize('.transcript .widget-kicker'),
+      themeControls: fontSize('.compact-theme'),
+      presence: fontSize('[data-testid="character-presence"]'),
+      composerStatus: fontSize('.composer-field > span')
+    };
+  });
+  for (const [name, size] of Object.entries(wideType)) {
+    expect(size, `${name} font size`).toBeGreaterThanOrEqual(name === 'themeControls' || name === 'transcriptKicker' ? 10 : 9);
+  }
+
+  await openFresh(page, 390, 844);
+  await activatePomOS(page);
+  const compactStatus = await page.locator('.composer-field > span').evaluate((element) => {
+    const style = getComputedStyle(element);
+    const bounds = element.getBoundingClientRect();
+    const field = element.parentElement!.getBoundingClientRect();
+    return {
+      fontSize: Number.parseFloat(style.fontSize),
+      whiteSpace: style.whiteSpace,
+      textOverflow: style.textOverflow,
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+      scrollHeight: element.scrollHeight,
+      clientHeight: element.clientHeight,
+      contained: bounds.top >= field.top - 1 && bounds.bottom <= field.bottom + 1
+    };
+  });
+  expect(compactStatus).toMatchObject({ fontSize: 9, whiteSpace: 'normal', textOverflow: 'clip', contained: true });
+  expect(compactStatus.scrollWidth).toBeLessThanOrEqual(compactStatus.clientWidth + 1);
+  expect(compactStatus.scrollHeight).toBeLessThanOrEqual(compactStatus.clientHeight + 1);
+});
+
+test('PomOS icon actions keep real names and 44px targets while essential labels remain text', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+  await activatePomOS(page);
+
+  const actions = page.locator('[data-pom-icon-action]:visible');
+  expect(await actions.count()).toBeGreaterThanOrEqual(4);
+  for (let index = 0; index < await actions.count(); index += 1) {
+    const evidence = await actions.nth(index).evaluate((button) => {
+      const icon = button.querySelector<HTMLElement>('[data-pom-action-icon]');
+      const label = button.querySelector<HTMLElement>('[data-pom-action-label]');
+      if (!icon || !label) throw new Error('IconAction is missing its semantic presentation children.');
+      const bounds = button.getBoundingClientRect();
+      return {
+        accessibleName: button.getAttribute('aria-label'),
+        iconDisplay: getComputedStyle(icon).display,
+        labelDisplay: getComputedStyle(label).display,
+        width: bounds.width,
+        height: bounds.height
+      };
+    });
+    expect(evidence.accessibleName?.trim().length).toBeGreaterThan(0);
+    expect(['grid', 'inline-grid']).toContain(evidence.iconDisplay);
+    expect(evidence.labelDisplay).toBe('none');
+    expect(evidence.width).toBeGreaterThanOrEqual(44);
+    expect(evidence.height).toBeGreaterThanOrEqual(44);
+  }
+  await expect(page.getByRole('tab', { name: 'Scene' })).toHaveText('Scene');
+  await expect(page.getByRole('heading', { name: 'Transcript' })).toHaveText('Transcript');
+  await expect(page.getByRole('heading', { name: 'The Water Remembers' })).toHaveText('The Water Remembers');
+
+  await page.getByText('Developer tools', { exact: true }).click();
+  await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: 'Deep Current', exact: true }).click();
+  await page.getByText('Developer tools', { exact: true }).click();
+  await expect(page.locator('main')).toHaveAttribute('data-pom-theme', 'deep-current');
+  const legacyAction = page.locator('[data-pom-icon-action]:visible').first();
+  await expect(legacyAction.locator('[data-pom-action-icon]')).toHaveCSS('display', 'none');
+  await expect(legacyAction.locator('[data-pom-action-label]')).toBeVisible();
+});
 
 test('native workbench keeps literal relationships and keyboard reorder behavior', async ({ page }) => {
   await openFresh(page, 1440, 900);

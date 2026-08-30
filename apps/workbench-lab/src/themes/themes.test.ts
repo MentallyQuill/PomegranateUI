@@ -250,11 +250,12 @@ describe('Workbench Lab theme conformance', () => {
     expect(POM_NEUTRAL_THEME).toMatchObject({
       schemaVersion: 'pomegranate.ui.theme.v2', id: 'pom-neutral', label: 'PomOS',
       colors: { canvas: '#167fdc', surfaceElevated: '#ffffff', accent: '#0868c4' },
-      shapes: { pane: { family: 'continuous-rounded', radiusPx: 18 } },
+      shapes: { pane: { family: 'continuous-rounded', radiusPx: 20 } },
       controls: { slider: { trackPx: 4, thumbPx: 11, hitTargetPx: 44 } }
     });
     expect(POM_NEUTRAL_THEME.materials.panel).toMatchObject({ opacity: 0, backdrop: { blurPx: 0 }, shadows: [] });
-    expect(POM_NEUTRAL_THEME.materials.pane).toMatchObject({ opacity: 0.42, backdrop: { blurPx: 30 } });
+    expect(POM_NEUTRAL_THEME.materials.pane).toMatchObject({ opacity: 0.3, backdrop: { blurPx: 34 } });
+    expect(POM_NEUTRAL_THEME.recipes.parts['group.surface']).toMatchObject({ material: 'pane', overflow: 'clip' });
     expect(POM_NEUTRAL_THEME.materials.header?.backdrop.blurPx).toBe(0);
     expect(POM_NEUTRAL_THEME.materials.content?.backdrop.blurPx).toBe(0);
     expect(POM_NEUTRAL_THEME.canvas.every((layer) => layer.kind !== 'image')).toBe(true);
