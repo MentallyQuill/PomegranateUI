@@ -70,6 +70,11 @@ test('packed verifier proves an isolated Svelte recipe consumer', async () => {
     "assertLocalResolutions"
   ]) assert.match(verifier, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), expected);
   assert.doesNotMatch(verifier, /renderer-dom-harness\.mjs/);
+  assert.doesNotMatch(verifier, /defaultPlacement: \{ kind: 'docked', edge|panelId, edge/);
+  assert.match(verifier, /regionRole: 'stage'/);
+  assert.match(verifier, /panelId, regionId/);
+  assert.match(verifier, /data-pomegranate-region-surface/);
+  assert.doesNotMatch(verifier, /data-pomegranate-dock=/);
   assert.match(verifier, /const temporaryBase = await realpath\(os\.tmpdir\(\)\)/);
   assert.match(verifier, /mkdtemp\(path\.join\(temporaryBase, 'pomegranate-ui-pack-'\)\)/);
   assert.doesNotMatch(verifier, /path\.resolve\(os\.tmpdir\(\)\)/);

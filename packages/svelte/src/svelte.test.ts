@@ -56,7 +56,7 @@ describe('Svelte Workbench bindings', () => {
     expect(revisions).toEqual([0]);
     expect(store.dispatch({
       type: 'panel.create',
-      panel: { id: asPanelId('scene'), name: 'Scene', templateId: 'standard', order: 0 }
+      panel: { id: asPanelId('scene'), name: 'Scene', templateId: 'story-stage.v1', order: 0 }
     }).ok).toBe(true);
     expect(revisions).toEqual([0, 1]);
 
