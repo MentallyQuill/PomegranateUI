@@ -378,6 +378,155 @@ export function placeWidget(
   });
 }
 
+export function renamePanel(state: WorkbenchState, panelId: PanelId, name: string): LayoutResult {
+  const index = state.panels.findIndex((panel) => panel.id === panelId);
+  if (index < 0) return rejectLayout(state, 'MISSING_PANEL', `Panel '${panelId}' does not exist.`);
+  if (!name || name.trim() !== name) return rejectLayout(state, 'INVALID_INDEX', 'Panel name is invalid.');
+  const panels = [...state.panels];
+  panels[index] = { ...panels[index]!, name };
+  return acceptLayout({ ...state, revision: nextRevision(state), panels });
+}
+
+export interface PanelDuplicateIds {
+  readonly panelId: PanelId;
+  readonly shelfIds: Readonly<Record<string, string>>;
+  readonly widgetIds: Readonly<Record<string, WidgetInstanceId>>;
+  readonly groupIds: Readonly<Record<string, string>>;
+}
+
+function remapVisiblePlacement(
+  placement: VisibleWidgetPlacement,
+  panelId: PanelId,
+  ids: PanelDuplicateIds
+): VisibleWidgetPlacement | null {
+  if (placement.kind === 'floating') return { ...placement, panelId };
+  const shelfId = ids.shelfIds[placement.shelfId];
+  if (!shelfId) return null;
+  const group = placement.group
+    ? ids.groupIds[placement.group.id]
+      ? { ...placement.group, id: ids.groupIds[placement.group.id]! }
+      : null
+    : undefined;
+  if (group === null) return null;
+  return {
+    ...placement,
+    panelId,
+    shelfId,
+    ...(group ? { group } : {})
+  };
+}
+
+export function duplicatePanel(
+  state: WorkbenchState,
+  sourcePanelId: PanelId,
+  name: string,
+  ids: PanelDuplicateIds
+): LayoutResult {
+  const sourceIndex = state.panels.findIndex((panel) => panel.id === sourcePanelId);
+  const source = state.panels[sourceIndex];
+  if (!source) return rejectLayout(state, 'MISSING_PANEL', `Panel '${sourcePanelId}' does not exist.`);
+  if (hasPanel(state, ids.panelId)) return rejectLayout(state, 'DUPLICATE_ID', `Panel '${ids.panelId}' already exists.`);
+  if (!name || name.trim() !== name) return rejectLayout(state, 'INVALID_INDEX', 'Panel name is invalid.');
+
+  const sourceShelves = state.shelves.filter((shelf) => shelf.panelId === sourcePanelId);
+  const duplicatedShelves: ShelfState[] = [];
+  for (const shelf of sourceShelves) {
+    const id = ids.shelfIds[shelf.id];
+    if (!id) return rejectLayout(state, 'INVALID_PLACEMENT', `Missing duplicate id for shelf '${shelf.id}'.`);
+    duplicatedShelves.push({ ...shelf, id, panelId: ids.panelId });
+  }
+
+  const widgets = { ...state.widgets };
+  const placements = { ...state.placements };
+  for (const [oldId, placement] of Object.entries(state.placements)) {
+    if (placement.panelId !== sourcePanelId) continue;
+    const newId = ids.widgetIds[oldId];
+    const sourceWidget = state.widgets[oldId];
+    if (!newId || !sourceWidget) return rejectLayout(state, 'INVALID_PLACEMENT', `Missing duplicate id for Widget '${oldId}'.`);
+    if (widgets[newId]) return rejectLayout(state, 'DUPLICATE_ID', `Widget instance '${newId}' already exists.`);
+    const visible = placement.kind === 'shelved'
+      ? remapVisiblePlacement(placement.lastVisible, ids.panelId, ids)
+      : remapVisiblePlacement(placement, ids.panelId, ids);
+    if (!visible) return rejectLayout(state, 'INVALID_PLACEMENT', `Missing duplicate group or shelf identity for Widget '${oldId}'.`);
+    widgets[newId] = { ...sourceWidget, id: newId };
+    placements[newId] = placement.kind === 'shelved'
+      ? { kind: 'shelved', panelId: ids.panelId, lastVisible: visible }
+      : visible;
+  }
+
+  const panels = [...state.panels];
+  panels.splice(sourceIndex + 1, 0, { ...source, id: ids.panelId, name, order: sourceIndex + 1 });
+  return acceptLayout({
+    ...state,
+    revision: nextRevision(state),
+    panels: normalizePanels(panels),
+    shelves: normalizeShelves([...state.shelves, ...duplicatedShelves]),
+    widgets,
+    placements: normalizeTabGroups(normalizeDockOrders(placements))
+  });
+}
+
+export function clearPanel(state: WorkbenchState, panelId: PanelId): LayoutResult {
+  if (!hasPanel(state, panelId)) return rejectLayout(state, 'MISSING_PANEL', `Panel '${panelId}' does not exist.`);
+  const widgets = { ...state.widgets };
+  const placements = { ...state.placements };
+  for (const [instanceId, placement] of Object.entries(state.placements)) {
+    if (placement.panelId !== panelId) continue;
+    delete widgets[instanceId];
+    delete placements[instanceId];
+  }
+  return acceptLayout({ ...state, revision: nextRevision(state), widgets, placements });
+}
+
+export function deletePanel(state: WorkbenchState, panelId: PanelId): LayoutResult {
+  const index = state.panels.findIndex((panel) => panel.id === panelId);
+  if (index < 0) return rejectLayout(state, 'MISSING_PANEL', `Panel '${panelId}' does not exist.`);
+  const cleared = clearPanel(state, panelId);
+  if (!cleared.ok) return cleared;
+  const panels = state.panels.filter((panel) => panel.id !== panelId);
+  const activePanelId = state.activePanelId === panelId
+    ? panels[Math.min(index, panels.length - 1)]?.id ?? null
+    : state.activePanelId;
+  return acceptLayout({
+    ...cleared.state,
+    revision: nextRevision(state),
+    activePanelId,
+    panels: normalizePanels(panels),
+    shelves: state.shelves.filter((shelf) => shelf.panelId !== panelId)
+  });
+}
+
+export interface PanelResetPayload {
+  readonly panel: PanelState;
+  readonly shelves: readonly ShelfState[];
+  readonly widgets: Readonly<Record<string, WidgetInstance>>;
+  readonly placements: Readonly<Record<string, WidgetPlacement>>;
+}
+
+export function resetPanel(state: WorkbenchState, panelId: PanelId, payload: PanelResetPayload): LayoutResult {
+  const index = state.panels.findIndex((panel) => panel.id === panelId);
+  if (index < 0) return rejectLayout(state, 'MISSING_PANEL', `Panel '${panelId}' does not exist.`);
+  if (payload.panel.id !== panelId) return rejectLayout(state, 'INVALID_PLACEMENT', 'Reset payload must preserve Panel identity.');
+  const cleared = clearPanel(state, panelId);
+  if (!cleared.ok) return cleared;
+  const panels = [...cleared.state.panels];
+  panels[index] = { ...payload.panel, order: index };
+  const widgets = { ...cleared.state.widgets, ...payload.widgets };
+  const placements = { ...cleared.state.placements, ...payload.placements };
+  const candidate = {
+    ...cleared.state,
+    revision: nextRevision(state),
+    panels,
+    shelves: normalizeShelves([
+      ...cleared.state.shelves.filter((shelf) => shelf.panelId !== panelId),
+      ...payload.shelves
+    ]),
+    widgets,
+    placements: normalizeTabGroups(normalizeDockOrders(placements))
+  };
+  return acceptLayout(candidate);
+}
+
 export function createShelf(
   state: WorkbenchState,
   shelf: ShelfState,

@@ -12,7 +12,9 @@ import {
 import {
   createInitialWorkbenchState,
   createPanel,
+  createPanelTemplateRegistry,
   createWidget,
+  BUILT_IN_PANEL_TEMPLATES,
   type LayoutResult
 } from '@pomegranate-ui/layout';
 
@@ -97,9 +99,22 @@ export function createConformanceFixture(): ConformanceFixture {
   const registry = createWidgetRegistry();
   registry.register(manifest(CONFORMANCE_IDS.summaryType, 'Summary'));
   registry.register(manifest(CONFORMANCE_IDS.notesType, 'Notes'));
+  const templates = createPanelTemplateRegistry([
+    ...BUILT_IN_PANEL_TEMPLATES,
+    {
+      id: 'user.custom',
+      label: 'Custom Panel',
+      family: 'columns',
+      regions: [
+        { id: 'column-1', label: 'Column 1', role: 'column', order: 0, acceptedShapes: ['narrow', 'medium', 'wide', 'stage', 'strip'], minimumWidth: 160, minimumHeight: 120, enabledWhen: { option: 'columns', minimum: 2 } },
+        { id: 'column-2', label: 'Column 2', role: 'column', order: 1, acceptedShapes: ['narrow', 'medium', 'wide', 'stage', 'strip'], minimumWidth: 160, minimumHeight: 120, enabledWhen: { option: 'columns', minimum: 2 } }
+      ],
+      options: { columns: { minimum: 2, maximum: 6, default: 2 } }
+    }
+  ]);
 
   return Object.freeze({
-    storeOptions: Object.freeze({ initialState: state, registry }),
+    storeOptions: Object.freeze({ initialState: state, registry, templates }),
     hostContext: Object.freeze({ storyId: 'story-7' })
   });
 }

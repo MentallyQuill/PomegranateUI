@@ -19,8 +19,11 @@ import {
   createPanelTemplateRegistry,
   createShelf,
   createWidget,
+  deletePanel,
+  duplicatePanel,
   mergeWidgetGroup,
   placeWidget,
+  renamePanel,
   removeWidget,
   resizeShelf,
   restoreWidget,
@@ -310,5 +313,28 @@ describe('atomic layout operations', () => {
     });
     expect(restored.ok).toBe(true);
     expect(restored.state.placements[summaryId]).toEqual(before.placements[summaryId]);
+  });
+
+  it('renames, deeply duplicates, and deletes Panels while selecting the nearest survivor', () => {
+    const renamed = renamePanel(populatedState(), sceneId, 'Chronicle');
+    expect(renamed.ok).toBe(true);
+    const duplicated = duplicatePanel(renamed.state, sceneId, 'Chronicle Copy', {
+      panelId: asPanelId('copy'),
+      shelfIds: { primary: 'primary-copy' },
+      widgetIds: {
+        [summaryId]: asWidgetInstanceId('summary-copy'),
+        [notesId]: asWidgetInstanceId('notes-copy')
+      },
+      groupIds: {}
+    });
+    expect(duplicated.ok).toBe(true);
+    expect(duplicated.state.panels.map((panel) => panel.name)).toEqual(['Chronicle', 'Chronicle Copy', 'Library']);
+    expect(duplicated.state.placements['summary-copy']).toMatchObject({
+      panelId: 'copy', regionId: 'left', shelfId: 'primary-copy'
+    });
+    const deleted = deletePanel(duplicated.state, sceneId);
+    expect(deleted.ok).toBe(true);
+    expect(deleted.state.activePanelId).toBe('copy');
+    expect(deleted.state.widgets[summaryId]).toBeUndefined();
   });
 });

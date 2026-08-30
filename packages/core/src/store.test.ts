@@ -165,4 +165,41 @@ describe('Workbench store', () => {
     });
     expect(unexpected.state).toBe(before);
   });
+
+  it('applies adopter Panel capability policy and one-step undo', () => {
+    const registry = createWidgetRegistry();
+    registry.register(summaryManifest());
+    const store = createWorkbenchStore({
+      initialState: initialState(),
+      registry,
+      panelPolicy: {
+        allows: (panel, capability) => !(panel.id === sceneId && capability === 'delete')
+      }
+    });
+    const renamed = store.dispatch({ type: 'panel.rename', panelId: sceneId, name: 'Chronicle' });
+    expect(renamed).toMatchObject({ ok: true });
+    expect(store.canUndo()).toBe(true);
+    expect(store.getState().panels[0]?.name).toBe('Chronicle');
+    const undone = store.dispatch({ type: 'layout.undo' });
+    expect(undone.ok).toBe(true);
+    expect(store.getState().panels[0]?.name).toBe('Scene');
+    expect(store.getState().revision).toBe(2);
+    expect(store.canUndo()).toBe(false);
+    const denied = store.dispatch({ type: 'panel.delete', panelId: sceneId });
+    expect(denied.ok).toBe(false);
+    expect(!denied.ok && denied.error.code).toBe('CAPABILITY_DENIED');
+  });
+
+  it('shelves and restores a Widget through the shared store path', () => {
+    const store = fixtureStore();
+    expect(store.dispatch({
+      type: 'widget.create',
+      instance: instance(),
+      placement: { kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'primary', order: 0 }
+    }).ok).toBe(true);
+    expect(store.dispatch({ type: 'widget.shelve', instanceId: summaryId }).ok).toBe(true);
+    expect(store.getState().placements[summaryId]?.kind).toBe('shelved');
+    expect(store.dispatch({ type: 'widget.restore', instanceId: summaryId }).ok).toBe(true);
+    expect(store.getState().placements[summaryId]).toMatchObject({ kind: 'docked', regionId: 'left' });
+  });
 });
