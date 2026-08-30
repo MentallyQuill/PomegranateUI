@@ -88,6 +88,20 @@ test('recipe hashes treat LF and CRLF as the same source-owned text', async () =
   assert.equal(refreshed.status, 0, refreshed.stderr || refreshed.stdout);
 });
 
+test('copy-owned Workbench recipes carry optional host title and metadata presentation', async () => {
+  const widgetFrame = await readFile(path.join(root, 'registry', 'recipes', 'widget-frame', 'WidgetFrame.svelte'), 'utf8');
+  assert.match(widgetFrame, /title\?: string/);
+  assert.match(widgetFrame, /meta\?: string/);
+  assert.match(widgetFrame, /class="widget-frame-meta"/);
+
+  for (const file of ['WorkbenchSurface.svelte', 'PanelTemplateSurface.svelte', 'DockRegion.svelte', 'DockShelf.svelte', 'WidgetGroup.svelte']) {
+    const source = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', file), 'utf8');
+    assert.match(source, /titleFor/, `${file} does not carry the host title resolver.`);
+  }
+  const group = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'WidgetGroup.svelte'), 'utf8');
+  assert.match(group, /titleFor\?\.\(frame\) \?\? frame\.title/);
+});
+
 test('recipe copy preflights every destination before writing an upgrade', async () => {
   const target = await mkdtemp(path.join(tmpdir(), 'pomegranate-recipes-transaction-'));
   temporaryRoots.push(target);

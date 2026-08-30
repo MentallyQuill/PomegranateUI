@@ -17,6 +17,7 @@
     surfacePart = 'widget.surface',
     contentPart = 'widget.content',
     title,
+    meta,
     class: className = ''
   }: {
     frame: WidgetFrameProjection;
@@ -27,6 +28,7 @@
     surfacePart?: 'widget.surface' | 'widget.content' | 'floating.surface' | null;
     contentPart?: 'widget.content' | null;
     title?: string;
+    meta?: string | undefined;
     class?: string;
   } = $props();
 
@@ -52,7 +54,10 @@
   data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
 >
   <header class:is-dragging={dragging} data-pom-part="widget.header">
-    <h2>{displayTitle}</h2>
+    <div class="widget-frame-heading">
+      <h2>{displayTitle}</h2>
+      {#if meta}<span class="widget-frame-meta">{meta}</span>{/if}
+    </div>
     <nav aria-label={`${displayTitle} placement`} data-pom-part="widget.actions">
       <button
         class="action-drag"

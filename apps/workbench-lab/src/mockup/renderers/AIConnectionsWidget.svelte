@@ -1,5 +1,5 @@
 <section class="ai-connections" aria-label="AI connection status">
-  <header data-pom-part="group.surface">
+  <header>
     <span>Inference route</span>
     <strong>Ready</strong>
   </header>

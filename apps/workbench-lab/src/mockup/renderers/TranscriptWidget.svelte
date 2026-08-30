@@ -5,8 +5,8 @@
 </script>
 
 <div class="widget-content transcript">
-  <p class="widget-kicker">{hostContext.location} · {hostContext.timeLabel}</p>
-  <p>The rain had thinned to silver threads by the time Mara reached the concourse.</p>
-  <p>Across the black water, the reservoir bell answered once—too early for the ferry.</p>
-  <blockquote>“That wasn’t the wind,” Ilex said.</blockquote>
+  <p class="widget-kicker">Chapter 04 · The Drowned Observatory</p>
+  <h2>The Water Remembers</h2>
+  <p>The reservoir held the last color of evening beneath its surface. Across the flooded concourse, a seam of pale light stood where no doorway had been.</p>
+  <blockquote>Mara lowered her voice. “It only opens when someone has forgotten why they came.”</blockquote>
 </div>

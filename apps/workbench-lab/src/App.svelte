@@ -13,7 +13,7 @@
   import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
   import { LAB_PANEL_IDS } from './mockup/state.js';
   import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
-  import { resolveLabWidgetTitle } from './mockup/presentation.js';
+  import { resolveLabWidgetMeta, resolveLabWidgetTitle } from './mockup/presentation.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
   import PanelCreateDialog from './recipes/PanelCreateDialog.svelte';
@@ -307,6 +307,7 @@
 
   function frameSurfacePart(frame: WidgetFrameProjection) {
     if (frame.placement.kind === 'floating') return 'floating.surface';
+    if (frame.placement.kind === 'docked' && frame.placement.group) return null;
     return frame.instance.type === 'story.transcript' || frame.instance.type === 'story.composer'
       ? null
       : 'widget.surface';
@@ -320,6 +321,7 @@
   }
 
   const frameTitle = (frame: WidgetFrameProjection) => resolveLabWidgetTitle(frame.instance.type, frame.title);
+  const frameMeta = (frame: WidgetFrameProjection) => resolveLabWidgetMeta(frame.instance.type);
 </script>
 
 <svelte:head>
@@ -390,6 +392,7 @@
               surfacePart={frameSurfacePart(frame)}
               contentPart={frameContentPart(frame)}
               title={frameTitle(frame)}
+              meta={frameMeta(frame)}
               class="widget-frame"
             />
           {/if}

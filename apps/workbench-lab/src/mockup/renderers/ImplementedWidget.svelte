@@ -7,6 +7,7 @@
   import type { LabHostContext } from '../host-context.js';
   import { getSurfaceFixture, resolveSurfaceState } from '../surface-fixtures.js';
   import AIConnectionsWidget from './AIConnectionsWidget.svelte';
+  import CompactThemeWidget from './CompactThemeWidget.svelte';
   import PersonasWidget from './PersonasWidget.svelte';
   import RecordingCharactersWidget from './RecordingCharactersWidget.svelte';
   import SceneEffectsWidget from './SceneEffectsWidget.svelte';
@@ -32,7 +33,9 @@
     data-surface-owner="lab-fixture"
   >
     <WidgetStateSurface {state} />
-    {#if instance.type === 'settings.custom-theme' && !['empty', 'unavailable', 'access-denied'].includes(state)}
+    {#if instance.type === 'settings.custom-theme' && instance.configuration.presentation === 'compact' && contentVisible}
+      <CompactThemeWidget theme={hostContext.theme} />
+    {:else if instance.type === 'settings.custom-theme' && !['empty', 'unavailable', 'access-denied'].includes(state)}
       <ThemeSettings theme={hostContext.theme} {eyedropper} contract={fixture} />
     {:else if instance.type === 'story.characters' && contentVisible}
       <RecordingCharactersWidget />

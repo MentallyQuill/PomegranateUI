@@ -73,11 +73,20 @@ describe('Svelte Workbench Lab mockup', () => {
     for (const title of ['Characters', 'Custom Theme', 'Transcript', 'Composer', 'Scene Effects', 'Personas']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();
     }
+    expect(within(screen.getByRole('article', { name: 'Characters' })).getByText('4 / 7')).toHaveClass('widget-frame-meta');
+    expect(within(screen.getByRole('article', { name: 'Custom Theme' })).getByText('Local')).toHaveClass('widget-frame-meta');
+    expect(within(screen.getByRole('article', { name: 'Scene Effects' })).getByText('Live')).toHaveClass('widget-frame-meta');
     expect(screen.queryByRole('article', { name: 'World State' })).toBeNull();
     expect(screen.queryByRole('article', { name: 'Character Relationships' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Widget group' }).querySelectorAll('[role="tab"]')).toHaveLength(2);
     expect(screen.getByRole('tab', { name: 'Personas' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'AI Connections' })).toHaveAttribute('aria-selected', 'false');
+    const perspectiveGroup = screen.getByRole('group', { name: 'Widget group' });
+    expect(perspectiveGroup.querySelector('[data-pom-part="widget.surface"]')).toBeNull();
+    expect(perspectiveGroup.querySelector('[data-surface-type="story.personas"]')).not.toBeNull();
+    expect(container.querySelector('[data-surface-presentation="compact-theme"]')).not.toBeNull();
+    expect(screen.getByText('Chapter 04 · The Drowned Observatory')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'The Water Remembers' })).toBeVisible();
     expect([...container.querySelectorAll('[data-conformance-region="shelf"], [data-pomegranate-region-surface]')].map((region) => region.getAttribute('data-conformance-region') ?? region.getAttribute('data-pomegranate-region-surface'))).toEqual([
       'shelf', 'left', 'stage', 'composer', 'right'
     ]);

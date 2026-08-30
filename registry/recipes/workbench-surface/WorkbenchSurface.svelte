@@ -4,7 +4,7 @@
   import { selectPanelSurface, type WidgetFrameProjection, type WorkbenchStore } from '@pomegranate-ui/core';
   import PanelTemplateSurface from './PanelTemplateSurface.svelte';
   import UnavailableTemplate from './UnavailableTemplate.svelte';
-  let { store, renderWidget, class: className = '' }: { store: WorkbenchStore; renderWidget: Snippet<[WidgetFrameProjection]>; class?: string } = $props();
+  let { store, renderWidget, titleFor, class: className = '' }: { store: WorkbenchStore; renderWidget: Snippet<[WidgetFrameProjection]>; titleFor?: ((frame: WidgetFrameProjection) => string) | undefined; class?: string } = $props();
   let state = $state<WorkbenchState>();
   $effect(() => {
     state = store.getState();
@@ -17,7 +17,7 @@
     {#if surface.unavailableTemplateId}
       <UnavailableTemplate templateId={surface.unavailableTemplateId} />
     {:else}
-      <PanelTemplateSurface {surface} {store} {renderWidget} />
+      <PanelTemplateSurface {surface} {store} {renderWidget} {titleFor} />
     {/if}
     <div data-pomegranate-floating-layer>
       {#each surface.floating as frame (frame.instanceId)}{@render renderWidget(frame)}{/each}

@@ -2,28 +2,55 @@
 
 import { cleanup, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
-import { asWidgetInstanceId, asWidgetType, type WidgetType } from '@pomegranate-ui/contracts';
+import { asWidgetInstanceId, asWidgetType, type JsonObject, type WidgetType } from '@pomegranate-ui/contracts';
 import type { WidgetRendererProps } from '@pomegranate-ui/svelte';
 
 import type { LabHostContext } from '../host-context.js';
+import { createLabHostContext } from '../host-context.js';
 import { IMPLEMENTED_SURFACE_TYPES } from '../implemented-surfaces.js';
+import { createLabThemeController } from '../../themes/controller.js';
 import ImplementedWidget from './ImplementedWidget.svelte';
 
 afterEach(cleanup);
 
-const hostContext = { surfaceState: 'ready' } as LabHostContext;
+function recordingHostContext(): LabHostContext {
+  const controller = createLabThemeController();
+  const snapshot = controller.getSnapshot();
+  return createLabHostContext({
+    activeId: 'deep-current',
+    presets: [],
+    inspector: {
+      colors: snapshot.compiled.theme.colors,
+      typography: [],
+      geometry: 'rounded · 4px',
+      density: 'compact',
+      iconPackId: snapshot.compiled.theme.iconPackId
+    },
+    materialControls: snapshot.materialControls,
+    authoring: controller.getAuthoringSnapshot(),
+    activate: () => undefined,
+    setMaterialControl: () => undefined,
+    resetMaterialControls: () => undefined,
+    openSettings: () => undefined,
+    editDraft: (next) => controller.editDraft(next),
+    resetDraft: () => controller.resetDraft(),
+    saveDraft: () => controller.saveDraft()
+  });
+}
+
+const hostContext = recordingHostContext();
 const dispatch: WidgetRendererProps<LabHostContext>['dispatch'] = () => {
   throw new Error('Recording-visible fixtures do not dispatch Workbench commands.');
 };
 
-function renderSurface(rawType: string) {
+function renderSurface(rawType: string, configuration: JsonObject = {}) {
   const type = asWidgetType(rawType);
   render(ImplementedWidget, {
     instance: {
       id: asWidgetInstanceId(`recording-${rawType.replaceAll('.', '-')}`),
       type,
       manifestVersion: '1.0.0',
-      configuration: {}
+      configuration
     },
     hostContext,
     capabilities: [],
@@ -92,5 +119,28 @@ describe('recording-visible Deep Current Widget anatomy', () => {
       'Characters 6 routes',
       'Latency 742 ms'
     ]);
+  });
+
+  it('renders the Scene Custom Theme as the compact recorded authoring instrument', () => {
+    renderSurface('settings.custom-theme', { presentation: 'compact' });
+
+    expect(screen.getByText('Deep Current')).toBeVisible();
+    expect(screen.getByText('Edited')).toBeVisible();
+    const roles = screen.getByRole('group', { name: 'Semantic theme colors' });
+    expect(within(roles).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Canvas', 'Glass', 'Chrome', 'Ambient', 'Text', 'Source'
+    ]);
+    for (const [name, value] of [
+      ['Glass Density', '20'],
+      ['Bar Opacity', '39'],
+      ['Selected Strength', '6'],
+      ['Frost Level', '22']
+    ] as const) {
+      expect(screen.getByRole('slider', { name })).toHaveValue(value);
+    }
+    expect(screen.getByText('Screen X,Y')).toBeVisible();
+    expect(screen.getByText('POS 74/41')).toBeVisible();
+    expect(screen.getByText(/RAD\s+8/)).toBeVisible();
+    expect(screen.getByText(/PWR\s+8/)).toBeVisible();
   });
 });

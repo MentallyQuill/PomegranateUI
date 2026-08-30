@@ -16,7 +16,7 @@ import { normalizeMeasurement } from '../conformance/normalize.ts';
 import { applyCanonicalShellGeometry, assertScenarioResolution } from '../conformance/runner.ts';
 import { CONFORMANCE_VIEWPORTS } from '../conformance/viewports.ts';
 import { prepareAtmosphericState } from '../conformance/drivers/reference/atmospheric.ts';
-import { prepareDeepCurrentState } from '../conformance/drivers/workbench-lab/deep-current.ts';
+import { DEEP_RECORDING_IMPLEMENTATION_STATES, prepareDeepCurrentState } from '../conformance/drivers/workbench-lab/deep-current.ts';
 import { VISIBLE_IMPLEMENTATION_REGION_IDS } from '../conformance/drivers/workbench-lab/deep-current.ts';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -903,6 +903,13 @@ test('exact Deep fidelity scenarios retain both executable authorities and every
     assert.equal(scenario.viewport, 'recording-wide');
     assert.equal(scenario.measurementProfile, 'deep-fidelity');
   }
+});
+
+test('the Lab fidelity driver has one explicit implementation state for every Deep recording', () => {
+  const recordingStates = DEEP_FIDELITY_SCENARIOS
+    .filter(({ authorityPath }) => authorityPath.includes('deep-current/recordings/'))
+    .map(({ implementationState }) => implementationState);
+  assert.deepEqual([...DEEP_RECORDING_IMPLEMENTATION_STATES], recordingStates);
 });
 
 test('exact Deep fidelity stores an inspectable original-resolution baseline and ledger', async () => {

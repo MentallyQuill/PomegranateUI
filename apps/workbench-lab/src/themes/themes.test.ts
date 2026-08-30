@@ -222,6 +222,19 @@ describe('Workbench Lab theme conformance', () => {
     }
   });
 
+  it('compiles Deep Current free edges as an upper highlight and lower shadow tonal bevel', () => {
+    const result = resolveThemeV2(DEEP_CURRENT_THEME, assetRegistry);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const bindings = compileThemeBindings(result.theme);
+    const widgetShadow = bindings['--pom-part-widget-surface-material-shadow'];
+
+    expect(widgetShadow).toContain('inset 0px 1px 0 0');
+    expect(widgetShadow).toContain('inset 0px -1px 0px 0px');
+    expect(bindings['--pom-part-widget-surface-radius']).toBe('4px 4px 4px 4px');
+    expect(bindings['--pom-part-widget-surface-clip-path']).toBe('none');
+  });
+
   it.each(LAB_THEME_IDS)('uses only packaged primary fonts and generic fallbacks in %s', (id) => {
     const theme = LAB_THEME_PRESETS.find((candidate) => candidate.id === id)!.target.theme;
     const packaged = new Set(['Pomegranate Sans', 'Pomegranate Serif', 'Pomegranate Mono']);
@@ -287,10 +300,10 @@ describe('Workbench Lab theme conformance', () => {
 
   it('projects recovered controls through bounded public theme policy', () => {
     const controller = createLabThemeController();
-    expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 30, barOpacity: 60, selectedStrength: 6, frostLevel: 30 });
-    expect(controller.getSnapshot().compiled.theme.materials.pane?.opacity).toBe(0.3);
-    expect(controller.getSnapshot().compiled.theme.materials.shelf?.opacity).toBe(0.6);
-    expect(controller.getSnapshot().compiled.theme.materials.pane?.backdrop.blurPx).toBe(12);
+    expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 20, barOpacity: 39, selectedStrength: 6, frostLevel: 22 });
+    expect(controller.getSnapshot().compiled.theme.materials.pane?.opacity).toBe(0.2);
+    expect(controller.getSnapshot().compiled.theme.materials.shelf?.opacity).toBe(0.39);
+    expect(controller.getSnapshot().compiled.theme.materials.pane?.backdrop.blurPx).toBe(8.8);
 
     expect(controller.activate('bunny').ok).toBe(true);
     expect(controller.getSnapshot().materialControls).toEqual({ glassDensity: 24, barOpacity: 28, selectedStrength: 62, frostLevel: 54 });

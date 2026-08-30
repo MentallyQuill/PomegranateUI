@@ -1,5 +1,5 @@
 <section class="recording-persona" aria-label="Active Persona">
-  <header data-pom-part="group.surface">
+  <header>
     <span>Active perspective</span>
     <strong>Aven Rook</strong>
     <p>A cartographer listening for structures beneath the waterline.</p>

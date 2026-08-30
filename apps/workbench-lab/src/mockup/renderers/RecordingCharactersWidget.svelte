@@ -14,7 +14,7 @@
 </script>
 
 <section class="recording-characters" aria-label="Characters">
-  <header data-pom-part="group.surface">
+  <header>
     <span>Story cast</span>
     <div role="group" aria-label="Character portrait size">
       <button

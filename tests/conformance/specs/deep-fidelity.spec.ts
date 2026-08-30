@@ -76,7 +76,7 @@ test.describe('Deep Current exact fidelity', () => {
         await page.screenshot({ path: paths.referencePng, animations: 'disabled', caret: 'hide' });
       }
 
-      await prepareDeepCurrentState(page, labOrigin);
+      await prepareDeepCurrentState(page, labOrigin, scenario.implementationState);
       const root = page.locator('main[data-pom-theme="deep-current"]');
       const identity = await root.getAttribute('data-active-panel');
       const implementation = await measureLabFidelity(page, identity ?? undefined);

@@ -15,7 +15,7 @@
   }
 </script>
 
-<details class="widget-shelf" data-widget-shelf>
+<details class="widget-shelf" data-widget-shelf data-empty={(surface?.widgetShelf.length ?? 0) === 0}>
   <summary>Widget Shelf <span>{surface?.widgetShelf.length ?? 0}</span></summary>
   <div>
     {#if surface?.widgetShelf.length}

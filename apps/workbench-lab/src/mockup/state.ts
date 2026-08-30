@@ -45,7 +45,7 @@ function requireState(result: LayoutResult): WorkbenchState {
 export function createLabState(): WorkbenchState {
   let state = createInitialWorkbenchState();
   for (const panel of [
-    { id: LAB_PANEL_IDS.scene, name: 'Scene', templateId: 'story-stage.v1', order: 0, configuration: { columns: 3 } },
+    { id: LAB_PANEL_IDS.scene, name: 'Scene', templateId: 'story-stage.v1', order: 0, configuration: { columns: 3, dockWidths: { left: 334, right: 335 } } },
     { id: LAB_PANEL_IDS.library, name: 'Library', templateId: 'focus-support.v1', order: 1, configuration: { columns: 2 } },
     { id: LAB_PANEL_IDS.settings, name: 'Settings', templateId: 'columns.v1', order: 2, configuration: { columns: 3 } }
   ]) state = requireState(createPanel(state, panel));
@@ -66,7 +66,7 @@ export function createLabState(): WorkbenchState {
 
   const fixtures = [
     ['scene-characters', LAB_WIDGET_TYPES.characters, LAB_PANEL_IDS.scene, 'left', 0, {}],
-    ['scene-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.scene, 'left', 1, {}],
+    ['scene-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.scene, 'left', 1, { presentation: 'compact' }],
     ['scene-transcript', LAB_WIDGET_TYPES.transcript, LAB_PANEL_IDS.scene, 'stage', 0, {}],
     ['scene-composer', LAB_WIDGET_TYPES.composer, LAB_PANEL_IDS.scene, 'composer', 0, {}],
     ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 0, {}],

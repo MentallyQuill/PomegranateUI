@@ -14,7 +14,7 @@
   };
 </script>
 
-<fieldset class="scene-effects" aria-label="Scene Effects controls" data-pom-part="group.surface">
+<fieldset class="scene-effects" aria-label="Scene Effects controls">
   <legend>Scene Effects</legend>
   {#each effects as effect (effect.label)}
     <label data-pom-part="row.surface">

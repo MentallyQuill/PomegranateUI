@@ -8,6 +8,17 @@ const LAB_WIDGET_TITLES: Readonly<Record<string, string>> = Object.freeze({
   'settings.custom-theme': 'Custom Theme'
 });
 
+const LAB_WIDGET_METADATA: Readonly<Record<string, string>> = Object.freeze({
+  'story.characters': '4 / 7',
+  'story.room-ambience': 'Live',
+  'settings.connections': 'Ready',
+  'settings.custom-theme': 'Local'
+});
+
 export function resolveLabWidgetTitle(type: WidgetType, fallback: string): string {
   return LAB_WIDGET_TITLES[type] ?? fallback;
+}
+
+export function resolveLabWidgetMeta(type: WidgetType): string | undefined {
+  return LAB_WIDGET_METADATA[type];
 }
