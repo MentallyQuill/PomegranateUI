@@ -288,9 +288,9 @@ main[data-active-panel="surface-preview"] .surface-contract-facts { display: gri
 .surface-prompt textarea { min-height: 110px; resize: none; font-family: var(--pom-font-technical, monospace); }
 
 @container (max-width: 320px) {
-  .widget-frame > header nav .action-dock-main,
-  .widget-frame > header nav .action-group,
-  .widget-frame > header nav .action-remove,
+  .widget-frame > header nav > .action-dock-main,
+  .widget-frame > header nav > .action-group,
+  .widget-frame > header nav > .action-remove,
   .widget-frame[data-pomegranate-edge="left"] > header nav .action-dock-left,
   .widget-frame[data-pomegranate-edge="right"] > header nav .action-dock-right,
   .widget-frame[data-pomegranate-edge="floating"] > header nav .action-float { display: none; }

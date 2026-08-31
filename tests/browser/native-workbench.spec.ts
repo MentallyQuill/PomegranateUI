@@ -212,6 +212,25 @@ test('Deep Current edge controls collapse and restore both toolbars without hidi
   await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
 });
 
+test('Deep Current narrow dock keeps the complete contextual Widget Actions menu', async ({ page }) => {
+  const worldState = page.getByRole('article', { name: 'World State' });
+  const header = widgetDragSurface(worldState);
+
+  await header.hover();
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(header.getByRole('button')).toHaveCount(1);
+
+  await header.getByRole('button', { name: 'Widget actions' }).click();
+  await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText([
+    'Dock left',
+    'Dock main',
+    'Float',
+    'Group with previous Widget',
+    'Focus Widget',
+    'Move to Widget Shelf'
+  ]);
+});
+
 test('Deep Current title-bar drag docks a Widget across both instrument rails', async ({ page }) => {
   const characters = page.locator('[data-widget-type="story.characters"]');
   const rightSeam = await page.locator('[data-shelf-insertion="right"]').boundingBox();
