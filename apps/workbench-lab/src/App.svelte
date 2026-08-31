@@ -9,6 +9,7 @@
 
   import ashAmberStage from './assets/ash-amber-stage.webp';
   import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
+  import deepCurrentStage from './assets/deep-current-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
   import { resolveLabShowcaseMediaProfile } from './mockup/showcase-media.js';
   import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
@@ -67,6 +68,7 @@
   const catalogState = toSvelteCatalogStore(catalog);
   const themeAssetRegistry: ThemeAssetRegistry = Object.freeze({
     'icons.minimal': { kind: 'icon-pack', source: 'icons.minimal' },
+    'image.deep-current-stage': { kind: 'image', source: deepCurrentStage },
     'image.bunny-garden': { kind: 'image', source: bunnyGardenCanvas },
     'image.ash-amber-stage': { kind: 'image', source: ashAmberStage }
   });

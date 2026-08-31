@@ -45,7 +45,7 @@ export const DEEP_CURRENT_THEME: ThemeDefinitionV2 = {
     display: { family: 'Pomegranate Serif', fallbacks: ['ui-serif', 'serif'], weight: 520, strongWeight: 680, lineHeight: 1.15, trackingEm: 0.02 },
     scale: { xs: 11, sm: 12, md: 14, lg: 18, xl: 24 }
   },
-  spacing: { density: 'compact', xs: 4, sm: 6, md: 10, lg: 16, xl: 24, chromeHeight: 46 },
+  spacing: { density: 'compact', xs: 4, sm: 6, md: 10, lg: 16, xl: 24, chromeHeight: 40 },
   materials: {
     canvas: material({ base: 'canvas', opacity: 0, blurPx: 0, borderWidthPx: 0, reducedTransparency: 'canvas' }),
     shelf: tonalBevel({ base: 'chrome', opacity: 0.62, blurPx: 24, saturation: 0.9, border: 'borderStrong', borderOpacity: 0.3, rimOpacity: 0.09, shadowOpacity: 0.34, shadowBlurPx: 44 }),
@@ -79,19 +79,23 @@ export const DEEP_CURRENT_THEME: ThemeDefinitionV2 = {
   },
   controls: { slider: { trackPx: 3, thumbPx: 10, hitTargetPx: 44 } },
   iconPackId: 'icons.minimal',
-  assets: [{ id: 'icons.minimal', kind: 'icon-pack', required: true }],
+  assets: [
+    { id: 'icons.minimal', kind: 'icon-pack', required: true },
+    { id: 'image.deep-current-stage', kind: 'image', required: true }
+  ],
   canvas: [
     { kind: 'solid', color: '#080c0d' },
+    { kind: 'image', assetId: 'image.deep-current-stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 0.74, blend: 'normal' },
     { kind: 'linear-gradient', angle: 90, stops: [{ color: '#020506e0', position: 0 }, { color: '#07101238', position: 0.54 }, { color: '#020506b8', position: 1 }] },
     { kind: 'radial-gradient', shape: 'ellipse', x: 0.68, y: 0.38, stops: [{ color: '#94d9d02e', position: 0 }, { color: '#07101200', position: 0.58 }] }
   ],
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
-  capabilities: { translucency: true, textures: false, localImages: false }
+  capabilities: { translucency: true, textures: true, localImages: true }
 };
 
 export const DEEP_CURRENT_TARGET = themeTarget(DEEP_CURRENT_THEME, {
   colorRole: 'accent',
-  position: { x: 0.74, y: 0.41 },
-  radius: 0.08,
-  power: 0.08
+  position: { x: 0.68, y: 0.38 },
+  radius: 0.42,
+  power: 0.64
 });

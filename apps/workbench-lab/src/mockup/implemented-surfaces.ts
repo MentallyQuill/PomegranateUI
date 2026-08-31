@@ -53,6 +53,7 @@ const IMPLEMENTED_TYPES = Object.freeze([
   'systems.cast',
   'systems.background-presences',
   'systems.world-state',
+  'systems.promise-ledger',
   'systems.attire',
   'systems.genre-style',
   'systems.dialogue-agency',

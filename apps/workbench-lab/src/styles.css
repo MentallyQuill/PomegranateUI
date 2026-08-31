@@ -1576,6 +1576,12 @@ main[data-pom-action-content="icon"] .widget-shelf > summary {
   max-width: none;
   object-fit: fill;
 }
+.recording-character-portrait > img.is-direct {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .recording-character-fallback { display: grid; place-items: center; width: 100%; height: 100%; }
 .recording-character-copy { display: grid; gap: 2px; min-width: 0; }
 .recording-character-copy strong { color: var(--ink); font-size: 12px; line-height: 1.1; }
@@ -1627,6 +1633,69 @@ main[data-pom-action-content="icon"] :is(.scene-effects label > span, .scene-eff
 .scene-effects label > span { grid-area: name; align-self: end; }
 .scene-effects output { grid-area: value; align-self: end; color: var(--faint); }
 .scene-effects input { grid-area: slider; width: 100%; height: 44px; margin: 0; }
+
+.atmospheric-world-state,
+.atmospheric-room-ambience,
+.atmospheric-promise-ledger {
+  height: 100%;
+  min-height: 0;
+  color: var(--muted);
+  overflow-y: auto;
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-width: thin;
+}
+.atmospheric-world-state > div {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 14px 13px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.atmospheric-state-glyph {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--pom-color-accent);
+  font: 15px var(--pom-font-technical, monospace);
+}
+.atmospheric-world-state p,
+.atmospheric-promise-ledger > p { display: grid; gap: 3px; margin: 0; }
+.atmospheric-world-state small,
+.atmospheric-room-ambience small,
+.atmospheric-promise-ledger small {
+  color: var(--pom-color-accent);
+  font: 8px var(--pom-font-technical, monospace);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.atmospheric-world-state strong,
+.atmospheric-room-ambience strong,
+.atmospheric-promise-ledger strong { color: var(--ink); font-size: 12px; }
+.atmospheric-world-state dl,
+.atmospheric-room-ambience dl { margin: 0; padding: 0; }
+.atmospheric-world-state dl > div,
+.atmospheric-room-ambience dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 39px;
+  padding: 0 13px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+}
+.atmospheric-world-state dt,
+.atmospheric-room-ambience dt { color: var(--muted); font-size: 10px; }
+.atmospheric-world-state dd,
+.atmospheric-room-ambience dd { margin: 0; color: var(--faint); font: 8px var(--pom-font-technical, monospace); }
+.atmospheric-room-ambience > header { display: grid; gap: 5px; padding: 14px 13px 12px; border-bottom: 1px solid var(--line); }
+.atmospheric-room-ambience > header p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.atmospheric-promise-ledger { padding: 13px; }
+.atmospheric-promise-ledger ul { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+.atmospheric-promise-ledger li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 9px; border: 1px solid var(--line); }
+.atmospheric-promise-ledger li > span { color: var(--ink); font-size: 10px; }
 
 .recording-persona,
 .ai-connections { height: 100%; min-height: 0; overflow-y: auto; scrollbar-color: var(--line-strong) transparent; scrollbar-width: thin; }
@@ -1869,7 +1938,7 @@ main[data-pom-widget-grouping="unified"] .widget-group > [data-widget-type] .wid
   backdrop-filter: none;
 }
 main[data-pom-widget-grouping="unified"] .widget-frame > header { min-height: 34px; padding: 0 12px; }
-main[data-pom-widget-grouping="unified"] [data-conformance-region="right"] > .dock-shelf { grid-template-rows: 36.3% 63.7%; }
+main[data-pom-widget-grouping="unified"] [data-conformance-region="right"] > .dock-shelf { grid-template-rows: 41.3% 58.7%; }
 
 .transcript h2 { margin: 0 0 17px; color: var(--ink); font: 600 14px/1.2 var(--pom-font-prose, serif); }
 .transcript .widget-kicker { margin-bottom: 10px; }

@@ -47,7 +47,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(container.querySelectorAll('.dock-shelf[data-pom-part]')).toHaveLength(0);
   });
 
-  it('renders one pointer-transparent theme canvas below the Workbench without stage wallpaper ownership', () => {
+  it('renders one pointer-transparent theme canvas below the Workbench with the exact image layer', () => {
     const { container } = render(App);
     const root = container.querySelector('main');
     const canvas = container.querySelector('[data-pom-canvas-root]');
@@ -57,6 +57,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(canvas).toHaveAttribute('data-pom-part', 'canvas.surface');
     expect(container.querySelectorAll('[data-pom-canvas-root]')).toHaveLength(1);
     expect(canvas?.querySelectorAll('[data-pom-canvas-layer]').length).toBeGreaterThan(0);
+    expect(canvas?.querySelectorAll('[data-pom-canvas-layer="image"]')).toHaveLength(1);
     expect(canvas?.querySelector('[data-pom-ambient-layer]')).not.toBeNull();
     for (const layer of canvas?.querySelectorAll<HTMLElement>('[data-pom-canvas-layer]') ?? []) {
       expect(layer.style.pointerEvents).toBe('none');
@@ -72,21 +73,21 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByText('The Reservoir at Blue Hour')).toBeVisible();
     expect(screen.getByLabelText('Active story identity')).toHaveTextContent('story-lab-reservoir');
     expect(within(screen.getByRole('tablist', { name: 'Panels' })).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Library', 'Settings']);
-    for (const title of ['Characters', 'Custom Theme', 'Transcript', 'Composer', 'Scene Effects', 'Personas']) {
+    for (const title of ['Characters', 'Custom Theme', 'Transcript', 'Composer', 'World State', 'Room Ambience']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();
     }
     expect(within(screen.getByRole('article', { name: 'Characters' })).getByText('4 / 7')).toHaveClass('widget-frame-meta');
     expect(within(screen.getByRole('article', { name: 'Custom Theme' })).getByText('Local')).toHaveClass('widget-frame-meta');
-    expect(within(screen.getByRole('article', { name: 'Scene Effects' })).getByText('Live')).toHaveClass('widget-frame-meta');
-    expect(screen.getByRole('group', { name: 'Scene Effects controls' })).toHaveAttribute('data-pom-part', 'group.surface');
-    expect(screen.queryByRole('article', { name: 'World State' })).toBeNull();
+    expect(within(screen.getByRole('article', { name: 'World State' })).getByText('Frame 3')).toHaveClass('widget-frame-meta');
+    expect(screen.queryByRole('article', { name: 'Scene Effects' })).toBeNull();
+    expect(screen.queryByRole('article', { name: 'Personas' })).toBeNull();
     expect(screen.queryByRole('article', { name: 'Character Relationships' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Widget group' }).querySelectorAll('[role="tab"]')).toHaveLength(2);
-    expect(screen.getByRole('tab', { name: 'Personas' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'AI Connections' })).toHaveAttribute('aria-selected', 'false');
-    const perspectiveGroup = screen.getByRole('group', { name: 'Widget group' });
-    expect(perspectiveGroup.querySelector('[data-pom-part="widget.surface"]')).toBeNull();
-    expect(perspectiveGroup.querySelector('[data-surface-type="story.personas"]')).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Room Ambience' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Promise Ledger' })).toHaveAttribute('aria-selected', 'false');
+    const ambienceGroup = screen.getByRole('group', { name: 'Widget group' });
+    expect(ambienceGroup.querySelector('[data-pom-part="widget.surface"]')).toBeNull();
+    expect(ambienceGroup.querySelector('[data-surface-type="story.room-ambience"]')).not.toBeNull();
     expect(container.querySelector('[data-surface-presentation="compact-theme"]')).not.toBeNull();
     expect(screen.getByText('Chapter 04 · The Drowned Observatory')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'The Water Remembers' })).toBeVisible();
@@ -158,21 +159,21 @@ describe('Svelte Workbench Lab mockup', () => {
     render(App);
     await user.click(screen.getByRole('button', { name: 'Move Settings left' }));
     expect(within(screen.getByRole('tablist', { name: 'Panels' })).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Settings', 'Library']);
-    const effects = screen.getByRole('article', { name: 'Scene Effects' });
-    await user.click(within(effects).getByRole('button', { name: 'Dock left' }));
-    const dockedEffects = screen.getByRole('article', { name: 'Scene Effects' });
-    expect(dockedEffects.closest('[data-pomegranate-dock]')).toHaveAttribute('data-pomegranate-dock', 'left');
-    await user.click(within(dockedEffects).getByRole('button', { name: 'Float' }));
-    expect(screen.getByRole('article', { name: 'Scene Effects' })).toHaveAttribute('data-pomegranate-placement', 'floating');
+    const ambience = screen.getByRole('article', { name: 'Room Ambience' });
+    await user.click(within(ambience).getByRole('button', { name: 'Dock left' }));
+    const dockedAmbience = screen.getByRole('article', { name: 'Room Ambience' });
+    expect(dockedAmbience.closest('[data-pomegranate-dock]')).toHaveAttribute('data-pomegranate-dock', 'left');
+    await user.click(within(dockedAmbience).getByRole('button', { name: 'Float' }));
+    expect(screen.getByRole('article', { name: 'Room Ambience' })).toHaveAttribute('data-pomegranate-placement', 'floating');
   });
 
   it('keeps host presentation titles through Focus', async () => {
     const user = userEvent.setup();
     render(App);
-    const effects = screen.getByRole('article', { name: 'Scene Effects' });
-    const focus = within(effects).getByRole('button', { name: 'Focus Widget' });
+    const ambience = screen.getByRole('article', { name: 'Room Ambience' });
+    const focus = within(ambience).getByRole('button', { name: 'Focus Widget' });
     await user.click(focus);
-    const dialog = screen.getByRole('dialog', { name: 'Focused Scene Effects' });
+    const dialog = screen.getByRole('dialog', { name: 'Focused Room Ambience' });
     expect(dialog).toBeVisible();
     await user.click(within(dialog).getByRole('button', { name: 'Back to Workbench' }));
   });

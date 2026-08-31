@@ -26,6 +26,7 @@
     "typecheck": "node ./node_modules/@typescript/native/bin/tsc -b --pretty false && node ./node_modules/@typescript/native/bin/tsc -p tsconfig.tests.json --noEmit --pretty false && npm run typecheck --workspace @pomegranate-ui/workbench-lab && npm run typecheck:svelte",
     "typecheck:svelte": "svelte-check --tsgo --tsconfig ./tsconfig.tests.json",
     "check:recipes": "node scripts/verify-recipes.mjs --check",
+    "check:atmospheric-assets": "node scripts/verify-atmospheric-assets.mjs",
     "check:lab-dist": "node scripts/verify-lab-dist.mjs",
     "check": "npm run test:unit && npm run typecheck && npm run test:native && npm run build && npm run check:lab-dist && npm run check:recipes && npm run test:pack && npm run test:browser"
   },

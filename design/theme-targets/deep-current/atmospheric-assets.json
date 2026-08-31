@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "pomegranate.ui.atmospheric-assets.v1",
+  "sourceAuthoritySha256": "38878d2cf8a86f5e879faba4b41a214e4293f22ed755975023e02c962d61b913",
+  "ownership": "user-authored",
+  "publicUseApproved": true,
+  "assets": [
+    {
+      "id": "stage",
+      "path": "apps/workbench-lab/src/assets/deep-current-stage.jpg",
+      "mimeType": "image/jpeg",
+      "width": 1600,
+      "height": 900,
+      "bytes": 102048,
+      "sha256": "e77ae630edaa409086e303c0cf580ed5105d81c4e9ad8f749b086eeb2530683b"
+    },
+    {
+      "id": "portrait.aven-rook",
+      "path": "apps/workbench-lab/src/assets/deep-current-aven-rook.webp",
+      "mimeType": "image/webp",
+      "width": 128,
+      "height": 128,
+      "bytes": 1088,
+      "sha256": "378a3ab0b40475420d77944148b87cd3e3cdd2de2ebb831975e2f4a973da24d1"
+    },
+    {
+      "id": "portrait.mara-venn",
+      "path": "apps/workbench-lab/src/assets/deep-current-mara-venn.webp",
+      "mimeType": "image/webp",
+      "width": 128,
+      "height": 128,
+      "bytes": 964,
+      "sha256": "e0ac8dff3492e9d0b7980d2738a71ebd1f165119fd13d2dd5d7c9e33d37f8544"
+    },
+    {
+      "id": "portrait.ilex",
+      "path": "apps/workbench-lab/src/assets/deep-current-ilex.webp",
+      "mimeType": "image/webp",
+      "width": 128,
+      "height": 128,
+      "bytes": 1124,
+      "sha256": "752827e0b47dd4795b0ac3c2f8fb8eb44c441edb994efa6f73f29db5d8fc0071"
+    },
+    {
+      "id": "portrait.quiet-diver",
+      "path": "apps/workbench-lab/src/assets/deep-current-quiet-diver.webp",
+      "mimeType": "image/webp",
+      "width": 128,
+      "height": 128,
+      "bytes": 890,
+      "sha256": "e10d6b9e3adb4fe8514d4f499d95e58af42a2263006ddbea71fab114c2b18d0e"
+    }
+  ]
+}

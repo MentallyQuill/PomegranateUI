@@ -25,6 +25,7 @@ export const LAB_WIDGET_TYPES = Object.freeze({
   composer: asWidgetType('story.composer'),
   worldState: asWidgetType('systems.world-state'),
   ambience: asWidgetType('story.room-ambience'),
+  promiseLedger: asWidgetType('systems.promise-ledger'),
   personas: asWidgetType('story.personas'),
   connections: asWidgetType('settings.connections'),
   characterRelationships: asWidgetType('systems.character-relationships'),
@@ -45,7 +46,7 @@ function requireState(result: LayoutResult): WorkbenchState {
 export function createLabState(): WorkbenchState {
   let state = createInitialWorkbenchState();
   for (const panel of [
-    { id: LAB_PANEL_IDS.scene, name: 'Scene', templateId: 'story-stage.v1', order: 0, configuration: { columns: 3, dockWidths: { left: 334, right: 335 } } },
+    { id: LAB_PANEL_IDS.scene, name: 'Scene', templateId: 'story-stage.v1', order: 0, configuration: { columns: 3, dockWidths: { left: 286, right: 286 } } },
     { id: LAB_PANEL_IDS.library, name: 'Library', templateId: 'focus-support.v1', order: 1, configuration: { columns: 2 } },
     { id: LAB_PANEL_IDS.settings, name: 'Settings', templateId: 'columns.v1', order: 2, configuration: { columns: 3 } }
   ]) state = requireState(createPanel(state, panel));
@@ -69,9 +70,9 @@ export function createLabState(): WorkbenchState {
     ['scene-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.scene, 'left', 1, { presentation: 'compact' }],
     ['scene-transcript', LAB_WIDGET_TYPES.transcript, LAB_PANEL_IDS.scene, 'stage', 0, {}],
     ['scene-composer', LAB_WIDGET_TYPES.composer, LAB_PANEL_IDS.scene, 'composer', 0, {}],
-    ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 0, { presentation: 'recording' }],
-    ['scene-personas', LAB_WIDGET_TYPES.personas, LAB_PANEL_IDS.scene, 'right', 1, { presentation: 'recording' }],
-    ['scene-connections', LAB_WIDGET_TYPES.connections, LAB_PANEL_IDS.scene, 'right', 2, { presentation: 'recording' }],
+    ['scene-world', LAB_WIDGET_TYPES.worldState, LAB_PANEL_IDS.scene, 'right', 0, { presentation: 'atmospheric' }],
+    ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 1, { presentation: 'atmospheric' }],
+    ['scene-promises', LAB_WIDGET_TYPES.promiseLedger, LAB_PANEL_IDS.scene, 'right', 2, { presentation: 'atmospheric' }],
     ['library-main', LAB_WIDGET_TYPES.library, LAB_PANEL_IDS.library, 'focus', 0, {}],
     ['library-character', LAB_WIDGET_TYPES.characterCard, LAB_PANEL_IDS.library, 'support', 0, { fixtureMode: 'failure' }],
     ['library-lore', LAB_WIDGET_TYPES.loreEntries, LAB_PANEL_IDS.library, 'support', 1, {}],
@@ -92,13 +93,13 @@ export function createLabState(): WorkbenchState {
       kind: 'docked', panelId, regionId, shelfId: 'primary', order
     }));
   }
-  const personasId = asWidgetInstanceId('scene-personas');
+  const ambienceId = asWidgetInstanceId('scene-ambience');
   state = requireState(mergeWidgetGroup(
     state,
-    asWidgetInstanceId('scene-connections'),
-    personasId,
-    'scene-perspective'
+    asWidgetInstanceId('scene-promises'),
+    ambienceId,
+    'scene-ambience-ledger'
   ));
-  state = requireState(activateWidgetGroup(state, personasId));
+  state = requireState(activateWidgetGroup(state, ambienceId));
   return { ...state, revision: 0 };
 }
