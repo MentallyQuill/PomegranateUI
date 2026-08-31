@@ -3733,8 +3733,11 @@ main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="co
   }
 }
 @media (max-width: 520px) {
+  main[data-pom-theme-root] .panel-tabs {
+    gap: 2px;
+  }
   main[data-pom-theme-root] .panel-tabs > div {
-    flex-basis: 58px;
+    flex-basis: 60px;
   }
   main[data-pom-theme-root] .panel-tabs > div:has([role="tab"][aria-selected="true"]) {
     flex-basis: 96px;
