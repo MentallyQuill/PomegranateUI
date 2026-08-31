@@ -1,6 +1,6 @@
-@font-face { font-family: "Pomegranate Sans"; src: url("../../../prototypes/sonder-baseline/atmospheric-workbench/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
-@font-face { font-family: "Pomegranate Serif"; src: url("../../../prototypes/sonder-baseline/atmospheric-workbench/Newsreader-Variable.ttf") format("truetype"); font-weight: 200 800; font-display: swap; }
-@font-face { font-family: "Pomegranate Mono"; src: url("../../../prototypes/sonder-baseline/atmospheric-workbench/GeistMono-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Pomegranate Sans"; src: url("./assets/fonts/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Pomegranate Serif"; src: url("./assets/fonts/Newsreader-Variable.ttf") format("truetype"); font-weight: 200 800; font-display: swap; }
+@font-face { font-family: "Pomegranate Mono"; src: url("./assets/fonts/GeistMono-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 
 :root {
   color: #eee8de; background: #111014; font-family: "Pomegranate Sans", ui-sans-serif, system-ui, sans-serif; font-synthesis: none;
@@ -75,14 +75,14 @@ main {
 .widget-frame h2 { margin: 0; font-size: .77rem; font-weight: 650; letter-spacing: .02em; }
 .widget-frame nav { display: flex; gap: .15rem; }
 .widget-frame nav button { width: 1.75rem; min-height: 1.75rem; overflow: hidden; padding: 0; border: var(--pom-border-width, 1px) solid transparent; border-radius: var(--pom-radius-small, .3rem); background-color: transparent; background-position: center; background-repeat: no-repeat; background-size: .82rem; color: transparent; font-size: 0; filter: var(--pom-icon-filter, invert(.72)); }
-.widget-frame nav .action-dock-left { background-image: url("../../../prototypes/sonder-baseline/assets/minimal-ui-icons/511381-arrow-left-335.svg"); }
-.widget-frame nav .action-drag { background-image: url("../../../prototypes/sonder-baseline/assets/minimal-ui-icons/512519-movement-focus-892.svg"); cursor: grab; touch-action: none; }
-.widget-frame nav .action-dock-main { background-image: url("../../../prototypes/sonder-baseline/assets/minimal-ui-icons/512326-grid-1524.svg"); }
-.widget-frame nav .action-dock-right { background-image: url("../../../prototypes/sonder-baseline/assets/minimal-ui-icons/511422-arrow-right-336.svg"); }
-.widget-frame nav .action-float { background-image: url("../../../prototypes/sonder-baseline/assets/minimal-ui-icons/511879-double-window-1503.svg"); }
-.widget-frame nav .action-group { background-image: url("../../../prototypes/sonder-baseline/assets/minimal-ui-icons/512326-grid-1524.svg"); }
-.widget-frame nav .action-focus { background-image: url("../../../prototypes/sonder-baseline/assets/minimal-ui-icons/512519-movement-focus-892.svg"); }
-.widget-frame nav .action-remove { background-image: url("../../../prototypes/sonder-baseline/assets/minimal-ui-icons/511788-delete-1487.svg"); }
+.widget-frame nav .action-dock-left { background-image: url("./assets/icons/dock-left.svg"); }
+.widget-frame nav .action-drag { background-image: url("./assets/icons/move.svg"); cursor: grab; touch-action: none; }
+.widget-frame nav .action-dock-main { background-image: url("./assets/icons/grid.svg"); }
+.widget-frame nav .action-dock-right { background-image: url("./assets/icons/dock-right.svg"); }
+.widget-frame nav .action-float { background-image: url("./assets/icons/float.svg"); }
+.widget-frame nav .action-group { background-image: url("./assets/icons/grid.svg"); }
+.widget-frame nav .action-focus { background-image: url("./assets/icons/move.svg"); }
+.widget-frame nav .action-remove { background-image: url("./assets/icons/remove.svg"); }
 .widget-frame nav button:hover { border-color: var(--line); background-color: color-mix(in srgb, var(--ink) 5%, transparent); filter: var(--pom-icon-filter-hover, invert(.9)); }
 .widget-frame [role="status"], .widget-frame [role="alert"] { margin: .65rem; padding: .65rem; border: var(--pom-border-width, 1px) dashed var(--line-strong); border-radius: var(--pom-radius-small, .4rem); color: var(--muted); font-size: .78rem; }
 .widget-frame [role="alert"] { color: var(--pom-color-danger, #f0b0a2); }

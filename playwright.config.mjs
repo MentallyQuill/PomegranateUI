@@ -7,7 +7,7 @@ export default defineConfig({
   timeout: 120_000,
   snapshotPathTemplate: '{testDir}/__screenshots__/{testFileName}-snapshots/{arg}{ext}',
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: 'http://127.0.0.1:4174',
     browserName: 'chromium',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure'

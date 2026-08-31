@@ -15,7 +15,7 @@ Pom succeeds only if a team can adopt reusable UI behavior without surrendering 
 | Persistence | Layout storage interfaces, validation, and migration envelopes | Databases, files, account sync, save formats, retention, and recovery policy |
 | Runtime | UI state orchestration and subscriptions | Backend services, model providers, prompt assembly, generation, streaming, and tool execution |
 | Security | Safe parsing at Pom's public package boundary | Authentication, authorization, secrets, tenancy, content policy, and network security |
-| Quality | Public test drivers, conformance fixtures, and preserved interaction evidence | Product acceptance criteria, end-to-end host tests, deployment checks, and support commitments |
+| Quality | Public test drivers, conformance fixtures, and reference interaction tests | Product acceptance criteria, end-to-end host tests, deployment checks, and support commitments |
 
 The integration between those owners is explicit. Host and domain data enters through adapters; Pom packages never reach into a frontend's backend or infer its private state.
 
@@ -62,7 +62,7 @@ The public tests are the portability mechanism. They describe the observable con
 
 ## Backend neutrality
 
-Pom packages accept validated public data and explicit host context. They do not import Sonder server code, assume a SillyTavern server, select an AI provider, or store roleplay-domain state.
+Pom packages accept validated public data and explicit host context. They do not import a production host backend, assume a SillyTavern server, select an AI provider, or store roleplay-domain state.
 
 An adopter may connect a local backend, a hosted service, an existing roleplay server, or several providers. That choice remains outside Pom as long as the adapter satisfies the public UI contract.
 
@@ -71,11 +71,10 @@ An adopter may connect a local backend, a hosted service, an existing roleplay s
 The current repository does not include:
 
 - npm package publication;
-- a production documentation site;
-- a production hosting stack;
+- a production documentation site beyond the Workbench Lab demo;
+- a production application hosting stack;
 - a SvelteKit application;
 - a SillyTavern adapter;
-- a Sonder Engine cutover; or
 - a production-ready theme package.
 
 Each would require its own approved scope. None is implicit in adopting the current toolkit.

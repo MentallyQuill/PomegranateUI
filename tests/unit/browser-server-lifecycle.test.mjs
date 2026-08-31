@@ -4,41 +4,19 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { startBrowserServers } from '../browser/global-setup.mjs';
+import { startBrowserServer } from '../browser/global-setup.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-test('browser server teardown closes every listener', async () => {
+test('browser server exposes and closes the configured Lab listener', async () => {
   let running;
   try {
-    running = await startBrowserServers({
+    running = await startBrowserServer({
       root,
-      preservationPort: 0,
-      includeLab: false
-    });
-
-    const response = await fetch(running.preservationUrl);
-    assert.equal(response.status, 200);
-    await response.text();
-  } finally {
-    await running?.close();
-  }
-
-  await running.close();
-  await assert.rejects(fetch(running.preservationUrl));
-});
-
-test('browser server exposes and closes the configured Lab listener without build output', async () => {
-  let running;
-  try {
-    running = await startBrowserServers({
-      root,
-      preservationPort: 0,
-      labPort: 0,
-      includeLab: true,
+      port: 0,
       labRoot: path.join(root, 'apps/workbench-lab')
     });
-    assert.match(running.preservationOrigin, /^http:\/\/127\.0\.0\.1:\d+$/);
+
     assert.equal(running.labOrigin, running.labUrl);
     assert.match(running.labUrl, /^http:\/\/127\.0\.0\.1:\d+$/);
     const response = await fetch(running.labUrl);
@@ -62,7 +40,11 @@ test('browser server rejects an occupied port instead of drifting', async () => 
     const address = occupied.address();
     assert.ok(address && typeof address !== 'string');
     await assert.rejects(
-      startBrowserServers({ root, preservationPort: address.port, includeLab: false }),
+      startBrowserServer({
+        root,
+        port: address.port,
+        labRoot: path.join(root, 'apps/workbench-lab')
+      }),
       (error) => error?.code === 'EADDRINUSE'
     );
   } finally {

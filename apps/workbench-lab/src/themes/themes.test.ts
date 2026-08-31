@@ -21,7 +21,6 @@ import { createLocalThemePreference, LAB_THEME_KEY } from './theme-storage.js';
 
 const assetRegistry = {
   'icons.minimal': { kind: 'icon-pack' as const, source: 'icons.minimal' },
-  'image.deep-current-stage': { kind: 'image' as const, source: '/assets/deep-current.jpg' },
   'image.bunny-garden': { kind: 'image' as const, source: '/assets/bunny-garden.webp' },
   'image.ash-amber-stage': { kind: 'image' as const, source: '/assets/ash-amber-stage.webp' }
 };
@@ -319,9 +318,10 @@ describe('Workbench Lab theme conformance', () => {
     expect(Object.values(bindings).join(';')).not.toContain('transition');
   });
 
-  it('keeps every photographic canvas local and gives Bunny and Ash independent target imagery', () => {
-    expect(DEEP_CURRENT_THEME.assets).toContainEqual({ id: 'image.deep-current-stage', kind: 'image', required: true });
-    expect(DEEP_CURRENT_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({ assetId: 'image.deep-current-stage', fit: 'cover' });
+  it('keeps photographic canvases local while Deep Current remains gradient-only', () => {
+    expect(DEEP_CURRENT_THEME.assets).toEqual([{ id: 'icons.minimal', kind: 'icon-pack', required: true }]);
+    expect(DEEP_CURRENT_THEME.canvas.some((layer) => layer.kind === 'image')).toBe(false);
+    expect(DEEP_CURRENT_THEME.capabilities.localImages).toBe(false);
     expect(BUNNY_THEME.assets).toContainEqual({ id: 'image.bunny-garden', kind: 'image', required: true });
     expect(BUNNY_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({ assetId: 'image.bunny-garden', fit: 'cover' });
     expect(ASH_AMBER_THEME.assets).toContainEqual({ id: 'image.ash-amber-stage', kind: 'image', required: true });
@@ -465,11 +465,11 @@ describe('Workbench Lab theme conformance', () => {
     if (!invalid.ok) expect(invalid.diagnostics[0]).toMatchObject({ code: 'THEME_MIGRATION_VERSION_UNSUPPORTED' });
 
     const missingController = createLabThemeController({
-      initialId: 'bunny',
-      availableAssets: new Set(['icons.minimal', 'image.bunny-garden'])
+      initialId: 'deep-current',
+      availableAssets: new Set(['icons.minimal'])
     });
     const beforeMissing = missingController.getSnapshot();
-    const missing = missingController.activate('deep-current');
+    const missing = missingController.activate('bunny');
     expect(missing.ok).toBe(false);
     expect(missingController.getSnapshot()).toBe(beforeMissing);
     if (!missing.ok) expect(missing.diagnostics[0]).toMatchObject({ code: 'THEME_ASSET_MISSING' });
