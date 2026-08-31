@@ -404,6 +404,15 @@ export function duplicateSubPanel(
     || requestedWidgetIds.some((instanceId) => instanceId !== undefined && state.widgets[instanceId] !== undefined)) {
     return rejectLayout(state, 'DUPLICATE_ID', 'Every duplicated Widget requires one unused caller-supplied identity.');
   }
+  const sourceGroupIds = [...new Set(ownedEntries.flatMap(([, placement]) => {
+    const visible = visiblePlacement(placement);
+    return visible.kind === 'docked' && visible.group ? [visible.group.id] : [];
+  }))];
+  const requestedGroupIds = sourceGroupIds.map((groupId) => ids.groupIds[groupId]);
+  if (requestedGroupIds.some((groupId) => !groupId || groupId.trim() !== groupId)
+    || new Set(requestedGroupIds).size !== requestedGroupIds.length) {
+    return rejectLayout(state, 'DUPLICATE_ID', 'Every duplicated Widget group requires one unique caller-supplied identity.');
+  }
 
   const widgets = { ...state.widgets };
   const placements = { ...state.placements };

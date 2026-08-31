@@ -303,6 +303,55 @@ describe('one-level sub-panel transitions', () => {
     });
   });
 
+  it('rejects duplicate target group identities instead of merging distinct source groups', () => {
+    const created = createSubPanel(
+      flatSettings(),
+      settingsId,
+      { id: notesId, name: 'Notes', layoutId: 'two-equal', order: 1, scrollTop: 0 },
+      { id: overviewId, name: 'Overview', layoutId: 'three-equal', order: 0, scrollTop: 96 }
+    );
+    const withDistinctGroups: WorkbenchState = {
+      ...created.state,
+      placements: {
+        ...created.state.placements,
+        [readingId]: {
+          kind: 'docked',
+          panelId: settingsId,
+          subPanelId: overviewId,
+          lane: 1,
+          regionId: 'column-2',
+          shelfId: 'primary',
+          order: 0,
+          group: { id: 'reading-stack', order: 0, active: true }
+        }
+      }
+    };
+
+    const result = duplicateSubPanel(
+      withDistinctGroups,
+      settingsId,
+      overviewId,
+      { id: advancedId, name: 'Overview Copy', layoutId: 'three-equal', order: 2, scrollTop: 0 },
+      {
+        widgetIds: {
+          [themeId]: copiedThemeId,
+          [readingId]: copiedReadingId,
+          [accessibilityId]: copiedAccessibilityId
+        },
+        groupIds: {
+          'settings-stack': 'shared-copy-group',
+          'reading-stack': 'shared-copy-group'
+        }
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      state: withDistinctGroups,
+      error: { code: 'DUPLICATE_ID' }
+    });
+  });
+
   it('moves every Widget into the destination layout and appends stably without identity loss', () => {
     const created = createSubPanel(
       flatSettings(),
