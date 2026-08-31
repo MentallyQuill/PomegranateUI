@@ -23,7 +23,11 @@ test('Atmospheric display assets are complete, user-owned, public, and hash-boun
     'portrait.quiet-diver'
   ]);
   for (const asset of manifest.assets) {
-    assert.match(asset.path, /^apps\/workbench-lab\/src\/assets\/deep-current-/);
+    assert.ok(
+      asset.path === 'apps/workbench-lab/src/assets/atmospheric-reservoir-stage.jpg'
+        || /^apps\/workbench-lab\/src\/assets\/deep-current-/.test(asset.path),
+      `${asset.id} public asset path`
+    );
     assert.match(asset.mimeType, /^image\/(?:jpeg|webp)$/);
     assert.ok(Number.isInteger(asset.width) && asset.width > 0, `${asset.id} width`);
     assert.ok(Number.isInteger(asset.height) && asset.height > 0, `${asset.id} height`);

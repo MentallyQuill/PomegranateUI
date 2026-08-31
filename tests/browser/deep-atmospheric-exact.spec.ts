@@ -21,13 +21,20 @@ const authorityBytes = await readFile(authorityPath);
 
 type Rectangle = { x: number; y: number; width: number; height: number };
 
-function diagnosticImages(referenceBytes: Buffer, candidateBytes: Buffer) {
+function isMasked(x: number, y: number, masks: readonly Rectangle[]) {
+  return masks.some((mask) => x >= mask.x && y >= mask.y && x < mask.x + mask.width && y < mask.y + mask.height);
+}
+
+function diagnosticImages(referenceBytes: Buffer, candidateBytes: Buffer, masks: readonly Rectangle[] = []) {
   const reference = PNG.sync.read(referenceBytes);
   const candidate = PNG.sync.read(candidateBytes);
   const overlay = new PNG({ width: reference.width, height: reference.height });
   const diff = new PNG({ width: reference.width, height: reference.height });
   for (let offset = 0; offset < reference.data.length; offset += 4) {
-    const delta = Math.max(
+    const pixel = offset / 4;
+    const x = pixel % reference.width;
+    const y = Math.floor(pixel / reference.width);
+    const delta = isMasked(x, y, masks) ? 0 : Math.max(
       Math.abs(reference.data[offset]! - candidate.data[offset]!),
       Math.abs(reference.data[offset + 1]! - candidate.data[offset + 1]!),
       Math.abs(reference.data[offset + 2]! - candidate.data[offset + 2]!)
@@ -42,6 +49,39 @@ function diagnosticImages(referenceBytes: Buffer, candidateBytes: Buffer) {
     diff.data[offset + 3] = 255;
   }
   return { overlay: PNG.sync.write(overlay), diff: PNG.sync.write(diff) };
+}
+
+function regionMetrics(referenceBytes: Buffer, candidateBytes: Buffer, rectangle: Rectangle) {
+  const reference = PNG.sync.read(referenceBytes);
+  const candidate = PNG.sync.read(candidateBytes);
+  let differingPixels = 0;
+  let highContrastMismatchCount = 0;
+  let absoluteChannelDelta = 0;
+  const deltaHistogram: Record<string, number> = {};
+  const pixelCount = rectangle.width * rectangle.height;
+  for (let y = rectangle.y; y < rectangle.y + rectangle.height; y += 1) {
+    for (let x = rectangle.x; x < rectangle.x + rectangle.width; x += 1) {
+      const offset = (y * reference.width + x) * 4;
+      let pixelDelta = 0;
+      for (let channel = 0; channel < 3; channel += 1) {
+        const delta = Math.abs(reference.data[offset + channel]! - candidate.data[offset + channel]!);
+        absoluteChannelDelta += delta;
+        pixelDelta = Math.max(pixelDelta, delta);
+      }
+      if (pixelDelta > 0) differingPixels += 1;
+      if (pixelDelta >= 128) highContrastMismatchCount += 1;
+      if (pixelDelta > 0) {
+        const bucket = pixelDelta >= 128 ? '128+' : pixelDelta >= 32 ? '32-127' : pixelDelta >= 8 ? '8-31' : pixelDelta >= 2 ? '2-7' : '1';
+        deltaHistogram[bucket] = (deltaHistogram[bucket] ?? 0) + 1;
+      }
+    }
+  }
+  return {
+    mismatchRatio: differingPixels / pixelCount,
+    highContrastMismatchCount,
+    meanAbsoluteChannelDelta: absoluteChannelDelta / (pixelCount * 3),
+    deltaHistogram
+  };
 }
 
 function geometryDelta(reference: Record<string, Rectangle>, candidate: Record<string, Rectangle | null>) {
@@ -97,12 +137,16 @@ test('Deep Current is indistinguishable from the Atmospheric authority', async (
 
   const candidateBytes = await workbench.screenshot({ animations: 'disabled', caret: 'hide' });
   const pixels = compareAtmosphericPixels(authorityBytes, candidateBytes, contract.masks);
+  const regions = Object.fromEntries(Object.entries(contract.geometry).map(([id, rectangle]) => [
+    id,
+    regionMetrics(authorityBytes, candidateBytes, rectangle as Rectangle)
+  ]));
   const roundDirectory = testInfo.outputPath('deep-atmospheric-round');
   await mkdir(roundDirectory, { recursive: true });
   await writeFile(path.join(roundDirectory, 'authority.png'), authorityBytes);
   await writeFile(path.join(roundDirectory, 'candidate.png'), candidateBytes);
   if (pixels.compatible) {
-    const images = diagnosticImages(authorityBytes, candidateBytes);
+    const images = diagnosticImages(authorityBytes, candidateBytes, contract.masks);
     await writeFile(path.join(roundDirectory, 'overlay.png'), images.overlay);
     await writeFile(path.join(roundDirectory, 'diff.png'), images.diff);
   }
@@ -111,20 +155,25 @@ test('Deep Current is indistinguishable from the Atmospheric authority', async (
   await characters.hover();
   const placementRailCount = await characters.getByRole('navigation', { name: /placement/i }).count();
   const actionMenuCount = await characters.getByRole('button', { name: 'Widget actions' }).count();
-  const inventory = await page.locator('[data-widget-type][data-pomegranate-placement]').evaluateAll((elements) => (
-    [...new Set(elements.map((element) => element.getAttribute('data-widget-type')).filter(Boolean))]
+  const inventory = await page.locator('[data-widget-type][data-pomegranate-placement], [data-group-widget-type]').evaluateAll((elements) => (
+    [...new Set(elements.map((element) => element.getAttribute('data-widget-type') ?? element.getAttribute('data-group-widget-type')).filter(Boolean))]
   ));
   const portraitStatus = await page.locator('[data-character-portrait] img').evaluateAll((images) => ({
     count: images.length,
     loaded: images.length === 4 && images.every((image) => (image as HTMLImageElement).naturalWidth > 0)
   }));
   const stageImageCount = await page.locator('[data-pom-canvas-layer="image"]').count();
-
+  const stageBackdropFilter = await page.locator('[data-conformance-region="stage"]')
+    .evaluate((element) => getComputedStyle(element).backdropFilter);
+  const composerBackdropFilter = await page.locator('[data-pomegranate-region-role="composer"] > .dock-shelf')
+    .evaluate((element) => getComputedStyle(element).backdropFilter);
   const findings = [...geometry.findings];
   for (const required of contract.requiredInventory) {
     if (!inventory.includes(required)) findings.push(`Missing default Widget: ${required}`);
   }
   if (stageImageCount !== 1) findings.push(`Expected one stage image layer, found ${stageImageCount}`);
+  if (stageBackdropFilter !== 'none') findings.push(`Stage must not blur the Atmospheric canvas; found ${stageBackdropFilter}`);
+  if (composerBackdropFilter !== 'none') findings.push(`Composer overlay must not blur the Atmospheric canvas; found ${composerBackdropFilter}`);
   if (!portraitStatus.loaded) findings.push(`Expected four loaded character portraits, found ${portraitStatus.count}`);
   if (placementRailCount !== 0) findings.push(`Hover exposed ${placementRailCount} placement rail`);
   if (actionMenuCount !== 1) findings.push(`Expected one restrained Widget actions trigger, found ${actionMenuCount}`);
@@ -143,7 +192,8 @@ test('Deep Current is indistinguishable from the Atmospheric authority', async (
     viewport: contract.viewport,
     geometry,
     pixels,
-    assets: { stageImageCount, portraitStatus },
+    regions,
+    assets: { stageImageCount, portraitStatus, stageBackdropFilter, composerBackdropFilter },
     interactionChrome: { placementRailCount, actionMenuCount },
     inventory,
     findings,

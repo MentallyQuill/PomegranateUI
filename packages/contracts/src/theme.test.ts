@@ -8,6 +8,7 @@ import {
   ThemeDefinitionSchema,
   ThemeDefinitionV1Schema,
   ThemeDefinitionV2Schema,
+  ThemeCanvasLayerSchema,
   type ThemeDefinition,
   type ThemeDefinitionV1
 } from './theme.js';
@@ -30,6 +31,16 @@ const material = (base: string, fallback = base) => ({
   shadowBlurPx: 70,
   insetHighlight: 0.05,
   bloom: 0
+});
+
+it('accepts bounded contrast and brightness controls on local image layers', () => {
+  const layer = {
+    kind: 'image', assetId: 'image.stage', fit: 'cover', x: 0.5, y: 0.5,
+    opacity: 1, blurPx: 0, saturation: 0.74, contrast: 1.04, brightness: 0.83, blend: 'normal'
+  };
+  expect(ThemeCanvasLayerSchema.safeParse(layer).success).toBe(true);
+  expect(ThemeCanvasLayerSchema.safeParse({ ...layer, contrast: 2.01 }).success).toBe(false);
+  expect(ThemeCanvasLayerSchema.safeParse({ ...layer, brightness: 0.49 }).success).toBe(false);
 });
 
 export const VALID_THEME = {
@@ -443,6 +454,15 @@ describe('Theme target owner schemas', () => {
       mutate(candidate);
       expect(ThemeTargetBundleSchema.safeParse(candidate).success).toBe(false);
     }
+  });
+
+  it('accepts an ordered ambient radius presentation range and rejects inverted bounds', () => {
+    const valid = validThemeTargetFixture() as Record<string, any>;
+    valid.ambient.radiusRange = { minimum: 0.24, maximum: 0.96 };
+    expect(ThemeTargetBundleSchema.safeParse(valid).success).toBe(true);
+
+    valid.ambient.radiusRange = { minimum: 0.8, maximum: 0.2 };
+    expect(ThemeTargetBundleSchema.safeParse(valid).success).toBe(false);
   });
 });
 

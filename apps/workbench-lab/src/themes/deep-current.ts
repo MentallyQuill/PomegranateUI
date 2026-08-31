@@ -33,8 +33,8 @@ export const DEEP_CURRENT_THEME: ThemeDefinitionV2 = {
   label: 'Deep Current',
   description: 'Industrial dark-tech glass, cold signal light, and compact technical geometry.',
   colors: {
-    canvas: '#080c0d', surface: '#0b1213', surfaceElevated: '#10191a', surfaceInset: '#040708', chrome: '#0b1213',
-    text: '#e7f6f0', textMuted: '#a7b8b2', textFaint: '#748580', textOnAccent: '#071011', accent: '#94d9d0',
+    canvas: '#06090a', surface: '#040708', surfaceElevated: '#10191a', surfaceInset: '#040708', chrome: '#0b1213',
+    text: '#eff4f1', textMuted: '#a7b8b2', textFaint: '#748580', textOnAccent: '#071011', accent: '#94d9d0',
     selection: '#244c4a', focus: '#bfeee8', success: '#86d89a', warning: '#d2b57a', danger: '#df7b70',
     border: '#28413f', borderStrong: '#5f807b', shadow: '#000000'
   },
@@ -69,6 +69,7 @@ export const DEEP_CURRENT_THEME: ThemeDefinitionV2 = {
   shapes: shapePalette({ family: 'rounded', small: 4, medium: 4, large: 4 }),
   recipes: {
     ...DEEP_CURRENT_RECIPES,
+    shellPresentation: 'instrumented',
     parts: {
       ...DEEP_CURRENT_RECIPES.parts,
       'group.surface': {
@@ -80,22 +81,31 @@ export const DEEP_CURRENT_THEME: ThemeDefinitionV2 = {
   controls: { slider: { trackPx: 3, thumbPx: 10, hitTargetPx: 44 } },
   iconPackId: 'icons.minimal',
   assets: [
-    { id: 'icons.minimal', kind: 'icon-pack', required: true },
-    { id: 'image.deep-current-stage', kind: 'image', required: true }
+    { id: 'icons.minimal', kind: 'icon-pack', required: true }
   ],
   canvas: [
     { kind: 'solid', color: '#080c0d' },
-    { kind: 'image', assetId: 'image.deep-current-stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 0.74, blend: 'normal' },
-    { kind: 'linear-gradient', angle: 90, stops: [{ color: '#020506e0', position: 0 }, { color: '#07101238', position: 0.54 }, { color: '#020506b8', position: 1 }] },
-    { kind: 'radial-gradient', shape: 'ellipse', x: 0.68, y: 0.38, stops: [{ color: '#94d9d02e', position: 0 }, { color: '#07101200', position: 0.58 }] }
+    { kind: 'linear-gradient', angle: 0, stops: [{ color: '#030607d6', position: 0 }, { color: '#03060700', position: 0.36 }, { color: '#0204054d', position: 1 }] },
+    { kind: 'linear-gradient', angle: 90, stops: [{ color: '#030607db', position: 0 }, { color: '#0306077a', position: 0.25 }, { color: '#0407081f', position: 0.56 }, { color: '#03060761', position: 1 }] },
+    {
+      kind: 'grid',
+      widthPx: 72,
+      heightPx: 72,
+      horizontal: '#cde7dd0f',
+      vertical: '#cde7dd0b',
+      lineWidthPx: 1,
+      opacity: 0.2,
+      mask: { angle: 90, stops: [{ color: '#00000000', position: 0.2 }, { color: '#000000', position: 0.72 }, { color: '#00000000', position: 1 }] }
+    }
   ],
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
-  capabilities: { translucency: true, textures: true, localImages: true }
+  capabilities: { translucency: true, textures: true, localImages: false }
 };
 
 export const DEEP_CURRENT_TARGET = themeTarget(DEEP_CURRENT_THEME, {
   colorRole: 'accent',
   position: { x: 0.68, y: 0.38 },
   radius: 0.42,
+  radiusRange: { minimum: 0.24, maximum: 0.96 },
   power: 0.64
 });

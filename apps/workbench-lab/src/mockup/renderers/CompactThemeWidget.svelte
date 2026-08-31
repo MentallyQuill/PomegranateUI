@@ -188,11 +188,19 @@
 
   <section class="compact-ambient" aria-label="Ambient light">
     <header><strong>Ambient Light</strong><span>Screen X,Y</span></header>
-    <AmbientPosition x={draft.ambient.position.x} y={draft.ambient.position.y} onchange={(position) => { draft.ambient.position = position; apply(); }} />
+    <AmbientPosition
+      x={draft.ambient.position.x}
+      y={draft.ambient.position.y}
+      radius={draft.ambient.radius}
+      power={draft.ambient.power}
+      onchange={(position) => { draft.ambient.position = position; apply(); }}
+      onradiuschange={(radius) => setAmbient('radius', radius)}
+      onpowerchange={(power) => setAmbient('power', power)}
+    />
     <footer>
       <span>POS {Math.round(draft.ambient.position.x * 100)}/{Math.round(draft.ambient.position.y * 100)}</span>
-      <label><span>RAD {Math.round(draft.ambient.radius * 100)}</span><input class="visually-hidden" aria-label="Radius" type="range" min="0" max="100" value={Math.round(draft.ambient.radius * 100)} oninput={(event) => setAmbient('radius', Number(event.currentTarget.value) / 100)} /></label>
-      <label><span>PWR {Math.round(draft.ambient.power * 100)}</span><input class="visually-hidden" aria-label="Power" type="range" min="0" max="100" value={Math.round(draft.ambient.power * 100)} oninput={(event) => setAmbient('power', Number(event.currentTarget.value) / 100)} /></label>
+      <span>RAD {Math.round(draft.ambient.radius * 100)}</span>
+      <span>PWR {Math.round(draft.ambient.power * 100)}</span>
     </footer>
   </section>
 </div>

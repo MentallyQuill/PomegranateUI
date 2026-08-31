@@ -26,12 +26,12 @@ describe('Lab Theme authoring controller', () => {
     });
     expect(controller.getSnapshot().resolvedAmbient).toMatchObject({
       source: 'target',
-      power: 0.08,
+      power: 0.12,
       transparencyEnabled: false,
       motion: { enabled: false }
     });
     expect(controller.getSnapshot().cssText).toContain('--pom-ambient-transparency-enabled:0');
-    expect(controller.getSnapshot().compiled.bindings['--pom-ambient-power']).toBe('0.08');
+    expect(controller.getSnapshot().compiled.bindings['--pom-ambient-power']).toBe('0.12');
   });
 
   it('applies valid edits live and retains the last applied object for invalid edits', () => {

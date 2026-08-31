@@ -15,6 +15,13 @@ export const AmbientProfileSchema = z.object({
     y: normalizedNumberSchema
   }).strict(),
   radius: normalizedNumberSchema,
+  radiusRange: z.object({
+    minimum: normalizedNumberSchema,
+    maximum: normalizedNumberSchema
+  }).strict().refine(
+    ({ minimum, maximum }) => minimum <= maximum,
+    { message: 'Ambient radius range minimum must not exceed its maximum.' }
+  ).optional(),
   power: normalizedNumberSchema,
   motion: z.object({
     enabled: z.boolean(),

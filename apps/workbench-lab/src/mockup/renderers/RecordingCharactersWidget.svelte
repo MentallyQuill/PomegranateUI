@@ -42,7 +42,7 @@
 
   <ul aria-label="Characters roster" data-portrait-scale={portraitScale}>
     {#each characters as character, index (character.name)}
-      <li data-pom-part="row.surface">
+      <li class:is-current={index === 0} data-pom-part="row.surface">
         <span class="recording-character-portrait" data-character-portrait>
           {#if portraits?.[index]}
             <img class="is-direct" src={portraits[index]} alt={`Portrait of ${character.name}`} />

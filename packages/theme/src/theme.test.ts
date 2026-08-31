@@ -525,4 +525,25 @@ describe('theme targets', () => {
     if (!expectedCanvas.ok) return;
     expect(compiled.canvas).toEqual(expectedCanvas.layers);
   });
+
+  it('maps a logical ambient radius through an optional bounded presentation range', () => {
+    const input = targetFromV2(v2Theme(), {
+      colorRole: 'accent',
+      position: { x: 0.68, y: 0.38 },
+      radius: 0.42,
+      radiusRange: { minimum: 0.24, maximum: 0.96 },
+      power: 0.64
+    });
+    const resolved = resolveThemeTarget(input, {
+      'icons.minimal': { kind: 'icon-pack', source: '/assets/icons.svg' }
+    });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+
+    const compiled = compileThemeTarget(resolved.target);
+
+    expect(compiled.bindings['--pom-ambient-radius']).toBe('54.24%');
+    expect(compiled.ambient.radius).toBe(0.42);
+    expect(compiled.ambient.radiusRange).toEqual({ minimum: 0.24, maximum: 0.96 });
+  });
 });

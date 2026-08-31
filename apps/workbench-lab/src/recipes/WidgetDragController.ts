@@ -112,13 +112,13 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       const groupId = targetPlacement?.kind === 'docked' && targetPlacement.group
         ? targetPlacement.group.id
         : `group-${targetId}`;
-      store.dispatch({
+      const grouped = store.dispatch({
         type: 'widget.group',
         instanceId: frame.instanceId,
         targetInstanceId: targetId,
         groupId
       });
-      return;
+      if (grouped.ok) return;
     }
 
     const seam = target.closest<HTMLElement>('[data-shelf-insertion]');
@@ -171,14 +171,14 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       return;
     }
 
-    if (edge === 'main' || target.closest('[data-pomegranate-floating-layer]')) floatAt(current, event);
+    floatAt(current, event);
   }
 
   return Object.freeze({
     pointerDown(event: PointerEvent) {
       if (event.button !== 0 || candidate) return;
       const handle = event.currentTarget as HTMLElement;
-      const root = handle.closest<HTMLElement>('[data-widget-type]');
+      const root = handle.closest<HTMLElement>('[data-widget-drag-root], [data-widget-type]');
       const surface = handle.closest<HTMLElement>('[data-pomegranate-panel]');
       if (!root || !surface) return;
       const box = root.getBoundingClientRect();

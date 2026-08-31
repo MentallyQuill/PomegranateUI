@@ -213,6 +213,19 @@ export const ThemeCanvasLayerSchema = z.discriminatedUnion('kind', [
     bottomRight: colorSchema
   }).strict(),
   z.object({
+    kind: z.literal('grid'),
+    widthPx: boundedNumber(2, 512),
+    heightPx: boundedNumber(2, 512),
+    horizontal: colorSchema,
+    vertical: colorSchema,
+    lineWidthPx: boundedNumber(0.25, 8),
+    opacity: opacitySchema,
+    mask: z.object({
+      angle: boundedNumber(-360, 360),
+      stops: gradientStopsSchema
+    }).strict().optional()
+  }).strict(),
+  z.object({
     kind: z.literal('image'),
     assetId: assetIdSchema,
     fit: z.enum(['cover', 'contain', 'fill']),
@@ -221,6 +234,8 @@ export const ThemeCanvasLayerSchema = z.discriminatedUnion('kind', [
     opacity: opacitySchema,
     blurPx: boundedNumber(0, 40),
     saturation: boundedNumber(0, 2),
+    contrast: boundedNumber(0.5, 2).optional(),
+    brightness: boundedNumber(0.5, 1.5).optional(),
     blend: blendModeSchema
   }).strict(),
   z.object({
@@ -356,6 +371,7 @@ export const ThemeRecipesV2Schema = z.object({
   parts: z.object(partRecipesShape).strict(),
   widgetGrouping: z.enum(['individual', 'unified']),
   chromePresentation: z.enum(['full', 'compact', 'overlay']),
+  shellPresentation: z.enum(['standard', 'instrumented']).optional(),
   actionPresentation: z.enum(['always', 'compact', 'hover-focus'])
 }).strict();
 

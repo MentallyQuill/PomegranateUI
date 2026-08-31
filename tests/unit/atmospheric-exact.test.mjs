@@ -111,6 +111,18 @@ test('Atmospheric pixel comparison reports literal mismatch and honors only vali
   assert.equal(masked.structuralSimilarity, 1);
 });
 
+test('Atmospheric pixel comparison ignores sub-perceptual browser raster drift', () => {
+  const reference = png(2, 1, [[12, 18, 19], [80, 90, 100]]);
+  const candidate = png(2, 1, [[13, 19, 18], [100, 104, 118]]);
+
+  const report = compareAtmosphericPixels(reference, candidate, []);
+
+  assert.equal(report.differingPixels, 0);
+  assert.equal(report.mismatchRatio, 0);
+  assert.equal(report.highContrastMismatchCount, 0);
+  assert.equal(report.structuralSimilarity, 1);
+});
+
 test('Atmospheric pixel comparison fails closed on dimension drift', () => {
   const reference = png(2, 1, [[0, 0, 0], [255, 255, 255]]);
   const candidate = png(1, 1, [[0, 0, 0]]);

@@ -21,7 +21,7 @@ import { createLocalThemePreference, LAB_THEME_KEY } from './theme-storage.js';
 
 const assetRegistry = {
   'icons.minimal': { kind: 'icon-pack' as const, source: 'icons.minimal' },
-  'image.deep-current-stage': { kind: 'image' as const, source: '/assets/deep-current-stage.jpg' },
+  'image.atmospheric-reservoir': { kind: 'image' as const, source: '/assets/atmospheric-reservoir-stage.jpg' },
   'image.bunny-garden': { kind: 'image' as const, source: '/assets/bunny-garden.webp' },
   'image.ash-amber-stage': { kind: 'image' as const, source: '/assets/ash-amber-stage.webp' }
 };
@@ -223,6 +223,11 @@ describe('Workbench Lab theme conformance', () => {
     }
   });
 
+  it('selects the instrumented shell through Deep theme data without changing other compact themes', () => {
+    expect(DEEP_CURRENT_THEME.recipes.shellPresentation).toBe('instrumented');
+    expect(ASH_AMBER_THEME.recipes.shellPresentation).toBeUndefined();
+  });
+
   it('compiles Deep Current free edges as an upper highlight and lower shadow tonal bevel', () => {
     const result = resolveThemeV2(DEEP_CURRENT_THEME, assetRegistry);
     expect(result.ok).toBe(true);
@@ -319,10 +324,13 @@ describe('Workbench Lab theme conformance', () => {
     expect(Object.values(bindings).join(';')).not.toContain('transition');
   });
 
-  it('keeps every photographic canvas local and explicitly declared', () => {
-    expect(DEEP_CURRENT_THEME.assets).toContainEqual({ id: 'image.deep-current-stage', kind: 'image', required: true });
-    expect(DEEP_CURRENT_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({ assetId: 'image.deep-current-stage', fit: 'cover' });
-    expect(DEEP_CURRENT_THEME.capabilities.localImages).toBe(true);
+  it('keeps the reusable Deep theme image-neutral while the Atmospheric Lab target owns its declared fixture', () => {
+    const deepLabTarget = LAB_THEME_PRESETS.find(({ id }) => id === 'deep-current')!.target;
+    expect(DEEP_CURRENT_THEME.assets.some(({ kind }) => kind === 'image')).toBe(false);
+    expect(DEEP_CURRENT_THEME.canvas.some(({ kind }) => kind === 'image')).toBe(false);
+    expect(DEEP_CURRENT_THEME.capabilities.localImages).toBe(false);
+    expect(deepLabTarget.theme.assets).toContainEqual({ id: 'image.atmospheric-reservoir', kind: 'image', required: true });
+    expect(deepLabTarget.canvas.layers.find((layer) => layer.kind === 'image')).toMatchObject({ assetId: 'image.atmospheric-reservoir', fit: 'cover' });
     expect(BUNNY_THEME.assets).toContainEqual({ id: 'image.bunny-garden', kind: 'image', required: true });
     expect(BUNNY_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({ assetId: 'image.bunny-garden', fit: 'cover' });
     expect(ASH_AMBER_THEME.assets).toContainEqual({ id: 'image.ash-amber-stage', kind: 'image', required: true });
@@ -467,7 +475,7 @@ describe('Workbench Lab theme conformance', () => {
 
     const missingController = createLabThemeController({
       initialId: 'deep-current',
-      availableAssets: new Set(['icons.minimal', 'image.deep-current-stage'])
+      availableAssets: new Set(['icons.minimal', 'image.atmospheric-reservoir'])
     });
     const beforeMissing = missingController.getSnapshot();
     const missing = missingController.activate('bunny');

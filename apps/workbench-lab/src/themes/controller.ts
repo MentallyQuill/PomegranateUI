@@ -225,7 +225,7 @@ export function createLabThemeController(options: {
   const assetRegistry = options.assetRegistry
     ?? registryFromIds(options.availableAssets ?? new Set([
       'icons.minimal',
-      'image.deep-current-stage',
+      'image.atmospheric-reservoir',
       'image.bunny-garden',
       'image.ash-amber-stage'
     ]));

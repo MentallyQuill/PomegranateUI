@@ -13,6 +13,7 @@
 <script lang="ts">
   let {
     label,
+    visualLabel,
     action,
     disabled = false,
     pressed,
@@ -21,6 +22,7 @@
     class: className = ''
   }: {
     label: string;
+    visualLabel?: string | undefined;
     action: IconActionKind;
     disabled?: boolean;
     pressed?: boolean;
@@ -46,10 +48,8 @@
   <span data-pom-action-icon aria-hidden="true">
     <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
       {#if action === 'open-catalog'}
-        <rect x="4" y="4" width="6" height="6" rx="1" />
-        <rect x="14" y="4" width="6" height="6" rx="1" />
-        <rect x="4" y="14" width="6" height="6" rx="1" />
-        <rect x="14" y="14" width="6" height="6" rx="1" />
+        <rect x="2" y="2" width="20" height="20" />
+        <path d="M12 2v20M2 12h20" />
       {:else if action === 'create-panel'}
         <rect x="3.5" y="5" width="17" height="14" rx="2" />
         <path d="M12 8.5v7M8.5 12h7" />
@@ -74,7 +74,7 @@
       {/if}
     </svg>
   </span>
-  <span data-pom-action-label>{label}</span>
+  <span data-pom-action-label>{visualLabel ?? label}</span>
 </button>
 
 <style>
