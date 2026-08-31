@@ -1,8 +1,8 @@
 # PomegranateUI One-Level Sub-Panels Design
 
-**Date:** 2026-08-31  
-**Status:** Approved by the active user goal  
-**Repository:** `MentallyQuill/PomegranateUI`  
+**Date:** 2026-08-31
+**Status:** Approved by the active user goal
+**Repository:** `MentallyQuill/PomegranateUI`
 **Authority:** The preserved Widget Overhaul sub-panel model and regression harness define behavior; Atmospheric and the four reviewed theme targets define presentation.
 
 ## Outcome
@@ -92,4 +92,3 @@ Required viewports include wide desktop, 390x844 mobile, 980x720 touch desktop-s
 ## Verification and release
 
 Every behavior starts as a failing real-state unit or Playwright test. Native conformance must assert the same behavior named by the preserved reference instead of mapping sub-panel persistence to unrelated Panel-width checks. Reviewed screenshots cover Settings in all four themes at wide and compact sizes, plus selector-open and dialog states. The full `npm.cmd run check` gate, Windows and Ubuntu CI, reviewed PR, merge, Pages deployment, and live Playwright proof are required before completion.
-
