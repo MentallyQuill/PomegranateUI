@@ -15,6 +15,7 @@ import { JsonObjectSchema, type JsonObject } from './json.js';
 export const WORKBENCH_STATE_SCHEMA = 'pomegranate.ui.state.v2' as const;
 export const LAYOUT_SNAPSHOT_V1_SCHEMA = 'pomegranate.ui.layout.v1' as const;
 export const LAYOUT_SNAPSHOT_V2_SCHEMA = 'pomegranate.ui.layout.v2' as const;
+export const LAYOUT_SNAPSHOT_V3_SCHEMA = 'pomegranate.ui.layout.v3' as const;
 
 export type PanelEdge = 'left' | 'main' | 'right';
 export const SubPanelLayoutIdSchema = z.enum(['single', 'two-equal', 'three-equal', 'wide-left', 'wide-right']);
@@ -151,6 +152,10 @@ export interface LayoutSnapshotV1 {
 
 export interface LayoutSnapshotV2 extends Omit<WorkbenchState, 'schema'> {
   readonly schema: typeof LAYOUT_SNAPSHOT_V2_SCHEMA;
+}
+
+export interface LayoutSnapshotV3 extends Omit<WorkbenchState, 'schema'> {
+  readonly schema: typeof LAYOUT_SNAPSHOT_V3_SCHEMA;
 }
 
 export type LegacyDockedPlacement = Omit<DockedPlacement, 'regionId'> & { readonly edge: PanelEdge };
@@ -377,9 +382,16 @@ export const LayoutSnapshotV2Schema = z.object({
   ...workbenchCollections
 }).strict();
 
+export const LayoutSnapshotV3Schema = z.object({
+  schema: z.literal(LAYOUT_SNAPSHOT_V3_SCHEMA),
+  ...workbenchCollections
+}).strict();
+
 export type WorkbenchStateInput = z.input<typeof WorkbenchStateSchema>;
 export type ParsedWorkbenchState = z.output<typeof WorkbenchStateSchema>;
 export type LayoutSnapshotV1Input = z.input<typeof LayoutSnapshotV1Schema>;
 export type ParsedLayoutSnapshotV1 = z.output<typeof LayoutSnapshotV1Schema>;
 export type LayoutSnapshotV2Input = z.input<typeof LayoutSnapshotV2Schema>;
 export type ParsedLayoutSnapshotV2 = z.output<typeof LayoutSnapshotV2Schema>;
+export type LayoutSnapshotV3Input = z.input<typeof LayoutSnapshotV3Schema>;
+export type ParsedLayoutSnapshotV3 = z.output<typeof LayoutSnapshotV3Schema>;

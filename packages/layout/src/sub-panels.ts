@@ -133,11 +133,19 @@ export function normalizeSubPanels(state: WorkbenchState): WorkbenchState {
       ? Math.floor(visible.lane)
       : 0;
     const lane = Math.min(laneCount - 1, Math.max(0, requestedLane));
+    const columnRegionId = `column-${lane + 1}`;
+    const regionId = state.shelves.some((shelf) => (
+      shelf.panelId === visible.panelId
+      && shelf.regionId === columnRegionId
+      && shelf.id === visible.shelfId
+    ))
+      ? columnRegionId
+      : visible.regionId;
     return [instanceId, replaceVisiblePlacement(placement, {
       ...visible,
       subPanelId: owner,
       lane,
-      regionId: `column-${lane + 1}`,
+      regionId,
       order: Number.isInteger(visible.order) && visible.order >= 0 ? visible.order : 0
     })];
   }));

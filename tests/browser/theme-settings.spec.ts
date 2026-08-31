@@ -12,6 +12,13 @@ async function fresh(page: Page, width = 1440, height = 900) {
 
 async function openThemeSettings(page: Page) {
   await page.getByRole('tab', { name: 'Settings' }).click();
+  const selector = page.locator('[data-sub-panel-selector-trigger]');
+  if (await selector.isVisible()) {
+    await selector.click();
+    await page.getByRole('option', { name: 'Appearance and Accessibility' }).click();
+  } else {
+    await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  }
   const settings = page.locator('[data-widget-type="settings.custom-theme"]');
   await expect(settings).toBeVisible();
   return settings;

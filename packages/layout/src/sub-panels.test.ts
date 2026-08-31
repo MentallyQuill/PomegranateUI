@@ -22,6 +22,7 @@ import {
   setSubPanelScroll
 } from './sub-panels.js';
 import { normalizeDockOrders } from './state.js';
+import { mergeWidgetGroup } from './operations.js';
 
 const settingsId = asPanelId('settings');
 const overviewId = asSubPanelId('settings-overview');
@@ -484,5 +485,38 @@ describe('one-level sub-panel transitions', () => {
 
     expect(placements[themeId]).toMatchObject({ subPanelId: overviewId, order: 0 });
     expect(placements[notesExistingId]).toMatchObject({ subPanelId: notesId, order: 0 });
+  });
+
+  it('rejects cross-sibling grouping even when Panel, region, and shelf match', () => {
+    const created = createSubPanel(
+      flatSettings(),
+      settingsId,
+      { id: notesId, name: 'Notes', layoutId: 'two-equal', order: 1, scrollTop: 0 },
+      { id: overviewId, name: 'Overview', layoutId: 'three-equal', order: 0, scrollTop: 96 }
+    );
+    const withNotesWidget: WorkbenchState = {
+      ...created.state,
+      widgets: {
+        ...created.state.widgets,
+        [notesExistingId]: {
+          id: notesExistingId,
+          type: asWidgetType('settings.notes'),
+          manifestVersion: '1.0.0',
+          configuration: {}
+        }
+      },
+      placements: {
+        ...created.state.placements,
+        [notesExistingId]: {
+          kind: 'docked', panelId: settingsId, subPanelId: notesId, lane: 0,
+          regionId: 'column-1', shelfId: 'primary', order: 0
+        }
+      }
+    };
+
+    const result = mergeWidgetGroup(withNotesWidget, themeId, notesExistingId, 'cross-owner');
+    expect(result.ok).toBe(false);
+    expect(result.state).toBe(withNotesWidget);
+    expect(!result.ok && result.error.code).toBe('INVALID_PLACEMENT');
   });
 });

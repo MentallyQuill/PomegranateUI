@@ -23,9 +23,11 @@
   class="dock-region"
   data-pomegranate-region-surface={projection.region.id}
   data-pomegranate-region-role={projection.region.role}
+  data-sub-panel-lane={projection.lane}
   data-pomegranate-dock={legacyDock}
   data-conformance-region={projection.region.id}
   data-pom-part={surfacePart ?? undefined}
+  style={`--pom-sub-panel-lane-weight:${projection.laneWeight}`}
   aria-label={`${projection.region.label} region`}
 >
   {#each projection.shelves as shelf, index (`${shelf.shelf.regionId}:${shelf.shelf.id}`)}

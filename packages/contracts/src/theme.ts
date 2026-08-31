@@ -42,6 +42,8 @@ export const THEME_PART_IDS = [
   'chrome.context',
   'dock.surface',
   'panel.surface',
+  'sub-panel.bar',
+  'sub-panel.surface',
   'group.surface',
   'widget.surface',
   'widget.header',

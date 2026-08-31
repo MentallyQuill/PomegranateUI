@@ -33,6 +33,8 @@ const PART_MATERIALS: Readonly<Record<ThemePartId, ThemeMaterialRole>> = {
   'chrome.context': 'shelf',
   'dock.surface': 'panel',
   'panel.surface': 'panel',
+  'sub-panel.bar': 'shelf',
+  'sub-panel.surface': 'panel',
   'group.surface': 'panel',
   'widget.surface': 'widget',
   'widget.header': 'widget',
@@ -58,6 +60,8 @@ const PART_SHAPES: Readonly<Record<ThemePartId, string>> = {
   'chrome.context': 'pill',
   'dock.surface': 'large',
   'panel.surface': 'large',
+  'sub-panel.bar': 'none',
+  'sub-panel.surface': 'large',
   'group.surface': 'widget',
   'widget.surface': 'widget',
   'widget.header': 'widget',
@@ -183,7 +187,8 @@ function migrateV1(theme: ThemeDefinitionV1): ThemeDefinitionV2 | null {
     spacing: part === 'canvas.surface' || part === 'separator' ? 'xs' : 'md',
     overflow: part === 'widget.content' ? 'scroll' : 'visible',
     separator: part === 'separator' ? theme.geometry.sharedEdge === 'none' ? 'space' : 'hairline' : 'none',
-    elevation: ['canvas.surface', 'separator', 'slider.input', 'slider.track', 'slider.fill'].includes(part) ? 0 : 2,
+    elevation: part === 'sub-panel.bar' ? 3
+      : ['canvas.surface', 'separator', 'slider.input', 'slider.track', 'slider.fill'].includes(part) ? 0 : 2,
     states: { disabledOpacity: 0.5 }
   } satisfies ThemePartRecipeV2])) as Record<ThemePartId, ThemePartRecipeV2>;
 

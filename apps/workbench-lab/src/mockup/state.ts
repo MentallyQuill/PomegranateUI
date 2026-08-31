@@ -13,6 +13,8 @@ import {
   type LayoutResult
 } from '@pomegranate-ui/layout';
 
+import { upgradeFlatSettingsPanel } from './settings-sub-panels.js';
+
 export const LAB_PANEL_IDS = Object.freeze({
   scene: asPanelId('scene'),
   library: asPanelId('library'),
@@ -27,15 +29,27 @@ export const LAB_WIDGET_TYPES = Object.freeze({
   ambience: asWidgetType('story.room-ambience'),
   promiseLedger: asWidgetType('systems.promise-ledger'),
   personas: asWidgetType('story.personas'),
+  providerCredentials: asWidgetType('settings.provider-credentials'),
   connections: asWidgetType('settings.connections'),
+  modelAssignments: asWidgetType('settings.model-assignments'),
+  defaultModel: asWidgetType('settings.default-model'),
+  memorySearchModel: asWidgetType('settings.memory-search-model'),
   characterRelationships: asWidgetType('systems.character-relationships'),
   library: asWidgetType('library.workspace'),
   characterCard: asWidgetType('library.character-card'),
   loreEntries: asWidgetType('library.lore-entries'),
   themeLibrary: asWidgetType('settings.theme'),
   themeSettings: asWidgetType('settings.custom-theme'),
+  readingLayout: asWidgetType('settings.reading-layout'),
+  soundMotion: asWidgetType('settings.sound-motion'),
   accessibility: asWidgetType('settings.accessibility'),
-  promptEditor: asWidgetType('settings.prompt-editor')
+  content: asWidgetType('settings.content'),
+  narratorVoice: asWidgetType('settings.narrator-voice'),
+  livingWorldControls: asWidgetType('settings.living-world-controls'),
+  addOns: asWidgetType('settings.add-ons'),
+  maintenance: asWidgetType('settings.maintenance'),
+  promptEditor: asWidgetType('settings.prompt-editor'),
+  rawStoryData: asWidgetType('settings.raw-story-data')
 });
 
 function requireState(result: LayoutResult): WorkbenchState {
@@ -76,12 +90,23 @@ export function createLabState(): WorkbenchState {
     ['library-main', LAB_WIDGET_TYPES.library, LAB_PANEL_IDS.library, 'focus', 0, {}],
     ['library-character', LAB_WIDGET_TYPES.characterCard, LAB_PANEL_IDS.library, 'support', 0, { fixtureMode: 'failure' }],
     ['library-lore', LAB_WIDGET_TYPES.loreEntries, LAB_PANEL_IDS.library, 'support', 1, {}],
+    ['settings-provider-credentials', LAB_WIDGET_TYPES.providerCredentials, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
+    ['settings-connections', LAB_WIDGET_TYPES.connections, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
+    ['settings-model-assignments', LAB_WIDGET_TYPES.modelAssignments, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
+    ['settings-default-model', LAB_WIDGET_TYPES.defaultModel, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
+    ['settings-memory-search-model', LAB_WIDGET_TYPES.memorySearchModel, LAB_PANEL_IDS.settings, 'column-2', 1, {}],
     ['settings-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
     ['settings-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.settings, 'column-1', 1, {}],
-    ['settings-accessibility', LAB_WIDGET_TYPES.accessibility, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
-    ['settings-world', LAB_WIDGET_TYPES.worldState, LAB_PANEL_IDS.settings, 'column-2', 1, {}],
-    ['settings-prompt-editor', LAB_WIDGET_TYPES.promptEditor, LAB_PANEL_IDS.settings, 'column-3', 0, {}],
-    ['settings-relationships', LAB_WIDGET_TYPES.characterRelationships, LAB_PANEL_IDS.settings, 'column-3', 1, {}]
+    ['settings-reading-layout', LAB_WIDGET_TYPES.readingLayout, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
+    ['settings-sound-motion', LAB_WIDGET_TYPES.soundMotion, LAB_PANEL_IDS.settings, 'column-2', 1, {}],
+    ['settings-accessibility', LAB_WIDGET_TYPES.accessibility, LAB_PANEL_IDS.settings, 'column-3', 0, {}],
+    ['settings-content', LAB_WIDGET_TYPES.content, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
+    ['settings-narrator-voice', LAB_WIDGET_TYPES.narratorVoice, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
+    ['settings-living-world-controls', LAB_WIDGET_TYPES.livingWorldControls, LAB_PANEL_IDS.settings, 'column-2', 1, {}],
+    ['settings-add-ons', LAB_WIDGET_TYPES.addOns, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
+    ['settings-maintenance', LAB_WIDGET_TYPES.maintenance, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
+    ['settings-prompt-editor', LAB_WIDGET_TYPES.promptEditor, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
+    ['settings-raw-story-data', LAB_WIDGET_TYPES.rawStoryData, LAB_PANEL_IDS.settings, 'column-1', 1, {}]
   ] as const;
   for (const [id, type, panelId, regionId, order, configuration] of fixtures) {
     state = requireState(createWidget(state, {
@@ -101,5 +126,5 @@ export function createLabState(): WorkbenchState {
     'scene-ambience-ledger'
   ));
   state = requireState(activateWidgetGroup(state, ambienceId));
-  return { ...state, revision: 0 };
+  return { ...upgradeFlatSettingsPanel(state), revision: 0 };
 }

@@ -3,6 +3,7 @@
   import type { WorkbenchState } from '@pomegranate-ui/contracts';
   import {
     selectPanelSurface,
+    selectSubPanelTabs,
     type WidgetFrameProjection,
     type WorkbenchStore
   } from '@pomegranate-ui/core';
@@ -37,6 +38,9 @@
     return current.subscribe((next) => { state = next; });
   });
   const surface = $derived(state ? selectPanelSurface(state, store.registry, store.templates) : null);
+  const activeSubPanel = $derived(state
+    ? selectSubPanelTabs(state).find((subPanel) => subPanel.selected)
+    : undefined);
   const activePanel = $derived(state?.panels.find((panel) => panel.id === state?.activePanelId));
   const panelDockWidths = $derived.by(() => {
     const raw = activePanel?.configuration?.dockWidths;
@@ -57,38 +61,48 @@
     role="tabpanel"
     aria-labelledby={surface.tabId}
     data-pomegranate-panel={surface.panelId}
+    data-sub-panel-layout={surface.activeSubPanelLayoutId ?? undefined}
     data-pom-part="panel.surface"
     style={`--pom-left-width:${leftCssWidth};--pom-right-width:${rightCssWidth}`}
   >
-    {#if surface.unavailableTemplateId}
-      <UnavailableTemplate templateId={surface.unavailableTemplateId} />
-    {:else}
-      <PanelTemplateSurface {surface} {store} {renderWidget} {titleFor} />
-    {/if}
-    <div data-shelf-insertion="left" aria-hidden="true"></div>
-    <div data-shelf-insertion="right" aria-hidden="true"></div>
-    <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
-    <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />
-    {#if surface.templateFamily === 'story-stage'}
-      <button
-        type="button"
-        class="toolbar-edge-toggle toolbar-edge-toggle-left"
-        aria-label="Toggle left dock"
-        aria-pressed={leftCollapsed}
-        onclick={ontoggleleft}
-      >OPEN TOOLBAR LFT</button>
-      <button
-        type="button"
-        class="toolbar-edge-toggle toolbar-edge-toggle-right"
-        aria-label="Toggle right dock"
-        aria-pressed={rightCollapsed}
-        onclick={ontoggleright}
-      >OPEN TOOLBAR RGT</button>
-    {/if}
-    <div data-pomegranate-floating-layer>
-      {#each surface.floating as frame (frame.instanceId)}
-        {@render renderWidget(frame)}
-      {/each}
+    <div
+      class="sub-panel-surface"
+      id={activeSubPanel?.surfaceId}
+      role={activeSubPanel ? 'tabpanel' : undefined}
+      aria-labelledby={activeSubPanel?.tabId}
+      data-pom-part={activeSubPanel ? 'sub-panel.surface' : undefined}
+      data-sub-panel={activeSubPanel?.subPanelIdAttribute}
+    >
+      {#if surface.unavailableTemplateId}
+        <UnavailableTemplate templateId={surface.unavailableTemplateId} />
+      {:else}
+        <PanelTemplateSurface {surface} {store} {renderWidget} {titleFor} />
+      {/if}
+      <div data-shelf-insertion="left" aria-hidden="true"></div>
+      <div data-shelf-insertion="right" aria-hidden="true"></div>
+      <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
+      <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />
+      {#if surface.templateFamily === 'story-stage'}
+        <button
+          type="button"
+          class="toolbar-edge-toggle toolbar-edge-toggle-left"
+          aria-label="Toggle left dock"
+          aria-pressed={leftCollapsed}
+          onclick={ontoggleleft}
+        >OPEN TOOLBAR LFT</button>
+        <button
+          type="button"
+          class="toolbar-edge-toggle toolbar-edge-toggle-right"
+          aria-label="Toggle right dock"
+          aria-pressed={rightCollapsed}
+          onclick={ontoggleright}
+        >OPEN TOOLBAR RGT</button>
+      {/if}
+      <div data-pomegranate-floating-layer>
+        {#each surface.floating as frame (frame.instanceId)}
+          {@render renderWidget(frame)}
+        {/each}
+      </div>
     </div>
   </div>
 {:else}

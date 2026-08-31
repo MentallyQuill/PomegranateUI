@@ -16,6 +16,17 @@ async function fresh(page: Page) {
   });
 }
 
+async function openAppearanceSettings(page: Page) {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  const selector = page.locator('[data-sub-panel-selector-trigger]');
+  if (await selector.isVisible()) {
+    await selector.click();
+    await page.getByRole('option', { name: 'Appearance and Accessibility' }).click();
+  } else {
+    await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  }
+}
+
 async function responsiveEvidence(page: Page, testInfo: TestInfo, name: string) {
   const evidence = await page.evaluate(() => {
     const rectangle = (selector: string): Rectangle | null => {
@@ -155,8 +166,8 @@ test.describe('Deep Atmospheric responsive phone presentation', () => {
 
   test('normal mobile gives the Settings panel one deterministic vertical scroll owner', async ({ page }) => {
     await fresh(page);
-    await page.getByRole('tab', { name: 'Settings' }).click();
-    const panel = page.locator('.panel-template-surface');
+    await openAppearanceSettings(page);
+    const panel = page.locator('.workbench-surface');
     const evidence = await panel.evaluate((element) => {
       const before = element.scrollTop;
       element.scrollTop = element.scrollHeight;
@@ -191,7 +202,7 @@ test.describe('Deep Atmospheric mobile desktop-site presentation', () => {
 test('a wide Deep session converges to the same mobile composition after material editing and resize', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await fresh(page);
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await openAppearanceSettings(page);
   const themeSettings = page.getByRole('article', { name: 'Custom Theme' });
   for (const label of ['Glass Density', 'Bar Opacity', 'Selected Strength', 'Frost Level']) {
     await themeSettings.getByRole('slider', { name: label }).fill('0');

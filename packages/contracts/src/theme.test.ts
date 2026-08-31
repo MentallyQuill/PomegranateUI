@@ -201,7 +201,7 @@ describe('ThemeDefinitionSchema', () => {
   it('publishes a stable semantic part inventory', () => {
     expect(THEME_PART_IDS).toEqual([
       'canvas.surface', 'chrome.shelf', 'chrome.context', 'dock.surface',
-      'panel.surface', 'group.surface', 'widget.surface', 'widget.header',
+      'panel.surface', 'sub-panel.bar', 'sub-panel.surface', 'group.surface', 'widget.surface', 'widget.header',
       'widget.content', 'widget.actions', 'row.surface', 'separator',
       'field.surface', 'button.surface', 'button.icon', 'menu.surface',
       'dialog.surface', 'floating.surface', 'slider.input', 'slider.track',

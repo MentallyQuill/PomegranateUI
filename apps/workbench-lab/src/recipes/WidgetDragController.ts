@@ -83,12 +83,14 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     const z = Math.max(0, ...Object.values(state.placements).map((placement) => (
       placement.kind === 'floating' ? placement.z : 0
     ))) + 1;
+    const visible = frame.placement.kind === 'shelved' ? frame.placement.lastVisible : frame.placement;
     store.dispatch({
       type: 'widget.place',
       instanceId: frame.instanceId,
       placement: {
         kind: 'floating',
         panelId: frame.placement.panelId,
+        ...(visible.subPanelId === undefined ? {} : { subPanelId: visible.subPanelId }),
         x,
         y,
         width,
@@ -103,6 +105,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     const store = options.getStore();
     const target = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
     if (!target || !current.surface.contains(target)) return;
+    const visible = frame.placement.kind === 'shelved' ? frame.placement.lastVisible : frame.placement;
 
     const targetWidget = target.closest<HTMLElement>('[data-pomegranate-widget]');
     const targetIdText = targetWidget?.dataset.pomegranateWidget;
@@ -146,6 +149,9 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         placement: {
           kind: 'docked',
           panelId: frame.placement.panelId,
+          ...(visible.subPanelId === undefined || visible.kind !== 'docked' || visible.lane === undefined
+            ? {}
+            : { subPanelId: visible.subPanelId, lane: visible.lane }),
           regionId,
           shelfId,
           order: Number.MAX_SAFE_INTEGER
@@ -154,16 +160,29 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       return;
     }
 
-    const dock = target.closest<HTMLElement>('[data-pomegranate-dock]');
-    const edge = dock?.dataset.pomegranateDock;
-    if (edge === 'left' || edge === 'right') {
+    const dock = target.closest<HTMLElement>('[data-pomegranate-region-surface]');
+    const regionId = dock?.dataset.pomegranateRegionSurface;
+    const legacyEdge = dock?.dataset.pomegranateDock;
+    if (regionId) {
+      const state = store.getState();
+      const panel = state.panels.find((candidate) => candidate.id === frame.placement.panelId);
+      const laneText = dock.dataset.subPanelLane;
+      const lane = laneText === undefined ? undefined : Number(laneText);
+      const subPanelId = panel?.activeSubPanelId;
+      if (subPanelId === undefined && legacyEdge !== 'left' && legacyEdge !== 'right') {
+        floatAt(current, event);
+        return;
+      }
       store.dispatch({
         type: 'widget.place',
         instanceId: frame.instanceId,
         placement: {
           kind: 'docked',
           panelId: frame.placement.panelId,
-          regionId: edge,
+          ...(subPanelId === undefined || lane === undefined || !Number.isInteger(lane)
+            ? {}
+            : { subPanelId, lane }),
+          regionId,
           shelfId: 'primary',
           order: Number.MAX_SAFE_INTEGER
         }

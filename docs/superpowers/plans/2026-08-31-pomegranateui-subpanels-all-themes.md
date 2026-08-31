@@ -16,7 +16,7 @@
 - Keep one mounted Workbench tree and data-only themes; add no concrete theme-ID selector or component fork.
 - Preserve existing flat Panel snapshots and adopt versioned migration for shipped flat Settings.
 - Sub-panels are exactly one level deep and cannot contain Panels or sub-panels.
-- Use `npm.cmd` on Windows and do not publish npm packages or change Sonder.
+- Use `npm.cmd` on Windows and do not publish npm packages or change a downstream adopter.
 - Every production behavior must be preceded by a failing real-behavior test.
 
 ---
@@ -194,4 +194,3 @@ expect(WorkbenchStateSchema.parse(state).panels[0]).toMatchObject({
 - [ ] **Step 4: Review the complete diff, commit, push `codex/subpanels-all-themes`, and open a reviewed GitHub PR.**
 - [ ] **Step 5: Require Ubuntu and Windows CI on the exact head SHA, merge, and follow the exact merge SHA through Pages deployment.**
 - [ ] **Step 6: Run the sub-panel Playwright matrix against the live Pages URL in every theme and required viewport; mark the goal complete only after all requirements have direct evidence.**
-

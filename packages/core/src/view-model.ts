@@ -4,6 +4,8 @@ import type {
   PanelId,
   PanelRegionDefinition,
   ShelfState,
+  SubPanelId,
+  SubPanelLayoutId,
   WidgetInstance,
   WidgetInstanceId,
   WidgetManifest,
@@ -13,7 +15,7 @@ import type {
 
 import type { WidgetRegistry } from './registry.js';
 import type { WorkbenchStore } from './store.js';
-import { createPanelTemplateRegistry, type PanelTemplateRegistry } from '@pomegranate-ui/layout';
+import { createPanelTemplateRegistry, SUB_PANEL_LAYOUTS, type PanelTemplateRegistry } from '@pomegranate-ui/layout';
 
 export interface PanelTabProjection {
   readonly panelId: PanelId;
@@ -35,8 +37,25 @@ export interface WidgetFrameProjection {
   readonly placement: WidgetPlacement;
 }
 
+export interface SubPanelTabProjection {
+  readonly panelId: PanelId;
+  readonly subPanelId: SubPanelId;
+  readonly subPanelIdAttribute: string;
+  readonly name: string;
+  readonly tabId: string;
+  readonly surfaceId: string;
+  readonly layoutId: SubPanelLayoutId;
+  readonly scrollTop: number;
+  readonly selected: boolean;
+  readonly moveLeftDisabled: boolean;
+  readonly moveRightDisabled: boolean;
+}
+
 export interface PanelSurfaceProjection {
   readonly panelId: PanelId;
+  readonly activeSubPanelId: SubPanelId | null;
+  readonly activeSubPanelLayoutId: SubPanelLayoutId | null;
+  readonly activeSubPanelScrollTop: number;
   readonly tabId: string;
   readonly surfaceId: string;
   readonly docks: Readonly<Record<'left' | 'main' | 'right', readonly WidgetFrameProjection[]>>;
@@ -54,6 +73,8 @@ export interface PanelShelfProjection {
 
 export interface PanelRegionProjection {
   readonly region: PanelRegionDefinition;
+  readonly lane: number;
+  readonly laneWeight: number;
   readonly shelves: readonly PanelShelfProjection[];
 }
 
@@ -86,6 +107,34 @@ export function selectPanelTabs(state: WorkbenchState): readonly PanelTabProject
   }));
 }
 
+export function selectSubPanelTabs(
+  state: WorkbenchState,
+  panelId: PanelId | null = state.activePanelId
+): readonly SubPanelTabProjection[] {
+  const panel = state.panels.find((candidate) => candidate.id === panelId);
+  if (!panel?.subPanels || !panel.activeSubPanelId) return Object.freeze([]);
+  const ordered = [...panel.subPanels]
+    .filter((subPanel) => !subPanel.hidden)
+    .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
+  const panelSuffix = panelDomSuffix(panel.id);
+  return Object.freeze(ordered.map((subPanel, index) => {
+    const suffix = panelDomSuffix(subPanel.id as unknown as PanelId);
+    return Object.freeze({
+      panelId: panel.id,
+      subPanelId: subPanel.id,
+      subPanelIdAttribute: subPanel.id,
+      name: subPanel.name,
+      tabId: `pomegranate-sub-panel-tab-${panelSuffix}-${suffix}`,
+      surfaceId: `pomegranate-sub-panel-${panelSuffix}-${suffix}`,
+      layoutId: subPanel.layoutId,
+      scrollTop: subPanel.scrollTop,
+      selected: subPanel.id === panel.activeSubPanelId,
+      moveLeftDisabled: index === 0,
+      moveRightDisabled: index === ordered.length - 1
+    });
+  }));
+}
+
 export function selectPanelSurface(
   state: WorkbenchState,
   registry: WidgetRegistry,
@@ -93,9 +142,16 @@ export function selectPanelSurface(
 ): PanelSurfaceProjection | null {
   const activePanel = state.panels.find((panel) => panel.id === state.activePanelId);
   if (!activePanel) return null;
+  const activeSubPanel = activePanel.subPanels?.find((subPanel) => subPanel.id === activePanel.activeSubPanelId);
 
   const allFrames = Object.entries(state.placements)
     .filter(([, placement]) => placement.panelId === activePanel.id)
+    .filter(([, placement]) => {
+      const visible = placement.kind === 'shelved' ? placement.lastVisible : placement;
+      return activeSubPanel
+        ? visible.subPanelId === activeSubPanel.id
+        : visible.subPanelId === undefined;
+    })
     .flatMap(([instanceId, placement]) => {
       const instance = state.widgets[instanceId];
       if (!instance) return [];
@@ -126,8 +182,16 @@ export function selectPanelSurface(
     }));
   const suffix = panelDomSuffix(activePanel.id);
   const template = templates.resolve(activePanel);
-  const regions = template.ok ? Object.freeze(template.template.regions.map((region) => Object.freeze({
+  const laneWeights = activeSubPanel ? SUB_PANEL_LAYOUTS[activeSubPanel.layoutId].columns : null;
+  const projectedRegions = template.ok && laneWeights && template.template.family === 'columns'
+    ? template.template.regions.slice(0, laneWeights.length)
+    : template.ok
+      ? template.template.regions
+      : [];
+  const regions = template.ok ? Object.freeze(projectedRegions.map((region, lane) => Object.freeze({
     region,
+    lane,
+    laneWeight: laneWeights?.[lane] ?? 1,
     shelves: Object.freeze(state.shelves
       .filter((shelf) => shelf.panelId === activePanel.id && shelf.regionId === region.id)
       .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))
@@ -150,6 +214,9 @@ export function selectPanelSurface(
 
   return Object.freeze({
     panelId: activePanel.id,
+    activeSubPanelId: activeSubPanel?.id ?? null,
+    activeSubPanelLayoutId: activeSubPanel?.layoutId ?? null,
+    activeSubPanelScrollTop: activeSubPanel?.scrollTop ?? 0,
     tabId: `pomegranate-panel-tab-${suffix}`,
     surfaceId: `pomegranate-panel-${suffix}`,
     docks: Object.freeze({ left: docked('left'), main: docked('main'), right: docked('right') }),
@@ -175,18 +242,36 @@ export function createWidgetActions(
         return store.dispatch({ type: 'widget.place', instanceId, placement: null });
       }
       const manifest = store.registry.get(instance.type);
-      const shelfId = current?.kind === 'docked'
-        ? current.shelfId
+      const currentVisible = current?.kind === 'shelved' ? current.lastVisible : current;
+      const panel = state.panels.find((candidate) => candidate.id === panelId);
+      const subPanelId = currentVisible?.subPanelId ?? panel?.activeSubPanelId;
+      const activeSubPanel = panel?.subPanels?.find((candidate) => candidate.id === subPanelId);
+      const resolvedTemplate = panel ? store.templates.resolve(panel) : null;
+      let lane = currentVisible?.kind === 'docked' ? currentVisible.lane ?? 0 : 0;
+      let regionId = edge === 'main' ? 'stage' : edge;
+      if (activeSubPanel && resolvedTemplate?.ok && resolvedTemplate.template.family === 'columns') {
+        const laneCount = SUB_PANEL_LAYOUTS[activeSubPanel.layoutId].columns.length;
+        lane = edge === 'left' ? 0 : edge === 'right' ? laneCount - 1 : Math.min(1, laneCount - 1);
+        regionId = `column-${lane + 1}`;
+      }
+      const preferredShelfId = currentVisible?.kind === 'docked'
+        ? currentVisible.shelfId
         : manifest?.defaultPlacement.kind === 'docked'
           ? manifest.defaultPlacement.shelfId
           : 'primary';
+      const shelfId = state.shelves.find((shelf) => (
+        shelf.panelId === panelId && shelf.regionId === regionId && shelf.id === preferredShelfId
+      ))?.id ?? state.shelves.find((shelf) => (
+        shelf.panelId === panelId && shelf.regionId === regionId
+      ))?.id ?? preferredShelfId;
       return store.dispatch({
         type: 'widget.place',
         instanceId,
         placement: {
           kind: 'docked',
           panelId,
-          regionId: edge === 'main' ? 'stage' : edge,
+          ...(subPanelId === undefined ? {} : { subPanelId, lane }),
+          regionId,
           shelfId,
           order: Number.MAX_SAFE_INTEGER
         }
@@ -207,6 +292,9 @@ export function createWidgetActions(
         placement.kind === 'floating' ? placement.z : 0
       ))) + 1;
       const manifest = store.registry.get(instance.type);
+      const currentVisible = current?.kind === 'shelved' ? current.lastVisible : current;
+      const panel = state.panels.find((candidate) => candidate.id === panelId);
+      const subPanelId = currentVisible?.subPanelId ?? panel?.activeSubPanelId;
       const defaults = manifest?.defaultPlacement.kind === 'floating'
         ? manifest.defaultPlacement
         : { width: 360, height: 240 };
@@ -216,6 +304,7 @@ export function createWidgetActions(
         placement: {
           kind: 'floating',
           panelId,
+          ...(subPanelId === undefined ? {} : { subPanelId }),
           x: 24,
           y: 24,
           width: defaults.width,
@@ -234,6 +323,8 @@ export function createWidgetActions(
         .filter(([id, placement]) => id !== instanceId
           && placement.kind === 'docked'
           && placement.panelId === current.panelId
+          && placement.subPanelId === current.subPanelId
+          && placement.lane === current.lane
           && placement.regionId === current.regionId
           && placement.shelfId === current.shelfId
           && placement.order < current.order)

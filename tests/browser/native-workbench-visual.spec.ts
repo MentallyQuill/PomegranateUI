@@ -48,8 +48,19 @@ async function invokeWidgetAction(widget: ReturnType<Page['locator']>, name: str
   await widget.getByRole('menuitem', { name }).press('Enter');
 }
 
-async function setMaterialControls(page: Page, values: readonly [number, number, number, number]) {
+async function openAppearanceSettings(page: Page) {
   await page.getByRole('tab', { name: 'Settings' }).click();
+  const selector = page.locator('[data-sub-panel-selector-trigger]');
+  if (await selector.isVisible()) {
+    await selector.click();
+    await page.getByRole('option', { name: 'Appearance and Accessibility' }).click();
+  } else {
+    await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  }
+}
+
+async function setMaterialControls(page: Page, values: readonly [number, number, number, number]) {
+  await openAppearanceSettings(page);
   const themeSettings = page.getByRole('article', { name: 'Custom Theme' });
   for (const [label, value] of [
     ['Glass Density', values[0]],
@@ -78,7 +89,7 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);
   await shot(page, 'wide-scene.png');
 
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await openAppearanceSettings(page);
   await shot(page, 'wide-material-controls.png');
   await page.getByRole('tab', { name: 'Scene' }).click();
 
@@ -95,7 +106,7 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
 
   await fresh(page, 390, 844);
   await shot(page, 'compact-scene.png');
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await openAppearanceSettings(page);
   await shot(page, 'compact-settings.png');
 
   await fresh(page, 1440, 900);
@@ -125,11 +136,11 @@ test('Deep Current freezes reviewed phone and mobile desktop-site compositions',
 
 test('Theme Settings freezes the focused wide and compact authoring surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await openAppearanceSettings(page);
   await shot(page, 'wide-theme-settings.png');
 
   await fresh(page, 390, 844);
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await openAppearanceSettings(page);
   await invokeWidgetAction(page.locator('[data-widget-type="settings.custom-theme"]'), 'Focus Widget');
   await expect(page.getByRole('dialog', { name: 'Focused Custom Theme' })).toBeVisible();
   await shot(page, 'compact-theme-settings.png');

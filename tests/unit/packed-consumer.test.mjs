@@ -77,7 +77,7 @@ test('packed verifier proves an isolated Svelte recipe consumer', async () => {
 
   const manifest = JSON.parse(await readFile(path.join(root, 'registry', 'recipes', 'recipe-manifest.json'), 'utf8'));
   assert.equal(manifest.schema, 'pomegranate.ui.recipes.v1');
-  assert.equal(manifest.recipes.length, 7);
+  assert.equal(manifest.recipes.length, 8);
   for (const recipe of manifest.recipes) {
     assert.ok(recipe.files.length > 0, recipe.id);
     assert.deepEqual(Object.keys(recipe.sha256), recipe.files, recipe.id);
