@@ -1,18 +1,33 @@
 import { asWidgetInstanceId } from '@pomegranate-ui/contracts';
 import type { WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core';
 
+import {
+  buildShelfRails,
+  clampHeldRect,
+  resolveDockIntent,
+  stabilizeDockIntent,
+  type DockIntent,
+  type DockPoint,
+  type DockRect,
+  type DockTarget
+} from './widget-docking.js';
+
 interface DragCandidate {
   readonly pointerId: number;
   readonly handle: HTMLElement;
   readonly root: HTMLElement;
+  visualRoot: HTMLElement;
   readonly surface: HTMLElement;
   readonly startX: number;
   readonly startY: number;
-  readonly grabX: number;
-  readonly grabY: number;
+  grabX: number;
+  grabY: number;
   readonly origin: WidgetFrameProjection['placement'];
   active: boolean;
-  ghost: HTMLElement | null;
+  held: HTMLElement | null;
+  overlay: HTMLElement | null;
+  intent: DockIntent | null;
+  canFloat: boolean;
 }
 
 export interface WidgetDragController {
@@ -30,34 +45,241 @@ interface WidgetDragControllerOptions {
 
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 
+function rectOf(rect: DOMRect): DockRect {
+  return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+}
+
+function pointInside(point: DockPoint, rect: DockRect): boolean {
+  return point.x >= rect.x && point.x <= rect.x + rect.width
+    && point.y >= rect.y && point.y <= rect.y + rect.height;
+}
+
+function positionFixed(element: HTMLElement, rect: DockRect) {
+  element.style.left = `${rect.x}px`;
+  element.style.top = `${rect.y}px`;
+  element.style.width = `${rect.width}px`;
+  element.style.height = `${rect.height}px`;
+}
+
+function makeVisualClone(source: HTMLElement): HTMLElement {
+  const clone = source.cloneNode(true) as HTMLElement;
+  clone.removeAttribute('style');
+  for (const element of [clone, ...clone.querySelectorAll<HTMLElement>('*')]) {
+    element.removeAttribute('id');
+    element.removeAttribute('name');
+    element.removeAttribute('for');
+    element.removeAttribute('aria-controls');
+    element.removeAttribute('aria-labelledby');
+    element.removeAttribute('data-pomegranate-widget');
+    element.removeAttribute('data-widget-type');
+    element.removeAttribute('data-widget-drag-root');
+    element.removeAttribute('data-widget-drag-surface');
+    element.setAttribute('tabindex', '-1');
+    if (element instanceof HTMLButtonElement || element instanceof HTMLInputElement
+      || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+      element.disabled = true;
+    }
+  }
+  return clone;
+}
+
+function visiblePlacement(frame: WidgetFrameProjection) {
+  return frame.placement.kind === 'shelved' ? frame.placement.lastVisible : frame.placement;
+}
+
 export function createWidgetDragController(options: WidgetDragControllerOptions): WidgetDragController {
   let candidate: DragCandidate | null = null;
 
-  function createGhost(current: DragCandidate) {
-    const box = current.root.getBoundingClientRect();
-    const ghost = document.createElement('div');
-    ghost.className = 'widget-drag-ghost';
-    ghost.textContent = options.getFrame().title;
-    ghost.style.width = `${Math.min(box.width, 360)}px`;
-    document.body.append(ghost);
-    current.ghost = ghost;
-    current.root.classList.add('is-widget-dragging');
+  function createHeldState(current: DragCandidate, event: PointerEvent) {
+    const box = current.visualRoot.getBoundingClientRect();
+    const width = Math.min(Math.max(230, box.width), 360, Math.max(180, window.innerWidth - 16));
+    const height = Math.min(Math.max(120, box.height), 340, Math.max(120, window.innerHeight - 16));
+    const held = document.createElement('div');
+    held.className = 'widget-drag-preview';
+    held.dataset.pomPart = 'widget.drag-preview';
+    held.setAttribute('aria-hidden', 'true');
+    held.inert = true;
+    held.append(makeVisualClone(current.visualRoot));
+    held.style.width = `${width}px`;
+    held.style.height = `${height}px`;
+    document.body.append(held);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'widget-drop-overlay';
+    overlay.dataset.pomPart = 'widget.drop-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.append(overlay);
+
+    current.held = held;
+    current.overlay = overlay;
+    current.visualRoot.classList.add('is-widget-dragging');
+    current.visualRoot.dataset.widgetDragPlaceholder = 'true';
     document.body.classList.add('pom-widget-drag-active');
     options.setDragging(true);
+    updateHeldPosition(current, event);
   }
 
-  function updateGhost(current: DragCandidate, event: PointerEvent) {
-    if (!current.ghost) return;
-    current.ghost.style.left = `${event.clientX + 12}px`;
-    current.ghost.style.top = `${event.clientY + 12}px`;
+  function updateHeldPosition(current: DragCandidate, event: PointerEvent) {
+    if (!current.held) return;
+    const width = Number.parseFloat(current.held.style.width);
+    const height = Number.parseFloat(current.held.style.height);
+    const original = current.visualRoot.getBoundingClientRect();
+    const scaleX = original.width > 0 ? width / original.width : 1;
+    const scaleY = original.height > 0 ? height / original.height : 1;
+    const next = clampHeldRect(
+      { x: event.clientX, y: event.clientY },
+      { x: current.grabX * scaleX, y: current.grabY * scaleY },
+      { width, height },
+      { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight }
+    );
+    current.held.style.transform = `translate3d(${next.x}px, ${next.y}px, 0)`;
+  }
+
+  function activeOwner(current: DragCandidate, region: HTMLElement) {
+    const frame = options.getFrame();
+    const state = options.getStore().getState();
+    const panel = state.panels.find((entry) => entry.id === frame.placement.panelId);
+    const laneText = region.dataset.subPanelLane;
+    const lane = laneText === undefined ? undefined : Number(laneText);
+    return {
+      panelId: frame.placement.panelId,
+      ...(panel?.activeSubPanelId === undefined ? {} : { subPanelId: panel.activeSubPanelId }),
+      ...(lane === undefined || !Number.isInteger(lane) ? {} : { lane }),
+      regionId: region.dataset.pomegranateRegionSurface ?? ''
+    };
+  }
+
+  function collectTargets(current: DragCandidate): DockTarget[] {
+    const targets: DockTarget[] = [];
+    const sourceId = options.getFrame().instanceId;
+    for (const region of current.surface.querySelectorAll<HTMLElement>('[data-pomegranate-region-surface]')) {
+      const owner = activeOwner(current, region);
+      if (!owner.regionId) continue;
+      const regionRect = rectOf(region.getBoundingClientRect());
+      if (regionRect.width <= 0 || regionRect.height <= 0) continue;
+      const shelves = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')].map((shelf, index) => ({
+        id: shelf.dataset.pomegranateShelf ?? `shelf-${index}`,
+        order: Number(shelf.dataset.pomegranateShelfOrder ?? index),
+        rect: rectOf(shelf.getBoundingClientRect())
+      }));
+      targets.push(...buildShelfRails(regionRect, shelves, owner));
+
+      let otherWidgets = 0;
+      for (const wrapper of region.querySelectorAll<HTMLElement>('[data-widget-type]')) {
+        const article = wrapper.querySelector<HTMLElement>('[data-pomegranate-widget]');
+        const targetId = article?.dataset.pomegranateWidget;
+        if (!article || !targetId || targetId === sourceId || wrapper === current.visualRoot) continue;
+        otherWidgets += 1;
+        const articleRect = rectOf(article.getBoundingClientRect());
+        const header = article.querySelector<HTMLElement>(':scope > header[data-widget-drag-surface]');
+        const content = article.querySelector<HTMLElement>(':scope > [data-pom-part="widget.content"]');
+        const group = wrapper.closest<HTMLElement>('[data-widget-group]');
+        const target: DockTarget = {
+          ...owner,
+          id: `widget:${targetId}`,
+          kind: 'widget',
+          rect: articleRect,
+          ...(header ? { headerRect: rectOf(header.getBoundingClientRect()) } : {}),
+          ...(content ? { bodyRect: rectOf(content.getBoundingClientRect()) } : {}),
+          ...(wrapper.dataset.pomegranateShelf === undefined ? {} : { shelfId: wrapper.dataset.pomegranateShelf }),
+          order: Number(wrapper.dataset.pomegranateOrder ?? 0),
+          targetInstanceId: targetId,
+          ...(group?.dataset.widgetGroupId === undefined ? {} : { groupId: group.dataset.widgetGroupId }),
+          label: article.getAttribute('aria-label') ?? targetId
+        };
+        targets.push(target);
+        if (group) {
+          const tabs = group.querySelector<HTMLElement>(':scope > .widget-group-tabs');
+          if (tabs) targets.push({
+            ...target,
+            id: `group:${group.dataset.widgetGroupId ?? targetId}`,
+            kind: 'group-header',
+            rect: rectOf(tabs.getBoundingClientRect())
+          });
+        }
+      }
+      if (otherWidgets === 0) targets.push({
+        ...owner,
+        id: `region:${owner.regionId}`,
+        kind: 'region',
+        rect: regionRect,
+        empty: true,
+        label: `Dock in ${region.getAttribute('aria-label') ?? owner.regionId}`
+      });
+    }
+    return targets;
+  }
+
+  function paintTargets(current: DragCandidate, targets: readonly DockTarget[], intent: DockIntent | null) {
+    const overlay = current.overlay;
+    if (!overlay) return;
+    overlay.replaceChildren();
+    for (const target of targets) {
+      if (target.kind !== 'rail') continue;
+      const rail = document.createElement('div');
+      rail.className = 'widget-drop-rail';
+      rail.dataset.pomPart = 'widget.drop-rail';
+      rail.dataset.dropRegion = target.regionId;
+      rail.dataset.dropRailKind = target.railKind;
+      rail.dataset.dropInsertOrder = String(target.insertOrder ?? 0);
+      rail.dataset.active = String(intent?.targetId === target.id);
+      positionFixed(rail, target.rect);
+      const label = document.createElement('span');
+      label.textContent = target.label ?? 'New shelf';
+      rail.append(label);
+      overlay.append(rail);
+    }
+    if (!intent) return;
+    const snap = document.createElement('div');
+    snap.className = 'widget-snap-preview';
+    snap.dataset.pomPart = 'widget.snap-preview';
+    snap.dataset.dropIntent = intent.kind;
+    snap.dataset.dropRegion = intent.regionId;
+    positionFixed(snap, intent.previewRect);
+    overlay.append(snap);
+    if (intent.kind === 'tab') {
+      const marker = document.createElement('div');
+      marker.className = 'widget-tab-insertion';
+      marker.dataset.pomPart = 'widget.tab-insertion';
+      positionFixed(marker, {
+        x: intent.previewRect.x + 8,
+        y: intent.previewRect.y + 4,
+        width: 2,
+        height: Math.max(20, Math.min(32, intent.previewRect.height - 8))
+      });
+      overlay.append(marker);
+    }
+    const label = document.createElement('div');
+    label.className = 'widget-drop-intent-label';
+    label.textContent = intent.label;
+    positionFixed(label, {
+      x: intent.previewRect.x + 12,
+      y: intent.previewRect.y + 8,
+      width: Math.max(120, Math.min(240, intent.previewRect.width - 24)),
+      height: 26
+    });
+    overlay.append(label);
+  }
+
+  function updateDropState(current: DragCandidate, event: PointerEvent) {
+    const point = { x: event.clientX, y: event.clientY };
+    const targets = collectTargets(current);
+    const next = resolveDockIntent(point, targets);
+    current.intent = stabilizeDockIntent(point, current.intent, next, 10);
+    current.canFloat = pointInside(point, rectOf(current.surface.getBoundingClientRect()));
+    paintTargets(current, targets, current.intent);
+    current.held?.toggleAttribute('data-float-ready', current.intent === null && current.canFloat);
   }
 
   function cleanup() {
     if (!candidate) return;
-    candidate.root.classList.remove('is-widget-dragging');
-    candidate.ghost?.remove();
+    candidate.visualRoot.classList.remove('is-widget-dragging');
+    delete candidate.visualRoot.dataset.widgetDragPlaceholder;
+    candidate.held?.remove();
+    candidate.overlay?.remove();
     document.body.classList.remove('pom-widget-drag-active');
     window.removeEventListener('keydown', escapeCancel);
+    candidate.handle.removeEventListener('lostpointercapture', lostCapture);
     options.setDragging(false);
     candidate = null;
   }
@@ -68,12 +290,16 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     cleanup();
   }
 
+  function lostCapture() {
+    if (candidate?.active) cleanup();
+  }
+
   function floatAt(current: DragCandidate, event: PointerEvent) {
     const frame = options.getFrame();
     const store = options.getStore();
     const state = store.getState();
     const surfaceBox = current.surface.getBoundingClientRect();
-    const rootBox = current.root.getBoundingClientRect();
+    const rootBox = current.visualRoot.getBoundingClientRect();
     const width = frame.placement.kind === 'floating' ? frame.placement.width : Math.min(420, Math.max(320, rootBox.width));
     const height = frame.placement.kind === 'floating' ? frame.placement.height : Math.min(520, Math.max(240, rootBox.height));
     const maxX = Math.max(8, surfaceBox.width - width - 8);
@@ -83,7 +309,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     const z = Math.max(0, ...Object.values(state.placements).map((placement) => (
       placement.kind === 'floating' ? placement.z : 0
     ))) + 1;
-    const visible = frame.placement.kind === 'shelved' ? frame.placement.lastVisible : frame.placement;
+    const visible = visiblePlacement(frame);
     store.dispatch({
       type: 'widget.place',
       instanceId: frame.instanceId,
@@ -100,97 +326,119 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     });
   }
 
-  function acceptDrop(current: DragCandidate, event: PointerEvent) {
+  function ownerFields(intent: DockIntent) {
+    const state = options.getStore().getState();
+    const panel = state.panels.find((entry) => entry.id === options.getFrame().placement.panelId);
+    return panel?.activeSubPanelId === undefined || intent.lane === undefined
+      ? {}
+      : { subPanelId: panel.activeSubPanelId, lane: intent.lane };
+  }
+
+  function createShelfAndPlace(intent: DockIntent, order: number): boolean {
     const frame = options.getFrame();
     const store = options.getStore();
-    const target = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
-    if (!target || !current.surface.contains(target)) return;
-    const visible = frame.placement.kind === 'shelved' ? frame.placement.lastVisible : frame.placement;
+    const shelfId = `${intent.regionId}-shelf-${store.getState().revision + 1}`;
+    const created = store.dispatch({
+      type: 'shelf.create',
+      shelf: {
+        id: shelfId,
+        panelId: frame.placement.panelId,
+        regionId: intent.regionId,
+        order,
+        weight: 1
+      }
+    });
+    if (!created.ok) return false;
+    return store.dispatch({
+      type: 'widget.place',
+      instanceId: frame.instanceId,
+      placement: {
+        kind: 'docked',
+        panelId: frame.placement.panelId,
+        ...ownerFields(intent),
+        regionId: intent.regionId,
+        shelfId,
+        order: 0
+      }
+    }).ok;
+  }
 
-    const targetWidget = target.closest<HTMLElement>('[data-pomegranate-widget]');
-    const targetIdText = targetWidget?.dataset.pomegranateWidget;
-    if (targetIdText && targetIdText !== frame.instanceId && frame.placement.kind === 'docked') {
-      const targetId = asWidgetInstanceId(targetIdText);
-      const targetPlacement = store.getState().placements[targetId];
-      const groupId = targetPlacement?.kind === 'docked' && targetPlacement.group
-        ? targetPlacement.group.id
-        : `group-${targetId}`;
-      const grouped = store.dispatch({
+  function acceptIntent(intent: DockIntent): boolean {
+    const frame = options.getFrame();
+    const store = options.getStore();
+    if (intent.kind === 'tab' && intent.targetInstanceId) {
+      const targetId = asWidgetInstanceId(intent.targetInstanceId);
+      const target = store.getState().placements[targetId];
+      if (target?.kind !== 'docked') return false;
+      const source = visiblePlacement(frame);
+      if (source.kind !== 'docked'
+        || source.panelId !== target.panelId
+        || source.subPanelId !== target.subPanelId) {
+        const placed = store.dispatch({
+          type: 'widget.place',
+          instanceId: frame.instanceId,
+          placement: {
+            kind: 'docked',
+            panelId: target.panelId,
+            ...(target.subPanelId === undefined || target.lane === undefined ? {} : { subPanelId: target.subPanelId, lane: target.lane }),
+            regionId: target.regionId,
+            shelfId: target.shelfId,
+            order: target.order + 1
+          }
+        });
+        if (!placed.ok) return false;
+      }
+      return store.dispatch({
         type: 'widget.group',
         instanceId: frame.instanceId,
         targetInstanceId: targetId,
-        groupId
-      });
-      if (grouped.ok) return;
+        groupId: target.group?.id ?? intent.groupId ?? `group-${targetId}`
+      }).ok;
     }
 
-    const seam = target.closest<HTMLElement>('[data-shelf-insertion]');
-    if (seam?.dataset.shelfInsertion === 'left' || seam?.dataset.shelfInsertion === 'right') {
-      const regionId = seam.dataset.shelfInsertion;
+    if (intent.kind === 'insert-before' || intent.kind === 'insert-after') {
       const state = store.getState();
-      const shelfId = `${regionId}-shelf-${state.revision + 1}`;
-      const regionShelves = state.shelves.filter((shelf) => (
-        shelf.panelId === frame.placement.panelId && shelf.regionId === regionId
+      const targetShelf = state.shelves.find((shelf) => (
+        shelf.panelId === frame.placement.panelId
+        && shelf.regionId === intent.regionId
+        && shelf.id === intent.shelfId
       ));
+      if (!targetShelf) return false;
+      return createShelfAndPlace(intent, targetShelf.order + (intent.kind === 'insert-after' ? 1 : 0));
+    }
+
+    if (intent.kind === 'shelf') {
+      return createShelfAndPlace(intent, intent.insertOrder ?? 0);
+    }
+
+    const state = store.getState();
+    let shelf = state.shelves
+      .filter((entry) => entry.panelId === frame.placement.panelId && entry.regionId === intent.regionId)
+      .sort((left, right) => left.order - right.order)[0];
+    if (!shelf) {
+      const shelfId = 'primary';
       const created = store.dispatch({
         type: 'shelf.create',
-        shelf: {
-          id: shelfId,
-          panelId: frame.placement.panelId,
-          regionId,
-          order: regionShelves.length,
-          weight: 1
-        }
+        shelf: { id: shelfId, panelId: frame.placement.panelId, regionId: intent.regionId, order: 0, weight: 1 }
       });
-      if (!created.ok) return;
-      store.dispatch({
-        type: 'widget.place',
-        instanceId: frame.instanceId,
-        placement: {
-          kind: 'docked',
-          panelId: frame.placement.panelId,
-          ...(visible.subPanelId === undefined || visible.kind !== 'docked' || visible.lane === undefined
-            ? {}
-            : { subPanelId: visible.subPanelId, lane: visible.lane }),
-          regionId,
-          shelfId,
-          order: Number.MAX_SAFE_INTEGER
-        }
-      });
-      return;
+      if (!created.ok) return false;
+      shelf = store.getState().shelves.find((entry) => (
+        entry.panelId === frame.placement.panelId && entry.regionId === intent.regionId && entry.id === shelfId
+      ));
     }
-
-    const dock = target.closest<HTMLElement>('[data-pomegranate-region-surface]');
-    const regionId = dock?.dataset.pomegranateRegionSurface;
-    const legacyEdge = dock?.dataset.pomegranateDock;
-    if (regionId) {
-      const state = store.getState();
-      const panel = state.panels.find((candidate) => candidate.id === frame.placement.panelId);
-      const laneText = dock.dataset.subPanelLane;
-      const lane = laneText === undefined ? undefined : Number(laneText);
-      const subPanelId = panel?.activeSubPanelId;
-      if (subPanelId === undefined && legacyEdge !== 'left' && legacyEdge !== 'right') {
-        floatAt(current, event);
-        return;
+    if (!shelf) return false;
+    return store.dispatch({
+      type: 'widget.place',
+      instanceId: frame.instanceId,
+      placement: {
+        kind: 'docked',
+        panelId: frame.placement.panelId,
+        ...ownerFields(intent),
+        regionId: intent.regionId,
+        shelfId: shelf.id,
+        order: Number.MAX_SAFE_INTEGER
       }
-      store.dispatch({
-        type: 'widget.place',
-        instanceId: frame.instanceId,
-        placement: {
-          kind: 'docked',
-          panelId: frame.placement.panelId,
-          ...(subPanelId === undefined || lane === undefined || !Number.isInteger(lane)
-            ? {}
-            : { subPanelId, lane }),
-          regionId,
-          shelfId: 'primary',
-          order: Number.MAX_SAFE_INTEGER
-        }
-      });
-      return;
-    }
-
-    floatAt(current, event);
+    }).ok;
   }
 
   return Object.freeze({
@@ -198,13 +446,17 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       if (event.button !== 0 || candidate) return;
       const handle = event.currentTarget as HTMLElement;
       const root = handle.closest<HTMLElement>('[data-widget-drag-root], [data-widget-type]');
+      const visualRoot = root?.matches('[data-widget-type]')
+        ? root
+        : root?.closest<HTMLElement>('[data-widget-group]')?.querySelector<HTMLElement>('[data-widget-type]') ?? root;
       const surface = handle.closest<HTMLElement>('[data-pomegranate-panel]');
-      if (!root || !surface) return;
-      const box = root.getBoundingClientRect();
+      if (!root || !visualRoot || !surface) return;
+      const box = visualRoot.getBoundingClientRect();
       candidate = {
         pointerId: event.pointerId,
         handle,
         root,
+        visualRoot,
         surface,
         startX: event.clientX,
         startY: event.clientY,
@@ -212,9 +464,13 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         grabY: event.clientY - box.top,
         origin: options.getFrame().placement,
         active: false,
-        ghost: null
+        held: null,
+        overlay: null,
+        intent: null,
+        canFloat: false
       };
       try { handle.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers need no capture. */ }
+      handle.addEventListener('lostpointercapture', lostCapture);
       window.addEventListener('keydown', escapeCancel);
       event.preventDefault();
     },
@@ -222,16 +478,30 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     pointerMove(event: PointerEvent) {
       if (!candidate || candidate.pointerId !== event.pointerId) return;
       if (!candidate.active && Math.hypot(event.clientX - candidate.startX, event.clientY - candidate.startY) >= 4) {
+        const currentVisualRoot = candidate.root.matches('[data-widget-type]')
+          ? candidate.root
+          : candidate.root.closest<HTMLElement>('[data-widget-group]')?.querySelector<HTMLElement>('[data-widget-type]');
+        if (currentVisualRoot) {
+          const box = currentVisualRoot.getBoundingClientRect();
+          candidate.visualRoot = currentVisualRoot;
+          candidate.grabX = candidate.startX - box.left;
+          candidate.grabY = candidate.startY - box.top;
+        }
         candidate.active = true;
-        createGhost(candidate);
+        createHeldState(candidate, event);
       }
-      if (candidate.active) updateGhost(candidate, event);
+      if (!candidate.active) return;
+      updateHeldPosition(candidate, event);
+      updateDropState(candidate, event);
     },
 
     pointerUp(event: PointerEvent) {
       if (!candidate || candidate.pointerId !== event.pointerId) return;
       const current = candidate;
-      if (current.active) acceptDrop(current, event);
+      if (current.active) {
+        if (current.intent) acceptIntent(current.intent);
+        else if (current.canFloat) floatAt(current, event);
+      }
       cleanup();
     },
 

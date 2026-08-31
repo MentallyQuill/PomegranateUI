@@ -78,8 +78,6 @@
       {:else}
         <PanelTemplateSurface {surface} {store} {renderWidget} {titleFor} />
       {/if}
-      <div data-shelf-insertion="left" aria-hidden="true"></div>
-      <div data-shelf-insertion="right" aria-hidden="true"></div>
       <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
       <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />
       {#if surface.templateFamily === 'story-stage'}

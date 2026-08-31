@@ -63,6 +63,7 @@ export type LabThemeDiagnostic = ThemeDiagnostic | PresentationDiagnostic;
 
 export interface LabThemeAuthoringSnapshot {
   readonly editable: unknown;
+  readonly lastValidEditable: PersistedThemeDraft;
   readonly applied: LabThemeSnapshot;
   readonly diagnostics: readonly LabThemeDiagnostic[];
   readonly dirty: boolean;
@@ -300,6 +301,7 @@ export function createLabThemeController(options: {
 
   const authoring = (): LabThemeAuthoringSnapshot => Object.freeze({
     editable,
+    lastValidEditable: structuredClone(validDrafts.get(snapshot.activeId) ?? seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!)),
     applied: snapshot,
     diagnostics: authoringDiagnostics,
     dirty

@@ -395,6 +395,44 @@ test('non-compact Panel tabs keep secondary actions out of their visible spacing
   expect(Math.max(...gaps)).toBeLessThanOrEqual(8);
 });
 
+test('the active Panel overflow menu escapes the tab strip and remains functional', async ({ page }) => {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 720, height: 1280 }, { width: 412, height: 915 }]) {
+    await openFresh(page, viewport.width, viewport.height);
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    const trigger = page.getByRole('button', { name: 'Manage Settings' });
+    await expect(trigger).toBeVisible();
+    const triggerAndTab = await trigger.evaluate((element) => {
+      const triggerRect = element.getBoundingClientRect();
+      const tabRect = element.closest('[data-pomegranate-panel-tab]')!.querySelector('[role="tab"]')!.getBoundingClientRect();
+      return { triggerWidth: triggerRect.width, tabWidth: tabRect.width };
+    });
+    expect(triggerAndTab.tabWidth - triggerAndTab.triggerWidth).toBeGreaterThanOrEqual(48);
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+
+    const menu = page.getByRole('menu', { name: 'Settings Panel actions' });
+    await expect(menu).toBeVisible();
+    const geometry = await menu.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const tabs = document.querySelector('[role="tablist"][aria-label="Panels"]')!.getBoundingClientRect();
+      return {
+        width: rect.width,
+        height: rect.height,
+        insideViewport: rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight,
+        extendsBeyondTabStrip: rect.bottom > tabs.bottom + 20
+      };
+    });
+    expect(geometry.width).toBeGreaterThan(180);
+    expect(geometry.height).toBeGreaterThan(180);
+    expect(geometry.insideViewport).toBe(true);
+    expect(geometry.extendsBeyondTabStrip).toBe(true);
+
+    await page.keyboard.press('Escape');
+    await expect(menu).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+  }
+});
+
 test('Atmospheric composition keeps developer chrome out of the default stage and keyboard reachable', async ({ page }) => {
   await openFresh(page, 1600, 900);
   await expect(page.locator('.context-rail, .lab-footer')).toHaveCount(0);

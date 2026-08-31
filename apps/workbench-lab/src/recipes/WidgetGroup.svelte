@@ -21,6 +21,7 @@
     return leftOrder - rightOrder || left.instanceId.localeCompare(right.instanceId);
   }));
   const active = $derived(ordered.find((frame) => frame.placement.kind === 'docked' && frame.placement.group?.active) ?? ordered[0]);
+  const groupId = $derived(active?.placement.kind === 'docked' ? active.placement.group?.id : undefined);
   let dragFrame = $state<WidgetFrameProjection | null>(null);
   let dragging = $state(false);
   const drag = createWidgetDragController({
@@ -30,6 +31,10 @@
   });
 
   function dragPointerDown(event: PointerEvent, frame: WidgetFrameProjection) {
+    const placement = store.getState().placements[frame.instanceId];
+    if (placement?.kind === 'docked' && !placement.group?.active) {
+      activate(frame);
+    }
     dragFrame = frame;
     drag.pointerDown(event);
   }
@@ -54,7 +59,7 @@
   }
 </script>
 
-<section class="widget-group" class:is-dragging={dragging} role="group" aria-label="Widget group" data-widget-group data-pom-part="group.surface">
+<section class="widget-group" class:is-dragging={dragging} role="group" aria-label="Widget group" data-widget-group data-widget-group-id={groupId} data-pom-part="group.surface">
   <div class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets" data-pom-part="widget.header">
     {#each ordered as frame, index (frame.instanceId)}
       {@const title = titleFor?.(frame) ?? frame.title}

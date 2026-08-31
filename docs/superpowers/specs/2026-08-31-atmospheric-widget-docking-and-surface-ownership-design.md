@@ -11,7 +11,7 @@ The shared Workbench will reproduce the Atmospheric interaction language while p
 
 - The preserved Atmospheric Workbench is the authority for drag geometry, held-state treatment, drop previews, insertion behavior, hysteresis, cancellation, and motion.
 - PomegranateUI remains the authority for store commands, Panel/Widget identity, accessibility, theme expressions, persistence, and reusable recipes.
-- Theme switching must keep one mounted Workbench tree. No theme-ID selectors, theme-specific component forks, or Sonder domain imports may be introduced.
+- Theme switching must keep one mounted Workbench tree. No theme-ID selectors, theme-specific component forks, or adopter-domain imports may be introduced.
 - Drag previews are ephemeral interaction state. They must never enter the persisted Workbench schema.
 
 ## Current failures

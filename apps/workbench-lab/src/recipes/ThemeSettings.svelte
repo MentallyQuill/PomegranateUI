@@ -15,6 +15,7 @@
     readonly ok: boolean;
     readonly authoring: {
       readonly editable: unknown;
+      readonly lastValidEditable?: PersistedThemeDraft;
       readonly diagnostics: readonly { readonly message: string; readonly path: readonly (string | number)[] }[];
       readonly dirty: boolean;
     };
@@ -23,6 +24,8 @@
   type ThemeAuthoring = {
     readonly authoring: {
       readonly editable: unknown;
+      readonly lastValidEditable?: PersistedThemeDraft;
+      readonly applied: { readonly resolved: { readonly theme: { readonly label: string } } };
       readonly diagnostics: readonly { readonly message: string; readonly path: readonly (string | number)[] }[];
       readonly dirty: boolean;
     };
@@ -41,11 +44,13 @@
   let {
     theme,
     eyedropper,
-    contract
+    contract,
+    presentation = 'full'
   }: {
     theme: ThemeAuthoring;
     eyedropper: EyeDropper;
     contract?: Contract;
+    presentation?: 'compact' | 'full';
   } = $props();
 
   const ROLE_LABELS: Readonly<Record<ThemeDraftColorRole, string>> = Object.freeze({
@@ -56,6 +61,14 @@
     text: 'Text',
     source: 'Source'
   });
+  const EDITOR_LABELS: Readonly<Record<ThemeDraftColorRole, string>> = Object.freeze({
+    canvas: 'Canvas Ink',
+    glass: 'Glass Surface',
+    chrome: 'Control Chrome',
+    ambient: 'Ambient Accent',
+    text: 'Interface Text',
+    source: 'Source Gold'
+  });
   const MATERIALS = [
     ['glassDensity', 'Glass Density'],
     ['barOpacity', 'Bar Opacity'],
@@ -65,15 +78,15 @@
   const exactHex = /^#[0-9a-f]{6}$/i;
 
   function parseEditable(value: unknown): PersistedThemeDraft {
-    return structuredClone(PersistedThemeDraftSchema.parse(value));
+    const parsed = PersistedThemeDraftSchema.safeParse(value);
+    const fallback = parsed.success
+      ? parsed.data
+      : PersistedThemeDraftSchema.parse(theme.authoring.lastValidEditable);
+    return structuredClone(fallback);
   }
 
   function initialEditable(): PersistedThemeDraft {
     return parseEditable(theme.authoring.editable);
-  }
-
-  function initialDiagnostics() {
-    return [...theme.authoring.diagnostics];
   }
 
   function snapshotDraft(): PersistedThemeDraft {
@@ -90,28 +103,38 @@
     return `#${numbers.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
   }
 
-  let draft = $state(initialEditable());
-  let selectedRole: ThemeDraftColorRole = $state('canvas');
+  const first = initialEditable();
+  let draft = $state(first);
+  let selectedRole: ThemeDraftColorRole | null = $state(null);
   let roleInputs: Record<ThemeDraftColorRole, string> = $state(Object.fromEntries(
-    THEME_DRAFT_COLOR_ROLES.map((role) => [role, initialEditable().draft.colors[role]])
+    THEME_DRAFT_COLOR_ROLES.map((role) => [role, first.draft.colors[role]])
   ) as Record<ThemeDraftColorRole, string>);
-  let rgbInputs: [string, string, string] = $state(rgb(initialEditable().draft.colors.canvas));
-  let diagnostics = $state(initialDiagnostics());
+  let rgbInputs: [string, string, string] = $state(rgb(first.draft.colors.canvas));
+  let diagnostics = $state<{ readonly message: string; readonly path: readonly (string | number)[] }[]>([]);
   let status = $state('Theme draft ready.');
-  let activeBase = $state(initialEditable().draft.baseTargetId);
-  const hsv = $derived(hexToHsv(draft.draft.colors[selectedRole]));
+  let authoringSignature = $state('');
+  const activeRole = $derived(selectedRole ?? 'canvas');
+  const hsv = $derived(hexToHsv(draft.draft.colors[activeRole]));
+  const activeLabel = $derived(theme.authoring.applied.resolved.theme.label);
+
+  $effect(() => {
+    if (presentation === 'full' && selectedRole === null) selectedRole = 'canvas';
+  });
 
   function syncFrom(next: unknown) {
     const parsed = parseEditable(next);
     draft = parsed;
-    activeBase = parsed.draft.baseTargetId;
     for (const role of THEME_DRAFT_COLOR_ROLES) roleInputs[role] = parsed.draft.colors[role];
-    rgbInputs = rgb(parsed.draft.colors[selectedRole]);
+    rgbInputs = rgb(parsed.draft.colors[activeRole]);
   }
 
   $effect(() => {
-    const parsed = PersistedThemeDraftSchema.safeParse(theme.authoring.editable);
-    if (parsed.success && parsed.data.draft.baseTargetId !== activeBase) syncFrom(parsed.data);
+    const signature = JSON.stringify(theme.authoring.editable);
+    const nextDiagnostics = [...theme.authoring.diagnostics];
+    if (signature === authoringSignature) return;
+    authoringSignature = signature;
+    diagnostics = nextDiagnostics;
+    if (PersistedThemeDraftSchema.safeParse(theme.authoring.editable).success) syncFrom(theme.authoring.editable);
   });
 
   function apply(nextStatus = 'Theme draft applied locally.') {
@@ -126,15 +149,16 @@
   }
 
   function setHex(raw: string) {
-    roleInputs[selectedRole] = raw;
+    const role = activeRole;
+    roleInputs[role] = raw;
     if (exactHex.test(raw)) {
-      draft.draft.colors[selectedRole] = raw.toLowerCase();
+      draft.draft.colors[role] = raw.toLowerCase();
       rgbInputs = rgb(raw);
-      apply(`${ROLE_LABELS[selectedRole]} updated.`);
+      apply(`${ROLE_LABELS[role]} updated.`);
       return;
     }
     const invalid = snapshotDraft() as unknown as { draft: { colors: Record<string, string> } };
-    invalid.draft.colors[selectedRole] = raw;
+    invalid.draft.colors[role] = raw;
     const result = theme.editDraft(invalid);
     diagnostics = [...result.authoring.diagnostics];
     status = result.authoring.diagnostics[0]?.message ?? 'Enter an exact #RRGGBB color.';
@@ -145,17 +169,18 @@
     const next = rgbHex(rgbInputs);
     if (next) setHex(next);
     else {
-      diagnostics = [{ message: 'RGB channels must be whole numbers from 0 to 255.', path: ['draft', 'colors', selectedRole] }];
+      diagnostics = [{ message: 'RGB channels must be whole numbers from 0 to 255.', path: ['draft', 'colors', activeRole] }];
       status = diagnostics[0]!.message;
     }
   }
 
   function setHsv(next: { hue: number; saturation: number; value: number }) {
+    const role = activeRole;
     const hex = hsvToHex(next);
-    roleInputs[selectedRole] = hex;
-    draft.draft.colors[selectedRole] = hex;
+    roleInputs[role] = hex;
+    draft.draft.colors[role] = hex;
     rgbInputs = rgb(hex);
-    apply(`${ROLE_LABELS[selectedRole]} updated.`);
+    apply(`${ROLE_LABELS[role]} updated.`);
   }
 
   function setMaterial(id: (typeof MATERIALS)[number][0], value: number) {
@@ -175,7 +200,7 @@
       return;
     }
     setHex(sampled);
-    status = `${ROLE_LABELS[selectedRole]} sampled with Eyedropper.`;
+    status = `${ROLE_LABELS[activeRole]} sampled with Eyedropper.`;
   }
 
   function reset() {
@@ -192,72 +217,165 @@
     diagnostics = [...result.authoring.diagnostics];
     status = result.ok ? 'Theme draft saved on this device.' : result.authoring.diagnostics[0]?.message ?? 'Theme draft could not be saved.';
   }
+
+  function scrollWithKeyboard(event: KeyboardEvent) {
+    if (event.target !== event.currentTarget || (event.key !== 'Home' && event.key !== 'End')) return;
+    event.preventDefault();
+    const region = event.currentTarget as HTMLElement;
+    region.scrollTop = event.key === 'Home' ? 0 : region.scrollHeight;
+  }
 </script>
 
-<div class="theme-settings" data-surface-presentation="theme-settings">
-  {#if contract}
-    <p class="surface-scope">{contract.scope}</p>
-    <dl class="surface-contract-facts" aria-label="Visible surface contract">
-      {#each contract.rows as row (row[0])}<div><dt>{row[0]}</dt><dd>{row[1]}</dd></div>{/each}
-    </dl>
-  {/if}
-
-  <section class="theme-settings-colors" aria-label="Semantic colors">
-    <h3>Semantic colors</h3>
-    <div class="theme-role-swatches" role="group" aria-label="Theme color role">
-      {#each THEME_DRAFT_COLOR_ROLES as role (role)}
-        <button
-          type="button"
-          data-pom-part="button.surface"
-          aria-label={ROLE_LABELS[role]}
-          aria-pressed={selectedRole === role}
-          onclick={() => selectRole(role)}
-        ><i style={`--theme-swatch:${draft.draft.colors[role]}`} aria-hidden="true"></i><span>{ROLE_LABELS[role]}</span></button>
-      {/each}
-    </div>
-    <div class="theme-color-editor">
-      <ColorPlane
-        hue={hsv.hue}
-        saturation={hsv.saturation}
-        value={hsv.value}
-        onchange={(next) => setHsv({ hue: hsv.hue, ...next })}
-      />
-      <HueControl value={hsv.hue} onchange={(hue) => setHsv({ hue, saturation: hsv.saturation, value: hsv.value })} />
-      <div class="theme-channel-fields">
-        <label class="theme-hex-field"><span>Hex</span><input data-pom-part="field.surface" aria-label="Hex color" value={roleInputs[selectedRole]} oninput={(event) => setHex(event.currentTarget.value)} /></label>
-        {#each ['Red', 'Green', 'Blue'] as label, index (label)}
-          <label><span>{label}</span><input data-pom-part="field.surface" aria-label={label} inputmode="numeric" value={rgbInputs[index]} oninput={(event) => setRgb(index, event.currentTarget.value)} /></label>
+<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (compact overflow owner implements Home/End scrolling) -->
+<div
+  class:theme-settings={presentation === 'full'}
+  class:compact-theme={presentation === 'compact'}
+  data-theme-settings-owner="canonical"
+  data-theme-settings-presentation={presentation}
+  data-surface-presentation={presentation === 'compact' ? 'compact-theme' : 'theme-settings'}
+  role={presentation === 'compact' ? 'region' : undefined}
+  aria-label={presentation === 'compact' ? 'Custom Theme controls' : undefined}
+  tabindex={presentation === 'compact' ? 0 : undefined}
+  onkeydown={presentation === 'compact' ? scrollWithKeyboard : undefined}
+>
+  {#if presentation === 'compact'}
+    {#if selectedRole}
+      <section class="compact-color-editor" aria-label={`${EDITOR_LABELS[selectedRole]} editor`}>
+        <header><strong>{EDITOR_LABELS[selectedRole]}</strong><span>Edited</span></header>
+        <ColorPlane
+          hue={hsv.hue}
+          saturation={hsv.saturation}
+          value={hsv.value}
+          onchange={(next) => setHsv({ hue: hsv.hue, ...next })}
+        />
+        <HueControl value={hsv.hue} onchange={(hue) => setHsv({ hue, saturation: hsv.saturation, value: hsv.value })} />
+        <div class="compact-color-fields">
+          <label class="compact-hex-field"><span>Hex</span><input data-pom-part="field.surface" aria-label="Hex color" value={roleInputs[activeRole]} oninput={(event) => setHex(event.currentTarget.value)} /></label>
+          {#each ['Red', 'Green', 'Blue'] as label, index (label)}
+            <label><span>{label}</span><input data-pom-part="field.surface" aria-label={label} inputmode="numeric" value={rgbInputs[index]} oninput={(event) => setRgb(index, event.currentTarget.value)} /></label>
+          {/each}
+        </div>
+        <button type="button" data-pom-part="button.surface" disabled={!eyedropper.available()} onclick={sampleColor}>
+          {eyedropper.available() ? 'Use Eyedropper' : 'Eyedropper unavailable'}
+        </button>
+        <button type="button" data-pom-part="button.surface" onclick={() => { selectedRole = null; }}>Back to theme overview</button>
+      </section>
+    {:else}
+      <header class="compact-theme-identity"><strong>{activeLabel}</strong><span>Edited</span></header>
+      <div class="compact-theme-swatches" role="group" aria-label="Semantic theme colors">
+        {#each THEME_DRAFT_COLOR_ROLES as role (role)}
+          <button
+            type="button"
+            data-pom-part="button.surface"
+            aria-label={ROLE_LABELS[role]}
+            style={`--theme-swatch:${draft.draft.colors[role]};background-color:${draft.draft.colors[role]}`}
+            onclick={() => selectRole(role)}
+          ></button>
         {/each}
       </div>
-      <button type="button" data-pom-part="button.surface" disabled={!eyedropper.available()} onclick={sampleColor}>
-        {eyedropper.available() ? 'Use Eyedropper' : 'Eyedropper unavailable'}
-      </button>
-    </div>
-  </section>
+      <section class="compact-theme-materials" aria-label="Materials">
+        {#each MATERIALS as control (control[0])}
+          <label>
+            <span>{control[1]}</span><output>{draft.draft.materials[control[0]]}%</output>
+            <input
+              data-pom-part="slider.input"
+              aria-label={control[1]}
+              type="range"
+              min="0"
+              max="100"
+              value={draft.draft.materials[control[0]]}
+              style={`--pom-slider-progress:${compileSliderProgress(draft.draft.materials[control[0]], 0, 100)}`}
+              oninput={(event) => setMaterial(control[0], Number(event.currentTarget.value))}
+            />
+          </label>
+        {/each}
+      </section>
+    {/if}
 
-  <section aria-label="Materials">
-    <h3>Materials</h3>
-    <div class="theme-settings-ranges">
-      {#each MATERIALS as control (control[0])}
-        <label><span>{control[1]}</span><output>{draft.draft.materials[control[0]]}%</output><input data-pom-part="slider.input" aria-label={control[1]} type="range" min="0" max="100" value={draft.draft.materials[control[0]]} style={`--pom-slider-progress:${compileSliderProgress(draft.draft.materials[control[0]], 0, 100)}`} oninput={(event) => setMaterial(control[0], Number(event.currentTarget.value))} /></label>
-      {/each}
-    </div>
-  </section>
+    <section class="compact-ambient" aria-label="Ambient light">
+      <header><strong>Ambient Light</strong><span>Screen X,Y</span></header>
+      <AmbientPosition
+        x={draft.ambient.position.x}
+        y={draft.ambient.position.y}
+        radius={draft.ambient.radius}
+        power={draft.ambient.power}
+        onchange={(position) => { draft.ambient.position = position; apply('Ambient position updated.'); }}
+        onradiuschange={(radius) => setAmbient('radius', radius)}
+        onpowerchange={(power) => setAmbient('power', power)}
+      />
+      <footer>
+        <span>POS {Math.round(draft.ambient.position.x * 100)}/{Math.round(draft.ambient.position.y * 100)}</span>
+        <span>RAD {Math.round(draft.ambient.radius * 100)}</span>
+        <span>PWR {Math.round(draft.ambient.power * 100)}</span>
+      </footer>
+    </section>
+  {:else}
+    {#if contract}
+      <p class="surface-scope">{contract.scope}</p>
+      <dl class="surface-contract-facts" aria-label="Visible surface contract">
+        {#each contract.rows as row (row[0])}<div><dt>{row[0]}</dt><dd>{row[1]}</dd></div>{/each}
+      </dl>
+    {/if}
 
-  <section aria-label="Ambient light">
-    <h3>Ambient light</h3>
-    <AmbientPosition x={draft.ambient.position.x} y={draft.ambient.position.y} onchange={(position) => { draft.ambient.position = position; apply('Ambient position updated.'); }} />
-    <div class="theme-settings-ranges">
-      {#each [['radius', 'Radius'], ['power', 'Power']] as control (control[0])}
-        <label><span>{control[1]}</span><output>{Math.round(draft.ambient[control[0] as 'radius' | 'power'] * 100)}%</output><input data-pom-part="slider.input" aria-label={control[1]} type="range" min="0" max="100" value={Math.round(draft.ambient[control[0] as 'radius' | 'power'] * 100)} style={`--pom-slider-progress:${compileSliderProgress(draft.ambient[control[0] as 'radius' | 'power'] * 100, 0, 100)}`} oninput={(event) => setAmbient(control[0] as 'radius' | 'power', Number(event.currentTarget.value) / 100)} /></label>
-      {/each}
-    </div>
-  </section>
+    <section class="theme-settings-colors" aria-label="Semantic colors">
+      <h3>Semantic colors</h3>
+      <div class="theme-role-swatches" role="group" aria-label="Theme color role">
+        {#each THEME_DRAFT_COLOR_ROLES as role (role)}
+          <button
+            type="button"
+            data-pom-part="button.surface"
+            aria-label={ROLE_LABELS[role]}
+            aria-pressed={activeRole === role}
+            onclick={() => selectRole(role)}
+          ><i style={`--theme-swatch:${draft.draft.colors[role]}`} aria-hidden="true"></i><span>{ROLE_LABELS[role]}</span></button>
+        {/each}
+      </div>
+      <div class="theme-color-editor">
+        <ColorPlane
+          hue={hsv.hue}
+          saturation={hsv.saturation}
+          value={hsv.value}
+          onchange={(next) => setHsv({ hue: hsv.hue, ...next })}
+        />
+        <HueControl value={hsv.hue} onchange={(hue) => setHsv({ hue, saturation: hsv.saturation, value: hsv.value })} />
+        <div class="theme-channel-fields">
+          <label class="theme-hex-field"><span>Hex</span><input data-pom-part="field.surface" aria-label="Hex color" value={roleInputs[activeRole]} oninput={(event) => setHex(event.currentTarget.value)} /></label>
+          {#each ['Red', 'Green', 'Blue'] as label, index (label)}
+            <label><span>{label}</span><input data-pom-part="field.surface" aria-label={label} inputmode="numeric" value={rgbInputs[index]} oninput={(event) => setRgb(index, event.currentTarget.value)} /></label>
+          {/each}
+        </div>
+        <button type="button" data-pom-part="button.surface" disabled={!eyedropper.available()} onclick={sampleColor}>
+          {eyedropper.available() ? 'Use Eyedropper' : 'Eyedropper unavailable'}
+        </button>
+      </div>
+    </section>
+
+    <section aria-label="Materials">
+      <h3>Materials</h3>
+      <div class="theme-settings-ranges">
+        {#each MATERIALS as control (control[0])}
+          <label><span>{control[1]}</span><output>{draft.draft.materials[control[0]]}%</output><input data-pom-part="slider.input" aria-label={control[1]} type="range" min="0" max="100" value={draft.draft.materials[control[0]]} style={`--pom-slider-progress:${compileSliderProgress(draft.draft.materials[control[0]], 0, 100)}`} oninput={(event) => setMaterial(control[0], Number(event.currentTarget.value))} /></label>
+        {/each}
+      </div>
+    </section>
+
+    <section aria-label="Ambient light">
+      <h3>Ambient light</h3>
+      <AmbientPosition x={draft.ambient.position.x} y={draft.ambient.position.y} onchange={(position) => { draft.ambient.position = position; apply('Ambient position updated.'); }} />
+      <div class="theme-settings-ranges">
+        {#each [['radius', 'Radius'], ['power', 'Power']] as control (control[0])}
+          <label><span>{control[1]}</span><output>{Math.round(draft.ambient[control[0] as 'radius' | 'power'] * 100)}%</output><input data-pom-part="slider.input" aria-label={control[1]} type="range" min="0" max="100" value={Math.round(draft.ambient[control[0] as 'radius' | 'power'] * 100)} style={`--pom-slider-progress:${compileSliderProgress(draft.ambient[control[0] as 'radius' | 'power'] * 100, 0, 100)}`} oninput={(event) => setAmbient(control[0] as 'radius' | 'power', Number(event.currentTarget.value) / 100)} /></label>
+        {/each}
+      </div>
+    </section>
+  {/if}
 
   {#if diagnostics.length}
     <ul class="theme-diagnostics" aria-label="Theme diagnostics">{#each diagnostics as diagnostic}<li>{diagnostic.message}</li>{/each}</ul>
   {/if}
-  <p class="theme-settings-status" role="status" aria-live="polite">{status}</p>
-  {#if contract}<p class="surface-boundary"><span aria-hidden="true">i</span>{contract.boundary}</p>{/if}
-  <footer class="surface-actions"><button type="button" data-pom-part="button.surface" onclick={reset}>Reset</button><button type="button" data-pom-part="button.surface" onclick={save} disabled={diagnostics.length > 0}>Save draft</button></footer>
+  {#if presentation === 'full'}
+    <p class="theme-settings-status" role="status" aria-live="polite">{status}</p>
+    {#if contract}<p class="surface-boundary"><span aria-hidden="true">i</span>{contract.boundary}</p>{/if}
+    <footer class="surface-actions"><button type="button" data-pom-part="button.surface" onclick={reset}>Reset</button><button type="button" data-pom-part="button.surface" onclick={save} disabled={diagnostics.length > 0}>Save draft</button></footer>
+  {/if}
 </div>

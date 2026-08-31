@@ -33,6 +33,26 @@ async function dragTo(
   await page.mouse.up();
 }
 
+async function dragToShelfRail(
+  page: import('@playwright/test').Page,
+  handle: import('@playwright/test').Locator,
+  region: string,
+  railKind: 'before' | 'between' | 'after' | 'append' = 'append'
+) {
+  const box = await handle.boundingBox();
+  if (!box) throw new Error('Expected drag handle geometry.');
+  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 12, start.y + 12, { steps: 3 });
+  const rail = page.locator(`[data-pom-part="widget.drop-rail"][data-drop-region="${region}"][data-drop-rail-kind="${railKind}"]`).last();
+  const railBox = await rail.boundingBox();
+  if (!railBox) throw new Error(`Expected ${region} ${railKind} shelf rail geometry.`);
+  await page.mouse.move(railBox.x + railBox.width / 2, railBox.y + railBox.height / 2, { steps: 6 });
+  await expect(rail).toHaveAttribute('data-active', 'true');
+  await page.mouse.up();
+}
+
 function widgetDragSurface(widget: import('@playwright/test').Locator) {
   return widget
     .locator(':scope > header[data-widget-drag-surface], :scope > .widget-frame > header[data-widget-drag-surface]')
@@ -153,6 +173,34 @@ test('Deep Current Widgets merge into an accessible persistent tab group and reo
   await expect(restored.getByRole('tab', { name: 'Characters (Story)' })).toHaveAttribute('aria-selected', 'true');
 });
 
+test('dragging an inactive grouped Widget holds that Widget rather than the active tab', async ({ page }) => {
+  const customTheme = page.getByRole('article', { name: 'Custom Theme' });
+  const charactersBox = await page.getByRole('article', { name: 'Characters (Story)' }).boundingBox();
+  if (!charactersBox) throw new Error('Expected Characters geometry.');
+  await dragTo(page, widgetDragSurface(customTheme), {
+    x: charactersBox.x + charactersBox.width / 2,
+    y: charactersBox.y + charactersBox.height / 2
+  });
+
+  const group = page.getByRole('group', { name: 'Widget group' });
+  await group.getByRole('tab', { name: 'Characters (Story)' }).click();
+  const inactiveTab = group.getByRole('tab', { name: 'Custom Theme' });
+  const target = page.getByRole('article', { name: 'World State' });
+  const tabBox = await inactiveTab.boundingBox();
+  const targetBox = await target.boundingBox();
+  if (!tabBox || !targetBox) throw new Error('Expected grouped drag geometry.');
+  await page.mouse.move(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2);
+  await page.mouse.down();
+  await expect(inactiveTab).toHaveAttribute('aria-selected', 'true');
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
+
+  const held = page.locator('[data-pom-part="widget.drag-preview"]');
+  await expect(held).toContainText('Custom Theme');
+  await expect(held).not.toContainText('Characters (Story)');
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+});
+
 test('Deep Current Focus and Back keep one Widget identity and restore invoking focus', async ({ page }) => {
   const worldState = page.getByRole('article', { name: 'World State' });
   await invokeWidgetAction(worldState, 'Focus Widget');
@@ -231,36 +279,119 @@ test('Deep Current narrow dock keeps the complete contextual Widget Actions menu
   ]);
 });
 
+test('Deep Current held Widget exposes the Atmospheric card, rails, and tab preview', async ({ page }) => {
+  const characters = page.locator('[data-widget-type="story.characters"]');
+  const worldState = page.getByRole('article', { name: 'World State' });
+  const handle = widgetDragSurface(characters);
+  const handleBox = await handle.boundingBox();
+  const targetBox = await worldState.boundingBox();
+  if (!handleBox || !targetBox) throw new Error('Expected held Widget and target geometry.');
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
+
+  const held = page.locator('[data-pom-part="widget.drag-preview"]');
+  await expect(held).toBeVisible();
+  await expect(held).toContainText('Characters');
+  await expect(held.locator('article')).toHaveCount(1);
+  await expect(page.locator('[data-pom-part="widget.drop-rail"]')).not.toHaveCount(0);
+  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toBeVisible();
+  await expect(page.locator('[data-pom-part="widget.tab-insertion"]')).toBeVisible();
+  await expect(characters).toHaveAttribute('data-widget-drag-placeholder', 'true');
+
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(held).toHaveCount(0);
+  await expect(page.locator('[data-pom-part="widget.drop-rail"]')).toHaveCount(0);
+  await expect(characters).not.toHaveAttribute('data-widget-drag-placeholder', 'true');
+  await expect(characters).toHaveAttribute('data-pomegranate-edge', 'left');
+});
+
+test('all themes preserve the same held-card docking composition', async ({ page }, testInfo) => {
+  await openDeveloperTools(page);
+  const themes = page.getByRole('group', { name: 'Visual target' });
+
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
+    await themes.getByRole('button', { name: theme, exact: true }).click();
+    await closeDeveloperTools(page);
+    const source = page.locator('[data-widget-type="story.characters"]');
+    const target = page.getByRole('article', { name: 'World State' });
+    const handleBox = await widgetDragSurface(source).boundingBox();
+    const targetBox = await target.boundingBox();
+    if (!handleBox || !targetBox) throw new Error(`Missing ${theme} docking geometry.`);
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
+
+    const held = page.locator('[data-pom-part="widget.drag-preview"]');
+    const [heldBox, snapBox, railCount, colors, viewport] = await Promise.all([
+      held.boundingBox(),
+      page.locator('[data-pom-part="widget.snap-preview"]').boundingBox(),
+      page.locator('[data-pom-part="widget.drop-rail"]').count(),
+      held.evaluate((node) => ({ border: getComputedStyle(node).borderColor, background: getComputedStyle(node).backgroundColor })),
+      page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }))
+    ]);
+    expect(heldBox?.width).toBeGreaterThanOrEqual(230);
+    expect(heldBox?.height).toBeGreaterThanOrEqual(120);
+    expect(heldBox?.x).toBeGreaterThanOrEqual(0);
+    expect(heldBox?.y).toBeGreaterThanOrEqual(0);
+    expect((heldBox?.x ?? viewport.width) + (heldBox?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
+    expect((heldBox?.y ?? viewport.height) + (heldBox?.height ?? 0)).toBeLessThanOrEqual(viewport.height);
+    expect(snapBox?.width).toBeGreaterThan(100);
+    expect(snapBox?.height).toBeGreaterThan(20);
+    expect(railCount).toBeGreaterThanOrEqual(6);
+    expect(colors.border).not.toBe('rgba(0, 0, 0, 0)');
+    expect(colors.background).not.toBe('rgba(0, 0, 0, 0)');
+    await testInfo.attach(`held-widget-${theme.toLowerCase().replaceAll(/[^a-z]+/g, '-')}`, {
+      body: await page.screenshot(),
+      contentType: 'image/png'
+    });
+
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
+    await expect(held).toHaveCount(0);
+    await openDeveloperTools(page);
+  }
+  await closeDeveloperTools(page);
+});
+
+test('held-Widget docking removes transition motion when the user requests it', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const source = page.locator('[data-widget-type="story.characters"]');
+  const target = page.getByRole('article', { name: 'World State' });
+  const handleBox = await widgetDragSurface(source).boundingBox();
+  const targetBox = await target.boundingBox();
+  if (!handleBox || !targetBox) throw new Error('Missing reduced-motion docking geometry.');
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
+
+  for (const selector of [
+    '[data-pom-part="widget.drag-preview"]',
+    '[data-pom-part="widget.drop-rail"]',
+    '[data-pom-part="widget.snap-preview"]'
+  ]) {
+    await expect(page.locator(selector).first()).toHaveCSS('transition-duration', '0s');
+  }
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+});
+
 test('Deep Current title-bar drag docks a Widget across both instrument rails', async ({ page }) => {
   const characters = page.locator('[data-widget-type="story.characters"]');
-  const rightSeam = await page.locator('[data-shelf-insertion="right"]').boundingBox();
-  if (!rightSeam) throw new Error('Expected right dock insertion geometry.');
-  await dragTo(page, widgetDragSurface(characters), {
-    x: rightSeam.x + rightSeam.width / 2,
-    y: rightSeam.y + rightSeam.height / 2
-  });
+  await dragToShelfRail(page, widgetDragSurface(characters), 'right');
   await expect(characters).toHaveAttribute('data-pomegranate-edge', 'right');
   await expect(characters).toHaveAttribute('data-pomegranate-shelf', /right-shelf-/);
 
-  const leftSeam = await page.locator('[data-shelf-insertion="left"]').boundingBox();
-  if (!leftSeam) throw new Error('Expected left dock insertion geometry.');
-  await dragTo(page, widgetDragSurface(characters), {
-    x: leftSeam.x + leftSeam.width / 2,
-    y: leftSeam.y + leftSeam.height / 2
-  });
+  await dragToShelfRail(page, widgetDragSurface(characters), 'left');
   await expect(characters).toHaveAttribute('data-pomegranate-edge', 'left');
   await expect(characters).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
 });
 
 test('Deep Current drag creates a new shelf and invalid release restores exact origin', async ({ page }) => {
   const effects = page.getByRole('article', { name: 'Room Ambience' });
-  const seam = page.locator('[data-shelf-insertion="left"]');
-  const seamBox = await seam.boundingBox();
-  if (!seamBox) throw new Error('Expected left shelf seam geometry.');
-  await dragTo(page, widgetDragSurface(effects), {
-    x: seamBox.x + seamBox.width / 2,
-    y: seamBox.y + seamBox.height / 2
-  });
+  await dragToShelfRail(page, widgetDragSurface(effects), 'left');
   const placed = page.locator('[data-widget-type="story.room-ambience"]');
   await expect(placed).toHaveAttribute('data-pomegranate-edge', 'left');
   await expect(placed).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
@@ -311,11 +442,13 @@ test('Deep Current accepts the same shelf placement path from a coarse touch poi
     await page.reload();
     const handle = widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' }));
     const handleBox = await handle.boundingBox();
-    const seamBox = await page.locator('[data-shelf-insertion="left"]').boundingBox();
-    if (!handleBox || !seamBox) throw new Error('Expected touch placement geometry.');
+    if (!handleBox) throw new Error('Expected touch placement geometry.');
     const start = { x: handleBox.x + handleBox.width / 2, y: handleBox.y + handleBox.height / 2 };
-    const end = { x: seamBox.x + seamBox.width / 2, y: seamBox.y + seamBox.height / 2 };
     await handle.dispatchEvent('pointerdown', { pointerId: 17, pointerType: 'touch', isPrimary: true, button: 0, clientX: start.x, clientY: start.y });
+    await handle.dispatchEvent('pointermove', { pointerId: 17, pointerType: 'touch', isPrimary: true, button: 0, clientX: start.x + 12, clientY: start.y + 12 });
+    const railBox = await page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="left"][data-drop-rail-kind="append"]').last().boundingBox();
+    if (!railBox) throw new Error('Expected touch shelf rail geometry.');
+    const end = { x: railBox.x + railBox.width / 2, y: railBox.y + railBox.height / 2 };
     await handle.dispatchEvent('pointermove', { pointerId: 17, pointerType: 'touch', isPrimary: true, button: 0, clientX: end.x, clientY: end.y });
     await handle.dispatchEvent('pointerup', { pointerId: 17, pointerType: 'touch', isPrimary: true, button: 0, clientX: end.x, clientY: end.y });
     await expect(page.locator('[data-widget-type="story.room-ambience"]')).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
@@ -328,13 +461,8 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   const sceneLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
   await sceneLeft.focus();
   await sceneLeft.press('End');
-  const sceneSeam = await page.locator('[data-shelf-insertion="left"]').boundingBox();
-  if (!sceneSeam) throw new Error('Expected Scene shelf seam.');
   await invokeWidgetAction(page.getByRole('article', { name: 'Characters (Story)' }), 'Float');
-  await dragTo(page, widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' })), {
-    x: sceneSeam.x + sceneSeam.width / 2,
-    y: sceneSeam.y + sceneSeam.height / 2
-  });
+  await dragToShelfRail(page, widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' })), 'left');
 
   await page.getByRole('tab', { name: 'Library' }).click();
   const libraryLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
@@ -432,6 +560,25 @@ test('native workbench applies complete themes without replacing live Workbench 
   await page.getByText('Developer tools', { exact: true }).click();
   await openWidgetCatalog(page);
   await expect(page.getByRole('dialog', { name: 'Widget Catalog' })).toBeVisible();
+});
+
+test('every theme keeps Panel tabs pointer-accessible beside the active Panel menu', async ({ page }) => {
+  for (const viewport of [{ width: 1920, height: 1280 }, { width: 844, height: 390 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await page.reload();
+    await openDeveloperTools(page);
+    const themes = page.getByRole('group', { name: 'Visual target' });
+    for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
+      await themes.getByRole('button', { name: theme, exact: true }).click();
+      await closeDeveloperTools(page);
+      await page.getByRole('tab', { name: 'Library' }).click();
+      await expect(page.getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
+      await page.getByRole('tab', { name: 'Scene' }).click();
+      await expect(page.getByRole('tab', { name: 'Scene' })).toHaveAttribute('aria-selected', 'true');
+      await openDeveloperTools(page);
+    }
+    await closeDeveloperTools(page);
+  }
 });
 
 test('all theme targets remain readable, transition-free, and contained at wide and compact sizes', async ({ page }) => {

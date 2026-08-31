@@ -7,7 +7,6 @@
   import type { LabHostContext } from '../host-context.js';
   import { getSurfaceFixture, resolveSurfaceState } from '../surface-fixtures.js';
   import AIConnectionsWidget from './AIConnectionsWidget.svelte';
-  import CompactThemeWidget from './CompactThemeWidget.svelte';
   import ComposerWidget from './ComposerWidget.svelte';
   import PersonasWidget from './PersonasWidget.svelte';
   import PromiseLedgerWidget from './PromiseLedgerWidget.svelte';
@@ -38,10 +37,13 @@
     data-surface-owner="lab-fixture"
   >
     <WidgetStateSurface {state} />
-    {#if instance.type === 'settings.custom-theme' && instance.configuration.presentation === 'compact' && contentVisible}
-      <CompactThemeWidget theme={hostContext.theme} />
-    {:else if instance.type === 'settings.custom-theme' && !['empty', 'unavailable', 'access-denied'].includes(state)}
-      <ThemeSettings theme={hostContext.theme} {eyedropper} contract={fixture} />
+    {#if instance.type === 'settings.custom-theme' && contentVisible}
+      <ThemeSettings
+        theme={hostContext.theme}
+        {eyedropper}
+        contract={fixture}
+        presentation={instance.configuration.presentation === 'compact' ? 'compact' : 'full'}
+      />
     {:else if instance.type === 'story.composer' && instance.configuration.surfacePreview !== true && contentVisible}
       <ComposerWidget {hostContext} />
     {:else if instance.type === 'story.transcript' && instance.configuration.surfacePreview !== true && contentVisible}

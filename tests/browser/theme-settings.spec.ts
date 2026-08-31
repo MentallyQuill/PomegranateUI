@@ -98,6 +98,53 @@ test('Theme Settings controls materials and ambient light by keyboard and pointe
   expect(Number(await ambient.evaluate((node) => getComputedStyle(node).opacity))).toBeCloseTo(0.41, 2);
 });
 
+test('Scene and Settings use one canonical Custom Theme authoring surface bidirectionally', async ({ page }) => {
+  await fresh(page);
+  const scene = page.locator('[data-widget-type="settings.custom-theme"]');
+  const sceneOwner = scene.locator('[data-theme-settings-owner="canonical"]');
+  await expect(sceneOwner).toHaveAttribute('data-theme-settings-presentation', 'compact');
+  for (const name of ['Glass Density', 'Bar Opacity', 'Selected Strength', 'Frost Level', 'Radius', 'Power']) {
+    await expect(scene.getByRole('slider', { name })).toHaveCount(1);
+  }
+  await scene.getByRole('slider', { name: 'Glass Density' }).fill('73');
+
+  const settings = await openThemeSettings(page);
+  const settingsOwner = settings.locator('[data-theme-settings-owner="canonical"]');
+  await expect(settingsOwner).toHaveAttribute('data-theme-settings-presentation', 'full');
+  for (const name of ['Glass Density', 'Bar Opacity', 'Selected Strength', 'Frost Level', 'Radius', 'Power']) {
+    await expect(settings.getByRole('slider', { name })).toHaveCount(1);
+  }
+  await expect(settings.getByRole('slider', { name: 'Glass Density' })).toHaveValue('73');
+  await settings.getByRole('slider', { name: 'Bar Opacity' }).fill('41');
+
+  await page.getByRole('tab', { name: 'Scene' }).click();
+  const restoredScene = page.locator('[data-widget-type="settings.custom-theme"]');
+  await expect(restoredScene.getByRole('slider', { name: 'Bar Opacity' })).toHaveValue('41');
+
+  const resetSettings = await openThemeSettings(page);
+  await resetSettings.getByRole('button', { name: 'Reset' }).click();
+  await expect(resetSettings.getByRole('slider', { name: 'Glass Density' })).toHaveValue('20');
+  await expect(resetSettings.getByRole('slider', { name: 'Bar Opacity' })).toHaveValue('60');
+});
+
+test('Custom Theme validation survives switching between its two placements', async ({ page }) => {
+  await fresh(page);
+  const scene = page.locator('[data-widget-type="settings.custom-theme"]');
+  await scene.getByRole('button', { name: 'Text', exact: true }).click();
+  await scene.getByRole('textbox', { name: 'Hex color' }).fill('not-a-color');
+  await expect(scene.getByRole('list', { name: 'Theme diagnostics' })).toContainText('#RRGGBB');
+
+  const settings = await openThemeSettings(page);
+  await expect(settings.getByRole('list', { name: 'Theme diagnostics' })).toContainText('#RRGGBB');
+  await expect(settings.getByRole('article', { name: /failed/i })).toHaveCount(0);
+  await settings.getByRole('button', { name: 'Text', exact: true }).click();
+  await settings.getByRole('textbox', { name: 'Hex color' }).fill('#f3fbf8');
+  await expect(settings.getByRole('list', { name: 'Theme diagnostics' })).toHaveCount(0);
+
+  await page.getByRole('tab', { name: 'Scene' }).click();
+  await expect(page.locator('[data-widget-type="settings.custom-theme"]').getByRole('list', { name: 'Theme diagnostics' })).toHaveCount(0);
+});
+
 test('Theme drafts save and restore independently of layout persistence', async ({ page }) => {
   await fresh(page);
   const settings = await openThemeSettings(page);

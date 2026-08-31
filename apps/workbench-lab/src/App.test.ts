@@ -229,7 +229,8 @@ describe('Svelte Workbench Lab mockup', () => {
   it('routes Panel reorder, docking, and floating through the public store', async () => {
     const user = userEvent.setup();
     render(App);
-    await user.click(screen.getByRole('button', { name: 'Move Settings left' }));
+    await user.click(screen.getByRole('button', { name: 'Manage Settings' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Move Settings left', hidden: true }));
     expect(within(screen.getByRole('tablist', { name: 'Panels' })).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Settings', 'Library']);
     const ambience = screen.getByRole('article', { name: 'Room Ambience' });
     await user.click(within(ambience).getByRole('button', { name: 'Widget actions' }));
