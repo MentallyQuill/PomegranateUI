@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { JSDOM } from 'jsdom';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -14,7 +15,18 @@ export const LEGAL_ARTIFACTS = Object.freeze([
 
 export async function verifyLabDist({ root = repositoryRoot } = {}) {
   const dist = path.join(root, 'apps', 'workbench-lab', 'dist');
-  assert.equal((await stat(path.join(dist, 'index.html'))).isFile(), true, 'Workbench Lab dist is missing index.html');
+  const indexPath = path.join(dist, 'index.html');
+  assert.equal((await stat(indexPath)).isFile(), true, 'Workbench Lab dist is missing index.html');
+  const indexHtml = await readFile(indexPath, 'utf8');
+  const dom = new JSDOM(indexHtml);
+  try {
+    assert.ok(
+      dom.window.document.head.querySelector('meta[name="darkreader-lock"]'),
+      'Workbench Lab dist is missing static Dark Reader lock'
+    );
+  } finally {
+    dom.window.close();
+  }
 
   for (const [output, source] of LEGAL_ARTIFACTS) {
     const [actual, expected] = await Promise.all([
