@@ -3106,9 +3106,9 @@ main[data-pom-action-content="icon"] .transcript .widget-kicker { font-size: 10p
 
 @media (pointer: coarse) and (min-width: 1181px) and (min-height: 621px) {
   main[data-pom-shell-presentation="instrumented"] .compact-theme-materials input {
-    height: 44px;
-    min-height: 44px;
-    margin: -19px 0 -22px;
+    height: 44.1px;
+    min-height: 44.1px;
+    margin: -19px 0 -22.1px;
   }
 }
 
