@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core';
+  import { createWidgetDragController } from './WidgetDragController.js';
 
   let {
     frames,
@@ -20,6 +21,18 @@
     return leftOrder - rightOrder || left.instanceId.localeCompare(right.instanceId);
   }));
   const active = $derived(ordered.find((frame) => frame.placement.kind === 'docked' && frame.placement.group?.active) ?? ordered[0]);
+  let dragFrame = $state<WidgetFrameProjection | null>(null);
+  let dragging = $state(false);
+  const drag = createWidgetDragController({
+    getFrame: () => dragFrame ?? active!,
+    getStore: () => store,
+    setDragging: (next) => { dragging = next; }
+  });
+
+  function dragPointerDown(event: PointerEvent, frame: WidgetFrameProjection) {
+    dragFrame = frame;
+    drag.pointerDown(event);
+  }
 
   function activate(frame: WidgetFrameProjection) {
     store.dispatch({ type: 'widget.group.activate', instanceId: frame.instanceId });
@@ -41,7 +54,7 @@
   }
 </script>
 
-<section class="widget-group" role="group" aria-label="Widget group" data-widget-group data-pom-part="group.surface">
+<section class="widget-group" class:is-dragging={dragging} role="group" aria-label="Widget group" data-widget-group data-pom-part="group.surface">
   <div class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets" data-pom-part="widget.header">
     {#each ordered as frame, index (frame.instanceId)}
       {@const title = titleFor?.(frame) ?? frame.title}
@@ -51,10 +64,17 @@
           data-pom-part="button.surface"
           role="tab"
           data-group-tab={frame.instanceId}
+          data-group-widget-type={frame.instance.type}
+          data-widget-drag-root
+          data-widget-drag-surface
           aria-selected={frame.instanceId === active?.instanceId}
           tabindex={frame.instanceId === active?.instanceId ? 0 : -1}
           onclick={() => activate(frame)}
           onkeydown={(event) => tabKeyDown(event, frame)}
+          onpointerdown={(event) => dragPointerDown(event, frame)}
+          onpointermove={drag.pointerMove}
+          onpointerup={drag.pointerUp}
+          onpointercancel={drag.pointerCancel}
         >{title}</button>
         <button
           type="button"

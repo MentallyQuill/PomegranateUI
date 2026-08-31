@@ -50,11 +50,14 @@ function percentage(value: number): string {
 
 function ambientBindings(theme: ResolvedThemeV2, ambient: AmbientProfile): ThemeBindings {
   const motion = ambient.motion;
+  const radius = ambient.radiusRange
+    ? ambient.radiusRange.minimum + ambient.radius * (ambient.radiusRange.maximum - ambient.radiusRange.minimum)
+    : ambient.radius;
   return Object.freeze({
     '--pom-ambient-color': theme.colors[ambient.colorRole],
     '--pom-ambient-x': percentage(ambient.position.x),
     '--pom-ambient-y': percentage(ambient.position.y),
-    '--pom-ambient-radius': percentage(ambient.radius),
+    '--pom-ambient-radius': percentage(radius),
     '--pom-ambient-power': formatNumber(ambient.power),
     '--pom-ambient-motion-enabled': motion?.enabled ? '1' : '0',
     '--pom-ambient-drift-x': formatNumber(motion?.driftX ?? 0),

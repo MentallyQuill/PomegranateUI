@@ -69,7 +69,7 @@ describe('recording-visible Deep Current Widget anatomy', () => {
 
     const roster = screen.getByRole('list', { name: 'Characters roster' });
     expect(within(roster).getAllByRole('listitem')).toHaveLength(4);
-    expect(within(roster).getAllByRole('img').map((portrait) => portrait.getAttribute('aria-label'))).toEqual([
+    expect(within(roster).getAllByRole('img').map((portrait) => portrait.getAttribute('alt') ?? portrait.getAttribute('aria-label'))).toEqual([
       'Portrait of Aven Rook',
       'Portrait of Mara Venn',
       'Portrait of Ilex',
@@ -153,15 +153,21 @@ describe('recording-visible Deep Current Widget anatomy', () => {
     ]);
     for (const [name, value] of [
       ['Glass Density', '20'],
-      ['Bar Opacity', '39'],
+      ['Bar Opacity', '60'],
       ['Selected Strength', '6'],
-      ['Frost Level', '22']
+      ['Frost Level', '50']
     ] as const) {
       expect(screen.getByRole('slider', { name })).toHaveValue(value);
     }
     expect(screen.getByText('Screen X,Y')).toBeVisible();
-    expect(screen.getByText('POS 74/41')).toBeVisible();
-    expect(screen.getByText(/RAD\s+8/)).toBeVisible();
-    expect(screen.getByText(/PWR\s+8/)).toBeVisible();
+    expect(screen.getByText('POS 68/38')).toBeVisible();
+    expect(screen.getByText(/RAD\s+42/)).toBeVisible();
+    expect(screen.getByText(/PWR\s+64/)).toBeVisible();
+    const radius = screen.getByRole('slider', { name: 'Radius' });
+    const power = screen.getByRole('slider', { name: 'Power' });
+    expect(radius).toHaveValue('42');
+    expect(power).toHaveValue('64');
+    expect(radius.closest('[data-ambient-ring="size"]')).not.toBeNull();
+    expect(power.closest('[data-ambient-ring="intensity"]')).not.toBeNull();
   });
 });

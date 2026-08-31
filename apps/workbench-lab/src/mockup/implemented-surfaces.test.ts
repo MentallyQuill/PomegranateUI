@@ -6,10 +6,10 @@ import { SURFACE_FIXTURES } from './surface-fixtures.js';
 import { createLabRuntime } from './widgets.js';
 
 describe('implemented Deep Current surface boundary', () => {
-  it('freezes the exact 51 reviewed Widget identities and family totals', () => {
-    expect(IMPLEMENTED_SURFACES).toHaveLength(51);
-    expect(new Set(IMPLEMENTED_SURFACES.map(({ type }) => type)).size).toBe(51);
-    expect(IMPLEMENTED_SURFACE_TOTALS).toEqual({ settings: 8, story: 12, library: 19, systems: 12 });
+  it('freezes the exact 52 reviewed Widget identities and family totals', () => {
+    expect(IMPLEMENTED_SURFACES).toHaveLength(52);
+    expect(new Set(IMPLEMENTED_SURFACES.map(({ type }) => type)).size).toBe(52);
+    expect(IMPLEMENTED_SURFACE_TOTALS).toEqual({ settings: 8, story: 12, library: 19, systems: 13 });
     expect(Object.isFrozen(IMPLEMENTED_SURFACES)).toBe(true);
     expect(IMPLEMENTED_SURFACES.every(Object.isFrozen)).toBe(true);
   });
@@ -29,7 +29,7 @@ describe('implemented Deep Current surface boundary', () => {
 
   it('gives every reviewed identity one state-aware fixture and specialized renderer', () => {
     const runtime = createLabRuntime();
-    expect(SURFACE_FIXTURES.size).toBe(51);
+    expect(SURFACE_FIXTURES.size).toBe(52);
     for (const surface of IMPLEMENTED_SURFACES) {
       const fixture = SURFACE_FIXTURES.get(surface.type);
       expect(fixture?.states).toContain('ready');
@@ -40,6 +40,6 @@ describe('implemented Deep Current surface boundary', () => {
 
   it('keeps an explicit unavailable fallback for a non-implemented Catalog identity', () => {
     const runtime = createLabRuntime();
-    expect(runtime.rendererRegistry.get(asWidgetType('systems.promise-ledger'))).toBeUndefined();
+    expect(runtime.rendererRegistry.get(asWidgetType('systems.temporal-ledger'))).toBeUndefined();
   });
 });

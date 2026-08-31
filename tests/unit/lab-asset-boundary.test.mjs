@@ -17,7 +17,7 @@ test('Workbench Lab uses only Pomegranate-owned asset paths', async () => {
   for (const font of ['Geist-Variable.woff2', 'GeistMono-Variable.woff2', 'Newsreader-Variable.ttf']) {
     assert.match(styles, new RegExp(`assets/fonts/${font.replace('.', '\\.')}`));
   }
-  for (const icon of ['dock-left', 'move', 'grid', 'dock-right', 'float', 'remove']) {
+  for (const icon of ['dock-left', 'move', 'grid', 'dock-right', 'float', 'remove', 'more']) {
     assert.match(styles, new RegExp(`assets/icons/${icon}\\.svg`));
     assert.match(await read(`apps/workbench-lab/src/assets/icons/${icon}.svg`), /<svg/);
   }

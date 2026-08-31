@@ -25,7 +25,7 @@ function percentage(value: number): string {
   return `${formatNumber(value * 100)}%`;
 }
 
-function stops(layer: Extract<ThemeCanvasLayer, { stops: unknown }>): string {
+function stops(layer: { readonly stops: readonly { readonly color: string; readonly position: number }[] }): string {
   return layer.stops.map((stop) => `${stop.color} ${percentage(stop.position)}`).join(', ');
 }
 
@@ -78,6 +78,15 @@ export function compileCanvasLayers(
           `radial-gradient(circle at 100% 100%, ${layer.bottomRight}, transparent 62%)`
         ].join(', ');
         break;
+      case 'grid':
+        style.backgroundImage = [
+          `linear-gradient(${layer.horizontal} ${formatNumber(layer.lineWidthPx)}px, transparent ${formatNumber(layer.lineWidthPx)}px)`,
+          `linear-gradient(90deg, ${layer.vertical} ${formatNumber(layer.lineWidthPx)}px, transparent ${formatNumber(layer.lineWidthPx)}px)`
+        ].join(', ');
+        style.backgroundSize = `${formatNumber(layer.widthPx)}px ${formatNumber(layer.heightPx)}px`;
+        style.opacity = formatNumber(layer.opacity);
+        if (layer.mask) style.maskImage = `linear-gradient(${formatNumber(layer.mask.angle)}deg, ${stops(layer.mask)})`;
+        break;
       case 'image': {
         const asset = registry[layer.assetId];
         if (!asset) {
@@ -101,7 +110,7 @@ export function compileCanvasLayers(
         style.backgroundSize = layer.fit;
         style.backgroundPosition = `${percentage(layer.x)} ${percentage(layer.y)}`;
         style.opacity = formatNumber(layer.opacity);
-        style.filter = `blur(${formatNumber(layer.blurPx)}px) saturate(${formatNumber(layer.saturation)})`;
+        style.filter = `blur(${formatNumber(layer.blurPx)}px) saturate(${formatNumber(layer.saturation)}) contrast(${formatNumber(layer.contrast ?? 1)}) brightness(${formatNumber(layer.brightness ?? 1)})`;
         style.mixBlendMode = layer.blend;
         style.transform = layer.blurPx > 0 ? `scale(${formatNumber(1 + Math.min(0.08, layer.blurPx / 500))})` : 'none';
         break;

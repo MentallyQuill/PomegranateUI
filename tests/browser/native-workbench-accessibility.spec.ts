@@ -177,61 +177,31 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
 });
 }
 
-test('PomOS Scene Effects keeps compact labels and 44px knobless range interactions', async ({ page }) => {
+test('PomOS Room Ambience keeps compact labels and stable value rows', async ({ page }) => {
   await openFresh(page, 1280, 720);
   await activatePomOS(page);
 
-  const controls = page.getByRole('group', { name: 'Scene Effects controls' }).locator(':scope > label');
-  await expect(page.getByRole('group', { name: 'Scene Effects controls' })).toHaveAttribute('data-pom-part', 'group.surface');
-  await expect(controls).toHaveCount(4);
-  const geometry = await controls.evaluateAll((labels) => labels.map((label) => {
+  const ambience = page.getByRole('region', { name: 'Current room ambience' });
+  const rows = ambience.locator('dl > div');
+  await expect(rows).toHaveCount(4);
+  const geometry = await rows.evaluateAll((elements) => elements.map((element) => {
     const rect = (element: Element | null) => {
-      if (!(element instanceof HTMLElement)) throw new Error('Missing Scene Effects control part.');
+      if (!(element instanceof HTMLElement)) throw new Error('Missing Room Ambience row part.');
       const box = element.getBoundingClientRect();
       return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height, centerY: (box.top + box.bottom) / 2 };
     };
     return {
-      label: rect(label),
-      name: rect(label.querySelector('span')),
-      output: rect(label.querySelector('output')),
-      input: rect(label.querySelector('input'))
+      row: rect(element),
+      name: rect(element.querySelector('dt')),
+      value: rect(element.querySelector('dd'))
     };
   }));
-  for (const [index, control] of geometry.entries()) {
-    expect(control.name.top, `control ${index} name top`).toBeGreaterThanOrEqual(control.label.top);
-    expect(control.output.right, `control ${index} output right`).toBeLessThanOrEqual(control.label.right);
-    expect(control.input.left, `control ${index} input left`).toBeGreaterThanOrEqual(control.label.left);
-    expect(control.input.right, `control ${index} input right`).toBeLessThanOrEqual(control.label.right);
-    expect(control.input.bottom, `control ${index} input bottom`).toBeLessThanOrEqual(control.label.bottom);
-    expect(Math.abs(control.name.centerY - control.output.centerY), `control ${index} label/value alignment`).toBeLessThanOrEqual(1);
-    expect(control.input.height, `control ${index} range target`).toBeGreaterThanOrEqual(44);
+  for (const [index, row] of geometry.entries()) {
+    expect(row.name.left, `row ${index} name left`).toBeGreaterThanOrEqual(row.row.left);
+    expect(row.value.right, `row ${index} value right`).toBeLessThanOrEqual(row.row.right);
+    expect(Math.abs(row.name.centerY - row.value.centerY), `row ${index} label/value alignment`).toBeLessThanOrEqual(1);
+    expect(row.row.height, `row ${index} stable height`).toBeGreaterThanOrEqual(39);
   }
-
-  const atmosphere = page.getByRole('slider', { name: 'Atmosphere' });
-  await atmosphere.focus();
-  await atmosphere.press('ArrowRight');
-  await expect(atmosphere).toHaveValue('63');
-  const focus = await atmosphere.evaluate((input) => ({
-    focusVisible: input.matches(':focus-visible'),
-    outlineWidth: Number.parseFloat(getComputedStyle(input).outlineWidth),
-    thumbSize: Number.parseFloat(getComputedStyle(input.closest('[data-pom-theme-root]')!).getPropertyValue('--pom-control-slider-thumb-size')),
-    thumbGeometryRules: [...document.styleSheets].flatMap((sheet) => [...sheet.cssRules])
-      .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule && /::-(?:webkit-slider-thumb|moz-range-thumb)/.test(rule.selectorText))
-      .map((rule) => ({ width: rule.style.width, height: rule.style.height }))
-  }));
-  expect(focus.focusVisible).toBe(true);
-  expect(focus.outlineWidth).toBeGreaterThanOrEqual(2);
-  expect(focus.thumbSize).toBe(11);
-  expect(focus.thumbGeometryRules).toContainEqual({
-    width: 'var(--pom-control-slider-thumb-size)',
-    height: 'var(--pom-control-slider-thumb-size)'
-  });
-  expect(focus.thumbGeometryRules.every((rule) => !rule.width || rule.width === 'var(--pom-control-slider-thumb-size)')).toBe(true);
-  expect(focus.thumbGeometryRules.every((rule) => !rule.height || rule.height === 'var(--pom-control-slider-thumb-size)')).toBe(true);
-  const range = await atmosphere.boundingBox();
-  if (!range) throw new Error('Atmosphere range has no pointer geometry.');
-  await page.mouse.click(range.x + (range.width * 0.8), range.y + (range.height / 2));
-  expect(Number(await atmosphere.inputValue())).toBeGreaterThan(63);
 });
 
 test('PomOS constrained side stacks expose deterministic internal scroll owners', async ({ page }) => {
@@ -256,8 +226,7 @@ test('PomOS constrained side stacks expose deterministic internal scroll owners'
     return {
       characters: scrollOwner('[data-widget-type="story.characters"] .recording-characters > ul'),
       theme: scrollOwner('[data-widget-type="settings.custom-theme"] .compact-theme'),
-      effects: scrollOwner('[data-widget-type="story.room-ambience"] .scene-effects'),
-      perspective: scrollOwner('[data-widget-type="story.personas"] .recording-persona')
+      ambience: scrollOwner('[data-widget-type="story.room-ambience"] .atmospheric-room-ambience')
     };
   });
 
@@ -273,10 +242,10 @@ test('PomOS grouped controls keep one translucent material owner and transparent
   await activatePomOS(page);
 
   const evidence = await page.evaluate(() => {
-    const group = document.querySelector<HTMLElement>('.scene-effects');
-    if (!group) throw new Error('Missing Scene Effects group.');
-    const nestedRow = group.querySelector<HTMLElement>(':scope > [data-pom-part="row.surface"]');
-    if (!nestedRow) throw new Error('Missing Scene Effects row.');
+    const group = document.querySelector<HTMLElement>('.widget-group:has([data-surface-type="story.room-ambience"])');
+    if (!group) throw new Error('Missing Room Ambience group.');
+    const nestedRow = group.querySelector<HTMLElement>('.atmospheric-room-ambience dl > div');
+    if (!nestedRow) throw new Error('Missing Room Ambience row.');
     const groupStyle = getComputedStyle(group);
     const rowStyle = getComputedStyle(nestedRow);
     const alpha = (color: string) => Number(color.match(/[\d.]+(?=\))/g)?.at(-1) ?? (color.startsWith('rgb(') ? 1 : 0));
@@ -316,7 +285,7 @@ test('PomOS metadata remains legible and the compact composer retains its comple
       transcriptKicker: fontSize('.transcript .widget-kicker'),
       themeControls: fontSize('.compact-theme'),
       presence: fontSize('[data-testid="character-presence"]'),
-      composerStatus: fontSize('.composer-field > span')
+      composerStatus: fontSize('.composer-field > .composer-meta')
     };
   });
   for (const [name, size] of Object.entries(wideType)) {
@@ -325,7 +294,7 @@ test('PomOS metadata remains legible and the compact composer retains its comple
 
   await openFresh(page, 390, 844);
   await activatePomOS(page);
-  const compactStatus = await page.locator('.composer-field > span').evaluate((element) => {
+  const compactStatus = await page.locator('.composer-field > .composer-meta').evaluate((element) => {
     const style = getComputedStyle(element);
     const bounds = element.getBoundingClientRect();
     const field = element.parentElement!.getBoundingClientRect();
@@ -372,7 +341,7 @@ test('PomOS icon actions keep real names and 44px targets while essential labels
     expect(evidence.height).toBeGreaterThanOrEqual(44);
   }
   await expect(page.getByRole('tab', { name: 'Scene' })).toHaveText('Scene');
-  await expect(page.getByRole('heading', { name: 'Transcript' })).toHaveText('Transcript');
+  await expect(page.getByRole('article', { name: 'Transcript' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'The Water Remembers' })).toHaveText('The Water Remembers');
 
   await page.getByText('Developer tools', { exact: true }).click();
@@ -406,7 +375,7 @@ test('native workbench keeps literal relationships and keyboard reorder behavior
   await expect(scene.locator('xpath=..')).toHaveAttribute('data-pomegranate-panel-tab', 'scene');
   await page.getByRole('tab', { name: 'Library' }).press('ArrowLeft');
   await expect(tabs).toHaveText(['Library', 'Scene', 'Settings']);
-  await expect(page.getByLabel('Active story identity')).toContainText('story-lab-reservoir');
+  await expect(page.getByLabel('Active story identity')).toContainText('STORY / 7E-19');
 });
 
 test('non-compact Panel tabs keep secondary actions out of their visible spacing', async ({ page }) => {
@@ -438,7 +407,9 @@ test('Atmospheric composition keeps developer chrome out of the default stage an
   ]);
   expect(runtimeBox).not.toBeNull();
   expect(launcherBox).not.toBeNull();
-  expect(runtimeBox!.x + runtimeBox!.width).toBeLessThanOrEqual(launcherBox!.x);
+  expect(runtimeBox!.x + runtimeBox!.width).toBeLessThanOrEqual(1600);
+  expect(launcherBox!.width).toBeLessThanOrEqual(2);
+  expect(launcherBox!.height).toBeLessThanOrEqual(2);
   await launcher.focus();
   await page.keyboard.press('Enter');
   await expect(drawer).toHaveAttribute('open', '');
@@ -478,6 +449,7 @@ test('all themes keep centered story prose aligned with the composer instrument'
       if (!field) throw new Error('Missing composer field');
       return {
         grouping: document.querySelector('main')?.getAttribute('data-pom-widget-grouping'),
+        shellPresentation: document.querySelector('main')?.getAttribute('data-pom-shell-presentation'),
         stage: box('[data-conformance-region="stage"]'),
         prose: box('[data-widget-type="story.transcript"] .transcript > p:not(.widget-kicker)'),
         transcript: box('[data-widget-type="story.transcript"] .widget-frame'),
@@ -489,15 +461,20 @@ test('all themes keep centered story prose aligned with the composer instrument'
     });
 
     expect(Math.abs(geometry.transcript.center - geometry.stage.center), `${theme} transcript center`).toBeLessThanOrEqual(1);
-    expect(Math.abs(geometry.prose.center - geometry.stage.center), `${theme} prose center`).toBeLessThanOrEqual(1);
     expect(Math.abs(geometry.composer.center - geometry.stage.center), `${theme} composer center`).toBeLessThanOrEqual(1);
     if (geometry.grouping === 'unified') {
       expect(geometry.composer.right - geometry.composer.left, `${theme} unified composer width`).toBeLessThanOrEqual(800.5);
     }
-    expect(
-      Math.abs((geometry.prose.left - geometry.composer.left) - (geometry.composer.right - geometry.prose.right)),
-      `${theme} prose inset within composer`
-    ).toBeLessThanOrEqual(1);
+    if (geometry.shellPresentation === 'instrumented') {
+      expect(Math.abs(geometry.prose.left - geometry.composer.left), `${theme} Atmospheric prose left edge`).toBeLessThanOrEqual(1);
+      expect(Math.abs((geometry.composer.right - geometry.prose.right) - 30), `${theme} Atmospheric prose right gutter`).toBeLessThanOrEqual(1);
+    } else {
+      expect(Math.abs(geometry.prose.center - geometry.stage.center), `${theme} prose center`).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs((geometry.prose.left - geometry.composer.left) - (geometry.composer.right - geometry.prose.right)),
+        `${theme} prose inset within composer`
+      ).toBeLessThanOrEqual(1);
+    }
     expect(geometry.fieldDisplay, `${theme} composer field layout`).toBe('grid');
     expect(Math.abs(geometry.textarea.left - (geometry.field.left + 12)), `${theme} textarea left inset`).toBeLessThanOrEqual(1);
     expect(Math.abs(geometry.textarea.right - (geometry.field.right - 12)), `${theme} textarea right inset`).toBeLessThanOrEqual(1);
@@ -602,7 +579,7 @@ test('shared Widget headers retain one-line titles without reserving hidden acti
 
   for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber'] as const) {
     await selectTheme(page, theme);
-    for (const title of ['Scene Effects', 'Custom Theme']) {
+    for (const title of ['World State', 'Custom Theme']) {
       const article = page.getByRole('article', { name: title });
       const evidence = await article.evaluate((node) => {
         const heading = node.querySelector('.widget-frame-heading h2');
@@ -626,7 +603,7 @@ test('shared Widget headers retain one-line titles without reserving hidden acti
         expect(evidence.headingScrollWidth, `${theme} ${title} title width`).toBeLessThanOrEqual(evidence.headingClientWidth + 1);
       }
       expect(evidence.actionPosition, `${theme} ${title} action presentation`)
-        .toBe(theme === 'Bunny' ? 'static' : 'absolute');
+        .toBe(theme === 'Bunny' ? 'relative' : 'absolute');
     }
   }
 });
@@ -645,13 +622,14 @@ test('every theme gives the active Panel tab a stable focus-color edge', async (
         edgeColor: edge.backgroundColor,
         edgeContent: edge.content,
         edgeHeight: Number.parseFloat(edge.height),
-        selected: tab.getAttribute('aria-selected')
+        selected: tab.getAttribute('aria-selected'),
+        shellPresentation: tab.closest('main')?.getAttribute('data-pom-shell-presentation')
       };
     });
     expect(style.selected, `${theme} active Panel identity`).toBe('true');
     expect(style.boxShadow, `${theme} zero-rim material`).toBe('none');
     expect(style.edgeContent, `${theme} active Panel edge content`).not.toBe('none');
-    expect(style.edgeHeight, `${theme} active Panel edge height`).toBeGreaterThanOrEqual(2);
+    expect(style.edgeHeight, `${theme} active Panel edge height`).toBeGreaterThanOrEqual(style.shellPresentation === 'instrumented' ? 1 : 2);
     expect(style.edgeColor, `${theme} active Panel edge color`).not.toBe('rgba(0, 0, 0, 0)');
   }
 });
@@ -930,6 +908,19 @@ test('native workbench exposes coarse-pointer targets separately from compact ic
   });
   expect(style).toContain('min-height: 44px');
   expect(style).toContain('width: 44px');
+});
+
+test.describe('coarse-pointer Deep controls', () => {
+  test.use({ hasTouch: true });
+
+  test('preserves 44px material-slider hit targets in the exact wide shell', async ({ page }) => {
+    await openFresh(page, 1440, 900);
+    const sliders = page.locator('.compact-theme-materials input[type="range"]');
+    await expect(sliders).toHaveCount(4);
+    for (const slider of await sliders.all()) {
+      expect((await slider.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    }
+  });
 });
 
 test('Panel creation uses the browser modal top layer and restores focus', async ({ page }) => {

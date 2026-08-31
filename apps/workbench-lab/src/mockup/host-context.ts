@@ -43,8 +43,8 @@ export interface LabHostContext {
 }
 
 const LAB_STORY_CONTEXT = Object.freeze({
-  storyId: 'story-lab-reservoir',
-  storyTitle: 'The Reservoir at Blue Hour',
+  storyId: 'STORY / 7E-19',
+  storyTitle: 'The Water Remembers',
   frameLabel: 'Present frame · Turn 42',
   location: 'Reservoir Concourse',
   timeLabel: 'Blue hour · rain easing',

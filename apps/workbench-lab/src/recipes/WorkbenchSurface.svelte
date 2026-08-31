@@ -14,11 +14,19 @@
     store,
     renderWidget,
     titleFor,
+    leftCollapsed = false,
+    rightCollapsed = false,
+    ontoggleleft,
+    ontoggleright,
     class: className = ''
   }: {
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
+    leftCollapsed?: boolean;
+    rightCollapsed?: boolean;
+    ontoggleleft?: (() => void) | undefined;
+    ontoggleright?: (() => void) | undefined;
     class?: string;
   } = $props();
 
@@ -61,6 +69,22 @@
     <div data-shelf-insertion="right" aria-hidden="true"></div>
     <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
     <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />
+    {#if surface.templateFamily === 'story-stage'}
+      <button
+        type="button"
+        class="toolbar-edge-toggle toolbar-edge-toggle-left"
+        aria-label="Toggle left dock"
+        aria-pressed={leftCollapsed}
+        onclick={ontoggleleft}
+      >OPEN TOOLBAR LFT</button>
+      <button
+        type="button"
+        class="toolbar-edge-toggle toolbar-edge-toggle-right"
+        aria-label="Toggle right dock"
+        aria-pressed={rightCollapsed}
+        onclick={ontoggleright}
+      >OPEN TOOLBAR RGT</button>
+    {/if}
     <div data-pomegranate-floating-layer>
       {#each surface.floating as frame (frame.instanceId)}
         {@render renderWidget(frame)}

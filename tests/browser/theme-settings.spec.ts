@@ -84,7 +84,7 @@ test('Theme Settings controls materials and ambient light by keyboard and pointe
 
   await settings.getByRole('slider', { name: 'Radius' }).fill('72');
   await settings.getByRole('slider', { name: 'Power' }).fill('41');
-  await expect.poll(() => binding(page, '--pom-ambient-radius')).toBe('72%');
+  await expect.poll(() => binding(page, '--pom-ambient-radius')).toBe('75.84%');
   await expect.poll(() => binding(page, '--pom-ambient-power')).toBe('0.41');
   const ambient = page.locator('[data-pom-ambient-layer]');
   await expect(ambient).toHaveCount(1);
@@ -108,7 +108,7 @@ test('Theme drafts save and restore independently of layout persistence', async 
 });
 
 test('compact Custom Theme owns one keyboard-scrollable region through its ambient footer', async ({ page }) => {
-  await fresh(page, 1440, 900);
+  await fresh(page, 1280, 450);
   const card = page.getByRole('article', { name: 'Custom Theme' });
   const controls = card.getByRole('region', { name: 'Custom Theme controls' });
   await expect(controls).toBeVisible();

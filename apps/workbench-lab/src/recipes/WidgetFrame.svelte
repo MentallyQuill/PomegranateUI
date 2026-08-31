@@ -37,11 +37,26 @@
   const Renderer = $derived(rendererRegistry.get(frame.instance.type));
   const dispatch = (command: WorkbenchCommand) => store.dispatch(command);
   let dragging = $state(false);
+  let actionsOpen = $state(false);
   const drag = createWidgetDragController({
     getFrame: () => frame,
     getStore: () => store,
     setDragging: (next) => { dragging = next; }
   });
+
+  const isInteractiveTarget = (target: EventTarget | null) => (
+    target instanceof Element
+    && Boolean(target.closest('button, a, input, textarea, select, summary, [role="menu"]'))
+  );
+  const dragSurfacePointerDown = (event: PointerEvent) => {
+    if (isInteractiveTarget(event.target)) return;
+    actionsOpen = false;
+    drag.pointerDown(event);
+  };
+  const runAction = (action: () => void) => {
+    actionsOpen = false;
+    action();
+  };
 </script>
 
 <article
@@ -53,37 +68,51 @@
   data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.regionId === 'stage' ? 'main' : frame.placement.regionId : 'floating'}
   data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
 >
-  <header class:is-dragging={dragging} data-pom-part="widget.header">
+  <header
+    role="group"
+    aria-label={`${displayTitle} draggable Widget header`}
+    class:is-dragging={dragging}
+    data-pom-part="widget.header"
+    data-widget-drag-surface
+    onpointerdown={dragSurfacePointerDown}
+    onpointermove={drag.pointerMove}
+    onpointerup={drag.pointerUp}
+    onpointercancel={drag.pointerCancel}
+  >
     <div class="widget-frame-heading">
       <h2>{displayTitle}</h2>
       {#if meta}<span class="widget-frame-meta">{meta}</span>{/if}
     </div>
-    <nav aria-label={`${displayTitle} placement`} data-pom-part="widget.actions">
+    <nav aria-label={`${displayTitle} actions`} data-pom-part="widget.actions">
       <button
-        class="action-drag"
+        class="action-menu"
         data-pom-part="button.icon"
         type="button"
-        aria-label="Drag Widget"
-        onpointerdown={drag.pointerDown}
-        onpointermove={drag.pointerMove}
-        onpointerup={drag.pointerUp}
-        onpointercancel={drag.pointerCancel}
-      >Drag Widget</button>
-      <button class="action-dock-left" data-pom-part="button.icon" type="button" onclick={() => actions.dock('left')}>Dock left</button>
-      <button class="action-dock-main" data-pom-part="button.icon" type="button" onclick={() => actions.dock('main')}>Dock main</button>
-      <button class="action-dock-right" data-pom-part="button.icon" type="button" onclick={() => actions.dock('right')}>Dock right</button>
-      <button class="action-float" data-pom-part="button.icon" type="button" onclick={() => actions.float()}>Float</button>
-      <button class="action-group" data-pom-part="button.icon" type="button" onclick={() => actions.groupWithPrevious()}>Group with previous Widget</button>
-      {#if onfocuswidget}
-        <button
-          class="action-focus"
-          data-pom-part="button.icon"
-          type="button"
-          data-focus-widget-for={frame.instanceId}
-          onclick={() => onfocuswidget?.(frame)}
-        >Focus Widget</button>
+        aria-label="Widget actions"
+        aria-haspopup="menu"
+        aria-expanded={actionsOpen}
+        data-focus-widget-for={frame.instanceId}
+        onclick={() => { actionsOpen = !actionsOpen; }}
+      >Widget actions</button>
+      {#if actionsOpen}
+        <div class="widget-actions-menu" role="menu">
+          <button class="action-dock-left" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.dock('left'))}>Dock left</button>
+          <button class="action-dock-main" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.dock('main'))}>Dock main</button>
+          <button class="action-dock-right" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.dock('right'))}>Dock right</button>
+          <button class="action-float" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.float())}>Float</button>
+          <button class="action-group" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.groupWithPrevious())}>Group with previous Widget</button>
+          {#if onfocuswidget}
+            <button
+              class="action-focus"
+              role="menuitem"
+              data-pom-part="button.icon"
+              type="button"
+              onclick={() => runAction(() => onfocuswidget?.(frame))}
+            >Focus Widget</button>
+          {/if}
+          <button class="action-remove" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.shelve())}>Move to Widget Shelf</button>
+        </div>
       {/if}
-      <button class="action-remove" data-pom-part="button.icon" type="button" onclick={() => actions.shelve()}>Move to Widget Shelf</button>
     </nav>
   </header>
   <div data-pom-part={contentPart ?? undefined}>

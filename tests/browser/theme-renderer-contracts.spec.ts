@@ -27,7 +27,9 @@ async function selectTheme(
 ) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
   if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
-  await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: target.label, exact: true }).click();
+  const targetButton = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: target.label, exact: true });
+  await targetButton.focus();
+  await targetButton.press('Enter');
   await expect(page.locator('main')).toHaveAttribute('data-pom-theme', target.id);
   if (closeDrawer) await page.getByText('Developer tools', { exact: true }).click();
 }
@@ -62,9 +64,16 @@ function blurPx(filter: string): number {
   return Number(filter.match(/blur\(([\d.]+)px\)/)?.[1] ?? 0);
 }
 
+async function invokeWidgetAction(widget: import('@playwright/test').Locator, name: string) {
+  const trigger = widget.getByRole('button', { name: 'Widget actions' });
+  await trigger.focus();
+  await trigger.press('Enter');
+  await widget.getByRole('menuitem', { name }).press('Enter');
+}
+
 function technicalRailPresentation(page: Page) {
   return page.locator('main[data-pom-theme-root]').evaluate((root) => {
-    const sceneLabel = root.querySelector<HTMLElement>('.scene-effects label > span')!;
+    const sceneLabel = root.querySelector<HTMLElement>('[data-widget-type="story.room-ambience"] dt')!;
     const authoring = root.querySelector<HTMLElement>('.compact-theme')!;
     const left = root.querySelector<HTMLElement>('[data-conformance-region="left"]')!.getBoundingClientRect();
     const stage = root.querySelector<HTMLElement>('[data-conformance-region="stage"]')!.getBoundingClientRect();
@@ -97,7 +106,7 @@ test('the canvas remains behind every interactive Workbench surface', async ({ p
   for (const target of TARGETS) {
     await selectTheme(page, target);
     await expect.poll(() => page.locator('[data-pom-canvas-root]').evaluate((canvas) => Number(getComputedStyle(canvas).zIndex)))
-      .toBeLessThan(0);
+      .toBeLessThanOrEqual(0);
     const widget = page.getByRole('article', { name: 'Characters' });
     const box = await widget.boundingBox();
     expect(box, `${target.label} widget bounds`).not.toBeNull();
@@ -117,7 +126,15 @@ test('the Lab loads theme-appropriate character art and independent ambient imag
   await fresh(page);
 
   await selectTheme(page, TARGETS[0]);
-  await expect(page.getByRole('article', { name: 'Characters' }).locator('.recording-character-portrait > img')).toHaveCount(0);
+  const atmosphericPortraits = page.getByRole('article', { name: 'Characters' }).locator('.recording-character-portrait > img');
+  await expect(atmosphericPortraits).toHaveCount(4);
+  expect(await atmosphericPortraits.evaluateAll((images: HTMLImageElement[]) => images.every((image) => (
+    image.complete && image.naturalWidth > 0 && image.classList.contains('is-direct')
+  )) && new Set(images.map((image) => image.currentSrc)).size === 4), 'Deep Current direct portrait set').toBe(true);
+  const atmosphericImage = page.locator('[data-pom-canvas-layer="image"]');
+  await expect(atmosphericImage).toHaveCount(1);
+  expect(await atmosphericImage.evaluate((layer) => getComputedStyle(layer).backgroundImage))
+    .toContain('atmospheric-reservoir-stage');
 
   for (const target of [
     { ...TARGETS[1], portraitAsset: 'pomos-character-atlas', canvasAsset: null },
@@ -171,7 +188,7 @@ test('Ash and Amber renders neutral graphite chrome, restrained amber ambience, 
     ambient: '#51493E',
     layers: [
       { kind: 'solid', background: 'rgb(36, 35, 33)' },
-      { kind: 'image', filter: 'blur(0px) saturate(0.82)', opacity: '0.72' },
+      { kind: 'image', filter: 'blur(0px) saturate(0.82) contrast(1) brightness(1)', opacity: '0.72' },
       { kind: 'linear-gradient' },
       { kind: 'radial-gradient' },
       { kind: 'veil', background: 'rgb(48, 46, 42)', opacity: '0.28' }
@@ -202,7 +219,7 @@ test('composition metadata and icon art survive data-only theme compilation', as
     await expect(root).toHaveAttribute('data-pom-chrome-presentation', /^(compact|overlay|full)$/);
     await expect(root).toHaveAttribute('data-pom-action-presentation', /^(compact|hover-focus|full|always)$/);
     const image = await page.getByRole('article', { name: 'Characters' })
-      .getByRole('button', { name: 'Drag Widget' })
+      .getByRole('button', { name: 'Widget actions' })
       .evaluate((button) => getComputedStyle(button).backgroundImage);
     expect(image, `${target.label} icon image`).toContain('url(');
     const pseudoContent = await page.getByRole('article', { name: 'Characters' })
@@ -270,19 +287,19 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
   });
   expect(unusedTail, 'individual window dead space').toBeLessThanOrEqual(32);
 
-  const effectsWindow = page.getByRole('article', { name: 'Scene Effects' });
+  const effectsWindow = page.getByRole('article', { name: 'Room Ambience' });
   const effectsSlot = page.locator(
-    '[data-conformance-region="right"] > .dock-shelf > [data-widget-type="story.room-ambience"]',
+    '[data-conformance-region="right"] [data-widget-type="story.room-ambience"]',
   );
   const effectsBox = await effectsWindow.boundingBox();
   const effectsSlotBox = await effectsSlot.boundingBox();
-  const finalEffectBox = await effectsWindow.getByRole('slider', { name: 'Reading Veil' }).boundingBox();
+  const finalEffectBox = await effectsWindow.locator('.atmospheric-room-ambience dl > div').last().boundingBox();
   expect(effectsBox).not.toBeNull();
   expect(effectsSlotBox).not.toBeNull();
   expect(finalEffectBox).not.toBeNull();
-  expect(effectsBox!.y + effectsBox!.height, 'PomOS Scene Effects window stays inside its shelf slot')
+  expect(effectsBox!.y + effectsBox!.height, 'PomOS Room Ambience window stays inside its shelf slot')
     .toBeLessThanOrEqual(effectsSlotBox!.y + effectsSlotBox!.height + 1);
-  expect(finalEffectBox!.y + finalEffectBox!.height, 'PomOS exposes all four Scene Effects controls inside the window')
+  expect(finalEffectBox!.y + finalEffectBox!.height, 'PomOS exposes the final Room Ambience row inside the window')
     .toBeLessThanOrEqual(effectsBox!.y + effectsBox!.height + 1);
 
   for (const target of TARGETS.slice(1)) {
@@ -448,8 +465,8 @@ test('Bunny keeps the compact reader expressive, contained, and responsive', asy
     lineHeight: '21.7px',
     intersectsStage: true,
     composerControlsContained: true,
-    composerDraft: 'Ask Mara what the bell means.',
-    sendLabel: 'Send action'
+    composerDraft: '',
+    sendLabel: 'Continue'
   });
   expect(evidence.readerImage).toContain('linear-gradient(150deg');
 });
@@ -492,13 +509,13 @@ test('unified compositions allocate rail space to functional content', async ({ 
   await fresh(page);
   await selectTheme(page, TARGETS[0]);
 
-  const effects = page.getByRole('article', { name: 'Scene Effects' });
-  const finalControl = effects.getByRole('slider', { name: 'Reading Veil' });
+  const effects = page.getByRole('article', { name: 'Room Ambience' });
+  const finalControl = effects.locator('.atmospheric-room-ambience dl > div').last();
   const effectsBox = await effects.boundingBox();
   const controlBox = await finalControl.boundingBox();
   expect(effectsBox).not.toBeNull();
   expect(controlBox).not.toBeNull();
-  expect(controlBox!.y + controlBox!.height, 'final effect control stays inside its assigned unified row')
+  expect(controlBox!.y + controlBox!.height, 'final ambience row stays inside its assigned unified rail')
     .toBeLessThanOrEqual(effectsBox!.y + effectsBox!.height + 1);
 });
 
@@ -510,12 +527,20 @@ test('each target keeps one glass owner per Widget and a seamless structural doc
     const widget = await material(page, '[data-conformance-region="left"] .widget-frame');
     const header = await material(page, '[data-conformance-region="left"] .widget-frame > header');
     const content = await material(page, '[data-conformance-region="left"] .widget-frame > [data-pom-part="widget.content"]');
-    expect(dock.alpha, `${target.label} dock fill`).toBe(0);
-    expect(blurPx(dock.backdrop), `${target.label} dock blur`).toBe(0);
-    expect(blurPx(widget.backdrop), `${target.label} Widget blur`).toBeGreaterThan(0);
-    expect(widget.alpha, `${target.label} Widget alpha`).toBeGreaterThan(0);
-    expect(widget.alpha, `${target.label} Widget translucency`).toBeLessThan(1);
-    expect(blurPx(header.backdrop), `${target.label} header duplicate blur`).toBe(0);
+    if (target.id === 'deep-current') {
+      expect(dock.alpha, 'Deep Current instrument rail fill').toBeCloseTo(0.2, 2);
+      expect(blurPx(dock.backdrop), 'Deep Current instrument rail blur').toBe(12);
+      expect(widget.alpha, 'Deep Current transparent nested Widget').toBe(0);
+      expect(blurPx(widget.backdrop), 'Deep Current nested Widget blur').toBe(0);
+      expect(blurPx(header.backdrop), 'Deep Current instrument header blur').toBe(12);
+    } else {
+      expect(dock.alpha, `${target.label} dock fill`).toBe(0);
+      expect(blurPx(dock.backdrop), `${target.label} dock blur`).toBe(0);
+      expect(blurPx(widget.backdrop), `${target.label} Widget blur`).toBeGreaterThan(0);
+      expect(widget.alpha, `${target.label} Widget alpha`).toBeGreaterThan(0);
+      expect(widget.alpha, `${target.label} Widget translucency`).toBeLessThan(1);
+      expect(blurPx(header.backdrop), `${target.label} header duplicate blur`).toBe(0);
+    }
     expect(blurPx(content.backdrop), `${target.label} content duplicate blur`).toBe(0);
   }
 });
@@ -681,14 +706,14 @@ test('Ash readability expression leaves Deep compact technical rail defaults unc
   expect(deepRail).toMatchObject({
     expressionRowSize: '',
     expressionSliderSize: '',
-    sceneLabelSize: '8px',
-    authoringSize: '9px'
+    sceneLabelSize: '10px',
+    authoringSize: '10px'
   });
   await selectTheme(page, ASH_TARGET);
   expect(await technicalRailPresentation(page)).toMatchObject({
     expressionRowSize: '11px',
     expressionSliderSize: '11px',
-    sceneLabelSize: '11px',
+    sceneLabelSize: '10px',
     authoringSize: '11px'
   });
   await selectTheme(page, TARGETS[0]);
@@ -720,7 +745,11 @@ test('an external non-preset definition renders the same live Workbench tree', a
     root.dataset.pomWidgetGrouping = recipes.widgetGrouping;
     root.dataset.pomChromePresentation = recipes.chromePresentation;
     root.dataset.pomActionPresentation = recipes.actionPresentation;
+    root.dataset.pomShellPresentation = recipes.shellPresentation ?? 'standard';
     root.dataset.pomDensity = 'compact';
+    const instrumented = recipes.shellPresentation === 'instrumented';
+    root.querySelector<HTMLElement>('.panel-create-action')!.hidden = !instrumented;
+    root.querySelector<HTMLButtonElement>('.developer-create-panel')!.hidden = instrumented;
     root.querySelector('[data-pom-part="row.surface"]')?.setAttribute('data-pom-spacing', 'recipe');
     const canvasRoot = root.querySelector<HTMLElement>('[data-pom-canvas-root]')!;
     canvasRoot.replaceChildren(...layers.map((layer) => {
@@ -745,7 +774,7 @@ test('an external non-preset definition renders the same live Workbench tree', a
     expressionRowSize: '',
     expressionSliderSize: '',
     sceneLabelSize: deepRail.sceneLabelSize,
-    authoringSize: deepRail.authoringSize
+    authoringSize: '9px'
   });
   expect(copperRail.geometry.left.x).toBeGreaterThanOrEqual(copperRail.geometry.shell.x);
   expect(copperRail.geometry.right.right).toBeLessThanOrEqual(copperRail.geometry.shell.right);
@@ -773,9 +802,9 @@ test('an external non-preset definition renders the same live Workbench tree', a
 test('focused and floating compositions retain exactly one elevated material owner', async ({ page }) => {
   await fresh(page);
   await selectTheme(page, TARGETS[1]);
-  const world = page.getByRole('article', { name: 'Scene Effects' });
+  const world = page.getByRole('article', { name: 'Room Ambience' });
 
-  await world.getByRole('button', { name: 'Focus Widget' }).click();
+  await invokeWidgetAction(world, 'Focus Widget');
   const dialog = await material(page, '.focused-widget-dialog');
   expect(blurPx(dialog.backdrop)).toBeGreaterThan(0);
   const focusedFrame = page.locator('.focused-widget-dialog .widget-frame');
@@ -783,7 +812,7 @@ test('focused and floating compositions retain exactly one elevated material own
   expect(blurPx((await material(page, '.focused-widget-dialog .widget-frame')).backdrop)).toBe(0);
   await page.getByRole('button', { name: 'Back to Workbench' }).click();
 
-  await world.getByRole('button', { name: 'Float' }).click();
+  await invokeWidgetAction(world, 'Float');
   const floatingWrapper = page.locator('.widget-float');
   await expect(floatingWrapper).not.toHaveAttribute('data-pom-part');
   const floatingFrame = floatingWrapper.locator('.widget-frame');

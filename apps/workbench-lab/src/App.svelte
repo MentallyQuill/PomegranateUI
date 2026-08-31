@@ -9,6 +9,7 @@
 
   import ashAmberStage from './assets/ash-amber-stage.webp';
   import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
+  import atmosphericReservoirStage from './assets/atmospheric-reservoir-stage.jpg';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
   import { resolveLabShowcaseMediaProfile } from './mockup/showcase-media.js';
   import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
@@ -53,7 +54,7 @@
       store.dispatch({ type: 'panel.activate', panelId });
       store.dispatch({
         type: 'widget.create',
-        instance: { id: asWidgetInstanceId('surface-preview-widget'), type: requestedType, manifestVersion: '1.0.0', configuration: {} },
+        instance: { id: asWidgetInstanceId('surface-preview-widget'), type: requestedType, manifestVersion: '1.0.0', configuration: { surfacePreview: true } },
         placement: {
           kind: 'docked',
           panelId,
@@ -67,6 +68,7 @@
   const catalogState = toSvelteCatalogStore(catalog);
   const themeAssetRegistry: ThemeAssetRegistry = Object.freeze({
     'icons.minimal': { kind: 'icon-pack', source: 'icons.minimal' },
+    'image.atmospheric-reservoir': { kind: 'image', source: atmosphericReservoirStage },
     'image.bunny-garden': { kind: 'image', source: bunnyGardenCanvas },
     'image.ash-amber-stage': { kind: 'image', source: ashAmberStage }
   });
@@ -198,6 +200,7 @@
   let focusedFrame = $state<WidgetFrameProjection | null>(null);
   let focusReturnId: string | null = null;
   let leftCollapsed = $state(false);
+  let rightCollapsed = $state(false);
   let panelDialog: { showModal(): void; close(): void };
   let status = $state('Local mockup ready.');
   let eventLog: string[] = $state([]);
@@ -328,10 +331,12 @@
 <main
   class:focus-mode={focusMode}
   class:left-collapsed={leftCollapsed}
+  class:right-collapsed={rightCollapsed}
   data-pom-theme={themeSnapshot.activeId}
   data-pom-theme-root
   data-pom-widget-grouping={themeSnapshot.compiled.theme.recipes.widgetGrouping}
   data-pom-chrome-presentation={themeSnapshot.compiled.theme.recipes.chromePresentation}
+  data-pom-shell-presentation={themeSnapshot.compiled.theme.recipes.shellPresentation ?? 'standard'}
   data-pom-action-presentation={themeSnapshot.compiled.theme.recipes.actionPresentation}
   data-pom-action-content={themeSnapshot.presentation.actions.content}
   data-pom-density={themeSnapshot.compiled.theme.spacing.density}
@@ -345,13 +350,16 @@
   <header class="top-shelf" data-pom-part="chrome.shelf" data-conformance-region="shelf">
     <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
     <PanelTabs {store} class="panel-tabs" />
+    <div class="panel-create-action" hidden={themeSnapshot.compiled.theme.recipes.shellPresentation !== 'instrumented'}>
+      <IconAction label="Create Panel" visualLabel="+" action="create-panel" onclick={openPanelDialog} />
+    </div>
     <div class="story-lockup">
-      <span>Active story</span>
+      <span>{hostContext.storyId}</span>
       <strong>{hostContext.storyTitle}</strong>
       <small aria-label="Active story identity">{hostContext.storyId} · {hostContext.frameLabel}</small>
     </div>
     <div class="shelf-actions">
-      <IconAction label="Open Widget Catalog" action="open-catalog" expanded={$catalogState.open} onclick={() => catalog.open('drawer')} />
+      <IconAction label="Open Widget Catalog" visualLabel="Widgets" action="open-catalog" expanded={$catalogState.open} onclick={() => catalog.open('drawer')} />
       <WidgetShelf {store} />
       <LayoutUndo {store} />
       <IconAction label="Focus reading" action="focus-reading" pressed={focusMode} onclick={() => { focusMode = !focusMode; }} />
@@ -382,8 +390,14 @@
               </select>
             </label>
           {/if}
+          <button
+            class="developer-create-panel"
+            type="button"
+            data-pom-part="button.surface"
+            hidden={themeSnapshot.compiled.theme.recipes.shellPresentation === 'instrumented'}
+            onclick={openPanelDialog}
+          >Create Panel</button>
           <button type="button" data-pom-part="button.surface" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
-          <button type="button" data-pom-part="button.surface" onclick={openPanelDialog}>Create Panel</button>
         </div>
         <div class="persistence-actions">
           <button type="button" data-pom-part="button.surface" onclick={() => void save()}>Save layout</button>
@@ -398,7 +412,15 @@
   </header>
 
   <section id="workbench" class="workbench-shell" data-pom-part="panel.surface" aria-label="Active Workbench">
-    <WorkbenchSurface {store} titleFor={frameTitle} class="workbench-surface">
+    <WorkbenchSurface
+      {store}
+      titleFor={frameTitle}
+      {leftCollapsed}
+      {rightCollapsed}
+      ontoggleleft={() => { leftCollapsed = !leftCollapsed; }}
+      ontoggleright={() => { rightCollapsed = !rightCollapsed; }}
+      class="workbench-surface"
+    >
       {#snippet renderWidget(frame)}
         <div
           class:widget-float={frame.placement.kind === 'floating'}

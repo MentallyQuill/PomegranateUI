@@ -18,6 +18,9 @@
   data-panel-template-family={surface.templateFamily}
   style={`--pom-template-columns:${surface.regions.length}`}
 >
+  {#if surface.templateFamily === 'story-stage'}
+    <p class="story-scene-chrome" aria-hidden="true">FIG. 07 / LIMINAL RESERVOIR</p>
+  {/if}
   {#each surface.regions as region (region.region.id)}
     {#if surface.templateFamily === 'story-stage' && region.region.role === 'stage'}
       <StoryStage><DockRegion projection={region} {store} {renderWidget} {titleFor} surfacePart={null} /></StoryStage>
