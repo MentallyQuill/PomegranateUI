@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildShelfRails,
   clampHeldRect,
+  dockRevealSide,
   resolveDockIntent,
   stabilizeDockIntent,
   type DockIntent,
@@ -60,7 +61,17 @@ describe('Atmospheric docking intent', () => {
       ['after', 2],
       ['append', 2]
     ]);
-    expect(rails.every((rail) => rail.rect.width === 300 && rail.rect.height >= 12)).toBe(true);
+    expect(rails.every((rail) => rail.rect.width === 300 && rail.rect.height >= 12 && rail.rect.height <= 18)).toBe(true);
+    expect(rails.every((rail) => rail.previewRect?.width === 300)).toBe(true);
+    expect(rails.every((rail) => (rail.previewRect?.height ?? 0) >= 72 && (rail.previewRect?.height ?? 0) <= 112)).toBe(true);
+  });
+
+  it('discovers collapsed edge docks without stealing the center canvas', () => {
+    const surface = { x: 10, y: 40, width: 1180, height: 720 };
+    expect(dockRevealSide({ x: 25, y: 300 }, surface, 34)).toBe('left');
+    expect(dockRevealSide({ x: 1175, y: 300 }, surface, 34)).toBe('right');
+    expect(dockRevealSide({ x: 600, y: 300 }, surface, 34)).toBeNull();
+    expect(dockRevealSide({ x: 25, y: 20 }, surface, 34)).toBeNull();
   });
 
   it('uses a full region target when empty and otherwise falls back to float', () => {
@@ -92,6 +103,15 @@ describe('Atmospheric docking intent', () => {
     };
     expect(stabilizeDockIntent({ x: 16, y: 100 }, previous, null, 10)).toBe(previous);
     expect(stabilizeDockIntent({ x: 5, y: 100 }, previous, null, 10)).toBeNull();
+  });
+
+  it('keeps hysteresis local to each 25/50/25 body zone', () => {
+    const before = resolveDockIntent({ x: 120, y: 90 }, [widget])!;
+    const center = resolveDockIntent({ x: 120, y: 170 }, [widget])!;
+    const after = resolveDockIntent({ x: 120, y: 265 }, [widget])!;
+    expect(stabilizeDockIntent({ x: 120, y: 128 }, before, center, 10)).toBe(before);
+    expect(stabilizeDockIntent({ x: 120, y: 170 }, before, center, 10)).toBe(center);
+    expect(stabilizeDockIntent({ x: 120, y: 265 }, center, after, 10)).toBe(after);
   });
 
   it('preserves the grab offset while clamping a held card to the viewport', () => {

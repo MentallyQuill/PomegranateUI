@@ -373,7 +373,7 @@ test('native workbench keeps literal relationships and keyboard reorder behavior
   expect(sceneTabId).toBeTruthy();
   await expect(page.locator(`#${scenePanelId}`)).toHaveAttribute('aria-labelledby', sceneTabId!);
   await expect(scene.locator('xpath=..')).toHaveAttribute('data-pomegranate-panel-tab', 'scene');
-  await page.getByRole('tab', { name: 'Library' }).press('ArrowLeft');
+  await page.getByRole('tab', { name: 'Library' }).press('Control+Shift+ArrowLeft');
   await expect(tabs).toHaveText(['Library', 'Scene', 'Settings']);
   await expect(page.getByLabel('Active story identity')).toContainText('STORY / 7E-19');
 });
@@ -396,7 +396,14 @@ test('non-compact Panel tabs keep secondary actions out of their visible spacing
 });
 
 test('the active Panel overflow menu escapes the tab strip and remains functional', async ({ page }) => {
-  for (const viewport of [{ width: 1440, height: 900 }, { width: 720, height: 1280 }, { width: 412, height: 915 }]) {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 980, height: 720 },
+    { width: 844, height: 390 },
+    { width: 720, height: 1280 },
+    { width: 720, height: 450 },
+    { width: 412, height: 915 }
+  ]) {
     await openFresh(page, viewport.width, viewport.height);
     await page.getByRole('tab', { name: 'Settings' }).click();
     const trigger = page.getByRole('button', { name: 'Manage Settings' });
@@ -407,11 +414,13 @@ test('the active Panel overflow menu escapes the tab strip and remains functiona
       return { triggerWidth: triggerRect.width, tabWidth: tabRect.width };
     });
     expect(triggerAndTab.tabWidth - triggerAndTab.triggerWidth).toBeGreaterThanOrEqual(48);
-    await trigger.click();
+    await trigger.focus();
+    await trigger.press('Enter');
     await expect(trigger).toHaveAttribute('aria-expanded', 'true');
 
-    const menu = page.getByRole('menu', { name: 'Settings Panel actions' });
+    const menu = page.getByRole('dialog', { name: 'Settings Panel actions' });
     await expect(menu).toBeVisible();
+    await expect(menu.getByRole('textbox', { name: 'Panel name' })).toBeFocused();
     const geometry = await menu.evaluate((element) => {
       const rect = element.getBoundingClientRect();
       const tabs = document.querySelector('[role="tablist"][aria-label="Panels"]')!.getBoundingClientRect();
@@ -427,7 +436,7 @@ test('the active Panel overflow menu escapes the tab strip and remains functiona
     expect(geometry.insideViewport).toBe(true);
     expect(geometry.extendsBeyondTabStrip).toBe(true);
 
-    await page.keyboard.press('Escape');
+    await menu.getByRole('button', { name: 'Rename' }).press('Enter');
     await expect(menu).not.toBeVisible();
     await expect(trigger).toBeFocused();
   }

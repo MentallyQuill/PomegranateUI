@@ -6,25 +6,20 @@
   let {
     panel,
     store,
-    moveLeft,
-    moveRight,
-    onaddsubpanel,
-    moveLeftDisabled = false,
-    moveRightDisabled = false
+    onaddsubpanel
   }: {
     panel: PanelState;
     store: WorkbenchStore;
-    moveLeft: () => void;
-    moveRight: () => void;
     onaddsubpanel?: (() => void) | undefined;
-    moveLeftDisabled?: boolean;
-    moveRightDisabled?: boolean;
   } = $props();
 
   let name = $state('');
   let trigger = $state<HTMLButtonElement>();
   let menu = $state<HTMLElement>();
+  let nameInput = $state<HTMLInputElement>();
   let open = $state(false);
+  let suppressTriggerClickUntil = 0;
+  let restoreTriggerAfterClose = false;
   const menuId = $derived(`panel-menu-${panel.id}`);
   const mayCreateFirstSubPanel = $derived(!panel.subPanels?.length);
   $effect(() => { name = panel.name; });
@@ -74,24 +69,29 @@
   }
 
   function toggleMenu() {
+    if (performance.now() <= suppressTriggerClickUntil) return;
     if (!menu) return;
     if (typeof menu.showPopover !== 'function') {
       open = !open;
       menu.toggleAttribute('data-fallback-open', open);
-      if (open) requestAnimationFrame(positionMenu);
+      if (open) requestAnimationFrame(opened);
     } else if (isMenuOpen()) menu.hidePopover();
     else {
+      restoreTriggerAfterClose = false;
       menu.showPopover();
-      requestAnimationFrame(positionMenu);
+      requestAnimationFrame(opened);
     }
   }
 
   function closeMenu(restoreFocus = true) {
+    suppressTriggerClickUntil = performance.now() + 120;
+    restoreTriggerAfterClose = restoreFocus;
     if (menu && typeof menu.hidePopover !== 'function') {
       menu.removeAttribute('data-fallback-open');
       open = false;
+      if (restoreFocus) queueMicrotask(() => trigger?.focus());
+      restoreTriggerAfterClose = false;
     } else if (isMenuOpen()) menu?.hidePopover();
-    if (restoreFocus) queueMicrotask(() => trigger?.focus());
   }
 
   function run(action: () => void) {
@@ -101,10 +101,27 @@
 
   function handleToggle(event: ToggleEvent) {
     open = event.newState === 'open';
-    if (open) requestAnimationFrame(positionMenu);
-    else if (document.activeElement === document.body) queueMicrotask(() => trigger?.focus());
+    if (open) requestAnimationFrame(opened);
+    else {
+      if (restoreTriggerAfterClose) queueMicrotask(() => trigger?.focus());
+      restoreTriggerAfterClose = false;
+    }
+  }
+
+  function handleWindowKey(event: KeyboardEvent) {
+    if (event.key !== 'Escape' || !isMenuOpen()) return;
+    event.preventDefault();
+    closeMenu(true);
+  }
+
+  function opened() {
+    positionMenu();
+    nameInput?.focus();
+    nameInput?.select();
   }
 </script>
+
+<svelte:window onkeydown={handleWindowKey} />
 
 <div class="panel-menu">
   <button
@@ -112,7 +129,7 @@
     class="panel-menu-trigger"
     type="button"
     aria-label={`Manage ${panel.name}`}
-    aria-haspopup="menu"
+    aria-haspopup="dialog"
     aria-expanded={open}
     aria-controls={menuId}
     onclick={toggleMenu}
@@ -121,21 +138,20 @@
     bind:this={menu}
     id={menuId}
     class="panel-menu-surface"
+    data-pom-part="menu.surface"
     popover="auto"
-    role="menu"
+    role="dialog"
     aria-label={`${panel.name} Panel actions`}
     ontoggle={handleToggle}
   >
-    <button type="button" role="menuitem" aria-label={`Move ${panel.name} left`} disabled={moveLeftDisabled} onclick={() => run(moveLeft)}>Move left</button>
-    <button type="button" role="menuitem" aria-label={`Move ${panel.name} right`} disabled={moveRightDisabled} onclick={() => run(moveRight)}>Move right</button>
-    <label>Panel name<input bind:value={name} /></label>
-    <button type="button" role="menuitem" onclick={() => run(() => store.dispatch({ type: 'panel.rename', panelId: panel.id, name: name.trim() || panel.name }))}>Rename</button>
-    <button type="button" role="menuitem" onclick={() => run(duplicate)}>Duplicate</button>
+    <label>Panel name<input bind:this={nameInput} bind:value={name} /></label>
+    <button type="button" onclick={() => run(() => store.dispatch({ type: 'panel.rename', panelId: panel.id, name: name.trim() || panel.name }))}>Rename</button>
+    <button type="button" onclick={() => run(duplicate)}>Duplicate</button>
     {#if mayCreateFirstSubPanel}
-      <button type="button" role="menuitem" onclick={() => run(() => onaddsubpanel?.())}>Create first sub-panel</button>
+      <button type="button" onclick={() => run(() => onaddsubpanel?.())}>Create first sub-panel</button>
     {/if}
-    <button type="button" role="menuitem" onclick={() => run(() => store.dispatch({ type: 'panel.reset', panelId: panel.id }))}>Reset</button>
-    <button type="button" role="menuitem" onclick={() => run(() => destructive('panel.clear'))}>Clear</button>
-    <button type="button" role="menuitem" onclick={() => run(() => destructive('panel.delete'))}>Delete</button>
+    <button type="button" onclick={() => run(() => store.dispatch({ type: 'panel.reset', panelId: panel.id }))}>Reset</button>
+    <button type="button" onclick={() => run(() => destructive('panel.clear'))}>Clear</button>
+    <button type="button" onclick={() => run(() => destructive('panel.delete'))}>Delete</button>
   </div>
 </div>

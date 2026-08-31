@@ -558,6 +558,21 @@ describe('public contracts', () => {
       : null).toEqual({ id: 'reading-stack', order: 0, active: true });
   });
 
+  it('binds atomic shelf creation to the Widget placement it owns', () => {
+    const parsed = WorkbenchCommandSchema.parse({
+      type: 'shelf.create-and-place',
+      shelf: { id: 'secondary', panelId, regionId: 'left', order: 1, weight: 0.5 },
+      instanceId: widgetId,
+      placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'secondary', order: 0 }
+    });
+    expect(parsed.type).toBe('shelf.create-and-place');
+    if (parsed.type !== 'shelf.create-and-place') throw new Error('Expected atomic shelf command.');
+    expect(WorkbenchCommandSchema.safeParse({
+      ...parsed,
+      placement: { ...parsed.placement, shelfId: 'another-shelf' }
+    }).success).toBe(false);
+  });
+
   it('parses every command in the first-slice protocol', () => {
     const commands = [
       { type: 'panel.create', panel: { id: asPanelId('library'), name: 'Library', templateId: 'standard', order: 1 } },
@@ -565,6 +580,7 @@ describe('public contracts', () => {
       { type: 'panel.reorder', panelId, toIndex: 0 },
       { type: 'panel.resize-dock', panelId, edge: 'left', width: 320 },
       { type: 'widget.create', instance: state.widgets[widgetId]!, placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'primary', order: 0 } },
+      { type: 'shelf.create-and-place', shelf: { id: 'secondary', panelId, regionId: 'left', order: 1, weight: 0.5 }, instanceId: widgetId, placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'secondary', order: 0 } },
       { type: 'widget.place', instanceId: widgetId, placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'primary', order: 0 } },
       { type: 'widget.group', instanceId: widgetId, targetInstanceId: widgetId, groupId: 'reading-stack' },
       { type: 'widget.group.activate', instanceId: widgetId },
@@ -579,6 +595,7 @@ describe('public contracts', () => {
       'panel.reorder',
       'panel.resize-dock',
       'widget.create',
+      'shelf.create-and-place',
       'widget.place',
       'widget.group',
       'widget.group.activate',

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import type { PanelId, SubPanelId, WorkbenchState } from '@pomegranate-ui/contracts';
   import { selectSubPanelTabs, type WorkbenchStore } from '@pomegranate-ui/core';
+  import { createTabReorderController } from './TabReorderController.js';
 
   type DialogMode = 'create' | 'rename' | 'layout' | 'move' | 'delete';
 
@@ -20,6 +21,7 @@
   let workbench = $state<WorkbenchState>();
   let selectorOpen = $state(false);
   let actionsOpen = $state(false);
+  let tablist = $state<HTMLElement>();
   $effect(() => {
     const current = store;
     workbench = current.getState();
@@ -28,6 +30,19 @@
   const panel = $derived(workbench?.panels.find((candidate) => candidate.id === workbench?.activePanelId));
   const tabs = $derived(workbench ? selectSubPanelTabs(workbench) : []);
   const active = $derived(tabs.find((tab) => tab.selected));
+
+  const drag = createTabReorderController({
+    getItems: () => tabs.flatMap((tab) => {
+      const element = tablist?.querySelector<HTMLElement>(`[data-sub-panel-tab="${CSS.escape(tab.subPanelIdAttribute)}"]`)?.closest<HTMLElement>('[data-tab-reorder-item]');
+      return element ? [{ id: tab.subPanelId, element }] : [];
+    }),
+    commit: (subPanelId, toIndex) => {
+      if (!panel) return;
+      store.dispatch({ type: 'sub-panel.reorder', panelId: panel.id, subPanelId: subPanelId as SubPanelId, toIndex });
+      void tick().then(() => focusTab(toIndex));
+    }
+  });
+  onDestroy(drag.destroy);
 
   function scrollOwner(panelId: PanelId): HTMLElement | null {
     return document.querySelector<HTMLElement>(`[data-pomegranate-panel="${CSS.escape(panelId)}"]`);
@@ -75,7 +90,7 @@
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
     const direction = event.key === 'ArrowLeft' ? -1 : 1;
-    if (event.altKey) {
+    if (event.ctrlKey && event.shiftKey) {
       store.dispatch({
         type: 'sub-panel.reorder',
         panelId: panel!.id,
@@ -110,21 +125,28 @@
     data-sub-panel-layout={active?.layoutId}
     aria-label={`${panel.name} sub-panel navigation`}
   >
-    <div class="sub-panel-tabs" role="tablist" aria-label={`${panel.name} sub-panels`}>
+    <div bind:this={tablist} class="sub-panel-tabs" role="tablist" aria-label={`${panel.name} sub-panels`}>
       {#each tabs as tab, index (tab.subPanelId)}
-        <button
-          type="button"
-          data-pom-part="button.surface"
-          data-sub-panel-tab={tab.subPanelIdAttribute}
-          role="tab"
-          id={tab.tabId}
-          aria-controls={tab.surfaceId}
-          aria-selected={tab.selected}
-          tabindex={tab.selected ? 0 : -1}
-          onclick={() => void activate(tab.subPanelId)}
-          onkeydown={(event) => handleKey(event, tab.subPanelId, index)}
-          oncontextmenu={(event) => { event.preventDefault(); if (tab.selected) actionsOpen = true; }}
-        >{tab.name}</button>
+        <span data-tab-reorder-item>
+          <button
+            type="button"
+            data-pom-part="button.surface"
+            data-tab-touch-reorder-grip
+            data-sub-panel-tab={tab.subPanelIdAttribute}
+            role="tab"
+            id={tab.tabId}
+            aria-controls={tab.surfaceId}
+            aria-selected={tab.selected}
+            tabindex={tab.selected ? 0 : -1}
+            onclick={() => { if (!drag.consumeClick()) void activate(tab.subPanelId); }}
+            onkeydown={(event) => handleKey(event, tab.subPanelId, index)}
+            onpointerdown={(event) => drag.pointerDown(event, tab.subPanelId)}
+            onpointermove={drag.pointerMove}
+            onpointerup={drag.pointerUp}
+            onpointercancel={drag.pointerCancel}
+            oncontextmenu={(event) => { event.preventDefault(); if (tab.selected) actionsOpen = true; }}
+          >{tab.name}</button>
+        </span>
       {/each}
       <button class="sub-panel-add" type="button" data-pom-part="button.surface" aria-label="Add sub-panel" onclick={() => request('create')}>+</button>
     </div>

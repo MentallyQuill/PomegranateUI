@@ -8,6 +8,7 @@ import {
   WidgetInstanceIdSchema
 } from './ids.js';
 import {
+  DockedPlacementSchema,
   PanelStateSchema,
   ShelfStateSchema,
   SubPanelLayoutIdSchema,
@@ -16,6 +17,7 @@ import {
   WidgetInstanceSchema,
   WidgetPlacementSchema,
   WorkbenchStateSchema,
+  type DockedPlacement,
   type PanelState,
   type ShelfState,
   type SubPanelLayoutId,
@@ -81,6 +83,12 @@ export type WorkbenchCommand =
       };
     }
   | { readonly type: 'shelf.create'; readonly shelf: ShelfState }
+  | {
+      readonly type: 'shelf.create-and-place';
+      readonly shelf: ShelfState;
+      readonly instanceId: WidgetInstanceId;
+      readonly placement: DockedPlacement;
+    }
   | { readonly type: 'shelf.resize'; readonly panelId: PanelId; readonly regionId: string; readonly shelfId: string; readonly weight: number }
   | { readonly type: 'widget.create'; readonly instance: WidgetInstance; readonly placement: VisibleWidgetPlacement }
   | { readonly type: 'widget.place'; readonly instanceId: WidgetInstanceId; readonly placement: VisibleWidgetPlacement }
@@ -185,6 +193,17 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     }).strict()
   }).strict(),
   z.object({ type: z.literal('shelf.create'), shelf: ShelfStateSchema }).strict(),
+  z.object({
+    type: z.literal('shelf.create-and-place'),
+    shelf: ShelfStateSchema,
+    instanceId: WidgetInstanceIdSchema,
+    placement: DockedPlacementSchema
+  }).strict().refine(
+    ({ shelf, placement }) => shelf.panelId === placement.panelId
+      && shelf.regionId === placement.regionId
+      && shelf.id === placement.shelfId,
+    { path: ['placement'], message: 'Placement must target the Shelf created by this command.' }
+  ),
   z.object({
     type: z.literal('shelf.resize'),
     panelId: PanelIdSchema,

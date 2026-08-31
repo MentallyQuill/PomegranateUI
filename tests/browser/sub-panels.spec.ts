@@ -28,6 +28,22 @@ async function assertContained(page: Page) {
   expect(evidence.surfaceRight).toBeLessThanOrEqual(evidence.viewport + 1);
 }
 
+async function dispatchHeldTouchDrag(page: Page, start: { x: number; y: number }, end: { x: number; y: number }) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [start] });
+  await page.waitForTimeout(190);
+  for (const ratio of [0.35, 0.7, 1]) {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{
+        x: start.x + (end.x - start.x) * ratio,
+        y: start.y + (end.y - start.y) * ratio
+      }]
+    });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+}
+
 test('all four themes expose the same exact six functional Settings sub-panels', async ({ page }) => {
   await openClean(page);
   await page.getByText('Developer tools', { exact: true }).click();
@@ -48,6 +64,32 @@ test('all four themes expose the same exact six functional Settings sub-panels',
     await expect(page.getByRole('article', { name: 'Provider Credentials' })).toHaveCount(0);
     await expect(page.getByRole('tabpanel', { name: names[2] })).toBeVisible();
   }
+});
+
+test('Settings sub-panel tabs reorder by pointer and modified keyboard without changing activation semantics', async ({ page }) => {
+  await openClean(page);
+  const tablist = page.getByRole('tablist', { name: 'Settings sub-panels' });
+  const account = tablist.getByRole('tab', { name: names[0] });
+  const appearance = tablist.getByRole('tab', { name: names[2] });
+  const accountBox = await account.boundingBox();
+  const appearanceBox = await appearance.boundingBox();
+  if (!accountBox || !appearanceBox) throw new Error('Expected Settings tab geometry.');
+  await page.mouse.move(accountBox.x + accountBox.width / 2, accountBox.y + accountBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(appearanceBox.x + appearanceBox.width - 2, appearanceBox.y + appearanceBox.height / 2, { steps: 8 });
+  await expect(page.locator('[data-pom-part="tab.insertion"]')).toBeVisible();
+  await page.mouse.up();
+  await expect(tablist.getByRole('tab')).toHaveText([
+    names[1], names[2], names[0], names[3], names[4], names[5]
+  ]);
+
+  await tablist.getByRole('tab', { name: names[2] }).focus();
+  await tablist.getByRole('tab', { name: names[2] }).press('ArrowRight');
+  await expect(tablist.getByRole('tab', { name: names[0] })).toBeFocused();
+  await tablist.getByRole('tab', { name: names[0] }).press('Control+Shift+ArrowLeft');
+  await expect(tablist.getByRole('tab')).toHaveText([
+    names[1], names[0], names[2], names[3], names[4], names[5]
+  ]);
 });
 
 test('create, rename, layout, duplicate, move, delete, and persistence operate through explicit controls', async ({ page }) => {
@@ -143,6 +185,20 @@ test('mobile desktop-site viewport retains a usable coarse-pointer bar and respo
     await expect(page.getByRole('tablist', { name: 'Settings sub-panels' })).toBeVisible();
     await page.getByRole('tab', { name: names[2] }).click();
     await expect(page.getByRole('article', { name: 'Theme Library' })).toBeVisible();
+    const tablist = page.getByRole('tablist', { name: 'Settings sub-panels' });
+    const account = tablist.getByRole('tab', { name: names[0] });
+    const appearance = tablist.getByRole('tab', { name: names[2] });
+    const accountGrip = account;
+    await expect(accountGrip).toHaveAttribute('data-tab-touch-reorder-grip', '');
+    const accountBox = await accountGrip.boundingBox();
+    const appearanceBox = await appearance.boundingBox();
+    if (!accountBox || !appearanceBox) throw new Error('Expected desktop-site touch tab geometry.');
+    expect(accountBox.width).toBeGreaterThanOrEqual(44);
+    expect(accountBox.height).toBeGreaterThanOrEqual(44);
+    const start = { x: accountBox.x + accountBox.width / 2, y: accountBox.y + accountBox.height / 2 };
+    const end = { x: appearanceBox.x + appearanceBox.width - 2, y: appearanceBox.y + appearanceBox.height / 2 };
+    await dispatchHeldTouchDrag(page, start, end);
+    await expect(tablist.getByRole('tab')).toHaveText([names[1], names[2], names[0], names[3], names[4], names[5]]);
     await assertContained(page);
   } finally {
     await context.close();

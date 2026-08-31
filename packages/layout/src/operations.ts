@@ -565,6 +565,25 @@ export function createShelf(
   });
 }
 
+export function createShelfWithWidget(
+  state: WorkbenchState,
+  shelf: ShelfState,
+  instanceId: WidgetInstanceId,
+  placement: DockedPlacement,
+  context: PlacementContext
+): LayoutResult {
+  if (shelf.panelId !== placement.panelId
+    || shelf.regionId !== placement.regionId
+    || shelf.id !== placement.shelfId) {
+    return rejectLayout(state, 'INVALID_PLACEMENT', 'Widget placement must target the Shelf being created.');
+  }
+  const created = createShelf(state, shelf, context.templates);
+  if (!created.ok) return created;
+  const placed = placeWidget(created.state, instanceId, placement, context);
+  if (!placed.ok) return { ok: false, state, error: placed.error };
+  return acceptLayout({ ...placed.state, revision: nextRevision(state) });
+}
+
 export function resizeShelf(state: WorkbenchState, key: ShelfKey, weight: number): LayoutResult {
   const siblings = state.shelves
     .filter((candidate) => candidate.panelId === key.panelId && candidate.regionId === key.regionId)

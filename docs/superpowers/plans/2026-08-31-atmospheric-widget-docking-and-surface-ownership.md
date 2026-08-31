@@ -2,9 +2,9 @@
 
 > **For Codex:** Execute this plan with test-driven development and visual Playwright loops. Do not refresh snapshots until localized differences are intentional and reviewed against the Atmospheric oracle.
 
-**Goal:** Make held-Widget docking indistinguishable from the Atmospheric interaction authority, restore the top-level Panel menu, and consolidate Custom Theme into one renderer across all themes.
+**Goal:** Make held-Widget docking and tab reordering indistinguishable from the Atmospheric interaction authority, make the top-level Panel menu fully theme-bound, and consolidate Custom Theme into one renderer across all themes.
 
-**Architecture:** Keep geometry and intent resolution in a pure TypeScript module, while `WidgetDragController` owns only pointer lifecycle, ephemeral DOM, and store command translation. Use semantic shared overlay parts for all themes. Use a native top-layer popover for the Panel menu. Route both Custom Theme placements through `ThemeSettings.svelte` with responsive presentation.
+**Architecture:** Keep docking and tab-reorder decisions in pure TypeScript modules, while controllers own pointer lifecycle, ephemeral DOM, and existing store-command translation. Active shelf destinations become temporary flex children so real siblings reflow. Use semantic shared parts for all themes, a native top-layer popover for the Panel menu, and one responsive `ThemeSettings.svelte` renderer.
 
 **Tech Stack:** TypeScript, Svelte 5, PomegranateUI contracts/core, Vitest, Playwright, CSS theme expressions.
 
@@ -39,12 +39,12 @@ Record the authority split, intent zones, visual states, cancellation rules, Pan
 - Modify: `tests/browser/native-workbench.spec.ts`
 - Modify: `tests/browser/native-workbench-accessibility.spec.ts`
 
-1. Replace seam-based browser assertions with failing tests that require a complete inert Widget preview, a full source placeholder, labeled contextual rails, active snap geometry, tab insertion, and preview-to-commit fidelity.
+1. Replace seam-based browser assertions with failing tests that require a complete inert Widget preview, a visually vacant source footprint, labeled contextual rails, a full-size in-layout slot, sibling reflow, collapsed-edge opening, tab insertion, and preview-to-commit fidelity.
 2. Build targets from the live active Panel/sub-panel DOM on every drag frame. Paint an overlay inside the active surface with semantic `data-pom-part` hooks.
 3. Clone the full Widget visual safely by stripping duplicate IDs, names, focusability, form submission behavior, and accessibility exposure.
-4. Preserve the source's layout footprint, pointer grab offset, and exact cancellation cleanup.
-5. Commit the stable `DockIntent` rather than re-hit-testing on pointer release. Translate tab, shelf before/after/append, empty-region, and float intents to existing store commands with deterministic shelf orders.
-6. Add pointer capture loss and Escape cleanup. Retain keyboard placement paths.
+4. Preserve the source's layout footprint while hiding all of its card content, preserve pointer grab offset, and guarantee exact cancellation cleanup.
+5. Commit the stable `DockIntent` rather than re-hit-testing on pointer release. Translate tab, shelf before/after/append, empty-region, and float intents to store commands with deterministic shelf orders; create-and-place shelf drops must be one atomic command and undo record.
+6. Add pointer capture loss, Escape, blur, and component-destruction cleanup. Retain keyboard placement paths and preserve an accepted release animation until its completion cleanup.
 7. Run the focused native browser specs and inspect screenshots at 1920x1080, 390x844, 844x390, and 720x1280.
 
 ## Task 4: Move the Panel menu into the top layer
@@ -57,10 +57,24 @@ Record the authority split, intent zones, visual states, cancellation rules, Pan
 - Modify: `tests/browser/sub-panels.spec.ts`
 
 1. Add failing browser tests that open `Manage Settings`, assert nonzero visible area outside the tab strip, invoke a harmless Panel action, dismiss with Escape, and verify focus restoration at every responsive authority viewport.
-2. Replace the clipped `details` popup with a button plus native `popover="auto"` menu anchored with fixed geometry.
-3. Close the popover after action completion and preserve keyboard/menu labels.
-4. Show first-sub-panel creation only when no sub-panel bar exists; keep sub-panel creation and active-sub-panel actions in their existing bar controls otherwise.
-5. Rerun the focused accessibility and sub-panel specs.
+2. Replace the clipped `details` popup with a button plus native `popover="auto"` dialog-like surface anchored with fixed geometry; its rename field and buttons use normal Tab semantics.
+3. Apply `menu.surface`, the compiled theme material, backdrop blur, reduced-transparency fallback, and forced-colors fallback. Remove Move left/right because ordering belongs to direct tab drag and modified keyboard commands.
+4. Focus the name field on open, restore the trigger after Escape/action completion, preserve an outside-click target's focus, and keep literal control labels.
+5. Show first-sub-panel creation only when no sub-panel bar exists; keep sub-panel creation and active-sub-panel actions in their existing bar controls otherwise.
+6. Rerun the focused accessibility and sub-panel specs.
+
+## Task 4A: Add shared direct tab reordering
+
+**Files:**
+- Add: `apps/workbench-lab/src/recipes/tab-reorder.ts`
+- Add: `apps/workbench-lab/src/recipes/TabReorderController.ts`
+- Modify: `PanelTabs.svelte`, `SubPanelBar.svelte`, `WidgetGroup.svelte`
+
+1. Test literal insertion indexes and mouse/pen/true-touch-hold decisions before implementation, including permanent cancellation when pre-hold motion exceeds slop.
+2. Render one inert tab proxy, one in-strip insertion slot, and a vacant origin while reordering.
+3. Commit Panel, sub-panel, and group orders through their existing store commands; ordinary Widget headers remain pan-compatible outside the dedicated touch grip.
+4. Keep bare arrows for navigation and Ctrl+Shift+Arrow for reorder.
+5. In grouped strips, route horizontal motion to reorder and deliberate vertical motion to Widget tear-off docking.
 
 ## Task 5: Consolidate Custom Theme
 
@@ -96,7 +110,7 @@ Record the authority split, intent zones, visual states, cancellation rules, Pan
 
 1. Run `npm.cmd run check` outside the sandbox if npm cache or browser process restrictions require it.
 2. Run `git diff --check`, inspect `git status --short`, and review the complete diff for theme-ID selectors, duplicated renderers, fixture drift, and unrelated changes.
-3. Commit implementation on `codex/atmospheric-docking-interactions` with a concise conventional message.
+3. Commit implementation on `codex/atmospheric-interaction-correction` with a concise conventional message.
 4. Fast-forward or merge the reviewed branch into the primary `main` checkout without touching unrelated untracked files, then `git push origin main`.
 5. Use GitHub CLI with network permission to verify the exact main SHA and watch required checks and Pages deployment to completion.
 6. Inspect the live GitHub Pages DOM, console, asset loads, responsive layouts, held docking visuals, Panel menu, and Custom Theme parity.

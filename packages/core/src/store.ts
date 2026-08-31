@@ -17,6 +17,7 @@ import {
   createSubPanel,
   createPanelTemplateRegistry,
   createShelf,
+  createShelfWithWidget,
   createWidget,
   deletePanel,
   deleteSubPanel,
@@ -133,6 +134,14 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'sub-panel.deleted', revision, panelId: command.panelId, subPanelId: command.subPanelId };
     case 'shelf.create':
       return { type: 'shelf.created', revision, panelId: command.shelf.panelId, shelfId: command.shelf.id };
+    case 'shelf.create-and-place':
+      return {
+        type: 'shelf.created-with-widget',
+        revision,
+        panelId: command.shelf.panelId,
+        shelfId: command.shelf.id,
+        instanceId: command.instanceId
+      };
     case 'shelf.resize':
       return { type: 'shelf.resized', revision, panelId: command.panelId, shelfId: command.shelfId };
     case 'widget.create':
@@ -364,6 +373,15 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
             break;
           case 'shelf.create':
             transition = createShelf(before, command.shelf, templates);
+            break;
+          case 'shelf.create-and-place':
+            transition = createShelfWithWidget(
+              before,
+              command.shelf,
+              command.instanceId,
+              command.placement,
+              placementContext
+            );
             break;
           case 'shelf.resize':
             transition = resizeShelf(before, command, command.weight);

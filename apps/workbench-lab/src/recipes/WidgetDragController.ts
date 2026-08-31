@@ -4,6 +4,7 @@ import type { WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core
 import {
   buildShelfRails,
   clampHeldRect,
+  dockRevealSide,
   resolveDockIntent,
   stabilizeDockIntent,
   type DockIntent,
@@ -11,6 +12,7 @@ import {
   type DockRect,
   type DockTarget
 } from './widget-docking.js';
+import { dragActivationDecision, tabDragDecision } from './tab-reorder.js';
 
 interface DragCandidate {
   readonly pointerId: number;
@@ -20,14 +22,19 @@ interface DragCandidate {
   readonly surface: HTMLElement;
   readonly startX: number;
   readonly startY: number;
+  readonly pointerType: string;
+  readonly startedAt: number;
   grabX: number;
   grabY: number;
   readonly origin: WidgetFrameProjection['placement'];
   active: boolean;
   held: HTMLElement | null;
   overlay: HTMLElement | null;
+  slot: HTMLElement | null;
+  slotIntentKey: string | null;
   intent: DockIntent | null;
   canFloat: boolean;
+  committing: boolean;
 }
 
 export interface WidgetDragController {
@@ -35,12 +42,14 @@ export interface WidgetDragController {
   pointerMove(event: PointerEvent): void;
   pointerUp(event: PointerEvent): void;
   pointerCancel(event: PointerEvent): void;
+  destroy(): void;
 }
 
 interface WidgetDragControllerOptions {
   readonly getFrame: () => WidgetFrameProjection;
   readonly getStore: () => WorkbenchStore;
   readonly setDragging: (dragging: boolean) => void;
+  readonly activation?: 'any' | 'vertical-tearoff';
 }
 
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
@@ -71,7 +80,6 @@ function makeVisualClone(source: HTMLElement): HTMLElement {
     element.removeAttribute('aria-controls');
     element.removeAttribute('aria-labelledby');
     element.removeAttribute('data-pomegranate-widget');
-    element.removeAttribute('data-widget-type');
     element.removeAttribute('data-widget-drag-root');
     element.removeAttribute('data-widget-drag-surface');
     element.setAttribute('tabindex', '-1');
@@ -92,6 +100,8 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
 
   function createHeldState(current: DragCandidate, event: PointerEvent) {
     const box = current.visualRoot.getBoundingClientRect();
+    const themeRoot = current.surface.closest<HTMLElement>('main[data-pom-theme-root]');
+    const overlayOwner = themeRoot ?? document.body;
     const width = Math.min(Math.max(230, box.width), 360, Math.max(180, window.innerWidth - 16));
     const height = Math.min(Math.max(120, box.height), 340, Math.max(120, window.innerHeight - 16));
     const held = document.createElement('div');
@@ -102,13 +112,13 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     held.append(makeVisualClone(current.visualRoot));
     held.style.width = `${width}px`;
     held.style.height = `${height}px`;
-    document.body.append(held);
+    overlayOwner.append(held);
 
     const overlay = document.createElement('div');
     overlay.className = 'widget-drop-overlay';
     overlay.dataset.pomPart = 'widget.drop-overlay';
     overlay.setAttribute('aria-hidden', 'true');
-    document.body.append(overlay);
+    overlayOwner.append(overlay);
 
     current.held = held;
     current.overlay = overlay;
@@ -210,6 +220,90 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     return targets;
   }
 
+  function regionForIntent(current: DragCandidate, intent: DockIntent) {
+    return [...current.surface.querySelectorAll<HTMLElement>('[data-pomegranate-region-surface]')]
+      .find((region) => region.dataset.pomegranateRegionSurface === intent.regionId) ?? null;
+  }
+
+  function shelfForTarget(region: HTMLElement, intent: DockIntent) {
+    if (intent.shelfId) {
+      const direct = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')]
+        .find((shelf) => shelf.dataset.pomegranateShelf === intent.shelfId);
+      if (direct) return direct;
+    }
+    if (!intent.targetInstanceId) return null;
+    return region.querySelector<HTMLElement>(`[data-pomegranate-widget="${CSS.escape(intent.targetInstanceId)}"]`)
+      ?.closest<HTMLElement>('.dock-shelf') ?? null;
+  }
+
+  function removeSlot(current: DragCandidate) {
+    current.slot?.remove();
+    current.slot = null;
+    current.slotIntentKey = null;
+  }
+
+  function syncDockSlot(current: DragCandidate, intent: DockIntent | null): DockIntent | null {
+    if (!intent || intent.kind === 'tab') {
+      removeSlot(current);
+      return intent;
+    }
+    const region = regionForIntent(current, intent);
+    if (!region) {
+      removeSlot(current);
+      return intent;
+    }
+    if (!current.slot) {
+      const slot = document.createElement('div');
+      slot.className = 'widget-dock-preview-slot';
+      slot.dataset.pomPart = 'widget.dock-slot';
+      slot.setAttribute('aria-hidden', 'true');
+      current.slot = slot;
+    }
+    const slot = current.slot;
+    slot.dataset.dropIntent = intent.kind;
+    slot.dataset.dropRegion = intent.regionId;
+    slot.style.setProperty('--pom-dock-preview-size', `${Math.max(72, Math.min(112, intent.previewRect.height))}px`);
+
+    if (current.slotIntentKey !== intent.key || !slot.isConnected) {
+      const shelves = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')];
+      if (intent.kind === 'shelf') {
+        const before = shelves[intent.insertOrder ?? shelves.length];
+        if (before) region.insertBefore(slot, before);
+        else region.append(slot);
+      } else if (intent.kind === 'insert-before' || intent.kind === 'insert-after') {
+        const shelf = shelfForTarget(region, intent);
+        if (shelf && intent.kind === 'insert-before') region.insertBefore(slot, shelf);
+        else if (shelf) {
+          const resizeHandle = shelf.nextElementSibling?.classList.contains('shelf-resize-handle')
+            ? shelf.nextElementSibling
+            : null;
+          (resizeHandle ?? shelf).after(slot);
+        } else region.append(slot);
+      } else region.append(slot);
+      current.slotIntentKey = intent.key;
+    }
+    const slotRect = rectOf(slot.getBoundingClientRect());
+    return slotRect.width > 0 && slotRect.height > 0 ? { ...intent, previewRect: slotRect } : intent;
+  }
+
+  function syncCollapsedDockReveal(current: DragCandidate, point: DockPoint) {
+    const root = current.surface.closest<HTMLElement>('main[data-pom-theme-root]');
+    if (!root) return;
+    const side = dockRevealSide(point, rectOf(current.surface.getBoundingClientRect()), 34);
+    const revealLeft = side === 'left' && root.classList.contains('left-collapsed');
+    const revealRight = side === 'right' && root.classList.contains('right-collapsed');
+    const changed = root.hasAttribute('data-drag-reveal-left') !== revealLeft
+      || root.hasAttribute('data-drag-reveal-right') !== revealRight;
+    if (revealLeft) root.dataset.dragRevealLeft = 'true';
+    else root.removeAttribute('data-drag-reveal-left');
+    if (revealRight) root.dataset.dragRevealRight = 'true';
+    else root.removeAttribute('data-drag-reveal-right');
+    if (changed) {
+      removeSlot(current);
+      void root.offsetWidth;
+    }
+  }
+
   function paintTargets(current: DragCandidate, targets: readonly DockTarget[], intent: DockIntent | null) {
     const overlay = current.overlay;
     if (!overlay) return;
@@ -263,23 +357,37 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
 
   function updateDropState(current: DragCandidate, event: PointerEvent) {
     const point = { x: event.clientX, y: event.clientY };
+    syncCollapsedDockReveal(current, point);
     const targets = collectTargets(current);
     const next = resolveDockIntent(point, targets);
     current.intent = stabilizeDockIntent(point, current.intent, next, 10);
+    current.intent = syncDockSlot(current, current.intent);
     current.canFloat = pointInside(point, rectOf(current.surface.getBoundingClientRect()));
     paintTargets(current, targets, current.intent);
     current.held?.toggleAttribute('data-float-ready', current.intent === null && current.canFloat);
   }
 
+  function removeGlobalListeners(current: DragCandidate) {
+    window.removeEventListener('keydown', escapeCancel);
+    window.removeEventListener('blur', blurCancel);
+    window.removeEventListener('pointerup', windowPointerUp);
+    window.removeEventListener('pointercancel', windowPointerCancel);
+    current.handle.removeEventListener('lostpointercapture', lostCapture);
+  }
+
   function cleanup() {
     if (!candidate) return;
-    candidate.visualRoot.classList.remove('is-widget-dragging');
-    delete candidate.visualRoot.dataset.widgetDragPlaceholder;
-    candidate.held?.remove();
-    candidate.overlay?.remove();
+    const current = candidate;
+    current.visualRoot.classList.remove('is-widget-dragging');
+    delete current.visualRoot.dataset.widgetDragPlaceholder;
+    current.held?.remove();
+    current.overlay?.remove();
+    removeSlot(current);
+    const themeRoot = current.surface.closest<HTMLElement>('main[data-pom-theme-root]');
+    themeRoot?.removeAttribute('data-drag-reveal-left');
+    themeRoot?.removeAttribute('data-drag-reveal-right');
     document.body.classList.remove('pom-widget-drag-active');
-    window.removeEventListener('keydown', escapeCancel);
-    candidate.handle.removeEventListener('lostpointercapture', lostCapture);
+    removeGlobalListeners(current);
     options.setDragging(false);
     candidate = null;
   }
@@ -291,7 +399,67 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
   }
 
   function lostCapture() {
-    if (candidate?.active) cleanup();
+    // Pointer capture can be released when the source becomes visually vacant.
+    // Window-level pointer completion remains authoritative for commit/cancel.
+  }
+
+  function blurCancel() {
+    if (candidate && !candidate.committing) cleanup();
+  }
+
+  function commitIntent(current: DragCandidate) {
+    if (!current.intent) return;
+    current.committing = true;
+    const held = current.held;
+    const target = current.slot?.getBoundingClientRect() ?? current.intent.previewRect;
+    const accepted = acceptIntent(current.intent);
+    if (!accepted) {
+      cleanup();
+      return;
+    }
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!held || reduceMotion) {
+      cleanup();
+      return;
+    }
+    held.dataset.dropCommitting = 'true';
+    const heldRect = held.getBoundingClientRect();
+    const scaleX = Math.max(.08, target.width / Math.max(1, heldRect.width));
+    const scaleY = Math.max(.08, target.height / Math.max(1, heldRect.height));
+    const animation = held.animate([
+      { transform: getComputedStyle(held).transform, opacity: .9 },
+      { transform: `translate3d(${target.x}px, ${target.y}px, 0) scale(${scaleX}, ${scaleY})`, opacity: .42 }
+    ], { duration: 150, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
+    void animation.finished.catch(() => undefined).then(() => {
+      if (candidate !== current) return;
+      cleanup();
+    });
+  }
+
+  function finishPointerUp(event: PointerEvent) {
+    if (!candidate || candidate.pointerId !== event.pointerId || candidate.committing) return;
+    const current = candidate;
+    if (current.active) {
+      if (current.intent) {
+        commitIntent(current);
+        return;
+      }
+      if (current.canFloat) floatAt(current, event);
+    }
+    cleanup();
+  }
+
+  function finishPointerCancel(event: PointerEvent) {
+    if (!candidate || candidate.pointerId !== event.pointerId || candidate.committing) return;
+    cleanup();
+  }
+
+  function windowPointerUp(event: PointerEvent) {
+    finishPointerUp(event);
+  }
+
+  function windowPointerCancel(event: PointerEvent) {
+    finishPointerCancel(event);
   }
 
   function floatAt(current: DragCandidate, event: PointerEvent) {
@@ -338,19 +506,15 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     const frame = options.getFrame();
     const store = options.getStore();
     const shelfId = `${intent.regionId}-shelf-${store.getState().revision + 1}`;
-    const created = store.dispatch({
-      type: 'shelf.create',
+    return store.dispatch({
+      type: 'shelf.create-and-place',
       shelf: {
         id: shelfId,
         panelId: frame.placement.panelId,
         regionId: intent.regionId,
         order,
         weight: 1
-      }
-    });
-    if (!created.ok) return false;
-    return store.dispatch({
-      type: 'widget.place',
+      },
       instanceId: frame.instanceId,
       placement: {
         kind: 'docked',
@@ -417,14 +581,19 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       .sort((left, right) => left.order - right.order)[0];
     if (!shelf) {
       const shelfId = 'primary';
-      const created = store.dispatch({
-        type: 'shelf.create',
-        shelf: { id: shelfId, panelId: frame.placement.panelId, regionId: intent.regionId, order: 0, weight: 1 }
-      });
-      if (!created.ok) return false;
-      shelf = store.getState().shelves.find((entry) => (
-        entry.panelId === frame.placement.panelId && entry.regionId === intent.regionId && entry.id === shelfId
-      ));
+      return store.dispatch({
+        type: 'shelf.create-and-place',
+        shelf: { id: shelfId, panelId: frame.placement.panelId, regionId: intent.regionId, order: 0, weight: 1 },
+        instanceId: frame.instanceId,
+        placement: {
+          kind: 'docked',
+          panelId: frame.placement.panelId,
+          ...ownerFields(intent),
+          regionId: intent.regionId,
+          shelfId,
+          order: 0
+        }
+      }).ok;
     }
     if (!shelf) return false;
     return store.dispatch({
@@ -444,11 +613,13 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
   return Object.freeze({
     pointerDown(event: PointerEvent) {
       if (event.button !== 0 || candidate) return;
+      if (event.pointerType === 'touch'
+        && (!(event.target instanceof Element) || !event.target.closest('[data-widget-touch-drag-grip]'))) return;
       const handle = event.currentTarget as HTMLElement;
       const root = handle.closest<HTMLElement>('[data-widget-drag-root], [data-widget-type]');
-      const visualRoot = root?.matches('[data-widget-type]')
-        ? root
-        : root?.closest<HTMLElement>('[data-widget-group]')?.querySelector<HTMLElement>('[data-widget-type]') ?? root;
+      const visualRoot = root?.closest<HTMLElement>('[data-widget-type]')
+        ?? root?.closest<HTMLElement>('[data-widget-group]')?.querySelector<HTMLElement>('[data-widget-type]')
+        ?? root;
       const surface = handle.closest<HTMLElement>('[data-pomegranate-panel]');
       if (!root || !visualRoot || !surface) return;
       const box = visualRoot.getBoundingClientRect();
@@ -460,27 +631,55 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         surface,
         startX: event.clientX,
         startY: event.clientY,
+        pointerType: event.pointerType,
+        startedAt: event.timeStamp,
         grabX: event.clientX - box.left,
         grabY: event.clientY - box.top,
         origin: options.getFrame().placement,
         active: false,
         held: null,
         overlay: null,
+        slot: null,
+        slotIntentKey: null,
         intent: null,
-        canFloat: false
+        canFloat: false,
+        committing: false
       };
       try { handle.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers need no capture. */ }
       handle.addEventListener('lostpointercapture', lostCapture);
       window.addEventListener('keydown', escapeCancel);
+      window.addEventListener('blur', blurCancel);
+      window.addEventListener('pointerup', windowPointerUp);
+      window.addEventListener('pointercancel', windowPointerCancel);
       event.preventDefault();
     },
 
     pointerMove(event: PointerEvent) {
       if (!candidate || candidate.pointerId !== event.pointerId) return;
-      if (!candidate.active && Math.hypot(event.clientX - candidate.startX, event.clientY - candidate.startY) >= 4) {
-        const currentVisualRoot = candidate.root.matches('[data-widget-type]')
-          ? candidate.root
-          : candidate.root.closest<HTMLElement>('[data-widget-group]')?.querySelector<HTMLElement>('[data-widget-type]');
+      const dx = event.clientX - candidate.startX;
+      const dy = event.clientY - candidate.startY;
+      const decision = options.activation === 'vertical-tearoff'
+        ? tabDragDecision({
+          dx,
+          dy,
+          pointerType: candidate.pointerType,
+          elapsedMs: event.timeStamp - candidate.startedAt,
+          allowTearOff: true
+        })
+        : dragActivationDecision({
+          dx,
+          dy,
+          pointerType: candidate.pointerType,
+          elapsedMs: event.timeStamp - candidate.startedAt
+        });
+      if (decision === 'cancelled') {
+        cleanup();
+        return;
+      }
+      const shouldActivate = decision === 'tear-off' || decision === 'ready';
+      if (!candidate.active && shouldActivate) {
+        const currentVisualRoot = candidate.root.closest<HTMLElement>('[data-widget-type]')
+          ?? candidate.root.closest<HTMLElement>('[data-widget-group]')?.querySelector<HTMLElement>('[data-widget-type]');
         if (currentVisualRoot) {
           const box = currentVisualRoot.getBoundingClientRect();
           candidate.visualRoot = currentVisualRoot;
@@ -496,17 +695,18 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     },
 
     pointerUp(event: PointerEvent) {
-      if (!candidate || candidate.pointerId !== event.pointerId) return;
-      const current = candidate;
-      if (current.active) {
-        if (current.intent) acceptIntent(current.intent);
-        else if (current.canFloat) floatAt(current, event);
-      }
-      cleanup();
+      finishPointerUp(event);
     },
 
     pointerCancel(event: PointerEvent) {
-      if (!candidate || candidate.pointerId !== event.pointerId) return;
+      finishPointerCancel(event);
+    },
+
+    destroy() {
+      if (candidate?.committing) {
+        removeGlobalListeners(candidate);
+        return;
+      }
       cleanup();
     }
   });

@@ -1,4 +1,5 @@
 <script lang="ts" generics="THostContext">
+  import { onDestroy } from 'svelte';
   import type { WorkbenchCommand } from '@pomegranate-ui/contracts';
   import {
     createWidgetActions,
@@ -43,6 +44,7 @@
     getStore: () => store,
     setDragging: (next) => { dragging = next; }
   });
+  onDestroy(drag.destroy);
 
   const isInteractiveTarget = (target: EventTarget | null) => (
     target instanceof Element
@@ -79,7 +81,7 @@
     onpointerup={drag.pointerUp}
     onpointercancel={drag.pointerCancel}
   >
-    <div class="widget-frame-heading">
+    <div class="widget-frame-heading" data-widget-touch-drag-grip>
       <h2>{displayTitle}</h2>
       {#if meta}<span class="widget-frame-meta">{meta}</span>{/if}
     </div>

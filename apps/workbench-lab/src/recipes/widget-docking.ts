@@ -23,6 +23,7 @@ export type DockTarget = DockOwner & {
   readonly id: string;
   readonly kind: 'widget' | 'group-header' | 'rail' | 'region';
   readonly rect: DockRect;
+  readonly previewRect?: DockRect;
   readonly headerRect?: DockRect;
   readonly bodyRect?: DockRect;
   readonly shelfId?: string;
@@ -110,7 +111,7 @@ function intentFromTarget(point: DockPoint, target: DockTarget): DockIntent | nu
       key: `${target.id}:${target.railKind ?? 'append'}`,
       kind: 'shelf',
       targetRect: target.rect,
-      previewRect: target.rect,
+      previewRect: target.previewRect ?? target.rect,
       ...(target.railKind === undefined ? {} : { railKind: target.railKind }),
       ...(target.insertOrder === undefined ? {} : { insertOrder: target.insertOrder }),
       label: target.label ?? 'Create shelf'
@@ -133,31 +134,34 @@ function intentFromTarget(point: DockPoint, target: DockTarget): DockIntent | nu
     if (!contains(body, point)) return null;
     const ratio = body.height <= 0 ? .5 : (point.y - body.y) / body.height;
     if (ratio < .25) {
+      const zone = previewSlice(body, 0, .25);
       return {
         ...base,
         key: `${target.id}:before`,
         kind: 'insert-before',
-        targetRect: body,
-        previewRect: previewSlice(body, 0, .25),
+        targetRect: zone,
+        previewRect: zone,
         label: `Insert before ${targetLabel(target)}`
       };
     }
     if (ratio > .75) {
+      const zone = previewSlice(body, .75, 1);
       return {
         ...base,
         key: `${target.id}:after`,
         kind: 'insert-after',
-        targetRect: body,
-        previewRect: previewSlice(body, .75, 1),
+        targetRect: zone,
+        previewRect: zone,
         label: `Insert after ${targetLabel(target)}`
       };
     }
+    const zone = previewSlice(body, .25, .75);
     return {
       ...base,
       key: `${target.id}:tab`,
       kind: 'tab',
-      targetRect: body,
-      previewRect: previewSlice(body, .25, .75),
+      targetRect: zone,
+      previewRect: zone,
       label: `Group with ${targetLabel(target)}`
     };
   }
@@ -199,7 +203,7 @@ export function stabilizeDockIntent(
   hysteresis = 10
 ): DockIntent | null {
   if (!previous || next?.key === previous.key) return next;
-  return contains(previous.previewRect, point, hysteresis) ? previous : next;
+  return contains(previous.targetRect, point, hysteresis) ? previous : next;
 }
 
 function railRect(region: DockRect, centerY: number, height = minimumRailSize): DockRect {
@@ -210,6 +214,27 @@ function railRect(region: DockRect, centerY: number, height = minimumRailSize): 
     width: region.width,
     height: boundedHeight
   };
+}
+
+function railPreviewRect(region: DockRect, centerY: number): DockRect {
+  const height = Math.min(region.height, Math.max(72, Math.min(112, region.height * .18)));
+  return {
+    x: region.x,
+    y: Math.max(region.y, Math.min(region.y + region.height - height, centerY - height / 2)),
+    width: region.width,
+    height
+  };
+}
+
+export function dockRevealSide(
+  point: DockPoint,
+  surface: DockRect,
+  edgeDistance = 34
+): 'left' | 'right' | null {
+  if (point.y < surface.y || point.y > surface.y + surface.height) return null;
+  if (point.x >= surface.x && point.x <= surface.x + edgeDistance) return 'left';
+  if (point.x <= surface.x + surface.width && point.x >= surface.x + surface.width - edgeDistance) return 'right';
+  return null;
 }
 
 export function buildShelfRails(
@@ -226,6 +251,7 @@ export function buildShelfRails(
     id: `rail:${owner.regionId}:before:${first.id}`,
     kind: 'rail',
     rect: railRect(region, first.rect.y - 6),
+    previewRect: railPreviewRect(region, first.rect.y),
     railKind: 'before',
     insertOrder: 0,
     label: 'New shelf before'
@@ -238,6 +264,7 @@ export function buildShelfRails(
       id: `rail:${owner.regionId}:between:${previous.id}:${next.id}`,
       kind: 'rail',
       rect: railRect(region, (previous.rect.y + previous.rect.height + next.rect.y) / 2),
+      previewRect: railPreviewRect(region, (previous.rect.y + previous.rect.height + next.rect.y) / 2),
       railKind: 'between',
       insertOrder: index,
       label: 'New shelf between'
@@ -249,6 +276,7 @@ export function buildShelfRails(
     id: `rail:${owner.regionId}:after:${last.id}`,
     kind: 'rail',
     rect: railRect(region, Math.min(last.rect.y + last.rect.height + 6, region.y + region.height - 28)),
+    previewRect: railPreviewRect(region, last.rect.y + last.rect.height),
     railKind: 'after',
     insertOrder: ordered.length,
     label: 'New shelf after'
@@ -258,6 +286,7 @@ export function buildShelfRails(
     id: `rail:${owner.regionId}:append`,
     kind: 'rail',
     rect: railRect(region, region.y + region.height - 8, 16),
+    previewRect: railPreviewRect(region, region.y + region.height),
     railKind: 'append',
     insertOrder: ordered.length,
     label: 'Append shelf'

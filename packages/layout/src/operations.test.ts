@@ -5,6 +5,7 @@ import {
   asWidgetInstanceId,
   asWidgetType,
   type PanelId,
+  type DockedPlacement,
   type WidgetInstance,
   type WidgetInstanceId,
   type VisibleWidgetPlacement,
@@ -18,6 +19,7 @@ import {
   createPanel,
   createPanelTemplateRegistry,
   createShelf,
+  createShelfWithWidget,
   createWidget,
   deletePanel,
   duplicatePanel,
@@ -297,6 +299,24 @@ describe('atomic layout operations', () => {
       { id: 'primary', weight: 0.4 },
       { id: 'secondary', weight: 0.6 }
     ]);
+  });
+
+  it('creates a Shelf and places its Widget as one atomic revision', () => {
+    const before = populatedState();
+    const shelf = { id: 'secondary', panelId: sceneId, regionId: 'left', order: 1, weight: 0.5 };
+    const placement = dock(sceneId, 'left', 0, shelf.id) as DockedPlacement;
+    const context = { templates: createPanelTemplateRegistry(), manifestFor: () => undefined };
+
+    const result = createShelfWithWidget(before, shelf, notesId, placement, context);
+    expect(result.ok).toBe(true);
+    expect(result.state.revision).toBe(1);
+    expect(result.state.shelves).toContainEqual(expect.objectContaining({ id: shelf.id, panelId: sceneId }));
+    expect(result.state.placements[notesId]).toMatchObject({ shelfId: shelf.id, order: 0 });
+
+    const rejected = createShelfWithWidget(before, shelf, asWidgetInstanceId('missing'), placement, context);
+    expect(rejected.ok).toBe(false);
+    expect(rejected.state).toBe(before);
+    expect(rejected.state.shelves.some((candidate) => candidate.id === shelf.id)).toBe(false);
   });
 
   it('shelves a Widget without deleting it and restores its exact origin', () => {

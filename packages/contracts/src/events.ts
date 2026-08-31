@@ -29,6 +29,12 @@ export type WorkbenchEvent =
     })
   | (EventBase & { readonly type: 'sub-panel.deleted'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })
   | (EventBase & { readonly type: 'shelf.created'; readonly panelId: PanelId; readonly shelfId: string })
+  | (EventBase & {
+      readonly type: 'shelf.created-with-widget';
+      readonly panelId: PanelId;
+      readonly shelfId: string;
+      readonly instanceId: WidgetInstanceId;
+    })
   | (EventBase & { readonly type: 'shelf.resized'; readonly panelId: PanelId; readonly shelfId: string })
   | (EventBase & { readonly type: 'widget.created'; readonly instanceId: WidgetInstanceId })
   | (EventBase & { readonly type: 'widget.placed'; readonly instanceId: WidgetInstanceId })

@@ -217,6 +217,37 @@ describe('Workbench store', () => {
     expect(seen).toEqual([1]);
   });
 
+  it('creates and places a Shelf in one event, notification, and undo step', () => {
+    const store = fixtureStore();
+    expect(store.dispatch({
+      type: 'widget.create',
+      instance: instance(),
+      placement: { kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'primary', order: 0 }
+    }).ok).toBe(true);
+    const before = store.getState();
+    const seen: number[] = [];
+    store.subscribe((snapshot) => seen.push(snapshot.revision));
+
+    const result = store.dispatch({
+      type: 'shelf.create-and-place',
+      shelf: { id: 'secondary', panelId: sceneId, regionId: 'left', order: 1, weight: 0.5 },
+      instanceId: summaryId,
+      placement: { kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'secondary', order: 0 }
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(result).toMatchObject({
+      ok: true,
+      events: [{ type: 'shelf.created-with-widget', panelId: sceneId, shelfId: 'secondary', instanceId: summaryId }]
+    });
+    expect(result.state.revision).toBe(before.revision + 1);
+    expect(result.state.placements[summaryId]).toMatchObject({ shelfId: 'secondary' });
+    expect(seen).toEqual([before.revision + 1]);
+
+    expect(store.dispatch({ type: 'layout.undo' }).ok).toBe(true);
+    expect(store.getState()).toEqual({ ...before, revision: before.revision + 2 });
+  });
+
   it('rejects an unknown Widget type without mutation or notification', () => {
     const store = fixtureStore();
     const before = store.getState();
