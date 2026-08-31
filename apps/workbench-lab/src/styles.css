@@ -3734,7 +3734,7 @@ main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="co
 }
 @media (max-width: 520px) {
   main[data-pom-theme-root] .panel-tabs {
-    gap: 2px;
+    gap: 0;
   }
   main[data-pom-theme-root] .panel-tabs > div {
     flex-basis: 60px;
@@ -3746,7 +3746,7 @@ main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="co
     overflow: hidden;
   }
   main[data-pom-theme-root] .panel-tabs > div:has([role="tab"][aria-selected="true"]) {
-    flex-basis: 96px;
-    min-width: 96px;
+    flex-basis: 98px;
+    min-width: 98px;
   }
 }
