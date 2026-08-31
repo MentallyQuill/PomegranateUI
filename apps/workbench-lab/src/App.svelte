@@ -199,6 +199,9 @@
   let focusMode = $state(false);
   let focusedFrame = $state<WidgetFrameProjection | null>(null);
   let focusReturnId: string | null = null;
+  const compactWorkbenchMedia = typeof window.matchMedia === 'function'
+    ? window.matchMedia('(max-width: 1180px)')
+    : null;
   let leftCollapsed = $state(false);
   let rightCollapsed = $state(false);
   let panelDialog: { showModal(): void; close(): void };
@@ -215,6 +218,8 @@
 
   onMount(() => {
     let current = true;
+    const collapseCompactDocks = (event: MediaQueryListEvent) => syncCompactDockDefaults(event.matches);
+    compactWorkbenchMedia?.addEventListener('change', collapseCompactDocks);
     void themeController.loadDraft().then((loaded) => {
       if (!current) return;
       hostContext.theme.authoring = loaded.authoring;
@@ -226,10 +231,31 @@
         status = 'Restored the saved local layout.';
       }
     });
-    return () => { current = false; };
+    return () => {
+      current = false;
+      compactWorkbenchMedia?.removeEventListener('change', collapseCompactDocks);
+    };
   });
 
   const activePanel = $derived(workbench.panels.find((panel) => panel.id === workbench.activePanelId));
+
+  function syncCompactDockDefaults(isCompact = compactWorkbenchMedia?.matches ?? false) {
+    const shouldCollapse = isCompact
+      && themeSnapshot.compiled.theme.recipes.shellPresentation === 'instrumented'
+      && activePanel?.templateId === 'story-stage.v1';
+    leftCollapsed = shouldCollapse;
+    rightCollapsed = shouldCollapse;
+  }
+
+  $effect(() => {
+    const shellPresentation = themeSnapshot.compiled.theme.recipes.shellPresentation;
+    const templateId = activePanel?.templateId;
+    if (compactWorkbenchMedia?.matches) {
+      const shouldCollapse = shellPresentation === 'instrumented' && templateId === 'story-stage.v1';
+      leftCollapsed = shouldCollapse;
+      rightCollapsed = shouldCollapse;
+    }
+  });
 
   function floatingStyle(frame: { placement: { kind: string; x?: number; y?: number; width?: number; height?: number; z?: number } }) {
     if (frame.placement.kind !== 'floating') return '';
