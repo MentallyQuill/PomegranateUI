@@ -199,6 +199,331 @@ describe('public contracts', () => {
     expect(LayoutSnapshotV1Schema.safeParse({ schema: 'future.v9' }).success).toBe(false);
   });
 
+  it('parses one-level Panel sub-panels with an exact active owner and Widget lane', () => {
+    const settingsId = asPanelId('settings');
+    const parsed = WorkbenchStateSchema.parse({
+      ...state,
+      activePanelId: settingsId,
+      panels: [{
+        id: settingsId,
+        name: 'Settings',
+        templateId: 'columns.v1',
+        order: 0,
+        activeSubPanelId: 'settings-account-access',
+        subPanels: [
+          {
+            id: 'settings-account-access',
+            name: 'Account and Access',
+            layoutId: 'two-equal',
+            order: 0,
+            scrollTop: 18,
+            shipped: true
+          },
+          {
+            id: 'settings-ai-models',
+            name: 'AI and Models',
+            layoutId: 'two-equal',
+            order: 1,
+            scrollTop: 0
+          }
+        ]
+      }],
+      shelves: [{ id: 'primary', panelId: settingsId, regionId: 'column-1', order: 0, weight: 1 }],
+      placements: {
+        [widgetId]: {
+          kind: 'docked',
+          panelId: settingsId,
+          subPanelId: 'settings-account-access',
+          lane: 1,
+          regionId: 'column-1',
+          shelfId: 'primary',
+          order: 0
+        }
+      }
+    });
+
+    expect(parsed.panels[0]).toMatchObject({
+      activeSubPanelId: 'settings-account-access',
+      subPanels: [
+        { id: 'settings-account-access', layoutId: 'two-equal', order: 0, scrollTop: 18 },
+        { id: 'settings-ai-models', layoutId: 'two-equal', order: 1, scrollTop: 0 }
+      ]
+    });
+    expect(parsed.placements[widgetId]).toMatchObject({
+      subPanelId: 'settings-account-access',
+      lane: 1
+    });
+  });
+
+  it('rejects incomplete or unknown active sub-panel ownership', () => {
+    const base = {
+      id: asPanelId('settings'),
+      name: 'Settings',
+      templateId: 'columns.v1',
+      order: 0
+    };
+    const sibling = {
+      id: 'settings-account-access',
+      name: 'Account and Access',
+      layoutId: 'two-equal',
+      order: 0,
+      scrollTop: 0
+    };
+
+    expect(WorkbenchStateSchema.safeParse({
+      ...state,
+      panels: [{ ...base, activeSubPanelId: 'settings-account-access' }]
+    }).success).toBe(false);
+    expect(WorkbenchStateSchema.safeParse({
+      ...state,
+      panels: [{ ...base, subPanels: [sibling] }]
+    }).success).toBe(false);
+    expect(WorkbenchStateSchema.safeParse({
+      ...state,
+      panels: [{ ...base, activeSubPanelId: 'settings-missing', subPanels: [sibling] }]
+    }).success).toBe(false);
+  });
+
+  it('rejects duplicate sub-panel identities or order slots', () => {
+    const settingsId = asPanelId('settings');
+    const sibling = {
+      id: 'settings-account-access',
+      name: 'Account and Access',
+      layoutId: 'two-equal',
+      order: 0,
+      scrollTop: 0
+    };
+    const panel = {
+      id: settingsId,
+      name: 'Settings',
+      templateId: 'columns.v1',
+      order: 0,
+      activeSubPanelId: sibling.id
+    };
+
+    expect(WorkbenchStateSchema.safeParse({
+      ...state,
+      panels: [{ ...panel, subPanels: [sibling, { ...sibling, name: 'Duplicate identity', order: 1 }] }]
+    }).success).toBe(false);
+    expect(WorkbenchStateSchema.safeParse({
+      ...state,
+      panels: [{ ...panel, subPanels: [sibling, { ...sibling, id: 'settings-ai-models', name: 'AI and Models' }] }]
+    }).success).toBe(false);
+  });
+
+  it('requires docked sub-panel ownership and lane to travel together', () => {
+    const placement = {
+      kind: 'docked',
+      panelId: asPanelId('settings'),
+      regionId: 'column-1',
+      shelfId: 'primary',
+      order: 0
+    };
+
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'widget.place',
+      instanceId: widgetId,
+      placement: { ...placement, subPanelId: 'settings-account-access' }
+    }).success).toBe(false);
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'widget.place',
+      instanceId: widgetId,
+      placement: { ...placement, lane: 0 }
+    }).success).toBe(false);
+  });
+
+  it('preserves sub-panel ownership when a Widget floats or is shelved', () => {
+    const settingsId = asPanelId('settings');
+    const floating = {
+      kind: 'floating',
+      panelId: settingsId,
+      subPanelId: 'settings-advanced',
+      x: 10,
+      y: 20,
+      width: 320,
+      height: 180,
+      z: 2
+    } as const;
+
+    expect(WorkbenchCommandSchema.parse({
+      type: 'widget.place',
+      instanceId: widgetId,
+      placement: floating
+    })).toMatchObject({ placement: { subPanelId: 'settings-advanced' } });
+    expect(WorkbenchStateSchema.parse({
+      ...state,
+      placements: {
+        [widgetId]: { kind: 'shelved', panelId: settingsId, lastVisible: floating }
+      }
+    }).placements[widgetId]).toMatchObject({
+      lastVisible: { subPanelId: 'settings-advanced' }
+    });
+  });
+
+  it('parses explicit sub-panel activation commands', () => {
+    expect(WorkbenchCommandSchema.parse({
+      type: 'sub-panel.activate',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced',
+      currentScrollTop: 72
+    }).type).toBe('sub-panel.activate');
+  });
+
+  it('requires activation to capture the outgoing sub-panel scroll position', () => {
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'sub-panel.activate',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced'
+    }).success).toBe(false);
+  });
+
+  it('parses deterministic sub-panel creation with a lossless Overview identity', () => {
+    expect(WorkbenchCommandSchema.parse({
+      type: 'sub-panel.create',
+      panelId: asPanelId('settings'),
+      overview: {
+        id: 'settings-overview',
+        name: 'Overview',
+        layoutId: 'three-equal',
+        order: 0,
+        scrollTop: 24
+      },
+      subPanel: {
+        id: 'settings-notes',
+        name: 'Notes',
+        layoutId: 'two-equal',
+        order: 1,
+        scrollTop: 0
+      }
+    })).toMatchObject({
+      type: 'sub-panel.create',
+      overview: { id: 'settings-overview' },
+      subPanel: { id: 'settings-notes' }
+    });
+  });
+
+  it('parses bounded sub-panel rename commands', () => {
+    expect(WorkbenchCommandSchema.parse({
+      type: 'sub-panel.rename',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced',
+      name: 'Advanced tools'
+    })).toMatchObject({ type: 'sub-panel.rename', name: 'Advanced tools' });
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'sub-panel.rename',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced',
+      name: '  '
+    }).success).toBe(false);
+  });
+
+  it('parses indexed sub-panel reorder commands', () => {
+    expect(WorkbenchCommandSchema.parse({
+      type: 'sub-panel.reorder',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced',
+      toIndex: 2
+    })).toMatchObject({ type: 'sub-panel.reorder', toIndex: 2 });
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'sub-panel.reorder',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced',
+      toIndex: -1
+    }).success).toBe(false);
+  });
+
+  it('parses only the five authoritative sub-panel layout choices', () => {
+    expect(WorkbenchCommandSchema.parse({
+      type: 'sub-panel.change-layout',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-appearance-accessibility',
+      layoutId: 'wide-left'
+    })).toMatchObject({ type: 'sub-panel.change-layout', layoutId: 'wide-left' });
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'sub-panel.change-layout',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-appearance-accessibility',
+      layoutId: 'four-equal'
+    }).success).toBe(false);
+  });
+
+  it('parses finite nonnegative sub-panel scroll retention', () => {
+    expect(WorkbenchCommandSchema.parse({
+      type: 'sub-panel.set-scroll',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced',
+      scrollTop: 612.5
+    })).toMatchObject({ type: 'sub-panel.set-scroll', scrollTop: 612.5 });
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'sub-panel.set-scroll',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced',
+      scrollTop: -1
+    }).success).toBe(false);
+  });
+
+  it('parses movement between two distinct sub-panel owners', () => {
+    expect(WorkbenchCommandSchema.parse({
+      type: 'sub-panel.move-widgets',
+      panelId: asPanelId('settings'),
+      sourceSubPanelId: 'settings-advanced',
+      targetSubPanelId: 'settings-data-maintenance'
+    })).toMatchObject({
+      type: 'sub-panel.move-widgets',
+      sourceSubPanelId: 'settings-advanced',
+      targetSubPanelId: 'settings-data-maintenance'
+    });
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'sub-panel.move-widgets',
+      panelId: asPanelId('settings'),
+      sourceSubPanelId: 'settings-advanced',
+      targetSubPanelId: 'settings-advanced'
+    }).success).toBe(false);
+  });
+
+  it('parses explicit sub-panel deletion commands', () => {
+    expect(WorkbenchCommandSchema.parse({
+      type: 'sub-panel.delete',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced'
+    }).type).toBe('sub-panel.delete');
+  });
+
+  it('requires caller-supplied Widget and group identities for sub-panel duplication', () => {
+    expect(WorkbenchCommandSchema.parse({
+      type: 'sub-panel.duplicate',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced',
+      subPanel: {
+        id: 'settings-advanced-copy',
+        name: 'Advanced Copy',
+        layoutId: 'single',
+        order: 6,
+        scrollTop: 0
+      },
+      ids: {
+        widgetIds: { 'settings-prompts': 'settings-prompts-copy' },
+        groupIds: { 'advanced-stack': 'advanced-stack-copy' }
+      }
+    })).toMatchObject({
+      type: 'sub-panel.duplicate',
+      subPanel: { id: 'settings-advanced-copy' },
+      ids: { widgetIds: { 'settings-prompts': 'settings-prompts-copy' } }
+    });
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'sub-panel.duplicate',
+      panelId: asPanelId('settings'),
+      subPanelId: 'settings-advanced',
+      subPanel: {
+        id: 'settings-advanced-copy',
+        name: 'Advanced Copy',
+        layoutId: 'single',
+        order: 6,
+        scrollTop: 0
+      }
+    }).success).toBe(false);
+  });
+
   it('preserves docked and floating placement discriminants', () => {
     const docked = WorkbenchCommandSchema.parse({
       type: 'widget.place',

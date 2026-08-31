@@ -4,6 +4,7 @@ declare const brand: unique symbol;
 
 export type BrandedId<Name extends string> = string & { readonly [brand]: Name };
 export type PanelId = BrandedId<'PanelId'>;
+export type SubPanelId = BrandedId<'SubPanelId'>;
 export type WidgetInstanceId = BrandedId<'WidgetInstanceId'>;
 export type WidgetType = BrandedId<'WidgetType'>;
 
@@ -15,11 +16,16 @@ function idSchema<Name extends string>(name: Name) {
 }
 
 export const PanelIdSchema = idSchema('PanelId');
+export const SubPanelIdSchema = idSchema('SubPanelId');
 export const WidgetInstanceIdSchema = idSchema('WidgetInstanceId');
 export const WidgetTypeSchema = idSchema('WidgetType');
 
 export function asPanelId(value: string): PanelId {
   return PanelIdSchema.parse(value);
+}
+
+export function asSubPanelId(value: string): SubPanelId {
+  return SubPanelIdSchema.parse(value);
 }
 
 export function asWidgetInstanceId(value: string): WidgetInstanceId {

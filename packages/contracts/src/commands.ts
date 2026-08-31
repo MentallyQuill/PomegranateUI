@@ -1,20 +1,25 @@
 import { z } from 'zod';
 
-import type { PanelId, WidgetInstanceId } from './ids.js';
+import type { PanelId, SubPanelId, WidgetInstanceId } from './ids.js';
 import { JsonObjectSchema, type JsonObject } from './json.js';
 import {
   PanelIdSchema,
+  SubPanelIdSchema,
   WidgetInstanceIdSchema
 } from './ids.js';
 import {
   PanelStateSchema,
   ShelfStateSchema,
+  SubPanelLayoutIdSchema,
+  SubPanelStateSchema,
   VisibleWidgetPlacementSchema,
   WidgetInstanceSchema,
   WidgetPlacementSchema,
   WorkbenchStateSchema,
   type PanelState,
   type ShelfState,
+  type SubPanelLayoutId,
+  type SubPanelState,
   type VisibleWidgetPlacement,
   type WidgetInstance,
   type WidgetPlacement,
@@ -42,6 +47,39 @@ export type WorkbenchCommand =
   | { readonly type: 'panel.activate'; readonly panelId: PanelId }
   | { readonly type: 'panel.reorder'; readonly panelId: PanelId; readonly toIndex: number }
   | { readonly type: 'panel.resize-dock'; readonly panelId: PanelId; readonly edge: 'left' | 'right'; readonly width: number }
+  | {
+      readonly type: 'sub-panel.activate';
+      readonly panelId: PanelId;
+      readonly subPanelId: SubPanelId;
+      readonly currentScrollTop: number;
+    }
+  | {
+      readonly type: 'sub-panel.create';
+      readonly panelId: PanelId;
+      readonly subPanel: SubPanelState;
+      readonly overview?: SubPanelState;
+    }
+  | { readonly type: 'sub-panel.rename'; readonly panelId: PanelId; readonly subPanelId: SubPanelId; readonly name: string }
+  | { readonly type: 'sub-panel.reorder'; readonly panelId: PanelId; readonly subPanelId: SubPanelId; readonly toIndex: number }
+  | { readonly type: 'sub-panel.change-layout'; readonly panelId: PanelId; readonly subPanelId: SubPanelId; readonly layoutId: SubPanelLayoutId }
+  | { readonly type: 'sub-panel.set-scroll'; readonly panelId: PanelId; readonly subPanelId: SubPanelId; readonly scrollTop: number }
+  | {
+      readonly type: 'sub-panel.move-widgets';
+      readonly panelId: PanelId;
+      readonly sourceSubPanelId: SubPanelId;
+      readonly targetSubPanelId: SubPanelId;
+    }
+  | { readonly type: 'sub-panel.delete'; readonly panelId: PanelId; readonly subPanelId: SubPanelId }
+  | {
+      readonly type: 'sub-panel.duplicate';
+      readonly panelId: PanelId;
+      readonly subPanelId: SubPanelId;
+      readonly subPanel: SubPanelState;
+      readonly ids: {
+        readonly widgetIds: Readonly<Record<string, WidgetInstanceId>>;
+        readonly groupIds: Readonly<Record<string, string>>;
+      };
+    }
   | { readonly type: 'shelf.create'; readonly shelf: ShelfState }
   | { readonly type: 'shelf.resize'; readonly panelId: PanelId; readonly regionId: string; readonly shelfId: string; readonly weight: number }
   | { readonly type: 'widget.create'; readonly instance: WidgetInstance; readonly placement: VisibleWidgetPlacement }
@@ -85,6 +123,66 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     panelId: PanelIdSchema,
     edge: z.enum(['left', 'right']),
     width: z.number().finite().min(200).max(420)
+  }).strict(),
+  z.object({
+    type: z.literal('sub-panel.activate'),
+    panelId: PanelIdSchema,
+    subPanelId: SubPanelIdSchema,
+    currentScrollTop: z.number().finite().nonnegative()
+  }).strict(),
+  z.object({
+    type: z.literal('sub-panel.create'),
+    panelId: PanelIdSchema,
+    subPanel: SubPanelStateSchema,
+    overview: SubPanelStateSchema.optional()
+  }).strict(),
+  z.object({
+    type: z.literal('sub-panel.rename'),
+    panelId: PanelIdSchema,
+    subPanelId: SubPanelIdSchema,
+    name: z.string().trim().min(1).max(48)
+  }).strict(),
+  z.object({
+    type: z.literal('sub-panel.reorder'),
+    panelId: PanelIdSchema,
+    subPanelId: SubPanelIdSchema,
+    toIndex: z.number().int().nonnegative()
+  }).strict(),
+  z.object({
+    type: z.literal('sub-panel.change-layout'),
+    panelId: PanelIdSchema,
+    subPanelId: SubPanelIdSchema,
+    layoutId: SubPanelLayoutIdSchema
+  }).strict(),
+  z.object({
+    type: z.literal('sub-panel.set-scroll'),
+    panelId: PanelIdSchema,
+    subPanelId: SubPanelIdSchema,
+    scrollTop: z.number().finite().nonnegative()
+  }).strict(),
+  z.object({
+    type: z.literal('sub-panel.move-widgets'),
+    panelId: PanelIdSchema,
+    sourceSubPanelId: SubPanelIdSchema,
+    targetSubPanelId: SubPanelIdSchema
+  }).strict().refine(
+    ({ sourceSubPanelId, targetSubPanelId }) => sourceSubPanelId !== targetSubPanelId,
+    { path: ['targetSubPanelId'], message: 'Widget movement requires two distinct sub-panels.' }
+  ),
+  z.object({
+    type: z.literal('sub-panel.delete'),
+    panelId: PanelIdSchema,
+    subPanelId: SubPanelIdSchema
+  }).strict(),
+  z.object({
+    type: z.literal('sub-panel.duplicate'),
+    panelId: PanelIdSchema,
+    subPanelId: SubPanelIdSchema,
+    subPanel: SubPanelStateSchema,
+    ids: z.object({
+      widgetIds: z.record(z.string(), WidgetInstanceIdSchema),
+      groupIds: z.record(z.string(), z.string().trim().min(1))
+    }).strict()
   }).strict(),
   z.object({ type: z.literal('shelf.create'), shelf: ShelfStateSchema }).strict(),
   z.object({

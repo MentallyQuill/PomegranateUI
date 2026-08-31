@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   asPanelId,
+  asSubPanelId,
   asWidgetInstanceId,
   asWidgetType,
   type WidgetInstance,
@@ -15,6 +16,11 @@ import { createWidgetRegistry, createWorkbenchStore } from './index.js';
 const sceneId = asPanelId('scene');
 const libraryId = asPanelId('library');
 const summaryId = asWidgetInstanceId('summary');
+const summaryCopyId = asWidgetInstanceId('summary-copy');
+const overviewId = asSubPanelId('scene-overview');
+const notesId = asSubPanelId('scene-notes');
+const advancedId = asSubPanelId('scene-advanced');
+const notesCopyId = asSubPanelId('scene-notes-copy');
 
 function summaryManifest(): WidgetManifest {
   return {
@@ -49,6 +55,37 @@ function fixtureStore() {
   return createWorkbenchStore({ initialState: initialState(), registry });
 }
 
+function subPanelStore() {
+  const initial = initialState();
+  return createWorkbenchStore({
+    initialState: {
+      ...initial,
+      panels: initial.panels.map((panel) => panel.id === sceneId
+        ? {
+            ...panel,
+            activeSubPanelId: notesId,
+            subPanels: [
+              { id: overviewId, name: 'Overview', layoutId: 'single' as const, order: 0, scrollTop: 96 },
+              { id: notesId, name: 'Notes', layoutId: 'two-equal' as const, order: 1, scrollTop: 0 }
+            ]
+          }
+        : panel),
+      widgets: { [summaryId]: instance() },
+      placements: {
+        [summaryId]: {
+          kind: 'docked',
+          panelId: sceneId,
+          subPanelId: notesId,
+          lane: 0,
+          regionId: 'column-1',
+          shelfId: 'primary',
+          order: 0
+        }
+      }
+    }
+  });
+}
+
 function instance(type = 'story.summary'): WidgetInstance {
   return {
     id: summaryId,
@@ -59,6 +96,82 @@ function instance(type = 'story.summary'): WidgetInstance {
 }
 
 describe('Workbench store', () => {
+  it('dispatches atomic sub-panel activation and publishes its typed event', () => {
+    const store = subPanelStore();
+
+    const result = store.dispatch({
+      type: 'sub-panel.activate',
+      panelId: sceneId,
+      subPanelId: overviewId,
+      currentScrollTop: 72
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.state.revision).toBe(1);
+    expect(result.state.panels[0]).toMatchObject({
+      activeSubPanelId: overviewId,
+      subPanels: [
+        { id: overviewId, scrollTop: 96 },
+        { id: notesId, scrollTop: 72 }
+      ]
+    });
+    expect(result.events).toEqual([{
+      type: 'sub-panel.activated',
+      revision: 1,
+      panelId: sceneId,
+      subPanelId: overviewId
+    }]);
+  });
+
+  it('routes every sub-panel mutation through history and exact typed events', () => {
+    const store = subPanelStore();
+
+    const results = [
+      store.dispatch({
+        type: 'sub-panel.create',
+        panelId: sceneId,
+        subPanel: { id: advancedId, name: 'Advanced', layoutId: 'single', order: 2, scrollTop: 0 }
+      }),
+      store.dispatch({ type: 'sub-panel.rename', panelId: sceneId, subPanelId: advancedId, name: 'Expert' }),
+      store.dispatch({
+        type: 'sub-panel.duplicate',
+        panelId: sceneId,
+        subPanelId: notesId,
+        subPanel: { id: notesCopyId, name: 'Notes Copy', layoutId: 'two-equal', order: 3, scrollTop: 0 },
+        ids: { widgetIds: { [summaryId]: summaryCopyId }, groupIds: {} }
+      }),
+      store.dispatch({ type: 'sub-panel.reorder', panelId: sceneId, subPanelId: notesCopyId, toIndex: 0 }),
+      store.dispatch({ type: 'sub-panel.change-layout', panelId: sceneId, subPanelId: overviewId, layoutId: 'two-equal' }),
+      store.dispatch({ type: 'sub-panel.set-scroll', panelId: sceneId, subPanelId: overviewId, scrollTop: 320 }),
+      store.dispatch({
+        type: 'sub-panel.move-widgets',
+        panelId: sceneId,
+        sourceSubPanelId: notesId,
+        targetSubPanelId: overviewId
+      })
+    ];
+
+    expect(results.every((result) => result.ok)).toBe(true);
+    expect(results.map((result) => result.events[0]?.type)).toEqual([
+      'sub-panel.created',
+      'sub-panel.renamed',
+      'sub-panel.duplicated',
+      'sub-panel.reordered',
+      'sub-panel.layout-changed',
+      'sub-panel.scroll-retained',
+      'sub-panel.widgets-moved'
+    ]);
+    expect(store.getState().placements[summaryId]).toMatchObject({ subPanelId: overviewId });
+    expect(store.getState().placements[summaryCopyId]).toMatchObject({ subPanelId: notesCopyId });
+
+    const beforeDelete = store.getState();
+    const deleted = store.dispatch({ type: 'sub-panel.delete', panelId: sceneId, subPanelId: advancedId });
+    expect(deleted.ok).toBe(true);
+    expect(deleted.events[0]?.type).toBe('sub-panel.deleted');
+    expect(store.dispatch({ type: 'layout.undo' }).ok).toBe(true);
+    expect(store.getState()).toEqual({ ...beforeDelete, revision: beforeDelete.revision + 2 });
+  });
+
   it('publishes one frozen event after an accepted command', () => {
     const store = fixtureStore();
     const seen: number[] = [];

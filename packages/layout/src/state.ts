@@ -23,7 +23,7 @@ export function normalizePanels(panels: readonly PanelState[]): readonly PanelSt
 }
 
 function dockKey(placement: DockedPlacement): string {
-  return `${placement.panelId}\u0000${placement.regionId}\u0000${placement.shelfId}`;
+  return `${placement.panelId}\u0000${placement.subPanelId ?? ''}\u0000${placement.lane ?? ''}\u0000${placement.regionId}\u0000${placement.shelfId}`;
 }
 
 export function normalizeShelves(shelves: readonly import('@pomegranate-ui/contracts').ShelfState[]): readonly import('@pomegranate-ui/contracts').ShelfState[] {
@@ -86,7 +86,7 @@ export function normalizeTabGroups(
   const groups = new Map<string, Array<{ instanceId: string; placement: DockedPlacement }>>();
   for (const [instanceId, placement] of Object.entries(placements)) {
     if (placement.kind !== 'docked' || !placement.group) continue;
-    const key = `${placement.panelId}\u0000${placement.group.id}`;
+    const key = `${placement.panelId}\u0000${placement.subPanelId ?? ''}\u0000${placement.group.id}`;
     const members = groups.get(key) ?? [];
     members.push({ instanceId, placement });
     groups.set(key, members);
