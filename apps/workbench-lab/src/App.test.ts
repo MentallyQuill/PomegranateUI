@@ -104,7 +104,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByText('Chapter 04 · The Drowned Observatory')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'The Water Remembers' })).toBeVisible();
     expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveValue('');
-    expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveAttribute('placeholder', 'Describe what you do, say, or notice…');
+    expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveAttribute('placeholder', ' ');
     expect(screen.getByText('Enter to send')).toBeVisible();
     expect(screen.getByText('Shift + Enter for line break')).toBeVisible();
     expect(screen.getByText('Perspective: Aven')).toBeVisible();
