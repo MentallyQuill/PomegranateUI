@@ -105,6 +105,24 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await shot(page, 'renderer-error.png');
 });
 
+test('Deep Current freezes reviewed phone and mobile desktop-site compositions', async ({ browser }) => {
+  for (const target of [
+    { name: 'deep-mobile-scene.png', viewport: { width: 390, height: 844 }, isMobile: true },
+    { name: 'deep-mobile-desktop-site.png', viewport: { width: 980, height: 720 }, isMobile: false }
+  ]) {
+    const context = await browser.newContext({
+      viewport: target.viewport,
+      hasTouch: true,
+      isMobile: target.isMobile
+    });
+    const page = await context.newPage();
+    await fresh(page, target.viewport.width, target.viewport.height);
+    await expect.poll(() => page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+    await shot(page, target.name);
+    await context.close();
+  }
+});
+
 test('Theme Settings freezes the focused wide and compact authoring surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);
   await page.getByRole('tab', { name: 'Settings' }).click();
