@@ -136,6 +136,8 @@ const PART_MATERIALS: Readonly<Record<ThemePartId, LabMaterialId>> = {
   'chrome.context': 'context',
   'dock.surface': 'panel',
   'panel.surface': 'panel',
+  'sub-panel.bar': 'shelf',
+  'sub-panel.surface': 'panel',
   'group.surface': 'panel',
   'widget.surface': 'pane',
   'widget.header': 'header',
@@ -161,6 +163,8 @@ const PART_SHAPES: Readonly<Record<ThemePartId, string>> = {
   'chrome.context': 'pill',
   'dock.surface': 'none',
   'panel.surface': 'none',
+  'sub-panel.bar': 'none',
+  'sub-panel.surface': 'none',
   'group.surface': 'group',
   'widget.surface': 'pane',
   'widget.header': 'header',
@@ -194,6 +198,7 @@ export function themeRecipes(options: {
     separator: part === 'separator' ? 'hairline' : 'none',
     elevation: part === 'floating.surface' || part === 'dialog.surface' ? 4
       : part === 'menu.surface' ? 3
+        : part === 'sub-panel.bar' ? 3
         : part === 'widget.surface' ? 2
           : 0,
     states: {

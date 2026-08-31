@@ -5,9 +5,11 @@
 
   let {
     store,
+    onaddsubpanel,
     class: className = ''
   }: {
     store: WorkbenchStore;
+    onaddsubpanel?: ((panelId: PanelId) => void) | undefined;
     class?: string;
   } = $props();
 
@@ -55,6 +57,7 @@
           {store}
           moveLeft={() => reorder(tab.panelId, index - 1)}
           moveRight={() => reorder(tab.panelId, index + 1)}
+          onaddsubpanel={() => onaddsubpanel?.(tab.panelId)}
           moveLeftDisabled={tab.moveLeftDisabled}
           moveRightDisabled={tab.moveRightDisabled}
         />

@@ -13,6 +13,40 @@ afterEach(() => {
 });
 
 describe('Svelte Workbench Lab mockup', () => {
+  it('renders exactly six Settings sub-panel tabs and switches the active Widget owner', async () => {
+    const user = userEvent.setup();
+    render(App);
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+
+    const tabs = screen.getByRole('tablist', { name: 'Settings sub-panels' });
+    expect(within(tabs).getAllByRole('tab').map((tab) => tab.textContent?.trim())).toEqual([
+      'Account and Access',
+      'AI and Models',
+      'Appearance and Accessibility',
+      'Story Defaults and Content',
+      'Data, Extensions, and Maintenance',
+      'Advanced'
+    ]);
+    expect(screen.getByRole('article', { name: 'Provider Credentials' })).toBeVisible();
+    expect(screen.getByRole('article', { name: 'AI Connections' })).toBeVisible();
+    expect(screen.queryByRole('article', { name: 'Theme Library' })).toBeNull();
+    const accountTab = within(tabs).getByRole('tab', { name: 'Account and Access' });
+    const accountSurface = screen.getByRole('tabpanel', { name: 'Account and Access' });
+    expect(accountTab).toHaveAttribute('aria-controls', accountSurface.id);
+    await user.hover(accountTab);
+    expect(screen.queryByRole('menu')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Manage Account and Access' }));
+    expect(screen.getByRole('menu', { name: 'Account and Access actions' })).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu', { name: 'Account and Access actions' })).toBeNull();
+
+    await user.click(within(tabs).getByRole('tab', { name: 'Appearance and Accessibility' }));
+    expect(screen.getByRole('article', { name: 'Theme Library' })).toBeVisible();
+    expect(screen.queryByRole('article', { name: 'Provider Credentials' })).toBeNull();
+    expect(screen.getByRole('tabpanel', { name: 'Appearance and Accessibility' })).toBeVisible();
+  });
+
   it('uses one Atmospheric composition with integrated story surfaces and a dormant developer drawer', () => {
     const { container } = render(App);
     expect(container.querySelector('.context-rail')).toBeNull();
@@ -313,6 +347,7 @@ describe('Svelte Workbench Lab mockup', () => {
     const user = userEvent.setup();
     const { container } = render(App);
     await user.click(screen.getByRole('tab', { name: 'Settings' }));
+    await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
     await user.click(within(screen.getByRole('article', { name: 'Theme Library' })).getByRole('button', { name: 'Open Theme Settings' }));
     expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   asPanelId,
+  asSubPanelId,
   asWidgetInstanceId,
   asWidgetType,
   type WorkbenchState
@@ -12,11 +13,14 @@ import {
   createWidgetRegistry,
   createWorkbenchStore,
   selectPanelSurface,
-  selectPanelTabs
+  selectPanelTabs,
+  selectSubPanelTabs
 } from './index.js';
 
 const scenePanel = asPanelId('scene');
 const libraryPanel = asPanelId('library');
+const overviewSubPanel = asSubPanelId('scene-overview');
+const notesSubPanel = asSubPanelId('scene-notes');
 
 function state(): WorkbenchState {
   return {
@@ -37,6 +41,134 @@ function state(): WorkbenchState {
 }
 
 describe('framework-neutral view projections', () => {
+  it('projects sibling tabs and only the active sub-panel Widget owner', () => {
+    const registry = createWidgetRegistry();
+    const overviewWidget = asWidgetInstanceId('overview-widget');
+    const notesWidget = asWidgetInstanceId('notes-widget');
+    const overviewShelfWidget = asWidgetInstanceId('overview-shelf-widget');
+    const withSubPanels: WorkbenchState = {
+      ...state(),
+      panels: state().panels.map((panel) => panel.id === scenePanel
+        ? {
+            ...panel,
+            activeSubPanelId: overviewSubPanel,
+            subPanels: [
+              { id: overviewSubPanel, name: 'Overview', layoutId: 'single' as const, order: 1, scrollTop: 120 },
+              { id: notesSubPanel, name: 'Notes', layoutId: 'two-equal' as const, order: 0, scrollTop: 20 }
+            ]
+          }
+        : panel),
+      widgets: Object.fromEntries([overviewWidget, notesWidget, overviewShelfWidget].map((id) => [id, {
+        id,
+        type: asWidgetType('story.summary'),
+        manifestVersion: '1.0.0',
+        configuration: {}
+      }])),
+      placements: {
+        [overviewWidget]: {
+          kind: 'docked', panelId: scenePanel, subPanelId: overviewSubPanel, lane: 0,
+          regionId: 'left', shelfId: 'primary', order: 0
+        },
+        [notesWidget]: {
+          kind: 'docked', panelId: scenePanel, subPanelId: notesSubPanel, lane: 0,
+          regionId: 'left', shelfId: 'primary', order: 0
+        },
+        [overviewShelfWidget]: {
+          kind: 'shelved',
+          panelId: scenePanel,
+          lastVisible: {
+            kind: 'docked', panelId: scenePanel, subPanelId: overviewSubPanel, lane: 0,
+            regionId: 'left', shelfId: 'primary', order: 1
+          }
+        }
+      }
+    };
+
+    expect(selectSubPanelTabs(withSubPanels, scenePanel)).toEqual([
+      expect.objectContaining({ subPanelId: notesSubPanel, name: 'Notes', selected: false }),
+      expect.objectContaining({ subPanelId: overviewSubPanel, name: 'Overview', selected: true })
+    ]);
+    const surface = selectPanelSurface(withSubPanels, registry);
+    expect(surface?.activeSubPanelId).toBe(overviewSubPanel);
+    expect(surface?.regions[0]?.shelves[0]?.frames.map((frame) => frame.instanceId)).toEqual([overviewWidget]);
+    expect(surface?.widgetShelf.map((frame) => frame.instanceId)).toEqual([overviewShelfWidget]);
+    expect(surface?.floating).toEqual([]);
+  });
+
+  it('preserves the exact sub-panel owner through public dock and float actions', () => {
+    const targetId = asWidgetInstanceId('sub-panel-target');
+    const initial: WorkbenchState = {
+      ...state(),
+      panels: state().panels.map((panel) => panel.id === scenePanel
+        ? {
+            ...panel,
+            activeSubPanelId: overviewSubPanel,
+            subPanels: [
+              { id: overviewSubPanel, name: 'Overview', layoutId: 'two-equal' as const, order: 0, scrollTop: 0 },
+              { id: notesSubPanel, name: 'Notes', layoutId: 'single' as const, order: 1, scrollTop: 0 }
+            ]
+          }
+        : panel),
+      widgets: {
+        [targetId]: { id: targetId, type: asWidgetType('story.summary'), manifestVersion: '1.0.0', configuration: {} }
+      },
+      placements: {
+        [targetId]: {
+          kind: 'docked', panelId: scenePanel, subPanelId: overviewSubPanel, lane: 1,
+          regionId: 'stage', shelfId: 'primary', order: 0
+        }
+      }
+    };
+    const store = createWorkbenchStore({ initialState: initial });
+
+    expect(createWidgetActions(store, targetId).dock('left').ok).toBe(true);
+    expect(store.getState().placements[targetId]).toMatchObject({ subPanelId: overviewSubPanel, lane: 1 });
+    expect(createWidgetActions(store, targetId).float().ok).toBe(true);
+    expect(store.getState().placements[targetId]).toMatchObject({ kind: 'floating', subPanelId: overviewSubPanel });
+  });
+
+  it('maps dock actions to the active sub-panel lanes in a columns Panel', () => {
+    const targetId = asWidgetInstanceId('settings-target');
+    const settingsSubPanel = asSubPanelId('settings-account');
+    const initial: WorkbenchState = {
+      ...state(),
+      activePanelId: libraryPanel,
+      panels: state().panels.map((panel) => panel.id === libraryPanel
+        ? {
+            ...panel,
+            activeSubPanelId: settingsSubPanel,
+            subPanels: [
+              { id: settingsSubPanel, name: 'Account', layoutId: 'two-equal' as const, order: 0, scrollTop: 0 }
+            ]
+          }
+        : panel),
+      shelves: [
+        ...state().shelves,
+        { id: 'primary', panelId: libraryPanel, regionId: 'column-1', order: 0, weight: 1 },
+        { id: 'primary', panelId: libraryPanel, regionId: 'column-2', order: 0, weight: 1 }
+      ],
+      widgets: {
+        [targetId]: { id: targetId, type: asWidgetType('story.summary'), manifestVersion: '1.0.0', configuration: {} }
+      },
+      placements: {
+        [targetId]: {
+          kind: 'docked', panelId: libraryPanel, subPanelId: settingsSubPanel, lane: 1,
+          regionId: 'column-2', shelfId: 'primary', order: 0
+        }
+      }
+    };
+    const store = createWorkbenchStore({ initialState: initial });
+
+    expect(createWidgetActions(store, targetId).dock('left').ok).toBe(true);
+    expect(store.getState().placements[targetId]).toMatchObject({
+      subPanelId: settingsSubPanel, lane: 0, regionId: 'column-1'
+    });
+    expect(createWidgetActions(store, targetId).dock('right').ok).toBe(true);
+    expect(store.getState().placements[targetId]).toMatchObject({
+      subPanelId: settingsSubPanel, lane: 1, regionId: 'column-2'
+    });
+  });
+
   it('projects sorted Panel tabs with stable relationships and reorder limits', () => {
     expect(selectPanelTabs(state())).toEqual([
       {

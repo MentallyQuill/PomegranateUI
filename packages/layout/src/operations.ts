@@ -161,8 +161,8 @@ export function mergeWidgetGroup(
   if (!state.widgets[instanceId] || !state.widgets[targetInstanceId]) {
     return rejectLayout(state, 'MISSING_WIDGET', 'Both grouped Widgets must exist.');
   }
-  if (!source || !target || source.panelId !== target.panelId) {
-    return rejectLayout(state, 'INVALID_PLACEMENT', 'Grouped Widgets must be docked in the same Panel.');
+  if (!source || !target || source.panelId !== target.panelId || source.subPanelId !== target.subPanelId) {
+    return rejectLayout(state, 'INVALID_PLACEMENT', 'Grouped Widgets must be docked in the same Panel and sub-panel owner.');
   }
   if (!groupId || groupId.trim() !== groupId) {
     return rejectLayout(state, 'INVALID_PLACEMENT', 'Widget group identity is invalid.');
@@ -175,6 +175,9 @@ export function mergeWidgetGroup(
   const moved = placeInRecord(state.placements, instanceId, {
     kind: 'docked',
     panelId: target.panelId,
+    ...(target.subPanelId === undefined || target.lane === undefined
+      ? {}
+      : { subPanelId: target.subPanelId, lane: target.lane }),
     regionId: target.regionId,
     shelfId: target.shelfId,
     order: target.order + 1
@@ -205,7 +208,10 @@ export function activateWidgetGroup(state: WorkbenchState, instanceId: WidgetIns
   const placements = { ...state.placements };
   for (const [id, placement] of Object.entries(placements)) {
     const group = placement.kind === 'docked' ? placement.group : undefined;
-    if (placement.kind === 'docked' && placement.panelId === selected.panelId && group?.id === selected.group.id) {
+    if (placement.kind === 'docked'
+      && placement.panelId === selected.panelId
+      && placement.subPanelId === selected.subPanelId
+      && group?.id === selected.group.id) {
       placements[id] = { ...placement, group: { id: group.id, order: group.order, active: id === instanceId } };
     }
   }
@@ -223,6 +229,7 @@ export function reorderWidgetGroup(
   const members = Object.entries(state.placements)
     .filter(([, placement]) => placement.kind === 'docked'
       && placement.panelId === selected.panelId
+      && placement.subPanelId === selected.subPanelId
       && placement.group?.id === selected.group!.id)
     .sort(([, left], [, right]) => (
       left.kind === 'docked' && right.kind === 'docked'

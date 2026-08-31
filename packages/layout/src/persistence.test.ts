@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   asPanelId,
+  asSubPanelId,
   asWidgetInstanceId,
   asWidgetType,
+  WorkbenchStateSchema,
   type LayoutStorage,
   type WorkbenchState
 } from '@pomegranate-ui/contracts';
@@ -19,6 +21,8 @@ const sceneId = asPanelId('scene');
 const libraryId = asPanelId('library');
 const summaryId = asWidgetInstanceId('summary');
 const missingRendererId = asWidgetInstanceId('extension-widget');
+const overviewId = asSubPanelId('scene-overview');
+const notesId = asSubPanelId('scene-notes');
 
 function populatedState(): WorkbenchState {
   return {
@@ -67,12 +71,86 @@ function populatedState(): WorkbenchState {
 
 function expectEncoded(state: WorkbenchState): string {
   const encoded = encodeLayoutSnapshot(state);
-  expect(encoded.ok).toBe(true);
   if (!encoded.ok) throw new Error(encoded.error.message);
+  expect(encoded.ok).toBe(true);
   return encoded.value;
 }
 
+function populatedSubPanelState(): WorkbenchState {
+  const base = populatedState();
+  return {
+    ...base,
+    panels: base.panels.map((panel) => panel.id === sceneId
+      ? {
+          ...panel,
+          activeSubPanelId: notesId,
+          subPanels: [
+            { id: overviewId, name: 'Overview', layoutId: 'single' as const, order: 0, scrollTop: 144 },
+            { id: notesId, name: 'Notes', layoutId: 'two-equal' as const, order: 1, scrollTop: 28 }
+          ]
+        }
+      : panel),
+    placements: {
+      ...base.placements,
+      [summaryId]: {
+        kind: 'docked',
+        panelId: sceneId,
+        subPanelId: overviewId,
+        lane: 0,
+        regionId: 'left',
+        shelfId: 'primary',
+        order: 0
+      }
+    }
+  };
+}
+
 describe('layout persistence', () => {
+  it('round-trips sub-panel metadata and placement ownership through the versioned snapshot', () => {
+    const state = populatedSubPanelState();
+
+    expect(WorkbenchStateSchema.safeParse(state).success).toBe(true);
+    const encoded = expectEncoded(state);
+    expect(JSON.parse(encoded).schema).toBe('pomegranate.ui.layout.v3');
+    const decoded = decodeLayoutSnapshot(encoded, populatedState());
+
+    expect(decoded.ok).toBe(true);
+    expect(decoded.state.panels[0]).toMatchObject({
+      activeSubPanelId: notesId,
+      subPanels: [
+        { id: overviewId, layoutId: 'single', scrollTop: 144 },
+        { id: notesId, layoutId: 'two-equal', scrollTop: 28 }
+      ]
+    });
+    expect(decoded.state.placements[summaryId]).toMatchObject({ subPanelId: overviewId, lane: 0 });
+    expect(expectEncoded(decoded.state)).toBe(encoded);
+  });
+
+  it('normalizes recoverable sub-panel corruption without discarding valid Widgets', () => {
+    const state = populatedSubPanelState();
+    const hostile = JSON.parse(expectEncoded(state));
+    hostile.panels[0].activeSubPanelId = 'scene-missing';
+    hostile.panels[0].subPanels[0].layoutId = 'unknown-layout';
+    hostile.panels[0].subPanels[0].scrollTop = -50;
+    hostile.panels[0].subPanels[0].subPanels = [];
+    hostile.placements[summaryId].subPanelId = 'scene-missing';
+    hostile.placements[summaryId].lane = 99;
+
+    const decoded = decodeLayoutSnapshot(JSON.stringify(hostile), populatedState());
+
+    if (!decoded.ok) throw new Error(decoded.error.message);
+    expect(decoded.ok).toBe(true);
+    expect(decoded.state.widgets).toEqual(state.widgets);
+    expect(decoded.state.panels[0]).toMatchObject({
+      activeSubPanelId: overviewId,
+      subPanels: [
+        { id: overviewId, layoutId: 'single', order: 0, scrollTop: 0 },
+        { id: notesId, layoutId: 'two-equal', order: 1, scrollTop: 28 }
+      ]
+    });
+    expect(decoded.state.placements[summaryId]).toMatchObject({ subPanelId: overviewId, lane: 0 });
+  });
+
   it('encodes deterministically across record and JSON object insertion order', () => {
     const first = populatedState();
     const second: WorkbenchState = {

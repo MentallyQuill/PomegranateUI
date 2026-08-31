@@ -16,7 +16,8 @@
 <div
   class="panel-template-surface"
   data-panel-template-family={surface.templateFamily}
-  style={`--pom-template-columns:${surface.regions.length}`}
+  data-sub-panel-layout={surface.activeSubPanelLayoutId ?? undefined}
+  style={`--pom-template-columns:${surface.regions.length};--pom-sub-panel-columns:${surface.regions.map((region) => `${region.laneWeight}fr`).join(' ')}`}
 >
   {#if surface.templateFamily === 'story-stage'}
     <p class="story-scene-chrome" aria-hidden="true">FIG. 07 / LIMINAL RESERVOIR</p>

@@ -1,8 +1,10 @@
 import {
   LAYOUT_SNAPSHOT_V1_SCHEMA,
   LAYOUT_SNAPSHOT_V2_SCHEMA,
+  LAYOUT_SNAPSHOT_V3_SCHEMA,
   LayoutSnapshotV1Schema,
   LayoutSnapshotV2Schema,
+  LayoutSnapshotV3Schema,
   WORKBENCH_STATE_SCHEMA,
   WorkbenchStateSchema,
   type CommandError,
@@ -10,9 +12,11 @@ import {
   type JsonValue,
   type LayoutSnapshotV1,
   type LayoutSnapshotV2,
+  type LayoutSnapshotV3,
   type LayoutStorage,
   type PanelState,
   type ShelfState,
+  type SubPanelState,
   type VisibleWidgetPlacement,
   type WidgetInstance,
   type WidgetPlacement,
@@ -21,6 +25,7 @@ import {
 
 import { acceptLayout, rejectLayout, type LayoutResult } from './errors.js';
 import { normalizeDockOrders, normalizePanels, normalizeShelves, normalizeTabGroups } from './state.js';
+import { normalizeSubPanels } from './sub-panels.js';
 import { createPanelTemplateRegistry, type PanelTemplateRegistry } from './templates.js';
 
 export type LayoutEncodeResult =
@@ -34,11 +39,34 @@ function canonicalJson(value: JsonValue): JsonValue {
   return Object.fromEntries(Object.keys(object).sort().map((key) => [key, canonicalJson(object[key]!)] as const));
 }
 
+function canonicalSubPanel(subPanel: SubPanelState): SubPanelState {
+  return {
+    id: subPanel.id,
+    name: subPanel.name,
+    layoutId: subPanel.layoutId,
+    order: subPanel.order,
+    scrollTop: subPanel.scrollTop,
+    ...(subPanel.shipped === undefined ? {} : { shipped: subPanel.shipped }),
+    ...(subPanel.hidden === undefined ? {} : { hidden: subPanel.hidden })
+  };
+}
+
 function canonicalPanel(panel: PanelState): PanelState {
   const base = { id: panel.id, name: panel.name, templateId: panel.templateId, order: panel.order };
-  return panel.configuration === undefined
-    ? base
-    : { ...base, configuration: canonicalJson(panel.configuration) as JsonObject };
+  return {
+    ...base,
+    ...(panel.configuration === undefined
+      ? {}
+      : { configuration: canonicalJson(panel.configuration) as JsonObject }),
+    ...(panel.subPanels === undefined || panel.activeSubPanelId === undefined
+      ? {}
+      : {
+          activeSubPanelId: panel.activeSubPanelId,
+          subPanels: [...panel.subPanels]
+            .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))
+            .map(canonicalSubPanel)
+        })
+  };
 }
 
 function canonicalShelf(shelf: ShelfState): ShelfState {
@@ -51,9 +79,27 @@ function canonicalWidget(instance: WidgetInstance): WidgetInstance {
 
 function canonicalVisiblePlacement(placement: VisibleWidgetPlacement): VisibleWidgetPlacement {
   if (placement.kind === 'floating') {
-    return { kind: 'floating', panelId: placement.panelId, x: placement.x, y: placement.y, width: placement.width, height: placement.height, z: placement.z };
+    return {
+      kind: 'floating',
+      panelId: placement.panelId,
+      ...(placement.subPanelId === undefined ? {} : { subPanelId: placement.subPanelId }),
+      x: placement.x,
+      y: placement.y,
+      width: placement.width,
+      height: placement.height,
+      z: placement.z
+    };
   }
-  const base = { kind: 'docked' as const, panelId: placement.panelId, regionId: placement.regionId, shelfId: placement.shelfId, order: placement.order };
+  const base = {
+    kind: 'docked' as const,
+    panelId: placement.panelId,
+    ...(placement.subPanelId === undefined || placement.lane === undefined
+      ? {}
+      : { subPanelId: placement.subPanelId, lane: placement.lane }),
+    regionId: placement.regionId,
+    shelfId: placement.shelfId,
+    order: placement.order
+  };
   return placement.group === undefined ? base : {
     ...base,
     group: { id: placement.group.id, order: placement.group.order, active: placement.group.active }
@@ -123,7 +169,7 @@ export function migrateLayoutSnapshotV1(
   };
 }
 
-function normalizeSnapshot(snapshot: LayoutSnapshotV2, currentState: WorkbenchState): LayoutResult {
+function normalizeSnapshot(snapshot: LayoutSnapshotV2 | LayoutSnapshotV3, currentState: WorkbenchState): LayoutResult {
   const panels = normalizePanels(snapshot.panels.map(canonicalPanel).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id)));
   const panelIds = new Set(panels.map((panel) => panel.id));
   if (panelIds.size !== panels.length) return rejectLayout(currentState, 'INVALID_SNAPSHOT', 'Layout snapshot contains duplicate Panel ids.');
@@ -168,11 +214,11 @@ function normalizeSnapshot(snapshot: LayoutSnapshotV2, currentState: WorkbenchSt
   return acceptLayout(normalized);
 }
 
-function snapshotFromState(state: WorkbenchState): LayoutSnapshotV2 | null {
+function snapshotFromState(state: WorkbenchState): LayoutSnapshotV3 | null {
   const parsed = WorkbenchStateSchema.safeParse(state);
   if (!parsed.success) return null;
-  const candidate: LayoutSnapshotV2 = {
-    schema: LAYOUT_SNAPSHOT_V2_SCHEMA,
+  const candidate: LayoutSnapshotV3 = {
+    schema: LAYOUT_SNAPSHOT_V3_SCHEMA,
     revision: parsed.data.revision,
     activePanelId: parsed.data.activePanelId,
     panels: parsed.data.panels as readonly PanelState[],
@@ -181,9 +227,9 @@ function snapshotFromState(state: WorkbenchState): LayoutSnapshotV2 | null {
     placements: parsed.data.placements as Readonly<Record<string, WidgetPlacement>>
   };
   const normalized = normalizeSnapshot(candidate, state);
-  if (!normalized.ok) return null;
+  if (!normalized.ok) throw new Error(normalized.error.message);
   return {
-    schema: LAYOUT_SNAPSHOT_V2_SCHEMA,
+    schema: LAYOUT_SNAPSHOT_V3_SCHEMA,
     revision: normalized.state.revision,
     activePanelId: normalized.state.activePanelId,
     panels: normalized.state.panels,
@@ -196,12 +242,12 @@ function snapshotFromState(state: WorkbenchState): LayoutSnapshotV2 | null {
 export function encodeLayoutSnapshot(state: WorkbenchState): LayoutEncodeResult {
   try {
     const snapshot = snapshotFromState(state);
-    if (!snapshot || !LayoutSnapshotV2Schema.safeParse(snapshot).success) {
+    if (!snapshot || !LayoutSnapshotV3Schema.safeParse(snapshot).success) {
       return { ok: false, state, error: { code: 'INVALID_SNAPSHOT', message: 'Workbench state cannot be encoded as a valid layout snapshot.', recoverable: true } };
     }
     return { ok: true, state, value: JSON.stringify(snapshot) };
-  } catch {
-    return { ok: false, state, error: { code: 'INTERNAL_ERROR', message: 'Layout snapshot encoding failed unexpectedly.', recoverable: false } };
+  } catch (error) {
+    return { ok: false, state, error: { code: 'INTERNAL_ERROR', message: error instanceof Error ? error.message : 'Layout snapshot encoding failed unexpectedly.', recoverable: false } };
   }
 }
 
@@ -218,6 +264,20 @@ export function decodeLayoutSnapshot(raw: string, currentState: WorkbenchState):
       const parsed = LayoutSnapshotV2Schema.safeParse(parsedJson);
       if (!parsed.success) return rejectLayout(currentState, 'INVALID_SNAPSHOT', 'Layout snapshot does not match pomegranate.ui.layout.v2.');
       return normalizeSnapshot(parsed.data as LayoutSnapshotV2, currentState);
+    }
+    if (schema === LAYOUT_SNAPSHOT_V3_SCHEMA) {
+      const normalizedInput = parsedJson !== null && typeof parsedJson === 'object'
+        ? {
+            ...normalizeSubPanels({
+              ...(parsedJson as WorkbenchState),
+              schema: WORKBENCH_STATE_SCHEMA
+            }),
+            schema: LAYOUT_SNAPSHOT_V3_SCHEMA
+          }
+        : parsedJson;
+      const parsed = LayoutSnapshotV3Schema.safeParse(normalizedInput);
+      if (!parsed.success) return rejectLayout(currentState, 'INVALID_SNAPSHOT', 'Layout snapshot does not match pomegranate.ui.layout.v3.');
+      return normalizeSnapshot(parsed.data as LayoutSnapshotV3, currentState);
     }
     return rejectLayout(currentState, 'INVALID_SNAPSHOT', 'Layout snapshot schema is unsupported.');
   } catch {

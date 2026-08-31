@@ -8,28 +8,37 @@ import {
 } from '@pomegranate-ui/contracts';
 import {
   activatePanel,
+  activateSubPanel,
+  changeSubPanelLayout,
   activateWidgetGroup,
   clearPanel,
   createInitialWorkbenchState,
   createPanel,
+  createSubPanel,
   createPanelTemplateRegistry,
   createShelf,
   createWidget,
   deletePanel,
+  deleteSubPanel,
   decodeLayoutSnapshot,
   encodeLayoutSnapshot,
   placeWidget,
   duplicatePanel,
+  duplicateSubPanel,
   mergeWidgetGroup,
+  moveSubPanelWidgets,
   removeWidget,
   renamePanel,
+  renameSubPanel,
   reorderPanel,
+  reorderSubPanel,
   reorderWidgetGroup,
   resetPanel,
   resizeShelf,
   resizePanelDock,
   restoreWidget,
   separateWidgetGroup,
+  setSubPanelScroll,
   shelveWidget,
   type PanelTemplateRegistry,
   type LayoutResult
@@ -98,6 +107,30 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'panel.reordered', revision, panelId: command.panelId };
     case 'panel.resize-dock':
       return { type: 'panel.dock-resized', revision, panelId: command.panelId, edge: command.edge };
+    case 'sub-panel.activate':
+      return { type: 'sub-panel.activated', revision, panelId: command.panelId, subPanelId: command.subPanelId };
+    case 'sub-panel.create':
+      return { type: 'sub-panel.created', revision, panelId: command.panelId, subPanelId: command.subPanel.id };
+    case 'sub-panel.rename':
+      return { type: 'sub-panel.renamed', revision, panelId: command.panelId, subPanelId: command.subPanelId };
+    case 'sub-panel.duplicate':
+      return { type: 'sub-panel.duplicated', revision, panelId: command.panelId, subPanelId: command.subPanel.id };
+    case 'sub-panel.reorder':
+      return { type: 'sub-panel.reordered', revision, panelId: command.panelId, subPanelId: command.subPanelId };
+    case 'sub-panel.change-layout':
+      return { type: 'sub-panel.layout-changed', revision, panelId: command.panelId, subPanelId: command.subPanelId };
+    case 'sub-panel.set-scroll':
+      return { type: 'sub-panel.scroll-retained', revision, panelId: command.panelId, subPanelId: command.subPanelId };
+    case 'sub-panel.move-widgets':
+      return {
+        type: 'sub-panel.widgets-moved',
+        revision,
+        panelId: command.panelId,
+        subPanelId: command.sourceSubPanelId,
+        targetSubPanelId: command.targetSubPanelId
+      };
+    case 'sub-panel.delete':
+      return { type: 'sub-panel.deleted', revision, panelId: command.panelId, subPanelId: command.subPanelId };
     case 'shelf.create':
       return { type: 'shelf.created', revision, panelId: command.shelf.panelId, shelfId: command.shelf.id };
     case 'shelf.resize':
@@ -285,6 +318,49 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
             break;
           case 'panel.resize-dock':
             transition = resizePanelDock(before, command.panelId, command.edge, command.width);
+            break;
+          case 'sub-panel.activate':
+            transition = activateSubPanel(
+              before,
+              command.panelId,
+              command.subPanelId,
+              command.currentScrollTop
+            );
+            break;
+          case 'sub-panel.create':
+            transition = createSubPanel(before, command.panelId, command.subPanel, command.overview);
+            break;
+          case 'sub-panel.rename':
+            transition = renameSubPanel(before, command.panelId, command.subPanelId, command.name);
+            break;
+          case 'sub-panel.duplicate':
+            transition = duplicateSubPanel(
+              before,
+              command.panelId,
+              command.subPanelId,
+              command.subPanel,
+              command.ids
+            );
+            break;
+          case 'sub-panel.reorder':
+            transition = reorderSubPanel(before, command.panelId, command.subPanelId, command.toIndex);
+            break;
+          case 'sub-panel.change-layout':
+            transition = changeSubPanelLayout(before, command.panelId, command.subPanelId, command.layoutId);
+            break;
+          case 'sub-panel.set-scroll':
+            transition = setSubPanelScroll(before, command.panelId, command.subPanelId, command.scrollTop);
+            break;
+          case 'sub-panel.move-widgets':
+            transition = moveSubPanelWidgets(
+              before,
+              command.panelId,
+              command.sourceSubPanelId,
+              command.targetSubPanelId
+            );
+            break;
+          case 'sub-panel.delete':
+            transition = deleteSubPanel(before, command.panelId, command.subPanelId);
             break;
           case 'shelf.create':
             transition = createShelf(before, command.shelf, templates);

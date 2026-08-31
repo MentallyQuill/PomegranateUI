@@ -34,6 +34,17 @@ async function selectTheme(
   if (closeDrawer) await page.getByText('Developer tools', { exact: true }).click();
 }
 
+async function openAppearanceSettings(page: Page) {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  const selector = page.locator('[data-sub-panel-selector-trigger]');
+  if (await selector.isVisible()) {
+    await selector.click();
+    await page.getByRole('option', { name: 'Appearance and Accessibility' }).click();
+  } else {
+    await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  }
+}
+
 type MaterialSample = {
   readonly alpha: number;
   readonly backdrop: string;
@@ -549,7 +560,7 @@ test('material controls have refined geometry and visibly control glass', async 
   for (const target of TARGETS) {
     await fresh(page);
     await selectTheme(page, target);
-    await page.getByRole('tab', { name: 'Settings' }).click();
+    await openAppearanceSettings(page);
     const settings = page.locator('[data-widget-type="settings.custom-theme"]');
     const glass = settings.getByRole('slider', { name: 'Glass Density' });
     const frost = settings.getByRole('slider', { name: 'Frost Level' });

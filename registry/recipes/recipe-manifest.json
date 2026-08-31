@@ -61,6 +61,31 @@
       }
     },
     {
+      "id": "sub-panel-navigation",
+      "revision": 1,
+      "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
+      "files": [
+        "SubPanelBar.svelte",
+        "SubPanelDialog.svelte"
+      ],
+      "dependencies": [
+        "@pomegranate-ui/contracts",
+        "@pomegranate-ui/core",
+        "svelte"
+      ],
+      "rendererContractIds": [
+        "POM-RENDER-4E5A79B301",
+        "POM-RENDER-5F6B8AC412",
+        "POM-RENDER-607C9BD523",
+        "POM-RENDER-718DACF634",
+        "POM-RENDER-B5C1E03A78"
+      ],
+      "sha256": {
+        "SubPanelBar.svelte": "36937FABF37943B8A30FE95CCA40AE002F1D4ABC38C1072E33E1CB4218693DF1",
+        "SubPanelDialog.svelte": "C60A2982A1776397161E7BA41E45549B1795CD0785606566EE6372974DA30DD9"
+      }
+    },
+    {
       "id": "theme-settings",
       "revision": 1,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
-  import { asPanelId, asWidgetInstanceId, asWidgetType, type WidgetManifest, type WorkbenchState } from '@pomegranate-ui/contracts';
+  import { asPanelId, asWidgetInstanceId, asWidgetType, type PanelId, type SubPanelId, type WidgetManifest, type WorkbenchState } from '@pomegranate-ui/contracts';
   import { loadLayout, saveLayout } from '@pomegranate-ui/layout';
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import type { WidgetFrameProjection } from '@pomegranate-ui/core';
@@ -16,9 +16,12 @@
   import { LAB_PANEL_IDS } from './mockup/state.js';
   import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
   import { resolveLabWidgetMeta, resolveLabWidgetTitle } from './mockup/presentation.js';
+  import { upgradeFlatSettingsPanel } from './mockup/settings-sub-panels.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
   import PanelCreateDialog from './recipes/PanelCreateDialog.svelte';
+  import SubPanelBar from './recipes/SubPanelBar.svelte';
+  import SubPanelDialog from './recipes/SubPanelDialog.svelte';
   import WidgetShelf from './recipes/WidgetShelf.svelte';
   import LayoutUndo from './recipes/LayoutUndo.svelte';
   import IconAction from './recipes/IconAction.svelte';
@@ -205,6 +208,10 @@
   let leftCollapsed = $state(false);
   let rightCollapsed = $state(false);
   let panelDialog: { showModal(): void; close(): void };
+  let subPanelDialog: {
+    open(request: { mode: 'create' | 'rename' | 'layout' | 'move' | 'delete'; panelId: PanelId; subPanelId?: SubPanelId }): void;
+    duplicate(panelId: PanelId, subPanelId: SubPanelId): void;
+  };
   let status = $state('Local mockup ready.');
   let eventLog: string[] = $state([]);
   let sequence = 0;
@@ -227,7 +234,7 @@
     });
     void loadLayout(storage, LAB_LAYOUT_KEY, store.getState()).then((loaded) => {
       if (current && loaded.ok) {
-        store.dispatch({ type: 'layout.hydrate', state: loaded.state });
+        store.dispatch({ type: 'layout.hydrate', state: upgradeFlatSettingsPanel(loaded.state) });
         status = 'Restored the saved local layout.';
       }
     });
@@ -266,6 +273,7 @@
     const panelId = workbench.activePanelId;
     if (!panelId) return;
     const id = asWidgetInstanceId(`catalog-${manifest.type.replace(/[^a-z0-9]+/gi, '-')}-${workbench.revision + 1}`);
+    const activeSubPanel = activePanel?.subPanels?.find((candidate) => candidate.id === activePanel.activeSubPanelId);
     const role = manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.regionRole : 'stage';
     const regionId = activePanel?.templateId === 'focus-support.v1'
       ? role === 'right-instruments' || role === 'support' ? 'support' : 'focus'
@@ -277,7 +285,14 @@
     const result = store.dispatch({
       type: 'widget.create',
       instance: { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} },
-      placement: { kind: 'docked', panelId, regionId, shelfId: 'primary', order: Number.MAX_SAFE_INTEGER }
+      placement: {
+        kind: 'docked',
+        panelId,
+        ...(activeSubPanel ? { subPanelId: activeSubPanel.id, lane: 0 } : {}),
+        regionId,
+        shelfId: 'primary',
+        order: Number.MAX_SAFE_INTEGER
+      }
     });
     status = result.ok ? `${manifest.title} added to ${activePanel?.name ?? 'Panel'}.` : result.error.message;
   }
@@ -303,12 +318,12 @@
 
   async function save() {
     const result = await saveLayout(storage, LAB_LAYOUT_KEY, store.getState());
-    status = result.ok ? 'Saved pomegranate.ui.layout.v2 locally.' : result.error.message;
+    status = result.ok ? 'Saved pomegranate.ui.layout.v3 locally.' : result.error.message;
   }
 
   async function reload() {
     const result = await loadLayout(storage, LAB_LAYOUT_KEY, store.getState());
-    if (result.ok) store.dispatch({ type: 'layout.hydrate', state: result.state });
+    if (result.ok) store.dispatch({ type: 'layout.hydrate', state: upgradeFlatSettingsPanel(result.state) });
     status = result.ok ? 'Reloaded the saved local layout.' : result.error.message;
   }
 
@@ -319,6 +334,14 @@
 
   function openPanelDialog() {
     panelDialog.showModal();
+  }
+
+  function openSubPanelDialog(request: {
+    mode: 'create' | 'rename' | 'layout' | 'move' | 'delete';
+    panelId: PanelId;
+    subPanelId?: SubPanelId;
+  }) {
+    subPanelDialog.open(request);
   }
 
   function focusWidget(frame: WidgetFrameProjection) {
@@ -375,7 +398,11 @@
   <ThemeCanvas layers={themeSnapshot.compiled.canvas} />
   <header class="top-shelf" data-pom-part="chrome.shelf" data-conformance-region="shelf">
     <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
-    <PanelTabs {store} class="panel-tabs" />
+    <PanelTabs
+      {store}
+      class="panel-tabs"
+      onaddsubpanel={(panelId) => openSubPanelDialog({ mode: 'create', panelId })}
+    />
     <div class="panel-create-action" hidden={themeSnapshot.compiled.theme.recipes.shellPresentation !== 'instrumented'}>
       <IconAction label="Create Panel" visualLabel="+" action="create-panel" onclick={openPanelDialog} />
     </div>
@@ -438,6 +465,11 @@
   </header>
 
   <section id="workbench" class="workbench-shell" data-pom-part="panel.surface" aria-label="Active Workbench">
+    <SubPanelBar
+      {store}
+      onrequest={openSubPanelDialog}
+      onduplicate={(panelId, subPanelId) => subPanelDialog.duplicate(panelId, subPanelId)}
+    />
     <WorkbenchSurface
       {store}
       titleFor={frameTitle}
@@ -498,4 +530,5 @@
   {/if}
 
   <PanelCreateDialog bind:this={panelDialog} oncreate={createPanel} />
+  <SubPanelDialog bind:this={subPanelDialog} {store} />
 </main>

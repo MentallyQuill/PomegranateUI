@@ -7,6 +7,7 @@
     store,
     moveLeft,
     moveRight,
+    onaddsubpanel,
     moveLeftDisabled = false,
     moveRightDisabled = false
   }: {
@@ -14,6 +15,7 @@
     store: WorkbenchStore;
     moveLeft: () => void;
     moveRight: () => void;
+    onaddsubpanel?: (() => void) | undefined;
     moveLeftDisabled?: boolean;
     moveRightDisabled?: boolean;
   } = $props();
@@ -52,6 +54,7 @@
     <label>Panel name<input bind:value={name} /></label>
     <button type="button" onclick={() => store.dispatch({ type: 'panel.rename', panelId: panel.id, name: name.trim() || panel.name })}>Rename</button>
     <button type="button" onclick={duplicate}>Duplicate</button>
+    <button type="button" onclick={onaddsubpanel}>Add sub-panel</button>
     <button type="button" onclick={() => store.dispatch({ type: 'panel.reset', panelId: panel.id })}>Reset</button>
     <button type="button" onclick={() => destructive('panel.clear')}>Clear</button>
     <button type="button" onclick={() => destructive('panel.delete')}>Delete</button>
