@@ -4,6 +4,7 @@ import {
 } from './contract-ids.js';
 
 export interface RendererTabSnapshot {
+  readonly panelId: string;
   readonly name: string;
   readonly id: string;
   readonly controls: string;
@@ -20,6 +21,10 @@ export interface RendererPanelOrderItemSnapshot {
 
 export interface RendererPanelOrderSnapshot {
   readonly label: string;
+  readonly request: {
+    readonly panelId: string;
+    readonly invokingTabId: string;
+  };
   readonly items: readonly RendererPanelOrderItemSnapshot[];
 }
 
@@ -158,10 +163,10 @@ export async function runRendererConformance(
   const movedExactlyOnePrevious = libraryIndex > 0
     && reorderedTabIds?.length === expectedReorderIds.length
     && expectedReorderIds.every((id, index) => reorderedTabIds[index] === id);
-  const revisionAdvanced = Boolean(
+  const revisionAdvancedExactlyOnce = Boolean(
     activation.snapshot
     && reorder.snapshot
-    && reorder.snapshot.revision > activation.snapshot.revision
+    && reorder.snapshot.revision === activation.snapshot.revision + 1
   );
   const orderItems = reorder.snapshot?.panelOrder?.items;
   const orderItemIds = orderItems?.map((item) => item.id);
@@ -170,6 +175,22 @@ export async function runRendererConformance(
     && reorderedTabIds
     && orderItemIds.length === reorderedTabIds.length
     && reorderedTabIds.every((id, index) => orderItemIds[index] === id)
+  );
+  const orderNamesMatchTabs = Boolean(
+    orderItems
+    && reorder.snapshot
+    && orderItems.length > 0
+    && orderItems.length === reorder.snapshot.tabs.length
+    && orderItems.every((item, index) => (
+      item.name.trim().length > 0
+      && item.name === reorder.snapshot?.tabs[index]?.name
+    ))
+  );
+  const invokingTab = preReorderTabs?.[libraryIndex];
+  const reorderRequestMatches = Boolean(
+    invokingTab
+    && reorder.snapshot?.panelOrder?.request.panelId === invokingTab.panelId
+    && reorder.snapshot.panelOrder.request.invokingTabId === invokingTab.id
   );
   const orderEdgesTruthful = Boolean(orderItems?.every((item, index) => (
     item.movePreviousDisabled === (index === 0)
@@ -191,9 +212,11 @@ export async function runRendererConformance(
   );
   const reorderPassed = Boolean(
     movedExactlyOnePrevious
-    && revisionAdvanced
+    && revisionAdvancedExactlyOnce
     && reorder.snapshot?.panelOrder?.label === 'Reorder Panels'
+    && reorderRequestMatches
     && orderMatchesTabs
+    && orderNamesMatchTabs
     && orderEdgesTruthful
     && activeOrderMatchesSelectedTab
     && reorderedRelationshipsPassed
@@ -248,8 +271,8 @@ export async function runRendererConformance(
       reorder.error
         ? `Panel reorder conformance failed: ${reorder.error}`
         : reorderPassed
-        ? 'Panel reorder opened an explicit ordering surface, moved Library exactly one position previous, advanced revision, retained active relationships, and exposed truthful edge controls.'
-        : 'Expected an explicit Panel ordering surface to move Library exactly one position previous, advance revision, retain one reciprocal active identity, and disable controls only at sequence edges.'
+        ? 'Panel reorder preserved its exact callback target, opened a complete ordering surface, moved Library exactly one position previous, advanced revision exactly once, retained active relationships, and exposed truthful edge controls.'
+        : 'Expected the exact Panel reorder callback target and a complete named ordering surface to move Library exactly one position previous, advance revision exactly once, retain one reciprocal active identity, and disable controls only at sequence edges.'
     ),
     result(
       RENDERER_CONTRACT_IDS.widgetPlacement,

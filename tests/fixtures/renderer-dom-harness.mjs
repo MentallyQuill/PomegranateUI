@@ -25,6 +25,7 @@ export function createRendererDomHarness(document) {
       floating: [],
       failed: [],
       orderSurfaceOpen: false,
+      orderRequest: null,
       revision: 0
     };
   }
@@ -56,6 +57,10 @@ export function createRendererDomHarness(document) {
     const reorderTrigger = button(document, 'Reorder Panels', { 'aria-haspopup': 'dialog' });
     reorderTrigger.addEventListener('click', () => {
       state.orderSurfaceOpen = true;
+      state.orderRequest = {
+        panelId: slug(state.active),
+        invokingTabId: `pomegranate-panel-tab-${slug(state.active)}`
+      };
       render();
     });
     root.append(reorderTrigger);
@@ -218,6 +223,7 @@ export function createRendererDomHarness(document) {
       return {
         tabListName: root.querySelector('[role="tablist"]')?.getAttribute('aria-label') ?? null,
         tabs: tabs.map((tab) => ({
+          panelId: tab.id.replace('pomegranate-panel-tab-', ''),
           name: tab.textContent,
           id: tab.id,
           controls: tab.getAttribute('aria-controls'),
@@ -225,6 +231,7 @@ export function createRendererDomHarness(document) {
         })),
         panelOrder: orderSurface ? {
           label: orderSurface.getAttribute('aria-label'),
+          request: state.orderRequest,
           items: [...orderSurface.querySelectorAll('[data-panel-order-item]')].map((item) => {
             const name = item.dataset.panelOrderName;
             return {

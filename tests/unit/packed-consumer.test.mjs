@@ -58,6 +58,7 @@ test('packed verifier proves an isolated Svelte recipe consumer', async () => {
     "vite",
     "renderer-conformance.test.ts",
     "PanelTabs.svelte",
+    "SubPanelBar.svelte",
     "WidgetCatalog.svelte",
     "WidgetFrame.svelte",
     "WorkbenchSurface.svelte",
@@ -69,11 +70,19 @@ test('packed verifier proves an isolated Svelte recipe consumer', async () => {
     "data-panel-order-id={tab.tabId}",
     "data-panel-order-active={tab.selected}",
     "data-panel-order-active-marker",
+    "data-panel-order-request-panel-id",
+    "data-panel-order-request-invoking-tab-id",
     "Move ${tab.name} up",
     "Move ${tab.name} down",
     "setupFiles",
-    "scrollIntoView"
+    "keeps copied tab reveal local to its rail",
+    "document.documentElement.scrollTop",
+    "createSubPanel",
+    "data-packed-sub-panel-surface",
+    "activatePackedSubPanel",
+    "activates copied sub-panel tabs with reciprocal host relationships"
   ]) assert.match(verifier, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), expected);
+  assert.doesNotMatch(verifier, /HTMLElement\.prototype\.scrollIntoView/);
   assert.doesNotMatch(verifier, /renderer-dom-harness\.mjs/);
   assert.doesNotMatch(verifier, /defaultPlacement: \{ kind: 'docked', edge|panelId, edge/);
   assert.match(verifier, /regionRole: 'stage'/);
