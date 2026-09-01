@@ -6,6 +6,11 @@ function pointer(type: string, init: PointerEventInit): PointerEvent {
   return new PointerEvent(type, { bubbles: true, button: 0, pointerId: 1, ...init });
 }
 
+function withCurrentTarget<EventType extends Event>(event: EventType, currentTarget: HTMLElement): EventType {
+  Object.defineProperty(event, 'currentTarget', { value: currentTarget });
+  return event;
+}
+
 function configureRail(rail: HTMLElement, values: { clientWidth?: number; scrollWidth?: number } = {}) {
   Object.defineProperties(rail, {
     clientWidth: { configurable: true, value: values.clientWidth ?? 200 },
@@ -107,21 +112,66 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
-  it('suppresses activation after a touch hold while a short touch remains an ordinary tap', () => {
+  it('emits one touch context request after a stationary hold and suppresses its native duplicate', () => {
     vi.useFakeTimers();
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
     configureRail(rail);
-    const controller = createTabRailController({ rail, onContextRequest: vi.fn() });
+    const settings = tab('settings');
+    const library = tab('library');
+    rail.append(settings, library);
+    const onContextRequest = vi.fn<(request: TabRailContextRequest) => void>();
+    const controller = createTabRailController({ rail, onContextRequest });
 
-    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 1, pointerType: 'touch' }), 'settings');
-    controller.pointerUp(pointer('pointerup', { clientX: 100, pointerId: 1, pointerType: 'touch' }));
-    expect(controller.consumeClick()).toBe(false);
-    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 2, pointerType: 'touch' }), 'settings');
+    controller.pointerDown(withCurrentTarget(pointer('pointerdown', { clientX: 100, pointerId: 2, pointerType: 'touch' }), settings), 'settings');
     vi.advanceTimersByTime(500);
-    controller.pointerUp(pointer('pointerup', { clientX: 100, pointerId: 2, pointerType: 'touch' }));
+
+    expect(onContextRequest).toHaveBeenCalledTimes(1);
+    expect(onContextRequest).toHaveBeenLastCalledWith({ id: 'settings', anchor: settings, source: 'touch' });
     expect(controller.consumeClick()).toBe(true);
+    const native = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), settings);
+    controller.contextMenu(native, 'settings');
+    const independent = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), library);
+    controller.contextMenu(independent, 'library');
+    expect(onContextRequest).toHaveBeenCalledTimes(2);
+    expect(native.defaultPrevented).toBe(true);
+    expect(independent.defaultPrevented).toBe(true);
     controller.destroy();
+  });
+
+  it('cancels pending touch holds on movement, early completion, cancellation, blur, Escape, and destroy', () => {
+    vi.useFakeTimers();
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const settings = tab('settings');
+    rail.append(settings);
+    const onContextRequest = vi.fn<(request: TabRailContextRequest) => void>();
+    const controller = createTabRailController({ rail, onContextRequest });
+    const down = (pointerId: number) => controller.pointerDown(
+      withCurrentTarget(pointer('pointerdown', { clientX: 100, pointerId, pointerType: 'touch' }), settings),
+      'settings'
+    );
+
+    down(1);
+    controller.pointerMove(pointer('pointermove', { clientX: 80, pointerId: 1, pointerType: 'touch' }));
+    down(2);
+    controller.pointerUp(pointer('pointerup', { clientX: 100, pointerId: 2, pointerType: 'touch' }));
+    down(3);
+    controller.pointerCancel(pointer('pointercancel', { clientX: 100, pointerId: 3, pointerType: 'touch' }));
+    down(4);
+    window.dispatchEvent(new Event('blur'));
+    down(5);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    vi.advanceTimersByTime(500);
+    expect(onContextRequest).not.toHaveBeenCalled();
+    controller.destroy();
+
+    const destroyed = createTabRailController({ rail, onContextRequest });
+    destroyed.pointerDown(withCurrentTarget(pointer('pointerdown', { clientX: 100, pointerType: 'touch' }), settings), 'settings');
+    destroyed.destroy();
+    vi.advanceTimersByTime(500);
+    expect(onContextRequest).not.toHaveBeenCalled();
   });
 
   it('suppresses a pan click when pointercancel, blur, or Escape ends the interaction', () => {

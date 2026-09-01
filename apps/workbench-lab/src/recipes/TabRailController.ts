@@ -3,7 +3,7 @@ import { railPanDecision, revealTabScrollLeft, tabRailOverflow } from './tab-rai
 export interface TabRailContextRequest {
   readonly id: string;
   readonly anchor: HTMLElement;
-  readonly source: 'pointer' | 'keyboard';
+  readonly source: 'pointer' | 'keyboard' | 'touch';
 }
 
 export interface TabRailController {
@@ -27,6 +27,8 @@ interface TabRailControllerOptions {
 interface Candidate {
   readonly pointerId: number;
   readonly pointerType: string;
+  readonly id: string;
+  readonly anchor: HTMLElement;
   readonly startX: number;
   readonly startY: number;
   readonly startScrollLeft: number;
@@ -36,6 +38,12 @@ interface Candidate {
   touchHoldTimer: ReturnType<typeof setTimeout> | null;
 }
 
+interface TouchContext {
+  readonly id: string;
+  readonly anchor: HTMLElement;
+  readonly until: number;
+}
+
 function anchorFor(event: Event): HTMLElement | null {
   return event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
 }
@@ -43,6 +51,7 @@ function anchorFor(event: Event): HTMLElement | null {
 export function createTabRailController(options: TabRailControllerOptions): TabRailController {
   let candidate: Candidate | null = null;
   let suppressClick = false;
+  let touchContext: TouchContext | null = null;
   const handledContexts = new WeakSet<Event>();
   const resizeObserver = typeof ResizeObserver === 'undefined'
     ? null
@@ -78,10 +87,12 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
     cleanup();
   }
 
-  function startCandidate(event: PointerEvent): Candidate {
+  function startCandidate(event: PointerEvent, id: string): Candidate {
     const current: Candidate = {
       pointerId: event.pointerId,
       pointerType: event.pointerType,
+      id,
+      anchor: anchorFor(event) ?? options.rail,
       startX: event.clientX,
       startY: event.clientY,
       startScrollLeft: options.rail.scrollLeft,
@@ -92,7 +103,11 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
     };
     if (event.pointerType === 'touch') {
       current.touchHoldTimer = setTimeout(() => {
-        if (candidate === current) current.touchHeld = true;
+        if (candidate !== current) return;
+        current.touchHeld = true;
+        suppressClick = true;
+        touchContext = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
+        options.onContextRequest({ id: current.id, anchor: current.anchor, source: 'touch' });
       }, 500);
     }
     return current;
@@ -105,7 +120,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
   return Object.freeze({
     pointerDown(event: PointerEvent, id: string) {
       if (event.button !== 0 || !id || candidate) return;
-      candidate = startCandidate(event);
+      candidate = startCandidate(event, id);
       window.addEventListener('keydown', cancelOnEscape);
       window.addEventListener('blur', cancelOnBlur);
     },
@@ -151,6 +166,12 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
 
     contextMenu(event: MouseEvent, id: string) {
       const anchor = anchorFor(event);
+      if (touchContext && performance.now() > touchContext.until) touchContext = null;
+      if (touchContext && touchContext.id === id && touchContext.anchor === anchor) {
+        touchContext = null;
+        event.preventDefault();
+        return;
+      }
       if (!id || !anchor || handledContexts.has(event)) return;
       handledContexts.add(event);
       event.preventDefault();
