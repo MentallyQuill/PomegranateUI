@@ -362,9 +362,10 @@ test('PomOS icon actions keep real names and 44px targets while essential labels
   expect(legacyBounds.content.right).toBeLessThanOrEqual(legacyBounds.owner.right + 1);
 });
 
-test('native workbench keeps literal relationships and keyboard reorder behavior', async ({ page }) => {
+test('native workbench keeps literal relationships and keyboard navigation without rail reorder', async ({ page }) => {
   await openFresh(page, 1440, 900);
-  const tabs = page.getByRole('tablist', { name: 'Panels' }).getByRole('tab');
+  const tabs = page.getByRole('tablist', { name: 'Panels' })
+    .locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
   await expect(tabs).toHaveCount(3);
   const scene = page.getByRole('tab', { name: 'Scene' });
   const scenePanelId = await scene.getAttribute('aria-controls');
@@ -373,8 +374,15 @@ test('native workbench keeps literal relationships and keyboard reorder behavior
   expect(sceneTabId).toBeTruthy();
   await expect(page.locator(`#${scenePanelId}`)).toHaveAttribute('aria-labelledby', sceneTabId!);
   await expect(scene.locator('xpath=..')).toHaveAttribute('data-pomegranate-panel-tab', 'scene');
+  const order = await tabs.allTextContents();
   await page.getByRole('tab', { name: 'Library' }).press('Control+Shift+ArrowLeft');
-  await expect(tabs).toHaveText(['Library', 'Scene', 'Settings']);
+  await expect(tabs).toHaveText(order);
+  await expect(scene).toBeFocused();
+  await page.getByRole('tab', { name: 'Scene' }).press('End');
+  await expect(page.getByRole('tab', { name: 'Settings' })).toBeFocused();
+  await expect(tabs).toHaveText(order);
+  await page.getByRole('tab', { name: 'Settings' }).press('Home');
+  await expect(scene).toBeFocused();
   await expect(page.getByLabel('Active story identity')).toContainText('STORY / 7E-19');
 });
 
@@ -395,7 +403,7 @@ test('non-compact Panel tabs keep secondary actions out of their visible spacing
   expect(Math.max(...gaps)).toBeLessThanOrEqual(8);
 });
 
-test('the active Panel overflow menu escapes the tab strip and remains functional', async ({ page }) => {
+test('the target-aware Panel context menu escapes the tab strip and remains functional', async ({ page }) => {
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 980, height: 720 },
@@ -406,17 +414,10 @@ test('the active Panel overflow menu escapes the tab strip and remains functiona
   ]) {
     await openFresh(page, viewport.width, viewport.height);
     await page.getByRole('tab', { name: 'Settings' }).click();
-    const trigger = page.getByRole('button', { name: 'Manage Settings' });
-    await expect(trigger).toBeVisible();
-    const triggerAndTab = await trigger.evaluate((element) => {
-      const triggerRect = element.getBoundingClientRect();
-      const tabRect = element.closest('[data-pomegranate-panel-tab]')!.querySelector('[role="tab"]')!.getBoundingClientRect();
-      return { triggerWidth: triggerRect.width, tabWidth: tabRect.width };
-    });
-    expect(triggerAndTab.tabWidth - triggerAndTab.triggerWidth).toBeGreaterThanOrEqual(48);
-    await trigger.focus();
-    await trigger.press('Enter');
-    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const target = page.getByRole('tab', { name: 'Settings' });
+    await expect(page.getByRole('button', { name: 'Manage Settings' })).toHaveCount(0);
+    await target.focus();
+    await target.press('Shift+F10');
 
     const menu = page.getByRole('dialog', { name: 'Settings Panel actions' });
     await expect(menu).toBeVisible();
@@ -438,7 +439,7 @@ test('the active Panel overflow menu escapes the tab strip and remains functiona
 
     await menu.getByRole('button', { name: 'Rename' }).press('Enter');
     await expect(menu).not.toBeVisible();
-    await expect(trigger).toBeFocused();
+    await expect(target).toBeFocused();
   }
 });
 

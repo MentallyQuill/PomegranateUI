@@ -12,6 +12,40 @@ async function closeDeveloperTools(page: import('@playwright/test').Page) {
   if (await drawer.getAttribute('open') !== null) await page.getByText('Developer tools', { exact: true }).click();
 }
 
+async function seedPanelRail(page: import('@playwright/test').Page) {
+  await openDeveloperTools(page);
+  for (const name of ['Archive', 'Lore', 'Cast', 'Timeline', 'Notes']) {
+    const launchers = page.getByRole('button', { name: 'Create Panel' });
+    const count = await launchers.count();
+    let opened = false;
+    for (let index = 0; index < count; index += 1) {
+      if (!await launchers.nth(index).isVisible()) continue;
+      await launchers.nth(index).click();
+      opened = true;
+      break;
+    }
+    if (!opened) throw new Error('Expected a visible Create Panel launcher.');
+    const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
+    await dialog.getByRole('textbox', { name: 'Panel name' }).fill(name);
+    await dialog.getByRole('button', { name: 'Create Panel' }).click();
+  }
+  await closeDeveloperTools(page);
+}
+
+async function dragHorizontally(
+  page: import('@playwright/test').Page,
+  target: import('@playwright/test').Locator,
+  deltaX: number
+) {
+  const box = await target.boundingBox();
+  if (!box) throw new Error('Expected horizontal drag target geometry.');
+  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + deltaX, start.y, { steps: 8 });
+  await page.mouse.up();
+}
+
 async function openWidgetCatalog(page: import('@playwright/test').Page) {
   const launcher = page.getByRole('button', { name: 'Open Widget Catalog' });
   await launcher.focus();
@@ -162,15 +196,20 @@ test('native workbench POM-PANEL-07856BFE9A POM-PANEL-DF4EC7C581 activates a Pan
   await expect(page.locator('[data-surface-type="library.workspace"]')).toBeVisible();
 });
 
-test('Panel actions use the active theme material and leave reordering to the tab strip', async ({ page }) => {
-  const trigger = page.getByRole('button', { name: 'Manage Scene' });
-  await trigger.focus();
-  await trigger.click();
-  const menu = page.getByRole('dialog', { name: 'Scene Panel actions' });
+test('Panel context actions target an inactive tab without activating it and restore focus', async ({ page }) => {
+  const scene = page.getByRole('tab', { name: 'Scene' });
+  const library = page.getByRole('tab', { name: 'Library' });
+  await expect(page.getByRole('button', { name: /^Manage / })).toHaveCount(0);
+  await expect(page.locator('.panel-menu-surface')).toHaveCount(1);
+  await library.click({ button: 'right' });
+  const menu = page.getByRole('dialog', { name: 'Library Panel actions' });
   await expect(menu).toBeVisible();
   await expect(menu.getByRole('textbox', { name: 'Panel name' })).toBeFocused();
   await expect(menu).toHaveAttribute('data-pom-part', 'menu.surface');
-  await expect(menu.getByRole('button', { name: /Move (left|right)/ })).toHaveCount(0);
+  await expect(menu.getByRole('button')).toHaveText([
+    'Rename', 'Duplicate', 'Create first sub-panel', 'Reset', 'Clear', 'Delete', 'Reorder Panels…'
+  ]);
+  await expect(scene).toHaveAttribute('aria-selected', 'true');
   const material = await menu.evaluate((node) => {
     const style = getComputedStyle(node);
     return {
@@ -183,10 +222,20 @@ test('Panel actions use the active theme material and leave reordering to the ta
   expect(material.background).not.toBe('rgba(0, 0, 0, 0)');
   expect(material.radius).not.toBe('');
 
-  const library = page.getByRole('tab', { name: 'Library' });
-  await library.click();
+  await page.keyboard.press('Escape');
   await expect(menu).not.toBeVisible();
   await expect(library).toBeFocused();
+
+  await library.press('Shift+F10');
+  await expect(menu).toBeVisible();
+  await menu.getByRole('textbox', { name: 'Panel name' }).fill('Reference Library');
+  await menu.getByRole('button', { name: 'Rename' }).click();
+  const renamed = page.getByRole('tab', { name: 'Reference Library' });
+  await expect(renamed).toBeFocused();
+  await expect(scene).toHaveAttribute('aria-selected', 'true');
+
+  await renamed.press('ContextMenu');
+  await expect(page.getByRole('dialog', { name: 'Reference Library Panel actions' })).toBeVisible();
 });
 
 test('Panel action material follows every theme and becomes opaque for accessibility fallbacks', async ({ page }) => {
@@ -196,7 +245,7 @@ test('Panel action material follows every theme and becomes opaque for accessibi
   for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
     await themeTargets.getByRole('button', { name: theme, exact: true }).click();
     await closeDeveloperTools(page);
-    await page.getByRole('button', { name: 'Manage Scene' }).click();
+    await page.getByRole('tab', { name: 'Scene' }).click({ button: 'right' });
     const menu = page.getByRole('dialog', { name: 'Scene Panel actions' });
     await expect(menu).toBeVisible();
     const material = await menu.evaluate((node) => {
@@ -217,7 +266,7 @@ test('Panel action material follows every theme and becomes opaque for accessibi
     features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }]
   });
   await page.reload();
-  await page.getByRole('button', { name: 'Manage Scene' }).click();
+  await page.getByRole('tab', { name: 'Scene' }).click({ button: 'right' });
   const reducedMenu = page.getByRole('dialog', { name: 'Scene Panel actions' });
   await expect(reducedMenu).toHaveCSS('backdrop-filter', 'none');
   expect(await reducedMenu.evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
@@ -225,52 +274,68 @@ test('Panel action material follows every theme and becomes opaque for accessibi
   await page.keyboard.press('Escape');
   await page.emulateMedia({ forcedColors: 'active' });
   await page.waitForTimeout(130);
-  await page.getByRole('button', { name: 'Manage Scene' }).click();
+  await page.getByRole('tab', { name: 'Scene' }).click({ button: 'right' });
   await expect(page.getByRole('dialog', { name: 'Scene Panel actions' })).toHaveCSS('backdrop-filter', 'none');
 });
 
-test('Panel tabs reorder by pointer while standard arrows navigate and modified arrows reorder', async ({ page }) => {
-  const tabs = page.getByRole('tablist', { name: 'Panels' });
-  const directTabs = tabs.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
-  const scene = tabs.getByRole('tab', { name: 'Scene' });
-  const settings = tabs.getByRole('tab', { name: 'Settings' });
-  const sceneBox = await scene.boundingBox();
-  const settingsBox = await settings.boundingBox();
-  if (!sceneBox || !settingsBox) throw new Error('Expected Panel tab geometry.');
-  await page.mouse.move(sceneBox.x + sceneBox.width / 2, sceneBox.y + sceneBox.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(settingsBox.x + settingsBox.width - 3, settingsBox.y + settingsBox.height / 2, { steps: 8 });
-  await expect(page.locator('[data-pom-part="tab.insertion"]')).toBeVisible();
-  await expect(page.locator('[data-pom-part="tab.drag-preview"]').locator('xpath=ancestor::main[@data-pom-theme-root]')).toHaveCount(1);
-  await page.mouse.up();
-  await expect(directTabs).toHaveText(['Library', 'Settings', 'Scene']);
+test('Panel tab drag pans an overflowing rail without activation or reorder', async ({ page }) => {
+  await seedPanelRail(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const rail = page.getByRole('tablist', { name: 'Panels' });
+  const beforeOrder = await rail.getByRole('tab').allTextContents();
+  const activeBefore = await rail.getByRole('tab', { selected: true }).textContent();
 
-  await tabs.getByRole('tab', { name: 'Library' }).focus();
-  await tabs.getByRole('tab', { name: 'Library' }).press('ArrowRight');
-  await expect(tabs.getByRole('tab', { name: 'Settings' })).toBeFocused();
-  await expect(directTabs).toHaveText(['Library', 'Settings', 'Scene']);
-  await tabs.getByRole('tab', { name: 'Settings' }).press('Control+Shift+ArrowRight');
-  await expect(directTabs).toHaveText(['Library', 'Scene', 'Settings']);
+  await rail.evaluate((node) => { node.scrollLeft = 0; });
+  await dragHorizontally(page, rail.getByRole('tab', { name: 'Settings' }), -120);
+
+  expect(await rail.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
+  await expect(rail.getByRole('tab')).toHaveText(beforeOrder);
+  await expect(rail.getByRole('tab', { selected: true })).toHaveText(activeBefore ?? '');
+});
+
+test('Panel arrows and boundaries activate and reveal without changing order', async ({ page }) => {
+  await seedPanelRail(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const rail = page.getByRole('tablist', { name: 'Panels' });
+  const directTabs = rail.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
+  const order = await directTabs.allTextContents();
+  const scene = rail.getByRole('tab', { name: 'Scene' });
+  await rail.evaluate((node) => { node.scrollLeft = 0; });
+  await scene.focus();
+
+  await scene.press('End');
+  await expect(rail.getByRole('tab', { name: 'Notes' })).toBeFocused();
+  await expect(rail.getByRole('tab', { name: 'Notes' })).toHaveAttribute('aria-selected', 'true');
+  expect(await rail.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
+  await expect(directTabs).toHaveText(order);
+
+  await rail.getByRole('tab', { name: 'Notes' }).press('Home');
+  await expect(scene).toBeFocused();
+  await expect(scene).toHaveAttribute('aria-selected', 'true');
+  expect(await rail.evaluate((node) => node.scrollLeft)).toBe(0);
+  await scene.press('Control+Shift+ArrowRight');
+  await expect(rail.getByRole('tab', { name: 'Library' })).toBeFocused();
+  await expect(directTabs).toHaveText(order);
 });
 
 test('Panel tab drag cancels cleanly when the window loses focus', async ({ page }) => {
-  const tabs = page.getByRole('tablist', { name: 'Panels' });
-  const directTabs = tabs.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
-  const scene = tabs.getByRole('tab', { name: 'Scene' });
-  const settings = tabs.getByRole('tab', { name: 'Settings' });
+  await seedPanelRail(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const rail = page.getByRole('tablist', { name: 'Panels' });
+  const beforeOrder = await rail.getByRole('tab').allTextContents();
+  const scene = rail.getByRole('tab', { name: 'Scene' });
   const sceneBox = await scene.boundingBox();
-  const settingsBox = await settings.boundingBox();
-  if (!sceneBox || !settingsBox) throw new Error('Expected Panel tab geometry.');
+  if (!sceneBox) throw new Error('Expected Panel tab geometry.');
   await page.mouse.move(sceneBox.x + sceneBox.width / 2, sceneBox.y + sceneBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(settingsBox.x + settingsBox.width - 3, settingsBox.y + settingsBox.height / 2, { steps: 8 });
-  await expect(page.locator('[data-pom-part="tab.insertion"]')).toBeVisible();
+  await page.mouse.move(sceneBox.x + sceneBox.width / 2 - 120, sceneBox.y + sceneBox.height / 2, { steps: 8 });
+  expect(await rail.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
 
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await expect(page.locator('[data-pom-part="tab.insertion"], [data-pom-part="tab.drag-preview"]')).toHaveCount(0);
   await expect(page.locator('.is-tab-reorder-origin')).toHaveCount(0);
   await page.mouse.up();
-  await expect(directTabs).toHaveText(['Scene', 'Library', 'Settings']);
+  await expect(rail.getByRole('tab')).toHaveText(beforeOrder);
 });
 
 test('Widget drag teardown clears global held state when its Panel unmounts', async ({ page }) => {
@@ -288,60 +353,51 @@ test('Widget drag teardown clears global held state when its Panel unmounts', as
   await page.mouse.up();
 });
 
-test('Panel tabs share the same deliberate reorder path for pen and long-press touch', async ({ page }) => {
+test('Panel tabs pan by pen and never expose a reorder gesture on touch', async ({ page }) => {
+  await seedPanelRail(page);
+  await page.setViewportSize({ width: 390, height: 844 });
   const tablist = page.getByRole('tablist', { name: 'Panels' });
-  const directTabs = tablist.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
+  const beforeOrder = await tablist.getByRole('tab').allTextContents();
   const scene = tablist.getByRole('tab', { name: 'Scene' });
-  const settings = tablist.getByRole('tab', { name: 'Settings' });
   const sceneBox = await scene.boundingBox();
-  const settingsBox = await settings.boundingBox();
-  if (!sceneBox || !settingsBox) throw new Error('Expected Panel tab geometry.');
+  if (!sceneBox) throw new Error('Expected Panel tab geometry.');
   const penStart = { x: sceneBox.x + sceneBox.width / 2, y: sceneBox.y + sceneBox.height / 2 };
-  const penEnd = { x: settingsBox.x + settingsBox.width - 2, y: settingsBox.y + settingsBox.height / 2 };
+  const penEnd = { x: penStart.x - 120, y: penStart.y };
   const sceneHandle = await scene.elementHandle();
   if (!sceneHandle) throw new Error('Expected the Scene tab handle.');
   await sceneHandle.dispatchEvent('pointerdown', { pointerId: 31, pointerType: 'pen', isPrimary: true, button: 0, clientX: penStart.x, clientY: penStart.y });
   await sceneHandle.dispatchEvent('pointermove', { pointerId: 31, pointerType: 'pen', isPrimary: true, button: 0, clientX: penEnd.x, clientY: penEnd.y });
   await sceneHandle.dispatchEvent('pointerup', { pointerId: 31, pointerType: 'pen', isPrimary: true, button: 0, clientX: penEnd.x, clientY: penEnd.y });
-  await expect(directTabs).toHaveText(['Library', 'Settings', 'Scene']);
+  expect(await tablist.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
+  await expect(tablist.getByRole('tab')).toHaveText(beforeOrder);
 
-  const movedScene = tablist.getByRole('tab', { name: 'Scene' });
-  const movedBox = await movedScene.boundingBox();
-  const libraryBox = await tablist.getByRole('tab', { name: 'Library' }).boundingBox();
-  if (!movedBox || !libraryBox) throw new Error('Expected reordered Panel tab geometry.');
-  const touchStart = { x: movedBox.x + movedBox.width / 2, y: movedBox.y + movedBox.height / 2 };
-  const touchEnd = { x: libraryBox.x + 2, y: libraryBox.y + libraryBox.height / 2 };
-  const movedSceneHandle = await movedScene.elementHandle();
-  if (!movedSceneHandle) throw new Error('Expected the reordered Scene tab handle.');
-  await movedSceneHandle.dispatchEvent('pointerdown', { pointerId: 32, pointerType: 'touch', isPrimary: true, button: 0, clientX: touchStart.x, clientY: touchStart.y });
+  await sceneHandle.dispatchEvent('pointerdown', { pointerId: 32, pointerType: 'touch', isPrimary: true, button: 0, clientX: penStart.x, clientY: penStart.y });
   await page.waitForTimeout(190);
-  await movedSceneHandle.dispatchEvent('pointermove', { pointerId: 32, pointerType: 'touch', isPrimary: true, button: 0, clientX: touchEnd.x, clientY: touchEnd.y });
-  await movedSceneHandle.dispatchEvent('pointerup', { pointerId: 32, pointerType: 'touch', isPrimary: true, button: 0, clientX: touchEnd.x, clientY: touchEnd.y });
-  await expect(directTabs).toHaveText(['Scene', 'Library', 'Settings']);
+  await sceneHandle.dispatchEvent('pointermove', { pointerId: 32, pointerType: 'touch', isPrimary: true, button: 0, clientX: penEnd.x, clientY: penEnd.y });
+  await sceneHandle.dispatchEvent('pointerup', { pointerId: 32, pointerType: 'touch', isPrimary: true, button: 0, clientX: penEnd.x, clientY: penEnd.y });
+  await expect(tablist.getByRole('tab')).toHaveText(beforeOrder);
 });
 
-test('phone portrait real long-press touch reorders Panel tabs without widening the document', async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+test('phone portrait touch exploration preserves Panel order and document containment', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1024, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   try {
     await page.goto('http://127.0.0.1:4174');
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
+    await seedPanelRail(page);
+    await page.setViewportSize({ width: 390, height: 844 });
     const tablist = page.getByRole('tablist', { name: 'Panels' });
-    const directTabs = tablist.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
+    const beforeOrder = await tablist.getByRole('tab').allTextContents();
     const scene = tablist.getByRole('tab', { name: 'Scene' });
-    const settings = tablist.getByRole('tab', { name: 'Settings' });
-    const sceneGrip = scene;
-    await expect(sceneGrip).toHaveAttribute('data-tab-touch-reorder-grip', '');
-    const sceneBox = await sceneGrip.boundingBox();
-    const settingsBox = await settings.boundingBox();
-    if (!sceneBox || !settingsBox) throw new Error('Expected phone Panel tab geometry.');
+    const sceneBox = await scene.boundingBox();
+    if (!sceneBox) throw new Error('Expected phone Panel tab geometry.');
     expect(sceneBox.width).toBeGreaterThanOrEqual(44);
     expect(sceneBox.height).toBeGreaterThanOrEqual(44);
     const start = { x: sceneBox.x + sceneBox.width / 2, y: sceneBox.y + sceneBox.height / 2 };
-    const end = { x: settingsBox.x + settingsBox.width - 2, y: settingsBox.y + settingsBox.height / 2 };
+    const end = { x: start.x - 120, y: start.y };
     await dispatchHeldTouchDrag(page, start, end);
-    await expect(directTabs).toHaveText(['Library', 'Settings', 'Scene']);
+    await expect(tablist.getByRole('tab')).toHaveText(beforeOrder);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   } finally {
     await context.close();
@@ -959,15 +1015,18 @@ test('native workbench POM-PERSIST-842D422EB3 POM-PERSIST-9FA69F9FC1 restores a 
   await expect(page.getByLabel('Workbench context')).toContainText('columns.v1');
 });
 
-test('native workbench POM-PERSIST-28DFDC9A8F POM-PERSIST-D50D69D3C4 restores reordered Panels', async ({ page }) => {
+test('native workbench persists Panel navigation without modified-arrow rail reorder', async ({ page }) => {
   const panelTabs = page.getByRole('tablist', { name: 'Panels' });
+  const order = await panelTabs.getByRole('tab').allTextContents();
   await panelTabs.getByRole('tab', { name: 'Settings' }).focus();
   await panelTabs.getByRole('tab', { name: 'Settings' }).press('Control+Shift+ArrowLeft');
-  await expect(panelTabs.getByRole('tab')).toHaveText(['Scene', 'Settings', 'Library']);
+  await expect(panelTabs.getByRole('tab')).toHaveText(order);
+  await expect(panelTabs.getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
-  await expect(panelTabs.getByRole('tab')).toHaveText(['Scene', 'Settings', 'Library']);
+  await expect(panelTabs.getByRole('tab')).toHaveText(order);
+  await expect(panelTabs.getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
 });
 
 test('native workbench applies complete themes without replacing live Workbench identity', async ({ page }) => {
