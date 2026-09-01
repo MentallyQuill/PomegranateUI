@@ -240,7 +240,7 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
-  it('emits one touch context request after a stationary hold and suppresses its native duplicate', () => {
+  it('commits one touch context request after a stationary hold is released and suppresses its native duplicate', async () => {
     vi.useFakeTimers();
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
@@ -254,11 +254,16 @@ describe('TabRailController', () => {
     controller.pointerDown(withCurrentTarget(pointer('pointerdown', { clientX: 100, pointerId: 2, pointerType: 'touch' }), settings), 'settings');
     vi.advanceTimersByTime(500);
 
+    expect(onContextRequest).not.toHaveBeenCalled();
+    const native = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), settings);
+    controller.contextMenu(native, 'settings');
+    expect(onContextRequest).not.toHaveBeenCalled();
+    controller.pointerUp(pointer('pointerup', { pointerId: 2, pointerType: 'touch' }));
+    await Promise.resolve();
+
     expect(onContextRequest).toHaveBeenCalledTimes(1);
     expect(onContextRequest).toHaveBeenLastCalledWith({ id: 'settings', anchor: settings, source: 'touch' });
     expect(controller.consumeClick(click({ pointerId: 2, pointerType: 'touch' }))).toBe(true);
-    const native = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), settings);
-    controller.contextMenu(native, 'settings');
     const independent = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), library);
     controller.contextMenu(independent, 'library');
     expect(onContextRequest).toHaveBeenCalledTimes(2);

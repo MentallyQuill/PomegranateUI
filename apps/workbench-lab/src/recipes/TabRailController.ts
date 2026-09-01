@@ -151,8 +151,14 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
 
   function finishOnWindowPointerUp(event: PointerEvent) {
     if (!candidate || candidate.pointerId !== event.pointerId) return;
-    if (candidate.active || candidate.touchHeld) suppressCandidate(candidate);
+    const current = candidate;
+    if (current.active || current.touchHeld) suppressCandidate(current);
     cleanup();
+    if (!current.touchHeld) return;
+    contextDuplicate = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
+    queueMicrotask(() => {
+      options.onContextRequest({ id: current.id, anchor: current.anchor, source: 'touch' });
+    });
   }
 
   function cancelOnWindowPointer(event: PointerEvent) {
@@ -192,7 +198,6 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
         current.touchHeld = true;
         suppressCandidate(current);
         contextDuplicate = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
-        options.onContextRequest({ id: current.id, anchor: current.anchor, source: 'touch' });
       }, 500);
     }
     return current;
