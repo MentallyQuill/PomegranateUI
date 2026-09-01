@@ -68,7 +68,9 @@ export function createRendererDomHarness(document) {
       for (const [index, name] of state.tabs.entries()) {
         const item = document.createElement('div');
         item.dataset.panelOrderItem = '';
+        item.dataset.panelOrderId = `pomegranate-panel-tab-${slug(name)}`;
         item.dataset.panelOrderName = name;
+        item.dataset.panelOrderActive = String(name === state.active);
         const previousName = `Move ${name} previous`;
         const nextName = `Move ${name} next`;
         const previous = button(document, previousName, { 'aria-label': previousName });
@@ -78,6 +80,12 @@ export function createRendererDomHarness(document) {
         previous.addEventListener('click', () => movePanel(name, 'previous'));
         next.addEventListener('click', () => movePanel(name, 'next'));
         item.append(name, previous, next);
+        if (name === state.active) {
+          const active = document.createElement('span');
+          active.dataset.panelOrderActiveMarker = '';
+          active.textContent = 'Active';
+          item.append(active);
+        }
         orderSurface.append(item);
       }
       root.append(orderSurface);
@@ -220,7 +228,10 @@ export function createRendererDomHarness(document) {
           items: [...orderSurface.querySelectorAll('[data-panel-order-item]')].map((item) => {
             const name = item.dataset.panelOrderName;
             return {
+              id: item.dataset.panelOrderId,
               name,
+              active: item.dataset.panelOrderActive === 'true'
+                && item.querySelector('[data-panel-order-active-marker]')?.textContent?.trim() === 'Active',
               movePreviousDisabled: item.querySelector(`[aria-label="Move ${name} previous"]`).disabled,
               moveNextDisabled: item.querySelector(`[aria-label="Move ${name} next"]`).disabled
             };

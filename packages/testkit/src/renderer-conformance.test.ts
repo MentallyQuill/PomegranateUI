@@ -66,6 +66,16 @@ function snapshot(overrides: Partial<RendererSnapshot> = {}): RendererSnapshot {
   };
 }
 
+function panelOrderSnapshot(items: readonly {
+  readonly id: string;
+  readonly name: string;
+  readonly active: boolean;
+  readonly movePreviousDisabled: boolean;
+  readonly moveNextDisabled: boolean;
+}[]): NonNullable<RendererSnapshot['panelOrder']> {
+  return { label: 'Reorder Panels', items };
+}
+
 class PassingHarness implements RendererHarness {
   protected current = snapshot();
 
@@ -91,8 +101,8 @@ class PassingHarness implements RendererHarness {
         panelOrder: {
           label: 'Reorder Panels',
           items: [
-            { name: 'Library', movePreviousDisabled: true, moveNextDisabled: false },
-            { name: 'Scene', movePreviousDisabled: false, moveNextDisabled: true }
+            { id: 'pomegranate-panel-tab-library', name: 'Library', active: true, movePreviousDisabled: true, moveNextDisabled: false },
+            { id: 'pomegranate-panel-tab-scene', name: 'Scene', active: false, movePreviousDisabled: false, moveNextDisabled: true }
           ]
         },
         revision: 2
@@ -199,7 +209,7 @@ describe('renderer conformance', () => {
     expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)).toEqual({
       contractId: RENDERER_CONTRACT_IDS.panelReorder,
       passed: true,
-      diagnostic: 'Panel reorder opened an explicit ordering surface, moved Library previous, and exposed truthful edge controls.'
+      diagnostic: 'Panel reorder opened an explicit ordering surface, moved Library exactly one position previous, advanced revision, retained active relationships, and exposed truthful edge controls.'
     });
   });
 
@@ -221,6 +231,62 @@ describe('renderer conformance', () => {
     });
   });
 
+  it('rejects a no-op when Library was already previous before the reorder operation', async () => {
+    class PreorderedNoOpHarness extends PassingHarness {
+      override async reset(): Promise<void> {
+        const base = snapshot();
+        this.current = {
+          ...base,
+          tabs: [base.tabs[1]!, base.tabs[0]!]
+        };
+      }
+
+      override async perform(operation: RendererOperation): Promise<void> {
+        if (operation.type === 'panel.activate') {
+          this.current = {
+            ...this.current,
+            tabs: this.current.tabs.map((tab) => ({ ...tab, selected: tab.name === 'Library' })),
+            panel: { id: 'pomegranate-panel-library', labelledBy: 'pomegranate-panel-tab-library' },
+            revision: 1
+          };
+          return;
+        }
+        if (operation.type === 'panel.reorder') {
+          this.current = {
+            ...this.current,
+            panelOrder: {
+              label: 'Reorder Panels',
+              items: [
+                { id: 'pomegranate-panel-tab-library', name: 'Library', active: true, movePreviousDisabled: true, moveNextDisabled: false },
+                { id: 'pomegranate-panel-tab-scene', name: 'Scene', active: false, movePreviousDisabled: false, moveNextDisabled: true }
+              ]
+            },
+            revision: 2
+          };
+          return;
+        }
+        await super.perform(operation);
+      }
+    }
+
+    const results = await runRendererConformance(new PreorderedNoOpHarness());
+
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)?.passed).toBe(false);
+  });
+
+  it('rejects DOM-only reorder snapshots whose store revision did not advance', async () => {
+    class UnchangedRevisionHarness extends PassingHarness {
+      override async perform(operation: RendererOperation): Promise<void> {
+        await super.perform(operation);
+        if (operation.type === 'panel.reorder') this.current = { ...this.current, revision: 1 };
+      }
+    }
+
+    const results = await runRendererConformance(new UnchangedRevisionHarness());
+
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)?.passed).toBe(false);
+  });
+
   it('rejects reordered tabs without an explicit ordering surface', async () => {
     class MissingOrderSurfaceHarness extends PassingHarness {
       override async perform(operation: RendererOperation): Promise<void> {
@@ -234,7 +300,7 @@ describe('renderer conformance', () => {
     expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)).toEqual({
       contractId: RENDERER_CONTRACT_IDS.panelReorder,
       passed: false,
-      diagnostic: 'Expected an explicit Panel ordering surface to move Library previous with disabled controls only at sequence edges.'
+      diagnostic: 'Expected an explicit Panel ordering surface to move Library exactly one position previous, advance revision, retain one reciprocal active identity, and disable controls only at sequence edges.'
     });
   });
 
@@ -259,6 +325,165 @@ describe('renderer conformance', () => {
     }
 
     const results = await runRendererConformance(new FalseOrderEdgesHarness());
+
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)?.passed).toBe(false);
+  });
+
+  it.each([
+    ['duplicate', ['Duplicate', 'Duplicate'], ['Duplicate', 'Duplicate']],
+    ['pipe-delimited', ['Draft|Archive', 'Draft'], ['Draft', 'Archive|Draft']]
+  ])('rejects swapped stable IDs hidden by %s display names', async (_case, tabNames, orderNames) => {
+    class AmbiguousNamesHarness extends PassingHarness {
+      override async reset(): Promise<void> {
+        this.current = snapshot({
+          tabs: [
+            { name: tabNames[0]!, id: 'pomegranate-panel-tab-scene', controls: 'pomegranate-panel-scene', selected: true },
+            { name: 'Library', id: 'pomegranate-panel-tab-library', controls: 'pomegranate-panel-library', selected: false },
+            { name: tabNames[1]!, id: 'pomegranate-panel-tab-archive', controls: 'pomegranate-panel-archive', selected: false }
+          ]
+        });
+      }
+
+      override async perform(operation: RendererOperation): Promise<void> {
+        if (operation.type === 'panel.activate') {
+          this.current = {
+            ...this.current,
+            tabs: this.current.tabs.map((tab) => ({ ...tab, selected: tab.id === 'pomegranate-panel-tab-library' })),
+            panel: { id: 'pomegranate-panel-library', labelledBy: 'pomegranate-panel-tab-library' },
+            revision: 1
+          };
+          return;
+        }
+        if (operation.type === 'panel.reorder') {
+          this.current = {
+            ...this.current,
+            tabs: [this.current.tabs[1]!, this.current.tabs[0]!, this.current.tabs[2]!],
+            panelOrder: panelOrderSnapshot([
+              { id: 'pomegranate-panel-tab-library', name: 'Library', active: true, movePreviousDisabled: true, moveNextDisabled: false },
+              { id: 'pomegranate-panel-tab-archive', name: orderNames[0]!, active: false, movePreviousDisabled: false, moveNextDisabled: false },
+              { id: 'pomegranate-panel-tab-scene', name: orderNames[1]!, active: false, movePreviousDisabled: false, moveNextDisabled: true }
+            ]),
+            revision: 2
+          };
+          return;
+        }
+        await super.perform(operation);
+      }
+    }
+
+    const results = await runRendererConformance(new AmbiguousNamesHarness());
+
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)?.passed).toBe(false);
+  });
+
+  it('rejects false disabled state on a middle order row', async () => {
+    class FalseMiddleEdgeHarness extends PassingHarness {
+      override async reset(): Promise<void> {
+        const base = snapshot();
+        this.current = {
+          ...base,
+          tabs: [
+            base.tabs[0]!,
+            base.tabs[1]!,
+            { name: 'Archive', id: 'pomegranate-panel-tab-archive', controls: 'pomegranate-panel-archive', selected: false }
+          ]
+        };
+      }
+
+      override async perform(operation: RendererOperation): Promise<void> {
+        if (operation.type === 'panel.activate') {
+          this.current = {
+            ...this.current,
+            tabs: this.current.tabs.map((tab) => ({ ...tab, selected: tab.name === 'Library' })),
+            panel: { id: 'pomegranate-panel-library', labelledBy: 'pomegranate-panel-tab-library' },
+            revision: 1
+          };
+          return;
+        }
+        if (operation.type === 'panel.reorder') {
+          this.current = {
+            ...this.current,
+            tabs: [this.current.tabs[1]!, this.current.tabs[0]!, this.current.tabs[2]!],
+            panelOrder: panelOrderSnapshot([
+              { id: 'pomegranate-panel-tab-library', name: 'Library', active: true, movePreviousDisabled: true, moveNextDisabled: false },
+              { id: 'pomegranate-panel-tab-scene', name: 'Scene', active: false, movePreviousDisabled: true, moveNextDisabled: false },
+              { id: 'pomegranate-panel-tab-archive', name: 'Archive', active: false, movePreviousDisabled: false, moveNextDisabled: true }
+            ]),
+            revision: 2
+          };
+          return;
+        }
+        await super.perform(operation);
+      }
+    }
+
+    const results = await runRendererConformance(new FalseMiddleEdgeHarness());
+
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)?.passed).toBe(false);
+  });
+
+  it('rejects an explicit order surface with no active marker', async () => {
+    class MissingActiveMarkerHarness extends PassingHarness {
+      override async perform(operation: RendererOperation): Promise<void> {
+        await super.perform(operation);
+        if (operation.type === 'panel.reorder' && this.current.panelOrder) {
+          this.current = {
+            ...this.current,
+            panelOrder: {
+              ...this.current.panelOrder,
+              items: this.current.panelOrder.items.map((item) => {
+                const { active: _active, ...withoutActive } = item as typeof item & { readonly active?: boolean };
+                return withoutActive;
+              })
+            } as unknown as NonNullable<RendererSnapshot['panelOrder']>
+          };
+        }
+      }
+    }
+
+    const results = await runRendererConformance(new MissingActiveMarkerHarness());
+
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)?.passed).toBe(false);
+  });
+
+  it.each([
+    ['wrong', [false, true]],
+    ['multiple', [true, true]]
+  ])('rejects %s active markers on the explicit order surface', async (_case, active) => {
+    class InvalidActiveMarkerHarness extends PassingHarness {
+      override async perform(operation: RendererOperation): Promise<void> {
+        await super.perform(operation);
+        if (operation.type === 'panel.reorder' && this.current.panelOrder) {
+          this.current = {
+            ...this.current,
+            panelOrder: {
+              ...this.current.panelOrder,
+              items: this.current.panelOrder.items.map((item, index) => ({ ...item, active: active[index]! }))
+            } as unknown as NonNullable<RendererSnapshot['panelOrder']>
+          };
+        }
+      }
+    }
+
+    const results = await runRendererConformance(new InvalidActiveMarkerHarness());
+
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)?.passed).toBe(false);
+  });
+
+  it('rejects a reordered selected tab that loses its reciprocal active tabpanel', async () => {
+    class BrokenReorderedRelationshipHarness extends PassingHarness {
+      override async perform(operation: RendererOperation): Promise<void> {
+        await super.perform(operation);
+        if (operation.type === 'panel.reorder') {
+          this.current = {
+            ...this.current,
+            panel: { id: 'pomegranate-panel-scene', labelledBy: 'pomegranate-panel-tab-scene' }
+          };
+        }
+      }
+    }
+
+    const results = await runRendererConformance(new BrokenReorderedRelationshipHarness());
 
     expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)?.passed).toBe(false);
   });
@@ -362,6 +587,7 @@ describe('renderer conformance', () => {
     const harness = createRendererDomHarness(document);
     await harness.reset();
 
+    await harness.perform({ type: 'panel.activate', name: 'Library' });
     await harness.perform({ type: 'panel.reorder', name: 'Library', direction: 'previous' });
 
     const reordered = await harness.snapshot();
@@ -369,8 +595,8 @@ describe('renderer conformance', () => {
     expect(reordered.panelOrder).toEqual({
       label: 'Reorder Panels',
       items: [
-        { name: 'Library', movePreviousDisabled: true, moveNextDisabled: false },
-        { name: 'Scene', movePreviousDisabled: false, moveNextDisabled: true }
+        { id: 'pomegranate-panel-tab-library', name: 'Library', active: true, movePreviousDisabled: true, moveNextDisabled: false },
+        { id: 'pomegranate-panel-tab-scene', name: 'Scene', active: false, movePreviousDisabled: false, moveNextDisabled: true }
       ]
     });
   });
