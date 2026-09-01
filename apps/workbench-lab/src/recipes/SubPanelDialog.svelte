@@ -14,9 +14,16 @@
     readonly mode: SubPanelDialogMode;
     readonly panelId: PanelId;
     readonly subPanelId?: SubPanelId;
+    readonly invokingTab?: HTMLElement;
   }
 
-  let { store }: { store: WorkbenchStore } = $props();
+  let {
+    store,
+    oncreated
+  }: {
+    store: WorkbenchStore;
+    oncreated?: ((name: string) => void) | undefined;
+  } = $props();
   let dialog: HTMLDialogElement;
   let mode = $state<SubPanelDialogMode>('create');
   let panel = $state<PanelState | null>(null);
@@ -24,6 +31,7 @@
   let name = $state('New sub-panel');
   let layoutId = $state<SubPanelLayoutId>('single');
   let targetSubPanelId = $state<SubPanelId | undefined>();
+  let invokingTab: HTMLElement | undefined;
 
   const activeSubPanel = $derived(panel?.subPanels?.find((candidate) => candidate.id === subPanelId));
   const moveTargets = $derived(panel?.subPanels?.filter((candidate) => candidate.id !== subPanelId && !candidate.hidden) ?? []);
@@ -42,6 +50,7 @@
     name = request.mode === 'rename' && nextSubPanel ? nextSubPanel.name : 'New sub-panel';
     layoutId = nextSubPanel?.layoutId ?? 'single';
     targetSubPanelId = nextPanel?.subPanels?.find((candidate) => candidate.id !== request.subPanelId && !candidate.hidden)?.id;
+    invokingTab = request.invokingTab;
     dialog.showModal?.();
   }
 
@@ -51,7 +60,7 @@
     if (mode === 'create') {
       const suffix = store.getState().revision + 1;
       const id = asSubPanelId(`${panel.id}-sub-panel-${suffix}`);
-      store.dispatch({
+      const result = store.dispatch({
         type: 'sub-panel.create',
         panelId: panel.id,
         subPanel: {
@@ -73,6 +82,8 @@
               }
             })
       });
+      if (!result.ok) return;
+      oncreated?.(name.trim() || 'Untitled');
     } else if (mode === 'rename' && subPanelId) {
       store.dispatch({ type: 'sub-panel.rename', panelId: panel.id, subPanelId, name: name.trim() || activeSubPanel?.name || 'Untitled' });
     } else if (mode === 'layout' && subPanelId) {
@@ -88,6 +99,20 @@
       store.dispatch({ type: 'sub-panel.delete', panelId: panel.id, subPanelId });
     }
     dialog.close?.();
+  }
+
+  function restoreFocus() {
+    const activeSubPanelTab = document.querySelector<HTMLElement>(
+      '[role="tablist"][aria-label$="sub-panels"] [role="tab"][aria-selected="true"]'
+    );
+    const owningPanelTab = panel
+      ? document.querySelector<HTMLElement>(
+          `[data-pomegranate-panel-tab="${CSS.escape(panel.id)}"] [role="tab"]`
+        )
+      : null;
+    const target = invokingTab?.isConnected ? invokingTab : activeSubPanelTab ?? owningPanelTab;
+    invokingTab = undefined;
+    queueMicrotask(() => target?.focus());
   }
 
   export function duplicate(panelId: PanelId, sourceSubPanelId: SubPanelId) {
@@ -122,7 +147,7 @@
   }
 </script>
 
-<dialog bind:this={dialog} class="sub-panel-dialog" data-pom-part="dialog.surface" aria-labelledby="sub-panel-dialog-title">
+<dialog bind:this={dialog} class="sub-panel-dialog" data-pom-part="dialog.surface" aria-labelledby="sub-panel-dialog-title" onclose={restoreFocus}>
   <form onsubmit={submit}>
     <h2 id="sub-panel-dialog-title">{title}</h2>
     {#if mode === 'create' || mode === 'rename'}

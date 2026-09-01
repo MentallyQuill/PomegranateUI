@@ -180,10 +180,11 @@
 
   let hostContext = $state(createLabHostContext({
     activeId: initialThemeSnapshot.activeId,
-    presets: LAB_THEME_PRESETS.map(({ id, target }) => ({
+    presets: LAB_THEME_PRESETS.map(({ id, target, swatchStyle }) => ({
       id,
       label: target.theme.label,
-      description: target.theme.description ?? target.theme.label
+      description: target.theme.description ?? target.theme.label,
+      swatchStyle
     })),
     inspector: themeInspector(),
     materialControls: initialThemeSnapshot.materialControls,
@@ -209,10 +210,11 @@
   let rightCollapsed = $state(false);
   let panelDialog: { showModal(): void; close(): void };
   let subPanelDialog: {
-    open(request: { mode: 'create' | 'rename' | 'layout' | 'move' | 'delete'; panelId: PanelId; subPanelId?: SubPanelId }): void;
+    open(request: { mode: 'create' | 'rename' | 'layout' | 'move' | 'delete'; panelId: PanelId; subPanelId?: SubPanelId; invokingTab?: HTMLElement }): void;
     duplicate(panelId: PanelId, subPanelId: SubPanelId): void;
   };
   let status = $state('Local mockup ready.');
+  let contextHintAnnouncedWithoutStorage = false;
   let eventLog: string[] = $state([]);
   let sequence = 0;
 
@@ -312,8 +314,23 @@
     if (result.ok) {
       store.dispatch({ type: 'panel.activate', panelId: id });
       panelDialog.close();
-      status = `${request.name} created.`;
+      reportCreatedTab(request.name);
     } else status = result.error.message;
+  }
+
+  function reportCreatedTab(name: string) {
+    const base = `${name} created.`;
+    const key = 'pomegranate.ui.tab-context-hint.v1';
+    let alreadyAnnounced = contextHintAnnouncedWithoutStorage;
+    try {
+      alreadyAnnounced = alreadyAnnounced || window.sessionStorage.getItem(key) === 'shown';
+      if (!alreadyAnnounced) window.sessionStorage.setItem(key, 'shown');
+    } catch {
+      contextHintAnnouncedWithoutStorage = true;
+    }
+    status = alreadyAnnounced
+      ? base
+      : `${base} Right-click or press and hold a tab for options.`;
   }
 
   async function save() {
@@ -340,6 +357,7 @@
     mode: 'create' | 'rename' | 'layout' | 'move' | 'delete';
     panelId: PanelId;
     subPanelId?: SubPanelId;
+    invokingTab?: HTMLElement;
   }) {
     subPanelDialog.open(request);
   }
@@ -530,5 +548,5 @@
   {/if}
 
   <PanelCreateDialog bind:this={panelDialog} oncreate={createPanel} />
-  <SubPanelDialog bind:this={subPanelDialog} {store} />
+  <SubPanelDialog bind:this={subPanelDialog} {store} oncreated={reportCreatedTab} />
 </main>

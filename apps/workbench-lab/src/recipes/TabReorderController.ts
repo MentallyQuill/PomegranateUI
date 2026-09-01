@@ -1,4 +1,4 @@
-import { reorderIndexAtPoint, tabDragDecision } from './tab-reorder.js';
+import { reorderIndexAtPoint, tabDragDecision, type ReorderAxis } from './tab-reorder.js';
 
 interface TabItem {
   readonly id: string;
@@ -6,6 +6,7 @@ interface TabItem {
 }
 
 interface TabReorderOptions {
+  readonly axis?: ReorderAxis;
   readonly getItems: () => readonly TabItem[];
   readonly commit: (id: string, toIndex: number) => void;
   readonly setDragging?: (dragging: boolean) => void;
@@ -22,6 +23,7 @@ interface Candidate {
   readonly startY: number;
   readonly startedAt: number;
   readonly grabX: number;
+  readonly grabY: number;
   active: boolean;
   toIndex: number;
   marker: HTMLElement | null;
@@ -43,6 +45,7 @@ function nowFor(event: PointerEvent) {
 }
 
 export function createTabReorderController(options: TabReorderOptions): TabReorderController {
+  const axis = options.axis ?? 'horizontal';
   let candidate: Candidate | null = null;
   let suppressClickUntil = 0;
 
@@ -52,15 +55,18 @@ export function createTabReorderController(options: TabReorderOptions): TabReord
 
   function positionProxy(current: Candidate, event: PointerEvent) {
     if (!current.proxy) return;
-    current.proxy.style.transform = `translate3d(${event.clientX - current.grabX}px, ${event.clientY - 18}px, 0)`;
+    current.proxy.style.transform = `translate3d(${event.clientX - current.grabX}px, ${event.clientY - current.grabY}px, 0)`;
   }
 
-  function placeMarker(current: Candidate, clientX: number) {
+  function placeMarker(current: Candidate, point: number) {
     if (!current.marker) return;
+    current.marker.remove();
     const items = options.getItems();
-    current.toIndex = reorderIndexAtPoint(current.sourceId, clientX, items.map(({ id, element }) => {
+    current.toIndex = reorderIndexAtPoint(current.sourceId, point, items.map(({ id, element }) => {
       const rect = element.getBoundingClientRect();
-      return { id, left: rect.left, right: rect.right };
+      return axis === 'vertical'
+        ? { id, start: rect.top, end: rect.bottom }
+        : { id, start: rect.left, end: rect.right };
     }));
     const destinations = items.filter((item) => item.id !== current.sourceId);
     const before = destinations[current.toIndex]?.element;
@@ -81,17 +87,19 @@ export function createTabReorderController(options: TabReorderOptions): TabReord
     proxy.className = 'tab-reorder-proxy';
     proxy.dataset.pomPart = 'tab.drag-preview';
     proxy.setAttribute('aria-hidden', 'true');
-    proxy.textContent = current.handle.textContent?.trim() ?? '';
+    proxy.textContent = current.handle.dataset.tabReorderLabel ?? current.handle.textContent?.trim() ?? '';
     proxy.style.width = `${box.width}px`;
     proxy.style.height = `${box.height}px`;
-    (current.source.closest<HTMLElement>('main[data-pom-theme-root]') ?? document.body).append(proxy);
+    (current.source.closest<HTMLElement>('dialog[open]')
+      ?? current.source.closest<HTMLElement>('main[data-pom-theme-root]')
+      ?? document.body).append(proxy);
     current.marker = marker;
     current.proxy = proxy;
     current.active = true;
     current.source.classList.add('is-tab-reorder-origin');
     document.body.classList.add('pom-tab-reorder-active');
     options.setDragging?.(true);
-    placeMarker(current, event.clientX);
+    placeMarker(current, axis === 'vertical' ? event.clientY : event.clientX);
     positionProxy(current, event);
   }
 
@@ -110,7 +118,6 @@ export function createTabReorderController(options: TabReorderOptions): TabReord
 
   function escapeCancel(event: KeyboardEvent) {
     if (event.key !== 'Escape' || !candidate) return;
-    event.preventDefault();
     if (candidate.active) suppressNextClick();
     cleanup();
   }
@@ -146,6 +153,7 @@ export function createTabReorderController(options: TabReorderOptions): TabReord
         startY: event.clientY,
         startedAt: nowFor(event),
         grabX: event.clientX - box.left,
+        grabY: event.clientY - box.top,
         active: false,
         toIndex: options.getItems().findIndex((item) => item.id === id),
         marker: null,
@@ -162,6 +170,7 @@ export function createTabReorderController(options: TabReorderOptions): TabReord
       const dx = event.clientX - candidate.startX;
       const dy = event.clientY - candidate.startY;
       const decision = tabDragDecision({
+        axis,
         dx,
         dy,
         pointerType: candidate.pointerType,
@@ -174,7 +183,9 @@ export function createTabReorderController(options: TabReorderOptions): TabReord
       if (!candidate.active && decision === 'reorder') activate(candidate, event);
       if (!candidate.active) return;
       event.preventDefault();
-      placeMarker(candidate, event.clientX);
+      if (decision === 'reorder') {
+        placeMarker(candidate, axis === 'vertical' ? event.clientY : event.clientX);
+      }
       positionProxy(candidate, event);
     },
 

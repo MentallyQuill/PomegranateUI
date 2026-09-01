@@ -15,10 +15,20 @@ async function fresh(page: Page, width: number, height: number) {
 
 type ThemeLabel = 'Deep Current' | 'PomOS' | 'Bunny' | 'Ash & Amber';
 
+const maintainedThemes = [
+  { label: 'Deep Current' as const, id: 'deep-current', slug: 'deep-current' },
+  { label: 'PomOS' as const, id: 'pom-neutral', slug: 'pom-neutral' },
+  { label: 'Bunny' as const, id: 'bunny', slug: 'bunny' },
+  { label: 'Ash & Amber' as const, id: 'ash-amber', slug: 'ash-amber' }
+] as const;
+const reviewedLongSubPanelName = 'Session History: Worldbuilding Reference Notes';
+
 async function selectTheme(page: Page, label: ThemeLabel) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
   if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
-  await page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: label, exact: true }).click();
+  await page.getByRole('group', { name: 'Visual target' })
+    .getByRole('button', { name: label, exact: true })
+    .evaluate((node: HTMLButtonElement) => node.click());
   const themeId = label === 'Deep Current' ? 'deep-current'
     : label === 'PomOS' ? 'pom-neutral'
       : label === 'Bunny' ? 'bunny'
@@ -32,6 +42,285 @@ async function selectTheme(page: Page, label: ThemeLabel) {
     window.scrollTo(0, 0);
   });
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+}
+
+async function openDeveloperTools(page: Page) {
+  const drawer = page.locator('[data-workbench-developer-drawer]');
+  if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
+}
+
+async function closeDeveloperTools(page: Page) {
+  const drawer = page.locator('[data-workbench-developer-drawer]');
+  if (await drawer.getAttribute('open') !== null) await page.getByText('Developer tools', { exact: true }).click();
+}
+
+async function seedOverflowingPanels(page: Page) {
+  await openDeveloperTools(page);
+  for (const name of [
+    'Archive Ledger and Canon Continuity',
+    'Lore Compendium and World Reference',
+    'Character Roster and Relationship Matrix',
+    'Master Timeline and Session Chronology',
+    'Session Notes and Narrative Threads'
+  ]) {
+    const launchers = page.getByRole('button', { name: 'Create Panel' });
+    let opened = false;
+    for (let index = 0; index < await launchers.count(); index += 1) {
+      if (!await launchers.nth(index).isVisible()) continue;
+      await launchers.nth(index).click();
+      opened = true;
+      break;
+    }
+    if (!opened) throw new Error('Expected a visible Create Panel launcher.');
+    const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
+    await dialog.getByRole('textbox', { name: 'Panel name' }).fill(name);
+    await dialog.getByRole('button', { name: 'Create Panel' }).click();
+  }
+  await closeDeveloperTools(page);
+  await expect(page.getByRole('tablist', { name: 'Panels' }).getByRole('tab')).toHaveCount(8);
+}
+
+async function seedOverflowingSubPanels(page: Page) {
+  const settings = page.getByRole('tab', { name: 'Settings' });
+  await settings.focus();
+  await settings.press('Enter');
+  await expect(settings).toHaveAttribute('aria-selected', 'true');
+  for (const name of [
+    'Research Notes: Narrative Continuity Archive',
+    reviewedLongSubPanelName,
+    'Continuity Index'
+  ]) {
+    await page.getByRole('button', { name: 'Add sub-panel' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create sub-panel' });
+    await dialog.getByLabel('Sub-panel name').fill(name);
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+  }
+  await expect(page.getByRole('tablist', { name: 'Settings sub-panels' }).getByRole('tab')).toHaveCount(9);
+}
+
+async function seedOverflowingRails(page: Page) {
+  await seedOverflowingPanels(page);
+  await seedOverflowingSubPanels(page);
+}
+
+async function settle(page: Page) {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    window.scrollTo(0, 0);
+  });
+}
+
+async function setRailPosition(rail: ReturnType<Page['locator']>, position: 'start' | 'middle' | 'end') {
+  await rail.evaluate((node, requested) => {
+    const maximum = node.scrollWidth - node.clientWidth;
+    node.scrollLeft = requested === 'start' ? 0 : requested === 'middle' ? maximum / 2 : maximum;
+    node.dispatchEvent(new Event('scroll'));
+  }, position);
+}
+
+async function panRail(page: Page, rail: ReturnType<Page['locator']>) {
+  await setRailPosition(rail, 'start');
+  const box = await rail.boundingBox();
+  if (!box) throw new Error('Expected visible rail geometry for panning.');
+  const startX = Math.min(box.x + box.width - 16, Math.max(box.x + 112, box.x + box.width / 2));
+  await page.mouse.move(startX, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(startX - 96, box.y + box.height / 2, { steps: 8 });
+  await page.mouse.up();
+  expect(await rail.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
+}
+
+async function proveRailGeometry(page: Page, viewport: { name: string; width: number; height: number }) {
+  await page.setViewportSize({ width: viewport.width, height: viewport.height });
+  await settle(page);
+
+  const panelRail = page.locator('[data-tab-rail-scroll][aria-label="Panels"]');
+  const panelOrder = await panelRail.getByRole('tab').allTextContents();
+  const catalog = page.locator('[data-pom-action="open-catalog"]:visible');
+  const catalogBefore = await catalog.boundingBox();
+  const panelExtent = await panelRail.evaluate((node) => ({ client: node.clientWidth, scroll: node.scrollWidth }));
+  expect(panelExtent.scroll, `${viewport.name} Panel rail overflow`).toBeGreaterThan(panelExtent.client);
+  await panRail(page, panelRail);
+  await expect(panelRail.getByRole('tab')).toHaveText(panelOrder);
+  const catalogAfter = await catalog.boundingBox();
+  if (!catalogBefore || !catalogAfter) throw new Error(`Missing ${viewport.name} fixed Catalog geometry.`);
+  expect(Math.abs(catalogAfter.x - catalogBefore.x), `${viewport.name} Catalog x`).toBeLessThanOrEqual(1);
+  expect(await panelRail.evaluate((node) => node.contains(document.querySelector('[data-pom-action="open-catalog"]')))).toBe(false);
+  await setRailPosition(panelRail, 'start');
+  await expect.poll(() => panelRail.getAttribute('data-overflow-before')).toBe('false');
+  await expect.poll(() => panelRail.getAttribute('data-overflow-after')).toBe('true');
+  await setRailPosition(panelRail, 'middle');
+  await expect.poll(() => panelRail.getAttribute('data-overflow-before')).toBe('true');
+  await expect.poll(() => panelRail.getAttribute('data-overflow-after')).toBe('true');
+  await setRailPosition(panelRail, 'end');
+  await expect.poll(() => panelRail.getAttribute('data-overflow-after')).toBe('false');
+  await setRailPosition(panelRail, 'start');
+  await panelRail.getByRole('tab').last().evaluate((node: HTMLElement) => node.focus());
+  await expect.poll(() => panelRail.evaluate((node) => node.scrollLeft), {
+    message: `${viewport.name} Panel auto-reveal`
+  }).toBeGreaterThan(0);
+
+  const settings = page.getByRole('tab', { name: 'Settings' });
+  await settings.evaluate((node: HTMLButtonElement) => {
+    node.focus();
+    node.click();
+    node.click();
+  });
+  await expect(settings).toHaveAttribute('aria-selected', 'true');
+  const subPanelRail = page.locator('[data-tab-rail-scroll][aria-label="Settings sub-panels"]');
+  const subPanelOrder = await subPanelRail.getByRole('tab').allTextContents();
+  const add = page.getByRole('button', { name: 'Add sub-panel' });
+  const addBefore = await add.boundingBox();
+  const subPanelExtent = await subPanelRail.evaluate((node) => ({ client: node.clientWidth, scroll: node.scrollWidth }));
+  expect(subPanelExtent.scroll, `${viewport.name} sub-panel rail overflow`).toBeGreaterThan(subPanelExtent.client);
+  await panRail(page, subPanelRail);
+  await expect(subPanelRail.getByRole('tab')).toHaveText(subPanelOrder);
+  const addAfter = await add.boundingBox();
+  if (!addBefore || !addAfter) throw new Error(`Missing ${viewport.name} fixed Add geometry.`);
+  expect(Math.abs(addAfter.x - addBefore.x), `${viewport.name} Add x`).toBeLessThanOrEqual(1);
+  expect(await subPanelRail.evaluate((node) => node.contains(document.querySelector('[aria-label="Add sub-panel"]')))).toBe(false);
+  await setRailPosition(subPanelRail, 'start');
+  await expect.poll(() => subPanelRail.getAttribute('data-overflow-before')).toBe('false');
+  await expect.poll(() => subPanelRail.getAttribute('data-overflow-after')).toBe('true');
+  await setRailPosition(subPanelRail, 'middle');
+  await expect.poll(() => subPanelRail.getAttribute('data-overflow-before')).toBe('true');
+  await expect.poll(() => subPanelRail.getAttribute('data-overflow-after')).toBe('true');
+  await setRailPosition(subPanelRail, 'end');
+  await expect.poll(() => subPanelRail.getAttribute('data-overflow-after')).toBe('false');
+  await setRailPosition(subPanelRail, 'start');
+  await subPanelRail.getByRole('tab').last().evaluate((node: HTMLElement) => node.focus());
+  await expect.poll(() => subPanelRail.evaluate((node) => node.scrollLeft), {
+    message: `${viewport.name} sub-panel auto-reveal`
+  }).toBeGreaterThan(0);
+
+  const containment = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth
+  }));
+  expect(containment.documentWidth, `${viewport.name} document overflow`).toBeLessThanOrEqual(containment.viewportWidth + 1);
+}
+
+async function compactActionButtonMetrics(actions: ReturnType<Page['locator']>) {
+  return actions.getByRole('button').evaluateAll((buttons) => {
+    type Color = { r: number; g: number; b: number; a: number };
+    const parse = (value: string): Color => {
+      const channels = value.match(/[\d.]+/g)?.map(Number);
+      if (!channels || channels.length < 3) throw new Error(`Unsupported computed color: ${value}`);
+      return { r: channels[0]!, g: channels[1]!, b: channels[2]!, a: channels[3] ?? 1 };
+    };
+    const composite = (top: Color, bottom: Color): Color => {
+      const alpha = top.a + bottom.a * (1 - top.a);
+      if (alpha === 0) return { r: 0, g: 0, b: 0, a: 0 };
+      return {
+        r: (top.r * top.a + bottom.r * bottom.a * (1 - top.a)) / alpha,
+        g: (top.g * top.a + bottom.g * bottom.a * (1 - top.a)) / alpha,
+        b: (top.b * top.a + bottom.b * bottom.a * (1 - top.a)) / alpha,
+        a: alpha
+      };
+    };
+    const luminance = (color: Color) => {
+      const linear = [color.r, color.g, color.b].map((channel) => {
+        const value = channel / 255;
+        return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!;
+    };
+
+    return buttons.map((button) => {
+      const style = getComputedStyle(button);
+      const surfaceStyle = getComputedStyle(button.parentElement!);
+      const rawBackground = parse(style.backgroundColor);
+      const background = composite(rawBackground, parse(surfaceStyle.backgroundColor));
+      const foreground = composite(parse(style.color), background);
+      const lighter = Math.max(luminance(foreground), luminance(background));
+      const darker = Math.min(luminance(foreground), luminance(background));
+      return {
+        label: button.textContent?.trim() ?? '',
+        foreground: style.color,
+        background: style.backgroundColor,
+        contrast: Math.round(((lighter + 0.05) / (darker + 0.05)) * 100) / 100,
+        nativeButtonFace: rawBackground.a === 1
+          && Math.max(rawBackground.r, rawBackground.g, rawBackground.b) - Math.min(rawBackground.r, rawBackground.g, rawBackground.b) <= 1
+          && rawBackground.r >= 238
+          && rawBackground.r <= 242
+      };
+    });
+  });
+}
+
+async function compactOrderGeometry(order: ReturnType<Page['locator']>) {
+  return order.getByRole('listitem').evaluateAll((items) => items.flatMap((item, index) => {
+    const row = item.getBoundingClientRect();
+    const children = Array.from(item.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+    const problems: string[] = [];
+    for (const child of children) {
+      const rect = child.getBoundingClientRect();
+      const label = child.getAttribute('aria-label') ?? child.textContent?.trim() ?? child.className;
+      if (rect.left < row.left - 0.5 || rect.right > row.right + 0.5 || rect.top < row.top - 0.5 || rect.bottom > row.bottom + 0.5) {
+        problems.push(`row ${index + 1} ${label} escapes ${Math.round(row.width)}x${Math.round(row.height)} row with ${Math.round(rect.width)}x${Math.round(rect.height)} child`);
+      }
+    }
+    for (let left = 0; left < children.length; left += 1) {
+      const a = children[left]!.getBoundingClientRect();
+      for (let right = left + 1; right < children.length; right += 1) {
+        const b = children[right]!.getBoundingClientRect();
+        if (a.right > b.left + 0.5 && b.right > a.left + 0.5 && a.bottom > b.top + 0.5 && b.bottom > a.top + 0.5) {
+          problems.push(`row ${index + 1} child ${left + 1} overlaps child ${right + 1}`);
+        }
+      }
+    }
+    const handle = item.querySelector<HTMLElement>('[data-tab-order-handle]')?.getBoundingClientRect();
+    if (!handle || handle.width < 44 || handle.height < 44) problems.push(`row ${index + 1} handle is smaller than 44px`);
+    return problems;
+  }));
+}
+
+async function openSubPanelActions(page: Page) {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  const rail = page.getByRole('tablist', { name: 'Settings sub-panels' });
+  const target = rail.getByRole('tab').first();
+  const targetName = await target.textContent();
+  if (!targetName) throw new Error('Expected a compact sub-panel action target.');
+  await target.click({ button: 'right' });
+  const actions = page.getByRole('dialog', { name: `${targetName} sub-panel actions` });
+  await expect(actions).toBeVisible();
+  return { actions, target };
+}
+
+async function proveExactContextAndReorder(page: Page) {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('tab', { name: 'Scene' }).click();
+  const library = page.getByRole('tab', { name: 'Library' });
+  await library.click({ button: 'right' });
+  await expect(page.getByRole('dialog', { name: 'Library Panel actions' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Scene' })).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  const rail = page.getByRole('tablist', { name: 'Settings sub-panels' });
+  const tabs = rail.getByRole('tab');
+  const names = await tabs.allTextContents();
+  const active = rail.locator('[role="tab"][aria-selected="true"]');
+  const target = tabs.nth(1);
+  const targetName = names[1];
+  if (!targetName) throw new Error('Expected an inactive sub-panel context target.');
+  await target.click({ button: 'right' });
+  const actions = page.getByRole('dialog', { name: `${targetName} sub-panel actions` });
+  await expect(actions).toBeVisible();
+  await expect(active).toHaveCount(1);
+  await actions.getByRole('button', { name: 'Reorder sub-panels…' }).click();
+  const orderDialog = page.getByRole('dialog', { name: 'Reorder Settings sub-panels' });
+  const orderList = orderDialog.getByRole('list', { name: 'Settings sub-panels order' });
+  await expect(orderList.getByRole('listitem')).toHaveCount(9);
+  await orderDialog.getByRole('button', { name: `Move ${targetName} down` }).press('Enter');
+  const moved = [...names];
+  [moved[1], moved[2]] = [moved[2]!, moved[1]!];
+  await expect(tabs).toHaveText(moved);
+  await orderDialog.getByRole('button', { name: `Move ${targetName} up` }).press('Enter');
+  await expect(tabs).toHaveText(names);
+  await orderDialog.getByRole('button', { name: 'Done' }).click();
+  await expect(target).toBeFocused();
 }
 
 async function invokeCompactChromeAction(page: Page, name: string) {
@@ -210,5 +499,189 @@ test('material stress states stay coherent at wide and compact viewports', async
       window.scrollTo(0, 0);
     });
     await shot(page, `compact-material-${state.name}.png`);
+  }
+});
+
+for (const viewport of [
+  { name: 'small phone portrait', width: 320, height: 568 },
+  { name: 'large phone portrait', width: 430, height: 932 },
+  { name: 'short landscape', width: 844, height: 390 },
+  { name: 'tablet desktop-site', width: 980, height: 720 },
+  { name: '200%-equivalent', width: 800, height: 450 }
+]) {
+  test(`all maintained themes preserve overflowing rails at ${viewport.name}`, async ({ browser }, testInfo) => {
+    testInfo.setTimeout(180_000);
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true, isMobile: false });
+    const page = await context.newPage();
+    try {
+      await fresh(page, 1440, 900);
+      await seedOverflowingRails(page);
+      const mountedRoot = await page.locator('main[data-pom-theme-root]').elementHandle();
+      if (!mountedRoot) throw new Error('Expected the mounted coarse Workbench theme root.');
+      await expect.poll(() => page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+      for (const theme of maintainedThemes) {
+        await test.step(theme.label, async () => {
+          await selectTheme(page, theme.label);
+          await expect(page.locator('main')).toHaveAttribute('data-pom-theme', theme.id);
+          expect(await mountedRoot.evaluate((node) => node === document.querySelector('main[data-pom-theme-root]'))).toBe(true);
+          await proveRailGeometry(page, { ...viewport, name: `${theme.slug} ${viewport.name}` });
+        });
+      }
+    } finally {
+      await context.close();
+    }
+  });
+}
+
+test('all maintained themes preserve exact context and explicit reorder on phone', async ({ browser }, testInfo) => {
+  testInfo.setTimeout(180_000);
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true, isMobile: false });
+  const page = await context.newPage();
+  try {
+    await fresh(page, 1440, 900);
+    await seedOverflowingRails(page);
+    const mountedRoot = await page.locator('main[data-pom-theme-root]').elementHandle();
+    if (!mountedRoot) throw new Error('Expected the mounted phone Workbench theme root.');
+    for (const theme of maintainedThemes) {
+      await test.step(theme.label, async () => {
+        await selectTheme(page, theme.label);
+        expect(await mountedRoot.evaluate((node) => node === document.querySelector('main[data-pom-theme-root]'))).toBe(true);
+        await proveExactContextAndReorder(page);
+      });
+    }
+  } finally {
+    await context.close();
+  }
+});
+
+test('all maintained themes keep compact action sheets readable', async ({ browser }, testInfo) => {
+  testInfo.setTimeout(180_000);
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true, isMobile: false });
+  const page = await context.newPage();
+  try {
+    await fresh(page, 1440, 900);
+    await seedOverflowingRails(page);
+    const failures: string[] = [];
+    for (const theme of maintainedThemes) {
+      await selectTheme(page, theme.label);
+      await page.setViewportSize({ width: 430, height: 932 });
+      const { actions } = await openSubPanelActions(page);
+      for (const metric of await compactActionButtonMetrics(actions)) {
+        if (metric.nativeButtonFace) failures.push(`${theme.label} ${metric.label}: native ${metric.background}`);
+        if (metric.contrast < 4.5) {
+          failures.push(`${theme.label} ${metric.label}: ${metric.contrast}:1 (${metric.foreground} on ${metric.background})`);
+        }
+      }
+      await page.keyboard.press('Escape');
+    }
+    expect(failures).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('all maintained themes keep long reorder labels separate at 390 and 430', async ({ browser }, testInfo) => {
+  testInfo.setTimeout(180_000);
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true, isMobile: false });
+  const page = await context.newPage();
+  try {
+    await fresh(page, 1440, 900);
+    await seedOverflowingRails(page);
+    const failures: string[] = [];
+    for (const theme of maintainedThemes) {
+      await selectTheme(page, theme.label);
+      await page.setViewportSize({ width: 430, height: 932 });
+      const { actions } = await openSubPanelActions(page);
+      await actions.getByRole('button', { name: 'Reorder sub-panels…' }).click();
+      const order = page.getByRole('dialog', { name: 'Reorder Settings sub-panels' });
+      const names = await order.locator('.tab-order-name').allTextContents();
+      expect(names.some((name) => name.length >= 36)).toBe(true);
+      for (const width of [390, 430]) {
+        await page.setViewportSize({ width, height: width === 390 ? 844 : 932 });
+        await settle(page);
+        for (const problem of await compactOrderGeometry(order)) failures.push(`${theme.label} ${width}px: ${problem}`);
+      }
+      await order.getByRole('button', { name: 'Done' }).click();
+    }
+    expect(failures).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('all maintained themes preserve overflowing rails at wide desktop', async ({ browser }, testInfo) => {
+  testInfo.setTimeout(180_000);
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: false, isMobile: false });
+  const page = await context.newPage();
+  try {
+    await fresh(page, 1440, 900);
+    await seedOverflowingRails(page);
+    const mountedRoot = await page.locator('main[data-pom-theme-root]').elementHandle();
+    if (!mountedRoot) throw new Error('Expected the mounted wide Workbench theme root.');
+    await expect.poll(() => page.evaluate(() => matchMedia('(pointer: fine)').matches)).toBe(true);
+    for (const theme of maintainedThemes) {
+      await test.step(theme.label, async () => {
+        await selectTheme(page, theme.label);
+        await expect(page.locator('main')).toHaveAttribute('data-pom-theme', theme.id);
+        expect(await mountedRoot.evaluate((node) => node === document.querySelector('main[data-pom-theme-root]'))).toBe(true);
+        await proveRailGeometry(page, { name: `${theme.slug} wide desktop`, width: 1440, height: 900 });
+      });
+    }
+  } finally {
+    await context.close();
+  }
+});
+
+test('all maintained themes freeze phone rails, actions, ordering, and desktop overflow', async ({ page }, testInfo) => {
+  testInfo.setTimeout(300_000);
+  await fresh(page, 1440, 900);
+  await seedOverflowingRails(page);
+  const mountedRoot = await page.locator('main[data-pom-theme-root]').elementHandle();
+  if (!mountedRoot) throw new Error('Expected the mounted visual Workbench theme root.');
+
+  for (const theme of maintainedThemes) {
+    await page.setViewportSize({ width: 430, height: 932 });
+    await selectTheme(page, theme.label);
+    expect(await mountedRoot.evaluate((node) => node === document.querySelector('main[data-pom-theme-root]'))).toBe(true);
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    const panelRail = page.locator('[data-tab-rail-scroll][aria-label="Panels"]');
+    const subPanelRail = page.locator('[data-tab-rail-scroll][aria-label="Settings sub-panels"]');
+    await setRailPosition(panelRail, 'middle');
+    await setRailPosition(subPanelRail, 'middle');
+    await settle(page);
+    await shot(page, `rails-phone-${theme.slug}.png`);
+
+    const target = subPanelRail.getByRole('tab').first();
+    const targetName = await target.textContent();
+    if (!targetName) throw new Error(`Expected ${theme.label} sub-panel action target.`);
+    await target.click({ button: 'right' });
+    const actions = page.getByRole('dialog', { name: `${targetName} sub-panel actions` });
+    await expect(actions).toBeVisible();
+    await shot(page, `actions-phone-${theme.slug}.png`);
+
+    await page.keyboard.press('Escape');
+    await subPanelRail.getByRole('tab', { name: reviewedLongSubPanelName }).click();
+    await target.click({ button: 'right' });
+    await expect(actions).toBeVisible();
+    await actions.getByRole('button', { name: 'Reorder sub-panels…' }).click();
+    const order = page.getByRole('dialog', { name: 'Reorder Settings sub-panels' });
+    await expect(order.getByRole('listitem')).toHaveCount(9);
+    const reviewedRow = order.getByRole('listitem').filter({ hasText: reviewedLongSubPanelName });
+    await expect(reviewedRow.locator('.tab-order-active')).toHaveText('Active');
+    await reviewedRow.scrollIntoViewIfNeeded();
+    expect(await reviewedRow.evaluate((row) => {
+      const rowRect = row.getBoundingClientRect();
+      const listRect = row.parentElement!.getBoundingClientRect();
+      return rowRect.top >= listRect.top - 0.5 && rowRect.bottom <= listRect.bottom + 0.5;
+    })).toBe(true);
+    await shot(page, `order-phone-${theme.slug}.png`);
+    await order.getByRole('button', { name: 'Done' }).click();
+    await subPanelRail.getByRole('tab', { name: 'Continuity Index' }).click();
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await setRailPosition(panelRail, 'middle');
+    await setRailPosition(subPanelRail, 'middle');
+    await settle(page);
+    await shot(page, `overflow-wide-${theme.slug}.png`);
   }
 });

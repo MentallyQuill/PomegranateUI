@@ -1,8 +1,10 @@
 export interface TabGeometry {
   readonly id: string;
-  readonly left: number;
-  readonly right: number;
+  readonly start: number;
+  readonly end: number;
 }
+
+export type ReorderAxis = 'horizontal' | 'vertical';
 
 export type TabDragDecision = 'pending' | 'reorder' | 'tear-off' | 'cancelled';
 
@@ -24,13 +26,14 @@ export function dragActivationDecision(input: {
   return distance >= threshold ? 'ready' : 'pending';
 }
 
-export function reorderIndexAtPoint(originId: string, clientX: number, tabs: readonly TabGeometry[]): number {
+export function reorderIndexAtPoint(originId: string, point: number, tabs: readonly TabGeometry[]): number {
   const destinations = tabs.filter((tab) => tab.id !== originId);
-  const before = destinations.findIndex((tab) => clientX < (tab.left + tab.right) / 2);
+  const before = destinations.findIndex((tab) => point < (tab.start + tab.end) / 2);
   return before < 0 ? destinations.length : before;
 }
 
 export function tabDragDecision(input: {
+  readonly axis?: ReorderAxis;
   readonly dx: number;
   readonly dy: number;
   readonly pointerType: string;
@@ -46,6 +49,9 @@ export function tabDragDecision(input: {
     return horizontal >= threshold || vertical >= threshold ? 'cancelled' : 'pending';
   }
   if (horizontal < threshold && vertical < threshold) return 'pending';
+  if (input.axis === 'vertical') {
+    return vertical >= horizontal && vertical >= threshold ? 'reorder' : 'pending';
+  }
   if (input.allowTearOff && vertical > horizontal && vertical >= threshold) return 'tear-off';
   return horizontal >= vertical && horizontal >= threshold ? 'reorder' : 'pending';
 }

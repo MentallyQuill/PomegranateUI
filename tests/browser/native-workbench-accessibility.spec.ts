@@ -29,6 +29,25 @@ async function activatePomOS(page: Page) {
   await expect(page.locator('main[data-pom-theme-root]')).toHaveAttribute('data-pom-theme', 'pom-neutral');
 }
 
+async function colorAlpha(value: string) {
+  const slash = value.match(/\/\s*([\d.]+)\s*\)$/);
+  if (slash) return Number(slash[1]);
+  if (!value.startsWith('rgba(')) return 1;
+  return Number(value.match(/,\s*([\d.]+)\s*\)$/)?.[1] ?? 1);
+}
+
+async function seedPanelRail(page: Page) {
+  const launcher = page.locator('[data-workbench-developer-drawer] > summary');
+  await launcher.click();
+  for (const name of ['Archive', 'Lore', 'Cast', 'Timeline', 'Notes']) {
+    await page.getByRole('button', { name: 'Create Panel' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
+    await dialog.getByRole('textbox', { name: 'Panel name' }).fill(name);
+    await dialog.getByRole('button', { name: 'Create Panel' }).click();
+  }
+  await launcher.click();
+}
+
 for (const viewport of [
   { name: 'wide', width: 1440, height: 900 },
   { name: 'short desktop', width: 1280, height: 720 },
@@ -362,9 +381,10 @@ test('PomOS icon actions keep real names and 44px targets while essential labels
   expect(legacyBounds.content.right).toBeLessThanOrEqual(legacyBounds.owner.right + 1);
 });
 
-test('native workbench keeps literal relationships and keyboard reorder behavior', async ({ page }) => {
+test('native workbench keeps literal relationships and keyboard navigation without rail reorder', async ({ page }) => {
   await openFresh(page, 1440, 900);
-  const tabs = page.getByRole('tablist', { name: 'Panels' }).getByRole('tab');
+  const tabs = page.getByRole('tablist', { name: 'Panels' })
+    .locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
   await expect(tabs).toHaveCount(3);
   const scene = page.getByRole('tab', { name: 'Scene' });
   const scenePanelId = await scene.getAttribute('aria-controls');
@@ -373,8 +393,21 @@ test('native workbench keeps literal relationships and keyboard reorder behavior
   expect(sceneTabId).toBeTruthy();
   await expect(page.locator(`#${scenePanelId}`)).toHaveAttribute('aria-labelledby', sceneTabId!);
   await expect(scene.locator('xpath=..')).toHaveAttribute('data-pomegranate-panel-tab', 'scene');
+  await expect(scene).toHaveAttribute('aria-keyshortcuts', 'Shift+F10');
+  const optionsDescriptionId = await scene.getAttribute('aria-describedby');
+  expect(optionsDescriptionId).toBeTruthy();
+  await expect(page.locator(`#${optionsDescriptionId}`)).toHaveText(
+    'Right-click, press and hold, or press Shift+F10 for tab options.'
+  );
+  const order = await tabs.allTextContents();
   await page.getByRole('tab', { name: 'Library' }).press('Control+Shift+ArrowLeft');
-  await expect(tabs).toHaveText(['Library', 'Scene', 'Settings']);
+  await expect(tabs).toHaveText(order);
+  await expect(scene).toBeFocused();
+  await page.getByRole('tab', { name: 'Scene' }).press('End');
+  await expect(page.getByRole('tab', { name: 'Settings' })).toBeFocused();
+  await expect(tabs).toHaveText(order);
+  await page.getByRole('tab', { name: 'Settings' }).press('Home');
+  await expect(scene).toBeFocused();
   await expect(page.getByLabel('Active story identity')).toContainText('STORY / 7E-19');
 });
 
@@ -395,7 +428,7 @@ test('non-compact Panel tabs keep secondary actions out of their visible spacing
   expect(Math.max(...gaps)).toBeLessThanOrEqual(8);
 });
 
-test('the active Panel overflow menu escapes the tab strip and remains functional', async ({ page }) => {
+test('the target-aware Panel context menu escapes the tab strip and remains functional', async ({ page }) => {
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 980, height: 720 },
@@ -406,17 +439,10 @@ test('the active Panel overflow menu escapes the tab strip and remains functiona
   ]) {
     await openFresh(page, viewport.width, viewport.height);
     await page.getByRole('tab', { name: 'Settings' }).click();
-    const trigger = page.getByRole('button', { name: 'Manage Settings' });
-    await expect(trigger).toBeVisible();
-    const triggerAndTab = await trigger.evaluate((element) => {
-      const triggerRect = element.getBoundingClientRect();
-      const tabRect = element.closest('[data-pomegranate-panel-tab]')!.querySelector('[role="tab"]')!.getBoundingClientRect();
-      return { triggerWidth: triggerRect.width, tabWidth: tabRect.width };
-    });
-    expect(triggerAndTab.tabWidth - triggerAndTab.triggerWidth).toBeGreaterThanOrEqual(48);
-    await trigger.focus();
-    await trigger.press('Enter');
-    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const target = page.getByRole('tab', { name: 'Settings' });
+    await expect(page.getByRole('button', { name: 'Manage Settings' })).toHaveCount(0);
+    await target.focus();
+    await target.press('Shift+F10');
 
     const menu = page.getByRole('dialog', { name: 'Settings Panel actions' });
     await expect(menu).toBeVisible();
@@ -438,7 +464,7 @@ test('the active Panel overflow menu escapes the tab strip and remains functiona
 
     await menu.getByRole('button', { name: 'Rename' }).press('Enter');
     await expect(menu).not.toBeVisible();
-    await expect(trigger).toBeFocused();
+    await expect(target).toBeFocused();
   }
 });
 
@@ -469,6 +495,210 @@ test('Atmospheric composition keeps developer chrome out of the default stage an
   await expect(transcript.locator('[data-pom-part="widget.surface"]')).toHaveCount(0);
   await expect(transcript.locator('.transcript')).toBeVisible();
   await expect(page.locator('[data-story-composer] textarea')).toBeVisible();
+});
+
+test('compact Panel rail keeps natural tabs, truthful cues, fixed actions, and document containment', async ({ page }) => {
+  await openFresh(page, 390, 844);
+  await seedPanelRail(page);
+  const rail = page.locator('[data-tab-rail-scroll][aria-label="Panels"]');
+  await page.waitForTimeout(100);
+  await rail.evaluate((node) => {
+    node.scrollLeft = 0;
+    node.dispatchEvent(new Event('scroll'));
+  });
+  await expect.poll(() => rail.getAttribute('data-overflow-before')).toBe('false');
+  const shell = rail.locator('..');
+  const beforeCue = shell.locator('[data-tab-rail-edge="before"]');
+  const afterCue = shell.locator('[data-tab-rail-edge="after"]');
+
+  const start = await rail.evaluate((node) => ({
+    clientWidth: node.clientWidth,
+    scrollWidth: node.scrollWidth,
+    cursor: getComputedStyle(node).cursor,
+    tabs: [...node.children].map((item) => {
+      const tab = item.querySelector<HTMLElement>('[role="tab"]');
+      if (!tab) throw new Error('Missing Panel tab.');
+      return {
+        shrink: getComputedStyle(item).flexShrink,
+        clientWidth: tab.clientWidth,
+        scrollWidth: tab.scrollWidth,
+        whiteSpace: getComputedStyle(tab).whiteSpace
+      };
+    })
+  }));
+  expect(start.scrollWidth).toBeGreaterThan(start.clientWidth);
+  expect(start.cursor).toBe('grab');
+  for (const tab of start.tabs) {
+    expect(tab.shrink).toBe('0');
+    expect(tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth + 1);
+    expect(tab.whiteSpace).toBe('nowrap');
+  }
+  await expect(beforeCue).toHaveCSS('opacity', '0');
+  await expect(afterCue).toHaveCSS('opacity', '1');
+  await expect(beforeCue).toHaveCSS('pointer-events', 'none');
+  await expect(afterCue).toHaveCSS('pointer-events', 'none');
+
+  await rail.evaluate((node) => { node.scrollLeft = (node.scrollWidth - node.clientWidth) / 2; });
+  await expect.poll(() => rail.getAttribute('data-overflow-before')).toBe('true');
+  await expect.poll(() => rail.getAttribute('data-overflow-after')).toBe('true');
+  await expect(beforeCue).toHaveCSS('opacity', '1');
+  await expect(afterCue).toHaveCSS('opacity', '1');
+
+  await rail.evaluate((node) => { node.scrollLeft = node.scrollWidth; });
+  await expect.poll(() => rail.getAttribute('data-overflow-after')).toBe('false');
+  await expect(beforeCue).toHaveCSS('opacity', '1');
+  await expect(afterCue).toHaveCSS('opacity', '0');
+
+  const containment = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: innerWidth,
+    catalogWidth: document.querySelector<HTMLElement>('[data-pom-action="open-catalog"]')?.getBoundingClientRect().width ?? 0,
+    developerWidth: document.querySelector<HTMLElement>('[data-workbench-developer-drawer] > summary')?.getBoundingClientRect().width ?? 0
+  }));
+  expect(containment.documentWidth).toBeLessThanOrEqual(containment.viewportWidth);
+  expect(containment.catalogWidth).toBeGreaterThanOrEqual(44);
+  expect(containment.developerWidth).toBeGreaterThanOrEqual(44);
+});
+
+test('fine-pointer Panel rail cursor reflects only active horizontal panning', async ({ page }) => {
+  await openFresh(page, 390, 844);
+  await seedPanelRail(page);
+  const rail = page.locator('[data-tab-rail-scroll][aria-label="Panels"]');
+  const tab = page.getByRole('tab', { name: 'Scene' });
+  await rail.evaluate((node) => {
+    node.scrollLeft = 0;
+    node.dispatchEvent(new Event('scroll'));
+  });
+  await expect.poll(() => rail.getAttribute('data-overflow-after')).toBe('true');
+  await expect(rail).toHaveAttribute('data-panning', 'false');
+  await expect(rail).toHaveCSS('cursor', 'grab');
+
+  const box = await tab.boundingBox();
+  if (!box) throw new Error('Missing visible Scene tab geometry.');
+  const startX = box.x + box.width / 2;
+  const startY = box.y + box.height / 2;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await expect(rail).toHaveAttribute('data-panning', 'false');
+  await expect(rail).toHaveCSS('cursor', 'grab');
+  await page.mouse.move(startX + 2, startY + 2);
+  await expect(rail).toHaveAttribute('data-panning', 'false');
+  await expect(rail).toHaveCSS('cursor', 'grab');
+  await page.mouse.move(startX + 2, startY + 12);
+  await expect(rail).toHaveAttribute('data-panning', 'false');
+  await expect(rail).toHaveCSS('cursor', 'grab');
+  await page.mouse.up();
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + 14, startY + 2);
+  await expect(rail).toHaveAttribute('data-panning', 'true');
+  await expect(rail).toHaveCSS('cursor', 'grabbing');
+  await page.mouse.up();
+  await expect(rail).toHaveAttribute('data-panning', 'false');
+  await expect(rail).toHaveCSS('cursor', 'grab');
+});
+
+test('compact Panel actions and reorder dialog are opaque bounded bottom sheets', async ({ page }) => {
+  await openFresh(page, 390, 844);
+  const settings = page.getByRole('tab', { name: 'Settings' });
+  await settings.click({ button: 'right' });
+  const actions = page.getByRole('dialog', { name: 'Settings Panel actions' });
+  await expect(actions).toBeVisible();
+  const panelName = actions.getByRole('textbox', { name: 'Panel name' });
+  const reorderPanels = actions.getByRole('button', { name: 'Reorder Panels…' });
+  await expect(panelName).toBeFocused();
+  await panelName.press('Shift+Tab');
+  await expect(reorderPanels).toBeFocused();
+  await reorderPanels.press('Tab');
+  await expect(panelName).toBeFocused();
+  const actionStyle = await actions.evaluate((node) => {
+    const box = node.getBoundingClientRect();
+    const style = getComputedStyle(node);
+    const backdrop = getComputedStyle(node, '::backdrop');
+    return {
+      bottom: box.bottom,
+      viewport: innerHeight,
+      maxHeight: style.maxHeight,
+      overflowY: style.overflowY,
+      background: style.backgroundColor,
+      backdrop: backdrop.backgroundColor
+    };
+  });
+  expect(actionStyle.bottom).toBeGreaterThanOrEqual(actionStyle.viewport - 1);
+  expect(actionStyle.overflowY).toBe('auto');
+  expect(await colorAlpha(actionStyle.background)).toBe(1);
+  expect(await colorAlpha(actionStyle.backdrop)).toBeGreaterThan(0);
+
+  await reorderPanels.click();
+  const order = page.getByRole('dialog', { name: 'Reorder Panels' });
+  const orderStyle = await order.evaluate((node) => {
+    const box = node.getBoundingClientRect();
+    const style = getComputedStyle(node);
+    const list = node.querySelector<HTMLElement>('[data-tab-order-list]');
+    if (!list) throw new Error('Missing Panel order list.');
+    return {
+      bottom: box.bottom,
+      viewport: innerHeight,
+      height: box.height,
+      background: style.backgroundColor,
+      backdrop: getComputedStyle(node, '::backdrop').backgroundColor,
+      listOverflowY: getComputedStyle(list).overflowY,
+      footerPaddingBottom: getComputedStyle(node.querySelector('footer')!).paddingBottom
+    };
+  });
+  expect(orderStyle.bottom).toBeGreaterThanOrEqual(orderStyle.viewport - 1);
+  expect(orderStyle.height).toBeLessThanOrEqual(orderStyle.viewport * .8 + 1);
+  expect(orderStyle.listOverflowY).toBe('auto');
+  expect(parseFloat(orderStyle.footerPaddingBottom)).toBeGreaterThanOrEqual(16);
+  expect(await colorAlpha(orderStyle.background)).toBe(1);
+  expect(await colorAlpha(orderStyle.backdrop)).toBeGreaterThan(0);
+});
+
+test('Developer tools uses a centered inline SVG and an independent 44px accessible target', async ({ page }) => {
+  await openFresh(page, 390, 844);
+  const button = page.locator('[data-workbench-developer-drawer] > summary');
+  const icon = button.locator('svg[aria-hidden="true"]');
+  await expect(button).toHaveAccessibleName('Developer tools');
+  await expect(button).toHaveText('Developer tools');
+  await expect(icon).toHaveCount(1);
+  const geometry = await button.evaluate((node) => {
+    const svg = node.querySelector('svg');
+    if (!svg) throw new Error('Missing Developer tools SVG.');
+    const buttonBox = node.getBoundingClientRect();
+    const iconBox = svg.getBoundingClientRect();
+    return {
+      button: { left: buttonBox.left, right: buttonBox.right, top: buttonBox.top, bottom: buttonBox.bottom },
+      icon: { left: iconBox.left, right: iconBox.right, top: iconBox.top, bottom: iconBox.bottom }
+    };
+  });
+  expect(geometry.button.right - geometry.button.left).toBeGreaterThanOrEqual(44);
+  expect(geometry.button.bottom - geometry.button.top).toBeGreaterThanOrEqual(44);
+  expect(Math.abs((geometry.icon.left + geometry.icon.right) / 2 - (geometry.button.left + geometry.button.right) / 2)).toBeLessThanOrEqual(1);
+  expect(Math.abs((geometry.icon.top + geometry.icon.bottom) / 2 - (geometry.button.top + geometry.button.bottom) / 2)).toBeLessThanOrEqual(1);
+});
+
+test('wide text-profile Developer tools keeps a centered 44px SVG launcher', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+  await selectTheme(page, 'Ash & Amber');
+  await expect(page.locator('main[data-pom-theme-root]')).toHaveAttribute('data-pom-action-content', 'text');
+  const button = page.locator('[data-workbench-developer-drawer] > summary');
+  const geometry = await button.evaluate((node) => {
+    const svg = node.querySelector('svg[aria-hidden="true"]');
+    if (!svg) throw new Error('Missing Developer tools SVG.');
+    const buttonBox = node.getBoundingClientRect();
+    const iconBox = svg.getBoundingClientRect();
+    return {
+      width: buttonBox.width,
+      height: buttonBox.height,
+      horizontalOffset: Math.abs((iconBox.left + iconBox.right) / 2 - (buttonBox.left + buttonBox.right) / 2),
+      verticalOffset: Math.abs((iconBox.top + iconBox.bottom) / 2 - (buttonBox.top + buttonBox.bottom) / 2)
+    };
+  });
+  expect(geometry.width).toBeGreaterThanOrEqual(44);
+  expect(geometry.height).toBeGreaterThanOrEqual(44);
+  expect(geometry.horizontalOffset).toBeLessThanOrEqual(1);
+  expect(geometry.verticalOffset).toBeLessThanOrEqual(1);
 });
 
 test('all themes keep centered story prose aligned with the composer instrument', async ({ page }) => {

@@ -50,6 +50,7 @@ export type LabThemeId = (typeof LAB_THEME_IDS)[number];
 export interface LabThemePreset {
   readonly id: LabThemeId;
   readonly target: ThemeTargetBundle;
+  readonly swatchStyle: string;
   readonly presentation?: PresentationProfileDefinition;
   readonly surfaceExpression?: SurfaceExpressionProfile;
 }
@@ -62,10 +63,29 @@ export interface LabThemePresetInput {
 }
 
 export const LAB_THEME_PRESETS: readonly LabThemePreset[] = Object.freeze([
-  { id: 'deep-current', target: DEEP_ATMOSPHERIC_TARGET },
-  { id: 'pom-neutral', target: POM_NEUTRAL_TARGET, presentation: POMOS_PRESENTATION_PROFILE },
-  { id: 'bunny', target: BUNNY_TARGET, surfaceExpression: BUNNY_SURFACE_EXPRESSION },
-  { id: 'ash-amber', target: ASH_AMBER_TARGET, surfaceExpression: ASH_AMBER_SURFACE_EXPRESSION }
+  {
+    id: 'deep-current',
+    target: DEEP_ATMOSPHERIC_TARGET,
+    swatchStyle: 'background: linear-gradient(145deg, #071416 0 48%, #8fd8ce 49% 53%, #111a1c 54%);'
+  },
+  {
+    id: 'pom-neutral',
+    target: POM_NEUTRAL_TARGET,
+    swatchStyle: 'background: linear-gradient(145deg, #f8fafc 0 48%, #3979ec 49% 53%, #d8dde4 54%);',
+    presentation: POMOS_PRESENTATION_PROFILE
+  },
+  {
+    id: 'bunny',
+    target: BUNNY_TARGET,
+    swatchStyle: 'background: linear-gradient(145deg, #fff1f7 0 48%, #ef80b8 49% 53%, #d8cdf0 54%);',
+    surfaceExpression: BUNNY_SURFACE_EXPRESSION
+  },
+  {
+    id: 'ash-amber',
+    target: ASH_AMBER_TARGET,
+    swatchStyle: 'background: linear-gradient(145deg, #071416 0 48%, #8fd8ce 49% 53%, #111a1c 54%);',
+    surfaceExpression: ASH_AMBER_SURFACE_EXPRESSION
+  }
 ]);
 
 export const LAB_THEME_TARGETS = LAB_THEME_PRESETS;

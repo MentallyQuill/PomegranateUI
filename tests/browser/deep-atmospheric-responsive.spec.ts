@@ -18,13 +18,7 @@ async function fresh(page: Page) {
 
 async function openAppearanceSettings(page: Page) {
   await page.getByRole('tab', { name: 'Settings' }).click();
-  const selector = page.locator('[data-sub-panel-selector-trigger]');
-  if (await selector.isVisible()) {
-    await selector.click();
-    await page.getByRole('option', { name: 'Appearance and Accessibility' }).click();
-  } else {
-    await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
-  }
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
 }
 
 async function responsiveEvidence(page: Page, testInfo: TestInfo, name: string) {

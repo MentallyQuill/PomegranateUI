@@ -58,19 +58,38 @@ test('packed verifier proves an isolated Svelte recipe consumer', async () => {
     "vite",
     "renderer-conformance.test.ts",
     "PanelTabs.svelte",
+    "SubPanelBar.svelte",
     "WidgetCatalog.svelte",
     "WidgetFrame.svelte",
     "WorkbenchSurface.svelte",
     "RendererState.svelte",
     "createPackedRendererHarness",
-    "assertLocalResolutions"
+    "assertLocalResolutions",
+    "onreorderrequest={openPanelOrder}",
+    "data-panel-order-surface",
+    "data-panel-order-id={tab.tabId}",
+    "data-panel-order-active={tab.selected}",
+    "data-panel-order-active-marker",
+    "data-panel-order-request-panel-id",
+    "data-panel-order-request-invoking-tab-id",
+    "Move ${tab.name} up",
+    "Move ${tab.name} down",
+    "setupFiles",
+    "keeps copied tab reveal local to its rail",
+    "document.documentElement.scrollTop",
+    "createSubPanel",
+    "data-packed-sub-panel-surface",
+    "activatePackedSubPanel",
+    "activates copied sub-panel tabs with reciprocal host relationships"
   ]) assert.match(verifier, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), expected);
+  assert.doesNotMatch(verifier, /HTMLElement\.prototype\.scrollIntoView/);
   assert.doesNotMatch(verifier, /renderer-dom-harness\.mjs/);
   assert.doesNotMatch(verifier, /defaultPlacement: \{ kind: 'docked', edge|panelId, edge/);
   assert.match(verifier, /regionRole: 'stage'/);
   assert.match(verifier, /panelId, regionId/);
   assert.match(verifier, /data-pomegranate-region-surface/);
   assert.doesNotMatch(verifier, /data-pomegranate-dock=/);
+  assert.doesNotMatch(verifier, /Move \$\{operation\.name\} \$\{operation\.direction\}/);
   assert.match(verifier, /const temporaryBase = await realpath\(os\.tmpdir\(\)\)/);
   assert.match(verifier, /mkdtemp\(path\.join\(temporaryBase, 'pomegranate-ui-pack-'\)\)/);
   assert.doesNotMatch(verifier, /path\.resolve\(os\.tmpdir\(\)\)/);

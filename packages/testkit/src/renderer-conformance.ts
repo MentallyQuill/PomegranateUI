@@ -4,12 +4,28 @@ import {
 } from './contract-ids.js';
 
 export interface RendererTabSnapshot {
+  readonly panelId: string;
   readonly name: string;
   readonly id: string;
   readonly controls: string;
   readonly selected: boolean;
-  readonly moveLeftDisabled: boolean;
-  readonly moveRightDisabled: boolean;
+}
+
+export interface RendererPanelOrderItemSnapshot {
+  readonly id: string;
+  readonly name: string;
+  readonly active: boolean;
+  readonly movePreviousDisabled: boolean;
+  readonly moveNextDisabled: boolean;
+}
+
+export interface RendererPanelOrderSnapshot {
+  readonly label: string;
+  readonly request: {
+    readonly panelId: string;
+    readonly invokingTabId: string;
+  };
+  readonly items: readonly RendererPanelOrderItemSnapshot[];
 }
 
 export interface RendererPanelSnapshot {
@@ -27,6 +43,7 @@ export interface RendererWidgetSnapshot {
 export interface RendererSnapshot {
   readonly tabListName: string | null;
   readonly tabs: readonly RendererTabSnapshot[];
+  readonly panelOrder: RendererPanelOrderSnapshot | null;
   readonly panel: RendererPanelSnapshot | null;
   readonly docks: Readonly<Record<'left' | 'main' | 'right', readonly string[]>>;
   readonly floating: readonly string[];
@@ -40,7 +57,7 @@ export interface RendererSnapshot {
 
 export type RendererOperation =
   | { readonly type: 'panel.activate'; readonly name: string }
-  | { readonly type: 'panel.reorder'; readonly name: string; readonly direction: 'left' | 'right' }
+  | { readonly type: 'panel.reorder'; readonly name: string; readonly direction: 'previous' | 'next' }
   | { readonly type: 'widget.place'; readonly title: string; readonly destination: 'left' | 'right' | 'floating' }
   | { readonly type: 'focus.next' }
   | { readonly type: 'renderer.fail'; readonly title: string };
@@ -132,13 +149,77 @@ export async function runRendererConformance(
     && activation.snapshot.hostStoryId === initialHostStoryId
   );
   const reorder = await performAndSnapshot(harness, {
-    type: 'panel.reorder', name: 'Library', direction: 'left'
+    type: 'panel.reorder', name: 'Library', direction: 'previous'
   });
+  const preReorderTabs = activation.snapshot?.tabs;
+  const preReorderIds = preReorderTabs?.map((tab) => tab.id);
+  const libraryIndex = preReorderTabs?.findIndex((tab) => tab.name === 'Library') ?? -1;
+  const expectedReorderIds = preReorderIds ? [...preReorderIds] : [];
+  if (libraryIndex > 0) {
+    const [libraryId] = expectedReorderIds.splice(libraryIndex, 1);
+    if (libraryId) expectedReorderIds.splice(libraryIndex - 1, 0, libraryId);
+  }
+  const reorderedTabIds = reorder.snapshot?.tabs.map((tab) => tab.id);
+  const movedExactlyOnePrevious = libraryIndex > 0
+    && reorderedTabIds?.length === expectedReorderIds.length
+    && expectedReorderIds.every((id, index) => reorderedTabIds[index] === id);
+  const revisionAdvancedExactlyOnce = Boolean(
+    activation.snapshot
+    && reorder.snapshot
+    && reorder.snapshot.revision === activation.snapshot.revision + 1
+  );
+  const orderItems = reorder.snapshot?.panelOrder?.items;
+  const orderItemIds = orderItems?.map((item) => item.id);
+  const orderMatchesTabs = Boolean(
+    orderItemIds
+    && reorderedTabIds
+    && orderItemIds.length === reorderedTabIds.length
+    && reorderedTabIds.every((id, index) => orderItemIds[index] === id)
+  );
+  const orderNamesMatchTabs = Boolean(
+    orderItems
+    && reorder.snapshot
+    && orderItems.length > 0
+    && orderItems.length === reorder.snapshot.tabs.length
+    && orderItems.every((item, index) => (
+      item.name.trim().length > 0
+      && item.name === reorder.snapshot?.tabs[index]?.name
+    ))
+  );
+  const invokingTab = preReorderTabs?.[libraryIndex];
+  const reorderRequestMatches = Boolean(
+    invokingTab
+    && reorder.snapshot?.panelOrder?.request.panelId === invokingTab.panelId
+    && reorder.snapshot.panelOrder.request.invokingTabId === invokingTab.id
+  );
+  const orderEdgesTruthful = Boolean(orderItems?.every((item, index) => (
+    item.movePreviousDisabled === (index === 0)
+    && item.moveNextDisabled === (index === orderItems.length - 1)
+  )));
+  const reorderedSelectedTabs = reorder.snapshot?.tabs.filter((tab) => tab.selected) ?? [];
+  const reorderedSelectedTab = reorderedSelectedTabs.length === 1 ? reorderedSelectedTabs[0] : undefined;
+  const activeOrderItems = orderItems?.filter((item) => item.active) ?? [];
+  const activeOrderMatchesSelectedTab = Boolean(
+    reorderedSelectedTab
+    && activeOrderItems.length === 1
+    && activeOrderItems[0]?.id === reorderedSelectedTab.id
+  );
+  const reorderedRelationshipsPassed = Boolean(
+    reorderedSelectedTab
+    && reorder.snapshot?.panel
+    && reorderedSelectedTab.controls === reorder.snapshot.panel.id
+    && reorder.snapshot.panel.labelledBy === reorderedSelectedTab.id
+  );
   const reorderPassed = Boolean(
-    reorder.snapshot?.tabs[0]?.name === 'Library'
-    && reorder.snapshot.tabs[0].moveLeftDisabled
-    && !reorder.snapshot.tabs[0].moveRightDisabled
-    && reorder.snapshot.tabs.at(-1)?.moveRightDisabled === true
+    movedExactlyOnePrevious
+    && revisionAdvancedExactlyOnce
+    && reorder.snapshot?.panelOrder?.label === 'Reorder Panels'
+    && reorderRequestMatches
+    && orderMatchesTabs
+    && orderNamesMatchTabs
+    && orderEdgesTruthful
+    && activeOrderMatchesSelectedTab
+    && reorderedRelationshipsPassed
   );
   const placement = await performAndSnapshot(harness, {
     type: 'widget.place', title: 'System Status', destination: 'left'
@@ -190,8 +271,8 @@ export async function runRendererConformance(
       reorder.error
         ? `Panel reorder conformance failed: ${reorder.error}`
         : reorderPassed
-        ? 'Panel reorder moved Library left and exposed truthful edge controls.'
-        : 'Expected Panel reorder to move Library left with disabled controls only at sequence edges.'
+        ? 'Panel reorder preserved its exact callback target, opened a complete ordering surface, moved Library exactly one position previous, advanced revision exactly once, retained active relationships, and exposed truthful edge controls.'
+        : 'Expected the exact Panel reorder callback target and a complete named ordering surface to move Library exactly one position previous, advance revision exactly once, retain one reciprocal active identity, and disable controls only at sequence edges.'
     ),
     result(
       RENDERER_CONTRACT_IDS.widgetPlacement,

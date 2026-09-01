@@ -3,7 +3,7 @@
   "source": "atmospheric-workbench",
   "authoritySourceSha256": "38878d2cf8a86f5e879faba4b41a214e4293f22ed755975023e02c962d61b913",
   "referenceImage": "tests/reference/atmospheric-exact/authority-1920x1280.png",
-  "referenceImageSha256": "4aad4c20a3fa9dcf1658ef634f7fd9e75a30883d2b64e00a59b67b3adbb5f4d0",
+  "referenceImageSha256": "7c3bd29fef74c5979029c00223902d5c4842af48b8807be85cff2a718e586a97",
   "normalization": "Hide the calibration-only rail, remove the host body margin, and size the Workbench window to the viewport without changing Workbench styles, content, state, or assets.",
   "viewport": {
     "width": 1920,

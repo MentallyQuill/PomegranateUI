@@ -5,13 +5,28 @@ import { dragActivationDecision, reorderIndexAtPoint, tabDragDecision } from './
 describe('shared tab reordering geometry', () => {
   it('selects an insertion index from literal tab centers while excluding the origin', () => {
     const tabs = [
-      { id: 'scene', left: 0, right: 100 },
-      { id: 'library', left: 100, right: 220 },
-      { id: 'settings', left: 220, right: 340 }
+      { id: 'scene', start: 0, end: 100 },
+      { id: 'library', start: 100, end: 220 },
+      { id: 'settings', start: 220, end: 340 }
     ];
     expect(reorderIndexAtPoint('scene', 300, tabs)).toBe(2);
     expect(reorderIndexAtPoint('settings', 40, tabs)).toBe(0);
     expect(reorderIndexAtPoint('library', 160, tabs)).toBe(1);
+  });
+
+  it('selects a vertical insertion index and activates only along the declared handle axis', () => {
+    expect(reorderIndexAtPoint('settings', 165, [
+      { id: 'scene', start: 0, end: 44 },
+      { id: 'library', start: 50, end: 94 },
+      { id: 'settings', start: 100, end: 144 },
+      { id: 'custom', start: 150, end: 194 }
+    ])).toBe(2);
+    expect(tabDragDecision({
+      axis: 'vertical', dx: 2, dy: 9, pointerType: 'mouse', elapsedMs: 40
+    })).toBe('reorder');
+    expect(tabDragDecision({
+      axis: 'vertical', dx: 9, dy: 2, pointerType: 'mouse', elapsedMs: 40
+    })).toBe('pending');
   });
 
   it('keeps taps as activation, starts horizontal reordering, and reserves vertical motion for tear-off', () => {

@@ -26,14 +26,44 @@ function semanticPartLiterals(source) {
   ].map((match) => match[1]);
 }
 
+function labThemeIds() {
+  const source = readFileSync(join(root, 'apps', 'workbench-lab', 'src', 'themes', 'presets.ts'), 'utf8');
+  const declaration = source.match(/LAB_THEME_IDS\s*=\s*\[([^\]]+)\]/);
+  assert.ok(declaration, 'missing LAB_THEME_IDS declaration');
+  return [...declaration[1].matchAll(/['"]([^'"]+)['"]/g)].map((match) => match[1]);
+}
+
+function cssBodies(path, source) {
+  if (extname(path) === '.css') return [source];
+  if (extname(path) !== '.svelte') return [];
+  return [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((match) => match[1]);
+}
+
+function cssSelectorPreludes(source) {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, '');
+  const selectors = [];
+  let tokenStart = 0;
+  for (let index = 0; index < css.length; index += 1) {
+    if (css[index] === '}') tokenStart = index + 1;
+    if (css[index] !== '{') continue;
+    const prelude = css.slice(tokenStart, index).trim();
+    if (prelude && !prelude.startsWith('@')) selectors.push(prelude);
+    tokenStart = index + 1;
+  }
+  return selectors;
+}
+
 test('production theme consumers contain no concrete theme-id selectors', () => {
+  const concreteThemeIds = labThemeIds();
   const files = [
     ...sourceFiles(join(root, 'apps', 'workbench-lab', 'src')),
     ...sourceFiles(join(root, 'registry', 'recipes'))
   ];
   const violations = files.flatMap((path) => {
     const source = readFileSync(path, 'utf8');
-    return /\[data-pom-theme\s*=/.test(source) ? [relative(root, path)] : [];
+    return cssBodies(path, source).flatMap((css) => cssSelectorPreludes(css)
+      .filter((selector) => concreteThemeIds.some((id) => selector.includes(id)))
+      .map((selector) => `${relative(root, path)}:${selector}`));
   });
   assert.deepEqual(violations, []);
 });

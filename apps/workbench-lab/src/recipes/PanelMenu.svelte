@@ -1,41 +1,61 @@
 <script lang="ts">
-  import type { PanelState } from '@pomegranate-ui/contracts';
+  import type { PanelId, PanelState } from '@pomegranate-ui/contracts';
   import { asPanelId, asWidgetInstanceId } from '@pomegranate-ui/contracts';
   import type { WorkbenchStore } from '@pomegranate-ui/core';
+  import type { TabRailContextRequest } from './TabRailController.js';
 
   let {
-    panel,
     store,
-    onaddsubpanel
+    onaddsubpanel,
+    onreorderpanels
   }: {
-    panel: PanelState;
     store: WorkbenchStore;
-    onaddsubpanel?: (() => void) | undefined;
+    onaddsubpanel?: ((panelId: PanelId) => void) | undefined;
+    onreorderpanels?: ((panelId: PanelId, anchor: HTMLElement) => void) | undefined;
   } = $props();
 
   let name = $state('');
-  let trigger = $state<HTMLButtonElement>();
+  let target = $state<PanelState>();
+  let targetAnchor = $state<HTMLElement>();
+  let source = $state<TabRailContextRequest['source']>('pointer');
   let menu = $state<HTMLElement>();
   let nameInput = $state<HTMLInputElement>();
-  let open = $state(false);
-  let suppressTriggerClickUntil = 0;
-  let restoreTriggerAfterClose = false;
-  const menuId = $derived(`panel-menu-${panel.id}`);
-  const mayCreateFirstSubPanel = $derived(!panel.subPanels?.length);
-  $effect(() => { name = panel.name; });
+  let restoreTargetAfterClose = false;
+  const mayCreateFirstSubPanel = $derived(Boolean(target && !target.subPanels?.length));
 
-  function duplicate() {
+  export function open(panelId: PanelId, anchor: HTMLElement, requestSource: TabRailContextRequest['source']) {
+    const panel = store.getState().panels.find((candidate) => candidate.id === panelId);
+    if (!panel || !menu) return;
+    target = panel;
+    targetAnchor = anchor;
+    source = requestSource;
+    name = panel.name;
+    restoreTargetAfterClose = true;
+    if (typeof menu.showPopover !== 'function') {
+      menu.setAttribute('data-fallback-open', '');
+      requestAnimationFrame(opened);
+      return;
+    }
+    if (!isMenuOpen()) menu.showPopover();
+    requestAnimationFrame(opened);
+  }
+
+  function duplicate(panel: PanelState) {
     const state = store.getState();
     const suffix = state.revision + 1;
     const widgetIds: Record<string, ReturnType<typeof asWidgetInstanceId>> = {};
     const shelfIds: Record<string, string> = {};
     const groupIds: Record<string, string> = {};
-    for (const shelf of state.shelves.filter((candidate) => candidate.panelId === panel.id)) shelfIds[shelf.id] = `${shelf.id}-copy-${suffix}`;
+    for (const shelf of state.shelves.filter((candidate) => candidate.panelId === panel.id)) {
+      shelfIds[shelf.id] = `${shelf.id}-copy-${suffix}`;
+    }
     for (const [instanceId, placement] of Object.entries(state.placements)) {
       if (placement.panelId !== panel.id) continue;
       widgetIds[instanceId] = asWidgetInstanceId(`${instanceId}-copy-${suffix}`);
       const visible = placement.kind === 'shelved' ? placement.lastVisible : placement;
-      if (visible.kind === 'docked' && visible.group) groupIds[visible.group.id] = `${visible.group.id}-copy-${suffix}`;
+      if (visible.kind === 'docked' && visible.group) {
+        groupIds[visible.group.id] = `${visible.group.id}-copy-${suffix}`;
+      }
     }
     store.dispatch({
       type: 'panel.duplicate', panelId: panel.id, name: `${panel.name} Copy`,
@@ -43,13 +63,15 @@
     });
   }
 
-  function destructive(type: 'panel.clear' | 'panel.delete') {
-    if (window.confirm(`${type === 'panel.clear' ? 'Clear' : 'Delete'} ${panel.name}?`)) store.dispatch({ type, panelId: panel.id });
+  function destructive(type: 'panel.clear' | 'panel.delete', panel: PanelState) {
+    if (window.confirm(`${type === 'panel.clear' ? 'Clear' : 'Delete'} ${panel.name}?`)) {
+      store.dispatch({ type, panelId: panel.id });
+    }
   }
 
   function positionMenu() {
-    if (!trigger || !menu || !isMenuOpen()) return;
-    const anchor = trigger.getBoundingClientRect();
+    if (!targetAnchor || !menu || !isMenuOpen()) return;
+    const anchor = targetAnchor.getBoundingClientRect();
     const width = Math.min(230, window.innerWidth - 16);
     menu.style.width = `${width}px`;
     const height = menu.getBoundingClientRect().height;
@@ -68,50 +90,74 @@
     catch { return menu.hasAttribute('data-fallback-open'); }
   }
 
-  function toggleMenu() {
-    if (performance.now() <= suppressTriggerClickUntil) return;
-    if (!menu) return;
-    if (typeof menu.showPopover !== 'function') {
-      open = !open;
-      menu.toggleAttribute('data-fallback-open', open);
-      if (open) requestAnimationFrame(opened);
-    } else if (isMenuOpen()) menu.hidePopover();
-    else {
-      restoreTriggerAfterClose = false;
-      menu.showPopover();
-      requestAnimationFrame(opened);
-    }
+  function restoreFocus() {
+    const fallback = document.querySelector<HTMLElement>(
+      '[role="tablist"][aria-label="Panels"] [role="tab"][aria-selected="true"]'
+    );
+    queueMicrotask(() => (targetAnchor?.isConnected ? targetAnchor : fallback)?.focus());
   }
 
-  function closeMenu(restoreFocus = true) {
-    suppressTriggerClickUntil = performance.now() + 120;
-    restoreTriggerAfterClose = restoreFocus;
+  function closeMenu(restore = true) {
+    restoreTargetAfterClose = restore;
     if (menu && typeof menu.hidePopover !== 'function') {
       menu.removeAttribute('data-fallback-open');
-      open = false;
-      if (restoreFocus) queueMicrotask(() => trigger?.focus());
-      restoreTriggerAfterClose = false;
+      if (restore) restoreFocus();
+      restoreTargetAfterClose = false;
     } else if (isMenuOpen()) menu?.hidePopover();
   }
 
-  function run(action: () => void) {
-    action();
+  function run(action: (panel: PanelState) => void) {
+    const panel = target;
+    if (!panel) return;
+    action(panel);
     closeMenu();
   }
 
+  function reorder() {
+    const panel = target;
+    const anchor = targetAnchor;
+    if (!panel || !anchor) return;
+    if (!onreorderpanels) {
+      closeMenu();
+      return;
+    }
+    closeMenu(false);
+    onreorderpanels(panel.id, anchor);
+  }
+
   function handleToggle(event: ToggleEvent) {
-    open = event.newState === 'open';
-    if (open) requestAnimationFrame(opened);
-    else {
-      if (restoreTriggerAfterClose) queueMicrotask(() => trigger?.focus());
-      restoreTriggerAfterClose = false;
+    if (event.newState !== 'open') {
+      if (restoreTargetAfterClose) restoreFocus();
+      restoreTargetAfterClose = false;
     }
   }
 
   function handleWindowKey(event: KeyboardEvent) {
-    if (event.key !== 'Escape' || !isMenuOpen()) return;
+    if (!isMenuOpen()) return;
+    if (event.key === 'Tab') {
+      const focusable = [...menu?.querySelectorAll<HTMLElement>(
+        'input:not([disabled]), button:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      ) ?? []];
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+      return;
+    }
+    if (event.key !== 'Escape') return;
     event.preventDefault();
     closeMenu(true);
+  }
+
+  function handleWindowPointer(event: PointerEvent) {
+    if (!isMenuOpen() || menu?.contains(event.target as Node)) return;
+    restoreTargetAfterClose = false;
   }
 
   function opened() {
@@ -121,37 +167,29 @@
   }
 </script>
 
-<svelte:window onkeydown={handleWindowKey} />
+<svelte:window onkeydown={handleWindowKey} onpointerdown={handleWindowPointer} />
 
-<div class="panel-menu">
-  <button
-    bind:this={trigger}
-    class="panel-menu-trigger"
-    type="button"
-    aria-label={`Manage ${panel.name}`}
-    aria-haspopup="dialog"
-    aria-expanded={open}
-    aria-controls={menuId}
-    onclick={toggleMenu}
-  >•••</button>
-  <div
-    bind:this={menu}
-    id={menuId}
-    class="panel-menu-surface"
-    data-pom-part="menu.surface"
-    popover="auto"
-    role="dialog"
-    aria-label={`${panel.name} Panel actions`}
-    ontoggle={handleToggle}
-  >
+<div
+  bind:this={menu}
+  id="panel-menu"
+  class="panel-menu-surface"
+  data-pom-part="menu.surface"
+  data-context-source={source}
+  popover="auto"
+  role="dialog"
+  aria-label={target ? `${target.name} Panel actions` : 'Panel actions'}
+  ontoggle={handleToggle}
+>
+  {#if target}
     <label>Panel name<input bind:this={nameInput} bind:value={name} /></label>
-    <button type="button" onclick={() => run(() => store.dispatch({ type: 'panel.rename', panelId: panel.id, name: name.trim() || panel.name }))}>Rename</button>
+    <button type="button" onclick={() => run((panel) => store.dispatch({ type: 'panel.rename', panelId: panel.id, name: name.trim() || panel.name }))}>Rename</button>
     <button type="button" onclick={() => run(duplicate)}>Duplicate</button>
     {#if mayCreateFirstSubPanel}
-      <button type="button" onclick={() => run(() => onaddsubpanel?.())}>Create first sub-panel</button>
+      <button type="button" onclick={() => run((panel) => onaddsubpanel?.(panel.id))}>Create first sub-panel</button>
     {/if}
-    <button type="button" onclick={() => run(() => store.dispatch({ type: 'panel.reset', panelId: panel.id }))}>Reset</button>
-    <button type="button" onclick={() => run(() => destructive('panel.clear'))}>Clear</button>
-    <button type="button" onclick={() => run(() => destructive('panel.delete'))}>Delete</button>
-  </div>
+    <button type="button" onclick={() => run((panel) => store.dispatch({ type: 'panel.reset', panelId: panel.id }))}>Reset</button>
+    <button type="button" onclick={() => run((panel) => destructive('panel.clear', panel))}>Clear</button>
+    <button type="button" onclick={() => run((panel) => destructive('panel.delete', panel))}>Delete</button>
+    <button type="button" onclick={reorder}>Reorder Panels…</button>
+  {/if}
 </div>

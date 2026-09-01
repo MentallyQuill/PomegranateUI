@@ -103,6 +103,34 @@ test('copy-owned Workbench recipes carry optional host title and metadata presen
   assert.match(group, /titleFor\?\.\(frame\) \?\? frame\.title/);
 });
 
+test('copy-owned navigation recipes expose semantic rails and host-owned actions', async () => {
+  const panelTabs = await readFile(path.join(root, 'registry', 'recipes', 'panel-tabs', 'PanelTabs.svelte'), 'utf8');
+  const subPanelBar = await readFile(path.join(root, 'registry', 'recipes', 'sub-panel-navigation', 'SubPanelBar.svelte'), 'utf8');
+  const subPanelDialog = await readFile(path.join(root, 'registry', 'recipes', 'sub-panel-navigation', 'SubPanelDialog.svelte'), 'utf8');
+
+  for (const [name, source] of [['PanelTabs', panelTabs], ['SubPanelBar', subPanelBar]]) {
+    assert.match(source, /data-tab-rail-shell/, `${name} is missing the semantic rail shell.`);
+    assert.match(source, /data-tab-rail-scroll/, `${name} is missing the semantic rail scroll owner.`);
+    assert.match(source, /data-tab-rail-edge="before"/, `${name} is missing its before cue.`);
+    assert.match(source, /data-tab-rail-edge="after"/, `${name} is missing its after cue.`);
+    assert.match(source, /onactivate\?:/, `${name} does not expose host activation.`);
+    assert.match(source, /oncontextrequest\?:/, `${name} does not expose exact-target host context.`);
+    assert.match(source, /onreorderrequest\?:/, `${name} does not expose explicit host reorder.`);
+    assert.doesNotMatch(source, /role="listbox"|data-sub-panel-selector-trigger|data-sub-panel-actions-trigger|•••/);
+    assert.doesNotMatch(source, /type:\s*['"](?:panel|sub-panel)\.reorder['"]/);
+    assert.doesNotMatch(source, /TabRailController|apps\/workbench-lab|deep-current|pom-neutral|bunny|ash-amber/);
+    assert.doesNotMatch(source, /scrollIntoView/, `${name} must reveal only through its rail scroll owner.`);
+    assert.match(source, /getBoundingClientRect\(\)/, `${name} is missing rail-local reveal geometry.`);
+    assert.match(source, /tablist\.scrollLeft/, `${name} is missing rail-local scroll ownership.`);
+  }
+
+  assert.match(panelTabs, /oncontextrequest\?\.\(\{[\s\S]*panelId: tab\.panelId/);
+  assert.match(subPanelBar, /oncontextrequest\?\.\(\{[\s\S]*panelId: panel\.id,[\s\S]*subPanelId: tab\.subPanelId/);
+  assert.match(subPanelDialog, /invokingTab\?: HTMLElement/);
+  assert.match(subPanelDialog, /onclose=\{restoreFocus\}/);
+  assert.match(subPanelDialog, /\[data-pomegranate-panel-tab="\$\{CSS\.escape\(panel\.id\)\}"\] \[role="tab"\]/);
+});
+
 test('recipe copy preflights every destination before writing an upgrade', async () => {
   const target = await mkdtemp(path.join(tmpdir(), 'pomegranate-recipes-transaction-'));
   temporaryRoots.push(target);
