@@ -455,10 +455,14 @@ test('touch hold targets an inactive sub-panel while movement scrolls without ac
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [hold] });
     await page.waitForTimeout(550);
     const menu = page.getByRole('dialog', { name: `${names[0]} sub-panel actions` });
-    await expect(menu).toBeVisible();
-    await expect(menu).toHaveAttribute('data-context-source', 'touch');
+    expect(await page.evaluate(() => getSelection()?.toString() ?? '')).toBe('');
+    await expect(menu).toHaveCount(0);
     await expect(notes).toHaveAttribute('aria-selected', 'true');
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect(menu).toBeVisible();
+    await expect(menu).toHaveAttribute('data-context-source', 'touch');
+    await page.waitForTimeout(100);
+    await expect(menu).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(account).toBeFocused();
     await assertContained(page);

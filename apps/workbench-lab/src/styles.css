@@ -3596,6 +3596,8 @@ main[data-pom-theme-root] [data-tab-rail-scroll] {
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
   touch-action: pan-x pan-y;
+  -webkit-user-select: none;
+  user-select: none;
 }
 main[data-pom-shell-presentation="instrumented"] .panel-tab-rail-shell {
   grid-column: 2;
