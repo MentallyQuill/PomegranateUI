@@ -322,7 +322,7 @@
     const key = 'pomegranate.ui.tab-context-hint.v1';
     let alreadyAnnounced = contextHintAnnouncedWithoutStorage;
     try {
-      alreadyAnnounced = window.sessionStorage.getItem(key) === 'shown';
+      alreadyAnnounced = alreadyAnnounced || window.sessionStorage.getItem(key) === 'shown';
       if (!alreadyAnnounced) window.sessionStorage.setItem(key, 'shown');
     } catch {
       contextHintAnnouncedWithoutStorage = true;

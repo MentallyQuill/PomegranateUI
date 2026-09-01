@@ -141,6 +141,7 @@
   }
 
   function pointerDown(event: PointerEvent, subPanelId: SubPanelId) {
+    if (event.button === 0) suppressCancelledTouchClick = false;
     if (event.pointerType === 'touch' && event.button === 0) pendingTouchPointer = event.pointerId;
     controller?.pointerDown(event, subPanelId);
   }

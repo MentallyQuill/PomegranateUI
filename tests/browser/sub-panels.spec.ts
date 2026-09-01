@@ -234,6 +234,25 @@ test('the Lab announces the tab-options hint once per browser session after cust
   await expect(status).toHaveText('Notes created.');
 });
 
+test('the Lab falls back to one in-memory hint when session storage writes fail', async ({ page }) => {
+  await page.addInitScript(() => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === 'pomegranate.ui.tab-context-hint.v1') throw new DOMException('Storage write blocked');
+      return setItem.call(this, key, value);
+    };
+  });
+  await openClean(page);
+  await addSubPanel(page, 'Research');
+  const status = page.locator('[data-workbench-developer-drawer]').getByRole('status');
+  await page.getByText('Developer tools', { exact: true }).click();
+  await expect(status).toContainText('Right-click or press and hold a tab for options.');
+  await page.getByText('Developer tools', { exact: true }).click();
+  await addSubPanel(page, 'Notes');
+  await page.getByText('Developer tools', { exact: true }).click();
+  await expect(status).toHaveText('Notes created.');
+});
+
 async function addSubPanel(page: Page, name: string) {
   await page.getByRole('button', { name: 'Add sub-panel' }).click();
   const dialog = page.getByRole('dialog', { name: 'Create sub-panel' });
@@ -333,8 +352,7 @@ test('touch hold targets an inactive sub-panel while movement scrolls without ac
   }
 });
 
-test('sub-panel touch candidates cancel on pointer cancellation and window blur without stray activation', async ({ page }) => {
-  await openClean(page);
+async function syntheticTouchTarget(page: Page) {
   const tablist = page.getByRole('tablist', { name: 'Settings sub-panels' });
   const account = tablist.getByRole('tab', { name: names[0] });
   const appearance = tablist.getByRole('tab', { name: names[2] });
@@ -342,20 +360,64 @@ test('sub-panel touch candidates cancel on pointer cancellation and window blur 
   const box = await account.boundingBox();
   const element = await account.elementHandle();
   if (!box || !element) throw new Error('Expected cancellation target geometry.');
-  const event = (pointerId: number) => ({
+  const event = (pointerId: number, x = box.x + box.width / 2) => ({
     pointerId, pointerType: 'touch', isPrimary: true, button: 0,
-    clientX: box.x + box.width / 2, clientY: box.y + box.height / 2
+    clientX: x, clientY: box.y + box.height / 2
   });
+  return { account, appearance, element, event };
+}
 
-  await element.dispatchEvent('pointerdown', event(71));
-  await element.dispatchEvent('pointercancel', event(71));
+async function freshTouchTap(
+  target: Awaited<ReturnType<typeof syntheticTouchTarget>>,
+  pointerId: number
+) {
+  await target.element.dispatchEvent('pointerdown', target.event(pointerId));
+  await target.element.dispatchEvent('pointerup', target.event(pointerId));
+  await target.element.dispatchEvent('click');
+  await expect(target.account).toHaveAttribute('aria-selected', 'true');
+}
+
+async function syntheticTouchSwipe(
+  target: Awaited<ReturnType<typeof syntheticTouchTarget>>,
+  pointerId: number
+) {
+  const startX = target.event(pointerId).clientX;
+  await target.element.dispatchEvent('pointerdown', target.event(pointerId));
+  await target.element.dispatchEvent('pointermove', target.event(pointerId, startX - 40));
+  await target.element.dispatchEvent('pointerup', target.event(pointerId, startX - 40));
+}
+
+test('a completed sub-panel touch swipe does not swallow the next fresh tap', async ({ page }) => {
+  await openClean(page);
+  const target = await syntheticTouchTarget(page);
+  await syntheticTouchSwipe(target, 69);
+  await target.element.dispatchEvent('click');
+  await expect(target.appearance).toHaveAttribute('aria-selected', 'true');
+  await syntheticTouchSwipe(target, 70);
+  await expect(target.appearance).toHaveAttribute('aria-selected', 'true');
+  await freshTouchTap(target, 71);
+});
+
+test('sub-panel pointer cancellation suppresses its click but allows the next fresh tap', async ({ page }) => {
+  await openClean(page);
+  const target = await syntheticTouchTarget(page);
+  await target.element.dispatchEvent('pointerdown', target.event(72));
+  await target.element.dispatchEvent('pointercancel', target.event(72));
   await page.waitForTimeout(550);
   await expect(page.getByRole('dialog', { name: `${names[0]} sub-panel actions` })).toHaveCount(0);
+  await target.element.dispatchEvent('click');
+  await expect(target.appearance).toHaveAttribute('aria-selected', 'true');
+  await freshTouchTap(target, 73);
+});
 
-  await element.dispatchEvent('pointerdown', event(72));
+test('sub-panel window blur suppresses its click but allows the next fresh tap', async ({ page }) => {
+  await openClean(page);
+  const target = await syntheticTouchTarget(page);
+  await target.element.dispatchEvent('pointerdown', target.event(74));
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await page.waitForTimeout(550);
   await expect(page.getByRole('dialog', { name: `${names[0]} sub-panel actions` })).toHaveCount(0);
-  await element.dispatchEvent('click');
-  await expect(appearance).toHaveAttribute('aria-selected', 'true');
+  await target.element.dispatchEvent('click');
+  await expect(target.appearance).toHaveAttribute('aria-selected', 'true');
+  await freshTouchTap(target, 75);
 });
