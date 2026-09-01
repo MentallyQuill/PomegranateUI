@@ -104,8 +104,7 @@
   }
 
   function handleToggle(event: ToggleEvent) {
-    if (event.newState === 'open') requestAnimationFrame(opened);
-    else {
+    if (event.newState !== 'open') {
       if (restoreTargetAfterClose) restoreFocus();
       restoreTargetAfterClose = false;
     }

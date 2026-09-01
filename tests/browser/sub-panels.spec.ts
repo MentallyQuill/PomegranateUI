@@ -247,7 +247,11 @@ test('sub-panel activation preserves each tab vertical scroll position', async (
   await tablist.getByRole('tab', { name: names[2] }).click();
   await owner.evaluate((node) => { node.scrollTop = 0; });
   await tablist.getByRole('tab', { name: names[4] }).click();
-  expect(await owner.evaluate((node) => node.scrollTop)).toBeGreaterThanOrEqual(saved - 1);
+  const restored = await owner.evaluate((node) => ({
+    scrollTop: node.scrollTop,
+    maximum: Math.max(0, node.scrollHeight - node.clientHeight)
+  }));
+  expect(restored.scrollTop).toBeGreaterThanOrEqual(Math.min(saved, restored.maximum) - 1);
 });
 
 test('the Lab announces the tab-options hint once per browser session after custom creation', async ({ page }) => {
