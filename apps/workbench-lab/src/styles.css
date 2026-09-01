@@ -1464,16 +1464,18 @@ main[data-active-panel="surface-preview"][data-surface-preview-family="story"] .
 .workbench-developer-drawer {
   position: relative;
   z-index: 40;
-  flex: 0 0 32px;
-  width: 32px;
+  flex: 0 0 44px;
+  width: 44px;
   color: var(--ink);
 }
 .workbench-developer-drawer > summary {
   position: relative;
   display: grid;
   place-items: center;
-  width: 32px;
-  min-height: 32px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
   border: 1px solid var(--line);
   background: var(--pom-material-menu, var(--glass-deep));
@@ -1536,12 +1538,8 @@ main[data-active-panel="surface-preview"][data-surface-preview-family="story"] .
 main[data-pom-action-content="icon"] .workbench-developer-drawer {
   top: auto;
   right: auto;
-  flex: 0 0 44px;
-  width: 44px;
 }
 main[data-pom-action-content="icon"] .workbench-developer-drawer > summary {
-  width: 44px;
-  min-height: 44px;
   border-radius: var(--pom-radius-pill, 999px);
 }
 main[data-pom-action-content="icon"] .developer-drawer-surface { top: 50px; }
@@ -3648,7 +3646,7 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
   main[data-pom-theme-root] [data-tab-rail-scroll]:is([data-overflow-before="true"], [data-overflow-after="true"]) {
     cursor: grab;
   }
-  main[data-pom-theme-root] [data-tab-rail-scroll]:is([data-overflow-before="true"], [data-overflow-after="true"]):active {
+  main[data-pom-theme-root] [data-tab-rail-scroll]:is([data-overflow-before="true"], [data-overflow-after="true"])[data-panning="true"] {
     cursor: grabbing;
   }
 }

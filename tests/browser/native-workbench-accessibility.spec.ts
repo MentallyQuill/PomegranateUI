@@ -560,6 +560,45 @@ test('compact Panel rail keeps natural tabs, truthful cues, fixed actions, and d
   expect(containment.developerWidth).toBeGreaterThanOrEqual(44);
 });
 
+test('fine-pointer Panel rail cursor reflects only active horizontal panning', async ({ page }) => {
+  await openFresh(page, 390, 844);
+  await seedPanelRail(page);
+  const rail = page.locator('[data-tab-rail-scroll][aria-label="Panels"]');
+  const tab = page.getByRole('tab', { name: 'Scene' });
+  await rail.evaluate((node) => {
+    node.scrollLeft = 0;
+    node.dispatchEvent(new Event('scroll'));
+  });
+  await expect.poll(() => rail.getAttribute('data-overflow-after')).toBe('true');
+  await expect(rail).toHaveAttribute('data-panning', 'false');
+  await expect(rail).toHaveCSS('cursor', 'grab');
+
+  const box = await tab.boundingBox();
+  if (!box) throw new Error('Missing visible Scene tab geometry.');
+  const startX = box.x + box.width / 2;
+  const startY = box.y + box.height / 2;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await expect(rail).toHaveAttribute('data-panning', 'false');
+  await expect(rail).toHaveCSS('cursor', 'grab');
+  await page.mouse.move(startX + 2, startY + 2);
+  await expect(rail).toHaveAttribute('data-panning', 'false');
+  await expect(rail).toHaveCSS('cursor', 'grab');
+  await page.mouse.move(startX + 2, startY + 12);
+  await expect(rail).toHaveAttribute('data-panning', 'false');
+  await expect(rail).toHaveCSS('cursor', 'grab');
+  await page.mouse.up();
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + 14, startY + 2);
+  await expect(rail).toHaveAttribute('data-panning', 'true');
+  await expect(rail).toHaveCSS('cursor', 'grabbing');
+  await page.mouse.up();
+  await expect(rail).toHaveAttribute('data-panning', 'false');
+  await expect(rail).toHaveCSS('cursor', 'grab');
+});
+
 test('compact Panel actions and reorder dialog are opaque bounded bottom sheets', async ({ page }) => {
   await openFresh(page, 390, 844);
   const settings = page.getByRole('tab', { name: 'Settings' });
@@ -630,6 +669,29 @@ test('Developer tools uses a centered inline SVG and an independent 44px accessi
   expect(geometry.button.bottom - geometry.button.top).toBeGreaterThanOrEqual(44);
   expect(Math.abs((geometry.icon.left + geometry.icon.right) / 2 - (geometry.button.left + geometry.button.right) / 2)).toBeLessThanOrEqual(1);
   expect(Math.abs((geometry.icon.top + geometry.icon.bottom) / 2 - (geometry.button.top + geometry.button.bottom) / 2)).toBeLessThanOrEqual(1);
+});
+
+test('wide text-profile Developer tools keeps a centered 44px SVG launcher', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+  await selectTheme(page, 'Ash & Amber');
+  await expect(page.locator('main[data-pom-theme-root]')).toHaveAttribute('data-pom-action-content', 'text');
+  const button = page.locator('[data-workbench-developer-drawer] > summary');
+  const geometry = await button.evaluate((node) => {
+    const svg = node.querySelector('svg[aria-hidden="true"]');
+    if (!svg) throw new Error('Missing Developer tools SVG.');
+    const buttonBox = node.getBoundingClientRect();
+    const iconBox = svg.getBoundingClientRect();
+    return {
+      width: buttonBox.width,
+      height: buttonBox.height,
+      horizontalOffset: Math.abs((iconBox.left + iconBox.right) / 2 - (buttonBox.left + buttonBox.right) / 2),
+      verticalOffset: Math.abs((iconBox.top + iconBox.bottom) / 2 - (buttonBox.top + buttonBox.bottom) / 2)
+    };
+  });
+  expect(geometry.width).toBeGreaterThanOrEqual(44);
+  expect(geometry.height).toBeGreaterThanOrEqual(44);
+  expect(geometry.horizontalOffset).toBeLessThanOrEqual(1);
+  expect(geometry.verticalOffset).toBeLessThanOrEqual(1);
 });
 
 test('all themes keep centered story prose aligned with the composer instrument', async ({ page }) => {
