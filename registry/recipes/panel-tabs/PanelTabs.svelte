@@ -52,12 +52,25 @@
     );
   }
 
+  function revealInRail(tab: HTMLElement) {
+    if (!tablist) return;
+    const railRect = tablist.getBoundingClientRect();
+    const tabRect = tab.getBoundingClientRect();
+    const tabLeft = tabRect.left - railRect.left + tablist.scrollLeft;
+    const tabRight = tabRect.right - railRect.left + tablist.scrollLeft;
+    const maximum = Math.max(0, tablist.scrollWidth - tablist.clientWidth);
+    if (tabLeft < tablist.scrollLeft) tablist.scrollLeft = Math.max(0, Math.min(tabLeft, maximum));
+    else if (tabRight > tablist.scrollLeft + tablist.clientWidth) {
+      tablist.scrollLeft = Math.max(0, Math.min(tabRight - tablist.clientWidth, maximum));
+    }
+  }
+
   function reveal(panelId: PanelId, focus = false) {
     void tick().then(() => {
       const tab = tabElement(panelId);
       if (!tab) return;
       if (focus) tab.focus();
-      tab.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
+      revealInRail(tab);
     });
   }
 

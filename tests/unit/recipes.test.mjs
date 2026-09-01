@@ -119,6 +119,9 @@ test('copy-owned navigation recipes expose semantic rails and host-owned actions
     assert.doesNotMatch(source, /role="listbox"|data-sub-panel-selector-trigger|data-sub-panel-actions-trigger|•••/);
     assert.doesNotMatch(source, /type:\s*['"](?:panel|sub-panel)\.reorder['"]/);
     assert.doesNotMatch(source, /TabRailController|apps\/workbench-lab|deep-current|pom-neutral|bunny|ash-amber/);
+    assert.doesNotMatch(source, /scrollIntoView/, `${name} must reveal only through its rail scroll owner.`);
+    assert.match(source, /getBoundingClientRect\(\)/, `${name} is missing rail-local reveal geometry.`);
+    assert.match(source, /tablist\.scrollLeft/, `${name} is missing rail-local scroll ownership.`);
   }
 
   assert.match(panelTabs, /oncontextrequest\?\.\(\{[\s\S]*panelId: tab\.panelId/);
