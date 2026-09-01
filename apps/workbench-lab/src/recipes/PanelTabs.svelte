@@ -3,6 +3,7 @@
   import type { PanelId, WorkbenchState } from '@pomegranate-ui/contracts';
   import { selectPanelTabs, type WorkbenchStore } from '@pomegranate-ui/core';
   import PanelMenu from './PanelMenu.svelte';
+  import TabOrderDialog, { type TabOrderItem } from './TabOrderDialog.svelte';
   import {
     createTabRailController,
     type TabRailContextRequest,
@@ -12,12 +13,10 @@
   let {
     store,
     onaddsubpanel,
-    onreorderpanels,
     class: className = ''
   }: {
     store: WorkbenchStore;
     onaddsubpanel?: ((panelId: PanelId) => void) | undefined;
-    onreorderpanels?: ((panelId: PanelId, anchor: HTMLElement) => void) | undefined;
     class?: string;
   } = $props();
 
@@ -31,6 +30,9 @@
   let tablist = $state<HTMLElement>();
   let menu = $state<{
     open: (panelId: PanelId, anchor: HTMLElement, source: TabRailContextRequest['source']) => void;
+  }>();
+  let orderDialog = $state<{
+    open: (options: { label: string; items: readonly TabOrderItem[]; invokingTab: HTMLElement }) => void;
   }>();
   let controller = $state<TabRailController>();
 
@@ -66,6 +68,14 @@
   function activate(panelId: PanelId, focus = false) {
     store.dispatch({ type: 'panel.activate', panelId });
     reveal(panelId, focus);
+  }
+
+  function openPanelOrder(_panelId: PanelId, invokingTab: HTMLElement) {
+    orderDialog?.open({
+      label: 'Reorder Panels',
+      items: tabs.map((tab) => ({ id: tab.panelId, name: tab.name, active: tab.selected })),
+      invokingTab
+    });
   }
 
   function focusAndActivate(index: number) {
@@ -135,5 +145,10 @@
   bind:this={menu}
   {store}
   onaddsubpanel={(panelId) => onaddsubpanel?.(panelId)}
-  {onreorderpanels}
+  onreorderpanels={openPanelOrder}
+/>
+
+<TabOrderDialog
+  bind:this={orderDialog}
+  onmove={(id, toIndex) => store.dispatch({ type: 'panel.reorder', panelId: id as PanelId, toIndex })}
 />

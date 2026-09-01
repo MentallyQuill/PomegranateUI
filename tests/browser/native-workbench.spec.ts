@@ -238,6 +238,109 @@ test('Panel context actions target an inactive tab without activating it and res
   await expect(page.getByRole('dialog', { name: 'Reference Library Panel actions' })).toBeVisible();
 });
 
+test('Reorder Panels exposes full names and reorders only from a dedicated handle', async ({ page }) => {
+  const panelTabs = page.getByRole('tablist', { name: 'Panels' });
+  const directTabs = panelTabs.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
+  const settings = panelTabs.getByRole('tab', { name: 'Settings' });
+  await settings.click();
+  await settings.click({ button: 'right' });
+  await page.getByRole('dialog', { name: 'Settings Panel actions' })
+    .getByRole('button', { name: 'Reorder Panels…' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Reorder Panels' });
+  const list = dialog.getByRole('list', { name: 'Panels order' });
+  await expect(list.locator('.tab-order-name')).toHaveText(['Scene', 'Library', 'Settings']);
+  await expect(list.getByRole('listitem').filter({ hasText: 'Settings' })).toContainText('Active');
+  const handle = dialog.getByRole('button', { name: 'Reorder Settings' });
+  const handleBox = await handle.boundingBox();
+  const sceneBox = await list.getByRole('listitem').filter({ hasText: 'Scene' }).boundingBox();
+  if (!handleBox || !sceneBox) throw new Error('Expected Panel order handle geometry.');
+  expect(handleBox.width).toBeGreaterThanOrEqual(44);
+  expect(handleBox.height).toBeGreaterThanOrEqual(44);
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x + handleBox.width / 2, sceneBox.y + 4, { steps: 8 });
+  await expect(page.locator('[data-pom-part="tab.drag-preview"]')).toBeVisible();
+  await page.mouse.up();
+
+  await expect(directTabs).toHaveText(['Settings', 'Scene', 'Library']);
+  await expect(panelTabs.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(settings).toBeFocused();
+});
+
+test('Panel order row dragging scrolls while handle cancellation commits nothing', async ({ page }) => {
+  await seedPanelRail(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const panelTabs = page.getByRole('tablist', { name: 'Panels' });
+  const directTabs = panelTabs.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
+  const settings = panelTabs.getByRole('tab', { name: 'Settings' });
+  const before = await directTabs.allTextContents();
+  await settings.click({ button: 'right' });
+  await page.getByRole('dialog', { name: 'Settings Panel actions' })
+    .getByRole('button', { name: 'Reorder Panels…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Reorder Panels' });
+  const list = dialog.getByRole('list', { name: 'Panels order' });
+  const listExtent = await list.evaluate((node) => ({ client: node.clientHeight, scroll: node.scrollHeight }));
+  expect(listExtent.scroll).toBeGreaterThan(listExtent.client);
+  const firstRow = list.getByRole('listitem').first();
+  const rowBox = await firstRow.locator('.tab-order-name').boundingBox();
+  if (!rowBox) throw new Error('Expected Panel order row geometry.');
+  await page.mouse.move(rowBox.x + rowBox.width / 2, rowBox.y + rowBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(rowBox.x + rowBox.width / 2, rowBox.y - 180, { steps: 8 });
+  await page.mouse.up();
+  expect(await list.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  await expect(directTabs).toHaveText(before);
+
+  const handle = dialog.getByRole('button', { name: 'Reorder Settings' });
+  const handleBox = await handle.boundingBox();
+  const handleElement = await handle.elementHandle();
+  if (!handleBox || !handleElement) throw new Error('Expected Settings order handle geometry.');
+  await handleElement.dispatchEvent('pointerdown', {
+    pointerId: 77, pointerType: 'mouse', isPrimary: true, button: 0,
+    clientX: handleBox.x + handleBox.width / 2, clientY: handleBox.y + handleBox.height / 2
+  });
+  await handleElement.dispatchEvent('pointermove', {
+    pointerId: 77, pointerType: 'mouse', isPrimary: true, button: 0,
+    clientX: handleBox.x + handleBox.width / 2, clientY: handleBox.y - 100
+  });
+  await handleElement.dispatchEvent('pointercancel', {
+    pointerId: 77, pointerType: 'mouse', isPrimary: true, button: 0,
+    clientX: handleBox.x + handleBox.width / 2, clientY: handleBox.y - 100
+  });
+  await expect(directTabs).toHaveText(before);
+});
+
+test('Panel order keyboard moves persist and Cancel does not roll back committed commands', async ({ page }) => {
+  const panelTabs = page.getByRole('tablist', { name: 'Panels' });
+  const directTabs = panelTabs.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
+  const settings = panelTabs.getByRole('tab', { name: 'Settings' });
+  await settings.click();
+  await settings.click({ button: 'right' });
+  await page.getByRole('dialog', { name: 'Settings Panel actions' })
+    .getByRole('button', { name: 'Reorder Panels…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Reorder Panels' });
+  const moveUp = dialog.getByRole('button', { name: 'Move Settings up' });
+  await moveUp.focus();
+  await moveUp.press('Enter');
+  await expect(directTabs).toHaveText(['Scene', 'Settings', 'Library']);
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(settings).toBeFocused();
+  await expect(directTabs).toHaveText(['Scene', 'Settings', 'Library']);
+
+  await settings.click({ button: 'right' });
+  await page.getByRole('dialog', { name: 'Settings Panel actions' })
+    .getByRole('button', { name: 'Reorder Panels…' }).click();
+  await page.keyboard.press('Escape');
+  await expect(settings).toBeFocused();
+  await openDeveloperTools(page);
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  await page.reload();
+  await expect(directTabs).toHaveText(['Scene', 'Settings', 'Library']);
+  await expect(panelTabs.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
+});
+
 test('Panel action material follows every theme and becomes opaque for accessibility fallbacks', async ({ page }) => {
   await openDeveloperTools(page);
   const themeTargets = page.getByRole('group', { name: 'Visual target' });
