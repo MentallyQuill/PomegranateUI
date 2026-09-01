@@ -63,7 +63,12 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
     options.rail.dataset.overflowAfter = String(overflow.after);
   }
 
+  function setPanning(panning: boolean) {
+    options.rail.dataset.panning = String(panning);
+  }
+
   function cleanup() {
+    setPanning(false);
     if (!candidate) return;
     const current = candidate;
     if (current.touchHoldTimer !== null) clearTimeout(current.touchHoldTimer);
@@ -115,6 +120,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
 
   resizeObserver?.observe(options.rail);
   options.rail.addEventListener('scroll', sync, { passive: true });
+  setPanning(false);
   sync();
 
   return Object.freeze({
@@ -145,6 +151,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
           candidate.captured = true;
         } catch { /* Synthetic or detached rails can pan without capture. */ }
         candidate.active = true;
+        setPanning(true);
       }
       suppressClick = true;
       event.preventDefault();

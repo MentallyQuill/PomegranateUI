@@ -52,6 +52,55 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
+  it('reflects data-panning only while a mouse or pen rail pan is active', () => {
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const controller = createTabRailController({ rail, onContextRequest: vi.fn() });
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, clientY: 100, pointerType: 'mouse' }), 'settings');
+    controller.pointerMove(pointer('pointermove', { clientX: 96, clientY: 100, pointerType: 'mouse' }));
+    expect(rail.dataset.panning).toBe('false');
+    controller.pointerMove(pointer('pointermove', { clientX: 102, clientY: 112, pointerType: 'mouse' }));
+    expect(rail.dataset.panning).toBe('false');
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 2, pointerType: 'pen' }), 'settings');
+    controller.pointerMove(pointer('pointermove', { clientX: 80, pointerId: 2, pointerType: 'pen' }));
+    expect(rail.dataset.panning).toBe('true');
+    controller.pointerUp(pointer('pointerup', { clientX: 80, pointerId: 2, pointerType: 'pen' }));
+    expect(rail.dataset.panning).toBe('false');
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 3, pointerType: 'touch' }), 'settings');
+    controller.pointerMove(pointer('pointermove', { clientX: 80, pointerId: 3, pointerType: 'touch' }));
+    expect(rail.dataset.panning).toBe('false');
+    controller.destroy();
+  });
+
+  it('clears data-panning after pointer cancellation, blur, Escape, and destroy', () => {
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const controller = createTabRailController({ rail, onContextRequest: vi.fn() });
+    const beginPan = (pointerId: number) => {
+      controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId, pointerType: 'mouse' }), 'settings');
+      controller.pointerMove(pointer('pointermove', { clientX: 80, pointerId, pointerType: 'mouse' }));
+      expect(rail.dataset.panning).toBe('true');
+    };
+
+    beginPan(1);
+    controller.pointerCancel(pointer('pointercancel', { clientX: 80, pointerId: 1, pointerType: 'mouse' }));
+    expect(rail.dataset.panning).toBe('false');
+    beginPan(2);
+    window.dispatchEvent(new Event('blur'));
+    expect(rail.dataset.panning).toBe('false');
+    beginPan(3);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(rail.dataset.panning).toBe('false');
+    beginPan(4);
+    controller.destroy();
+    expect(rail.dataset.panning).toBe('false');
+  });
+
   it('captures only after horizontal panning begins and releases capture on pointer up', () => {
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
