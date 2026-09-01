@@ -300,6 +300,80 @@ test('short mobile landscape keeps the eight-sub-panel rail and fixed Add reacha
   await assertContained(page);
 });
 
+test('phone sub-panel rail keeps natural tabs, truthful cues, fixed Add, and opaque actions', async ({ page }) => {
+  await openClean(page);
+  await addSubPanel(page, 'Research');
+  await addSubPanel(page, 'Notes');
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  const rail = page.locator('[data-tab-rail-scroll][aria-label="Settings sub-panels"]');
+  const shell = rail.locator('..');
+  const add = page.getByRole('button', { name: 'Add sub-panel' });
+  await page.waitForTimeout(100);
+  await rail.evaluate((node) => {
+    node.scrollLeft = 0;
+    node.dispatchEvent(new Event('scroll'));
+  });
+  await expect.poll(() => rail.getAttribute('data-overflow-before')).toBe('false');
+  const initial = await rail.evaluate((node) => ({
+    clientWidth: node.clientWidth,
+    scrollWidth: node.scrollWidth,
+    tabs: [...node.children].map((item) => {
+      const tab = item.querySelector<HTMLElement>('[role="tab"]');
+      if (!tab) throw new Error('Missing sub-panel tab.');
+      return {
+        shrink: getComputedStyle(item).flexShrink,
+        tabClientWidth: tab.clientWidth,
+        tabScrollWidth: tab.scrollWidth
+      };
+    })
+  }));
+  expect(initial.scrollWidth).toBeGreaterThan(initial.clientWidth);
+  for (const tab of initial.tabs) {
+    expect(tab.shrink).toBe('0');
+    expect(tab.tabScrollWidth).toBeLessThanOrEqual(tab.tabClientWidth + 1);
+  }
+  await expect(shell.locator('[data-tab-rail-edge="before"]')).toHaveCSS('opacity', '0');
+  await expect(shell.locator('[data-tab-rail-edge="after"]')).toHaveCSS('opacity', '1');
+  const startAdd = await add.boundingBox();
+  if (!startAdd) throw new Error('Missing Add sub-panel geometry.');
+  expect(startAdd.width).toBeGreaterThanOrEqual(44);
+  expect(startAdd.height).toBeGreaterThanOrEqual(44);
+
+  await rail.evaluate((node) => { node.scrollLeft = node.scrollWidth; });
+  await expect.poll(() => rail.getAttribute('data-overflow-after')).toBe('false');
+  const endAdd = await add.boundingBox();
+  expect(endAdd).toEqual(startAdd);
+  await expect(shell.locator('[data-tab-rail-edge="before"]')).toHaveCSS('opacity', '1');
+  await expect(shell.locator('[data-tab-rail-edge="after"]')).toHaveCSS('opacity', '0');
+
+  const account = rail.getByRole('tab', { name: names[0] });
+  await account.click({ button: 'right' });
+  const actions = page.getByRole('dialog', { name: `${names[0]} sub-panel actions` });
+  const sheet = await actions.evaluate((node) => {
+    const box = node.getBoundingClientRect();
+    const background = getComputedStyle(node).backgroundColor;
+    return {
+      bottom: box.bottom,
+      viewport: innerHeight,
+      overflowY: getComputedStyle(node).overflowY,
+      background,
+      backdrop: getComputedStyle(node, '::backdrop').backgroundColor
+    };
+  });
+  const alpha = (value: string) => {
+    const slash = value.match(/\/\s*([\d.]+)\s*\)$/);
+    if (slash) return Number(slash[1]);
+    if (!value.startsWith('rgba(')) return 1;
+    return Number(value.match(/,\s*([\d.]+)\s*\)$/)?.[1] ?? 1);
+  };
+  expect(sheet.bottom).toBeGreaterThanOrEqual(sheet.viewport - 1);
+  expect(sheet.overflowY).toBe('auto');
+  expect(alpha(sheet.background)).toBe(1);
+  expect(alpha(sheet.backdrop)).toBeGreaterThan(0);
+  await assertContained(page);
+});
+
 async function touchDesktopPage(browser: Browser) {
   const context = await browser.newContext({ viewport: { width: 980, height: 720 }, hasTouch: true, isMobile: false });
   const page = await context.newPage();
