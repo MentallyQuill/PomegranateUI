@@ -17,6 +17,7 @@ export interface LabThemeHostContext {
     readonly id: LabThemeId;
     readonly label: string;
     readonly description: string;
+    readonly swatchStyle: string;
   }[];
   inspector: LabThemeInspector;
   materialControls: LabMaterialControls;

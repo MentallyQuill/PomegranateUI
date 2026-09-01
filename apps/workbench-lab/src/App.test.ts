@@ -65,6 +65,31 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByRole('tabpanel', { name: 'Appearance and Accessibility' })).toBeVisible();
   });
 
+  it('renders theme picker previews from preset data without theme-id hooks', async () => {
+    const user = userEvent.setup();
+    const { container } = render(App);
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+    await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
+
+    const library = screen.getByRole('article', { name: 'Theme Library' });
+    const expected = [
+      ['Deep Current', 'linear-gradient(145deg, rgb(7, 20, 22) 0 48%, rgb(143, 216, 206) 49% 53%, rgb(17, 26, 28) 54%)'],
+      ['PomOS', 'linear-gradient(145deg, rgb(248, 250, 252) 0 48%, rgb(57, 121, 236) 49% 53%, rgb(216, 221, 228) 54%)'],
+      ['Bunny', 'linear-gradient(145deg, rgb(255, 241, 247) 0 48%, rgb(239, 128, 184) 49% 53%, rgb(216, 205, 240) 54%)'],
+      ['Ash & Amber', 'linear-gradient(145deg, rgb(7, 20, 22) 0 48%, rgb(143, 216, 206) 49% 53%, rgb(17, 26, 28) 54%)']
+    ] as const;
+
+    const pickerButtons = [...library.querySelectorAll<HTMLButtonElement>('.surface-themes button')];
+    for (const [label, background] of expected) {
+      const button = pickerButtons.find((candidate) => candidate.querySelector('strong')?.textContent === label);
+      const swatch = button?.querySelector<HTMLElement>('i');
+      expect(swatch).not.toBeNull();
+      expect(swatch).not.toHaveAttribute('data-theme-swatch');
+      expect(swatch?.style.backgroundImage).toBe(background);
+    }
+    expect(container.querySelectorAll('.surface-themes i')).toHaveLength(4);
+  });
+
   it('uses one Atmospheric composition with integrated story surfaces and a dormant developer drawer', () => {
     const { container } = render(App);
     expect(container.querySelector('.context-rail')).toBeNull();

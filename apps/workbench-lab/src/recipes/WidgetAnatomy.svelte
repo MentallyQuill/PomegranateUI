@@ -141,7 +141,7 @@
           </div>
         {:else if fixture.presentation === 'theme'}
           <div class="surface-themes">
-            {#each hostContext.theme.presets as preset (preset.id)}<button type="button" data-pom-part="button.surface" aria-pressed={hostContext.theme.activeId === preset.id} onclick={() => hostContext.theme.activate(preset.id)}><i data-theme-swatch={preset.id}></i><strong>{preset.label}</strong><small>{preset.description}</small></button>{/each}
+            {#each hostContext.theme.presets as preset (preset.id)}<button type="button" data-pom-part="button.surface" aria-pressed={hostContext.theme.activeId === preset.id} onclick={() => hostContext.theme.activate(preset.id)}><i style={preset.swatchStyle}></i><strong>{preset.label}</strong><small>{preset.description}</small></button>{/each}
           </div>
         {:else if fixture.presentation === 'accessibility'}
           <div class="surface-accessibility">

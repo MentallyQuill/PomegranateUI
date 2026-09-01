@@ -255,9 +255,7 @@ main[data-active-panel="surface-preview"] .surface-contract-facts { display: gri
 .surface-themes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .surface-themes button { display: grid; grid-template-columns: 28px 1fr; gap: 2px 7px; text-align: left; }
 .surface-themes button[aria-pressed="true"] { border-color: var(--pom-color-focus); box-shadow: inset 0 -2px var(--pom-color-focus); }
-.surface-themes i { grid-row: 1 / 3; width: 28px; height: 36px; border: 1px solid var(--line); background: linear-gradient(145deg, #071416 0 48%, #8fd8ce 49% 53%, #111a1c 54%); }
-.surface-themes i[data-theme-swatch="pom-neutral"] { background: linear-gradient(145deg, #f8fafc 0 48%, #3979ec 49% 53%, #d8dde4 54%); }
-.surface-themes i[data-theme-swatch="bunny"] { background: linear-gradient(145deg, #fff1f7 0 48%, #ef80b8 49% 53%, #d8cdf0 54%); }
+.surface-themes i { grid-row: 1 / 3; width: 28px; height: 36px; border: 1px solid var(--line); }
 .surface-themes small { color: var(--faint); }
 @container (max-width: 440px) {
   .surface-themes { grid-template-columns: repeat(2, minmax(0, 1fr)); }

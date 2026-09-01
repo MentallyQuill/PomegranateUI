@@ -180,10 +180,11 @@
 
   let hostContext = $state(createLabHostContext({
     activeId: initialThemeSnapshot.activeId,
-    presets: LAB_THEME_PRESETS.map(({ id, target }) => ({
+    presets: LAB_THEME_PRESETS.map(({ id, target, swatchStyle }) => ({
       id,
       label: target.theme.label,
-      description: target.theme.description ?? target.theme.label
+      description: target.theme.description ?? target.theme.label,
+      swatchStyle
     })),
     inspector: themeInspector(),
     materialControls: initialThemeSnapshot.materialControls,
