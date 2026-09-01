@@ -21,19 +21,16 @@ function snapshot(overrides: Partial<RendererSnapshot> = {}): RendererSnapshot {
         name: 'Scene',
         id: 'pomegranate-panel-tab-scene',
         controls: 'pomegranate-panel-scene',
-        selected: true,
-        moveLeftDisabled: true,
-        moveRightDisabled: false
+        selected: true
       },
       {
         name: 'Library',
         id: 'pomegranate-panel-tab-library',
         controls: 'pomegranate-panel-library',
-        selected: false,
-        moveLeftDisabled: false,
-        moveRightDisabled: true
+        selected: false
       }
     ],
+    panelOrder: null,
     panel: {
       id: 'pomegranate-panel-scene',
       labelledBy: 'pomegranate-panel-tab-scene'
@@ -85,15 +82,19 @@ class PassingHarness implements RendererHarness {
         revision: 1
       });
     }
-    if (operation.type === 'panel.reorder' && operation.name === 'Library' && operation.direction === 'left') {
+    if (operation.type === 'panel.reorder' && operation.name === 'Library' && operation.direction === 'previous') {
       const library = this.current.tabs.find((tab) => tab.name === 'Library')!;
       const scene = this.current.tabs.find((tab) => tab.name === 'Scene')!;
       this.current = {
         ...this.current,
-        tabs: [
-          { ...library, moveLeftDisabled: true, moveRightDisabled: false },
-          { ...scene, moveLeftDisabled: false, moveRightDisabled: true }
-        ],
+        tabs: [library, scene],
+        panelOrder: {
+          label: 'Reorder Panels',
+          items: [
+            { name: 'Library', movePreviousDisabled: true, moveNextDisabled: false },
+            { name: 'Scene', movePreviousDisabled: false, moveNextDisabled: true }
+          ]
+        },
         revision: 2
       };
     }
@@ -193,13 +194,73 @@ describe('renderer conformance', () => {
     });
   });
 
-  it('reorders Panels with truthful disabled directions', async () => {
+  it('reorders Panels through an explicit surface with truthful disabled edges', async () => {
     const results = await runRendererConformance(new PassingHarness());
     expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)).toEqual({
       contractId: RENDERER_CONTRACT_IDS.panelReorder,
       passed: true,
-      diagnostic: 'Panel reorder moved Library left and exposed truthful edge controls.'
+      diagnostic: 'Panel reorder opened an explicit ordering surface, moved Library previous, and exposed truthful edge controls.'
     });
+  });
+
+  it('requests a semantic previous move instead of a normal-rail direction', async () => {
+    const operations: RendererOperation[] = [];
+    class RecordingHarness extends PassingHarness {
+      override async perform(operation: RendererOperation): Promise<void> {
+        operations.push(operation);
+        await super.perform(operation);
+      }
+    }
+
+    await runRendererConformance(new RecordingHarness());
+
+    expect(operations.find((operation) => operation.type === 'panel.reorder')).toEqual({
+      type: 'panel.reorder',
+      name: 'Library',
+      direction: 'previous'
+    });
+  });
+
+  it('rejects reordered tabs without an explicit ordering surface', async () => {
+    class MissingOrderSurfaceHarness extends PassingHarness {
+      override async perform(operation: RendererOperation): Promise<void> {
+        await super.perform(operation);
+        if (operation.type === 'panel.reorder') this.current = { ...this.current, panelOrder: null };
+      }
+    }
+
+    const results = await runRendererConformance(new MissingOrderSurfaceHarness());
+
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)).toEqual({
+      contractId: RENDERER_CONTRACT_IDS.panelReorder,
+      passed: false,
+      diagnostic: 'Expected an explicit Panel ordering surface to move Library previous with disabled controls only at sequence edges.'
+    });
+  });
+
+  it('rejects false disabled edges on the explicit ordering surface', async () => {
+    class FalseOrderEdgesHarness extends PassingHarness {
+      override async perform(operation: RendererOperation): Promise<void> {
+        await super.perform(operation);
+        if (operation.type === 'panel.reorder' && this.current.panelOrder) {
+          this.current = {
+            ...this.current,
+            panelOrder: {
+              ...this.current.panelOrder,
+              items: this.current.panelOrder.items.map((item) => ({
+                ...item,
+                movePreviousDisabled: false,
+                moveNextDisabled: false
+              }))
+            }
+          };
+        }
+      }
+    }
+
+    const results = await runRendererConformance(new FalseOrderEdgesHarness());
+
+    expect(results.find((entry) => entry.contractId === RENDERER_CONTRACT_IDS.panelReorder)?.passed).toBe(false);
   });
 
   it('appends menu placement to an occupied dock', async () => {
@@ -294,7 +355,24 @@ describe('renderer conformance', () => {
   it('accepts a document.createElement harness with no framework imports', async () => {
     const results = await runRendererConformance(createRendererDomHarness(document));
     expect(results).toHaveLength(Object.keys(RENDERER_CONTRACT_IDS).length);
-    expect(results.every((entry) => entry.passed)).toBe(true);
+    expect(results.filter((entry) => !entry.passed)).toEqual([]);
+  });
+
+  it('drives the framework-free explicit order controls and snapshots exact edges', async () => {
+    const harness = createRendererDomHarness(document);
+    await harness.reset();
+
+    await harness.perform({ type: 'panel.reorder', name: 'Library', direction: 'previous' });
+
+    const reordered = await harness.snapshot();
+    expect(reordered.tabs.map((tab: RendererSnapshot['tabs'][number]) => tab.name)).toEqual(['Library', 'Scene']);
+    expect(reordered.panelOrder).toEqual({
+      label: 'Reorder Panels',
+      items: [
+        { name: 'Library', movePreviousDisabled: true, moveNextDisabled: false },
+        { name: 'Scene', movePreviousDisabled: false, moveNextDisabled: true }
+      ]
+    });
   });
 
   it('publishes the literal renderer markup vocabulary', () => {

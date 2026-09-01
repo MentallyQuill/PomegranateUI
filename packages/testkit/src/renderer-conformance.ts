@@ -8,8 +8,17 @@ export interface RendererTabSnapshot {
   readonly id: string;
   readonly controls: string;
   readonly selected: boolean;
-  readonly moveLeftDisabled: boolean;
-  readonly moveRightDisabled: boolean;
+}
+
+export interface RendererPanelOrderItemSnapshot {
+  readonly name: string;
+  readonly movePreviousDisabled: boolean;
+  readonly moveNextDisabled: boolean;
+}
+
+export interface RendererPanelOrderSnapshot {
+  readonly label: string;
+  readonly items: readonly RendererPanelOrderItemSnapshot[];
 }
 
 export interface RendererPanelSnapshot {
@@ -27,6 +36,7 @@ export interface RendererWidgetSnapshot {
 export interface RendererSnapshot {
   readonly tabListName: string | null;
   readonly tabs: readonly RendererTabSnapshot[];
+  readonly panelOrder: RendererPanelOrderSnapshot | null;
   readonly panel: RendererPanelSnapshot | null;
   readonly docks: Readonly<Record<'left' | 'main' | 'right', readonly string[]>>;
   readonly floating: readonly string[];
@@ -40,7 +50,7 @@ export interface RendererSnapshot {
 
 export type RendererOperation =
   | { readonly type: 'panel.activate'; readonly name: string }
-  | { readonly type: 'panel.reorder'; readonly name: string; readonly direction: 'left' | 'right' }
+  | { readonly type: 'panel.reorder'; readonly name: string; readonly direction: 'previous' | 'next' }
   | { readonly type: 'widget.place'; readonly title: string; readonly destination: 'left' | 'right' | 'floating' }
   | { readonly type: 'focus.next' }
   | { readonly type: 'renderer.fail'; readonly title: string };
@@ -132,13 +142,18 @@ export async function runRendererConformance(
     && activation.snapshot.hostStoryId === initialHostStoryId
   );
   const reorder = await performAndSnapshot(harness, {
-    type: 'panel.reorder', name: 'Library', direction: 'left'
+    type: 'panel.reorder', name: 'Library', direction: 'previous'
   });
+  const orderItems = reorder.snapshot?.panelOrder?.items;
   const reorderPassed = Boolean(
     reorder.snapshot?.tabs[0]?.name === 'Library'
-    && reorder.snapshot.tabs[0].moveLeftDisabled
-    && !reorder.snapshot.tabs[0].moveRightDisabled
-    && reorder.snapshot.tabs.at(-1)?.moveRightDisabled === true
+    && reorder.snapshot.panelOrder?.label === 'Reorder Panels'
+    && orderItems?.length === reorder.snapshot.tabs.length
+    && orderItems.map((item) => item.name).join('|') === reorder.snapshot.tabs.map((tab) => tab.name).join('|')
+    && orderItems[0]?.movePreviousDisabled === true
+    && orderItems[0]?.moveNextDisabled === false
+    && orderItems.at(-1)?.movePreviousDisabled === false
+    && orderItems.at(-1)?.moveNextDisabled === true
   );
   const placement = await performAndSnapshot(harness, {
     type: 'widget.place', title: 'System Status', destination: 'left'
@@ -190,8 +205,8 @@ export async function runRendererConformance(
       reorder.error
         ? `Panel reorder conformance failed: ${reorder.error}`
         : reorderPassed
-        ? 'Panel reorder moved Library left and exposed truthful edge controls.'
-        : 'Expected Panel reorder to move Library left with disabled controls only at sequence edges.'
+        ? 'Panel reorder opened an explicit ordering surface, moved Library previous, and exposed truthful edge controls.'
+        : 'Expected an explicit Panel ordering surface to move Library previous with disabled controls only at sequence edges.'
     ),
     result(
       RENDERER_CONTRACT_IDS.widgetPlacement,

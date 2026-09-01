@@ -24,6 +24,7 @@ export function createRendererDomHarness(document) {
       },
       floating: [],
       failed: [],
+      orderSurfaceOpen: false,
       revision: 0
     };
   }
@@ -40,7 +41,7 @@ export function createRendererDomHarness(document) {
     const tablist = document.createElement('div');
     tablist.setAttribute('role', 'tablist');
     tablist.setAttribute('aria-label', 'Panels');
-    for (const [index, name] of state.tabs.entries()) {
+    for (const name of state.tabs) {
       const suffix = slug(name);
       const tab = button(document, name, {
         role: 'tab',
@@ -48,11 +49,39 @@ export function createRendererDomHarness(document) {
         'aria-controls': `pomegranate-panel-${suffix}`,
         'aria-selected': name === state.active
       });
-      tab.dataset.moveLeftDisabled = String(index === 0);
-      tab.dataset.moveRightDisabled = String(index === state.tabs.length - 1);
       tablist.append(tab);
     }
     root.append(tablist);
+
+    const reorderTrigger = button(document, 'Reorder Panels', { 'aria-haspopup': 'dialog' });
+    reorderTrigger.addEventListener('click', () => {
+      state.orderSurfaceOpen = true;
+      render();
+    });
+    root.append(reorderTrigger);
+
+    if (state.orderSurfaceOpen) {
+      const orderSurface = document.createElement('section');
+      orderSurface.dataset.panelOrderSurface = '';
+      orderSurface.setAttribute('role', 'dialog');
+      orderSurface.setAttribute('aria-label', 'Reorder Panels');
+      for (const [index, name] of state.tabs.entries()) {
+        const item = document.createElement('div');
+        item.dataset.panelOrderItem = '';
+        item.dataset.panelOrderName = name;
+        const previousName = `Move ${name} previous`;
+        const nextName = `Move ${name} next`;
+        const previous = button(document, previousName, { 'aria-label': previousName });
+        const next = button(document, nextName, { 'aria-label': nextName });
+        previous.disabled = index === 0;
+        next.disabled = index === state.tabs.length - 1;
+        previous.addEventListener('click', () => movePanel(name, 'previous'));
+        next.addEventListener('click', () => movePanel(name, 'next'));
+        item.append(name, previous, next);
+        orderSurface.append(item);
+      }
+      root.append(orderSurface);
+    }
 
     const panelSuffix = slug(state.active);
     const panel = document.createElement('section');
@@ -116,6 +145,16 @@ export function createRendererDomHarness(document) {
     }
   }
 
+  function movePanel(name, direction) {
+    const from = state.tabs.indexOf(name);
+    const offset = direction === 'previous' ? -1 : 1;
+    const to = Math.max(0, Math.min(state.tabs.length - 1, from + offset));
+    if (from < 0 || from === to) return;
+    state.tabs.splice(to, 0, state.tabs.splice(from, 1)[0]);
+    state.revision += 1;
+    render();
+  }
+
   root.addEventListener('pomegranate-operation', (event) => {
     const operation = event.detail;
     if (operation.type === 'focus.next') {
@@ -127,11 +166,16 @@ export function createRendererDomHarness(document) {
       state.revision += 1;
     }
     if (operation.type === 'panel.reorder') {
-      const from = state.tabs.indexOf(operation.name);
-      const offset = operation.direction === 'left' ? -1 : 1;
-      const to = Math.max(0, Math.min(state.tabs.length - 1, from + offset));
-      state.tabs.splice(to, 0, state.tabs.splice(from, 1)[0]);
-      state.revision += 1;
+      const trigger = [...root.querySelectorAll('button')]
+        .find((candidate) => candidate.textContent?.trim() === 'Reorder Panels');
+      if (!trigger) throw new Error("Button 'Reorder Panels' is missing.");
+      trigger.click();
+      const controlName = `Move ${operation.name} ${operation.direction}`;
+      const control = [...root.querySelectorAll('button')]
+        .find((candidate) => candidate.textContent?.trim() === controlName);
+      if (!control) throw new Error(`Button '${controlName}' is missing.`);
+      control.click();
+      return;
     }
     if (operation.type === 'widget.place') {
       for (const edge of ['left', 'main', 'right']) {
@@ -159,6 +203,7 @@ export function createRendererDomHarness(document) {
     },
     async snapshot() {
       const tabs = [...root.querySelectorAll('[role="tab"]')];
+      const orderSurface = root.querySelector('[data-panel-order-surface]');
       const panel = root.querySelector('[role="tabpanel"]');
       const dockTitles = (edge) => [...root.querySelectorAll(`[data-pomegranate-dock="${edge}"] [data-widget-title]`)]
         .map((element) => element.dataset.widgetTitle);
@@ -168,10 +213,19 @@ export function createRendererDomHarness(document) {
           name: tab.textContent,
           id: tab.id,
           controls: tab.getAttribute('aria-controls'),
-          selected: tab.getAttribute('aria-selected') === 'true',
-          moveLeftDisabled: tab.dataset.moveLeftDisabled === 'true',
-          moveRightDisabled: tab.dataset.moveRightDisabled === 'true'
+          selected: tab.getAttribute('aria-selected') === 'true'
         })),
+        panelOrder: orderSurface ? {
+          label: orderSurface.getAttribute('aria-label'),
+          items: [...orderSurface.querySelectorAll('[data-panel-order-item]')].map((item) => {
+            const name = item.dataset.panelOrderName;
+            return {
+              name,
+              movePreviousDisabled: item.querySelector(`[aria-label="Move ${name} previous"]`).disabled,
+              moveNextDisabled: item.querySelector(`[aria-label="Move ${name} next"]`).disabled
+            };
+          })
+        } : null,
         panel: panel ? { id: panel.id, labelledBy: panel.getAttribute('aria-labelledby') } : null,
         docks: {
           left: dockTitles('left'),
