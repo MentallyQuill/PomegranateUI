@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -33,15 +33,33 @@ describe('Svelte Workbench Lab mockup', () => {
     const accountTab = within(tabs).getByRole('tab', { name: 'Account and Access' });
     const accountSurface = screen.getByRole('tabpanel', { name: 'Account and Access' });
     expect(accountTab).toHaveAttribute('aria-controls', accountSurface.id);
+    expect(accountTab).toHaveAttribute('aria-keyshortcuts', 'Shift+F10');
+    expect(screen.queryByRole('button', { name: /^Manage / })).toBeNull();
     await user.hover(accountTab);
     expect(screen.queryByRole('menu')).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: 'Manage Account and Access' }));
-    expect(screen.getByRole('menu', { name: 'Account and Access actions' })).toBeVisible();
-    await user.keyboard('{Escape}');
-    expect(screen.queryByRole('menu', { name: 'Account and Access actions' })).toBeNull();
+    const appearanceTab = within(tabs).getByRole('tab', { name: 'Appearance and Accessibility' });
+    await user.click(appearanceTab);
+    accountTab.focus();
+    expect(await fireEvent.keyDown(accountTab, { key: 'ContextMenu' })).toBe(false);
+    const actions = document.querySelector<HTMLElement>('.sub-panel-menu-surface');
+    if (!actions) throw new Error('Expected the shared sub-panel action surface.');
+    expect(actions).toHaveAttribute('role', 'dialog');
+    expect(actions).toHaveAttribute('aria-label', 'Account and Access sub-panel actions');
+    expect(actions).toHaveAttribute('data-fallback-open');
+    expect(actions).toHaveAttribute('data-context-source', 'keyboard');
+    expect(within(actions).getAllByRole('button', { hidden: true }).map((button) => button.textContent?.trim())).toEqual([
+      'Rename', 'Duplicate', 'Change layout', 'Move Widgets', 'Delete', 'Reorder sub-panels…'
+    ]);
+    expect(accountTab).toHaveAttribute('aria-selected', 'false');
+    expect(appearanceTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('article', { name: 'Theme Library' })).toBeVisible();
+    expect(screen.queryByRole('article', { name: 'Provider Credentials' })).toBeNull();
+    await fireEvent.keyDown(window, { key: 'Escape' });
+    expect(actions).not.toHaveAttribute('data-fallback-open');
+    expect(accountTab).toHaveFocus();
+    expect(appearanceTab).toHaveAttribute('aria-selected', 'true');
 
-    await user.click(within(tabs).getByRole('tab', { name: 'Appearance and Accessibility' }));
     expect(screen.getByRole('article', { name: 'Theme Library' })).toBeVisible();
     expect(screen.queryByRole('article', { name: 'Provider Credentials' })).toBeNull();
     expect(screen.getByRole('tabpanel', { name: 'Appearance and Accessibility' })).toBeVisible();
@@ -229,9 +247,30 @@ describe('Svelte Workbench Lab mockup', () => {
   it('routes Panel reorder, docking, and floating through the public store', async () => {
     const user = userEvent.setup();
     render(App);
-    screen.getByRole('tab', { name: 'Settings' }).focus();
+    const panelTablist = screen.getByRole('tablist', { name: 'Panels' });
+    const panelOrder = () => within(panelTablist).getAllByRole('tab').map((tab) => tab.textContent?.trim());
+    const settingsTab = within(panelTablist).getByRole('tab', { name: 'Settings' });
+    settingsTab.focus();
     await user.keyboard('{Control>}{Shift>}{ArrowLeft}{/Shift}{/Control}');
-    expect(within(screen.getByRole('tablist', { name: 'Panels' })).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Settings', 'Library']);
+    expect(panelOrder()).toEqual(['Scene', 'Library', 'Settings']);
+    expect(within(panelTablist).getByRole('tab', { name: 'Library' })).toHaveFocus();
+    expect(within(panelTablist).getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
+
+    settingsTab.focus();
+    expect(await fireEvent.keyDown(settingsTab, { key: 'ContextMenu' })).toBe(false);
+    const panelActions = document.querySelector<HTMLElement>('#panel-menu');
+    if (!panelActions) throw new Error('Expected the shared Panel action surface.');
+    expect(panelActions).toHaveAttribute('role', 'dialog');
+    expect(panelActions).toHaveAttribute('aria-label', 'Settings Panel actions');
+    expect(panelActions).toHaveAttribute('data-fallback-open');
+    await fireEvent.click(within(panelActions).getByRole('button', { name: 'Reorder Panels…', hidden: true }));
+    const orderDialog = await screen.findByRole('dialog', { name: 'Reorder Panels' });
+    await user.click(within(orderDialog).getByRole('button', { name: 'Move Settings up' }));
+    expect(panelOrder()).toEqual(['Scene', 'Settings', 'Library']);
+    expect(within(panelTablist).getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
+    await user.click(within(orderDialog).getByRole('button', { name: 'Done' }));
+
+    await user.click(within(panelTablist).getByRole('tab', { name: 'Scene' }));
     const ambience = screen.getByRole('article', { name: 'Room Ambience' });
     await user.click(within(ambience).getByRole('button', { name: 'Widget actions' }));
     await user.click(within(ambience).getByRole('menuitem', { name: 'Dock left' }));
