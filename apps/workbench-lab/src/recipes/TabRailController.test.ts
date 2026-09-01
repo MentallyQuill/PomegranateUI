@@ -25,6 +25,7 @@ describe('TabRailController', () => {
   afterEach(() => {
     cleanup.splice(0).forEach((element) => element.remove());
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -46,18 +47,47 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
-  it('does not capture before panning and releases a vertical mouse gesture to its owner', () => {
+  it('captures only after horizontal panning begins and releases capture on pointer up', () => {
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
     configureRail(rail);
     const controller = createTabRailController({ rail, onContextRequest: vi.fn() });
     Object.defineProperty(rail, 'setPointerCapture', { configurable: true, value: () => {} });
+    Object.defineProperty(rail, 'releasePointerCapture', { configurable: true, value: () => {} });
     const capture = vi.spyOn(rail, 'setPointerCapture');
+    const release = vi.spyOn(rail, 'releasePointerCapture');
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, clientY: 100, pointerType: 'mouse' }), 'settings');
+    controller.pointerMove(pointer('pointermove', { clientX: 96, clientY: 100, pointerType: 'mouse' }));
+    expect(capture).not.toHaveBeenCalled();
+    controller.pointerMove(pointer('pointermove', { clientX: 80, clientY: 100, pointerType: 'mouse' }));
+    controller.pointerUp(pointer('pointerup', { clientX: 80, clientY: 100, pointerType: 'mouse' }));
+
+    expect(capture).toHaveBeenCalledWith(1);
+    expect(release).toHaveBeenCalledWith(1);
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 2, pointerType: 'mouse' }), 'settings');
+    controller.pointerMove(pointer('pointermove', { clientX: 80, pointerId: 2, pointerType: 'mouse' }));
+    controller.pointerCancel(pointer('pointercancel', { clientX: 80, pointerId: 2, pointerType: 'mouse' }));
+    expect(capture).toHaveBeenCalledWith(2);
+    expect(release).toHaveBeenCalledWith(2);
+    controller.destroy();
+  });
+
+  it('does not capture or release for a vertical mouse cancellation', () => {
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const controller = createTabRailController({ rail, onContextRequest: vi.fn() });
+    Object.defineProperty(rail, 'setPointerCapture', { configurable: true, value: () => {} });
+    Object.defineProperty(rail, 'releasePointerCapture', { configurable: true, value: () => {} });
+    const capture = vi.spyOn(rail, 'setPointerCapture');
+    const release = vi.spyOn(rail, 'releasePointerCapture');
 
     controller.pointerDown(pointer('pointerdown', { clientX: 100, clientY: 100, pointerType: 'mouse' }), 'settings');
     controller.pointerMove(pointer('pointermove', { clientX: 102, clientY: 112, pointerType: 'mouse' }));
 
     expect(capture).not.toHaveBeenCalled();
+    expect(release).not.toHaveBeenCalled();
     expect(rail.scrollLeft).toBe(0);
     expect(controller.consumeClick()).toBe(false);
     controller.destroy();
@@ -145,13 +175,12 @@ describe('TabRailController', () => {
 
   it('synchronizes overflow on scroll and resize, then reveals by rail-local geometry after document movement', () => {
     const resizeCallbacks: ResizeObserverCallback[] = [];
-    const OriginalResizeObserver = globalThis.ResizeObserver;
-    globalThis.ResizeObserver = class {
+    vi.stubGlobal('ResizeObserver', class {
       constructor(callback: ResizeObserverCallback) { resizeCallbacks.push(callback); }
       disconnect() {}
       observe() {}
       unobserve() {}
-    } as unknown as typeof ResizeObserver;
+    });
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
     configureRail(rail);
@@ -170,6 +199,29 @@ describe('TabRailController', () => {
     controller.reveal(settings);
     expect(rail.scrollLeft).toBe(130);
     controller.destroy();
-    globalThis.ResizeObserver = OriginalResizeObserver;
+  });
+
+  it('disconnects observation, removes scroll synchronization, and cancels a pending touch hold on destroy', () => {
+    vi.useFakeTimers();
+    const disconnect = vi.fn();
+    vi.stubGlobal('ResizeObserver', class {
+      disconnect = disconnect;
+      observe() {}
+      unobserve() {}
+    });
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const controller = createTabRailController({ rail, onContextRequest: vi.fn() });
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerType: 'touch' }), 'settings');
+    controller.destroy();
+    rail.dataset.overflowAfter = 'unchanged';
+    rail.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(500);
+
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(rail.dataset.overflowAfter).toBe('unchanged');
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

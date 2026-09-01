@@ -31,6 +31,7 @@ interface Candidate {
   readonly startY: number;
   readonly startScrollLeft: number;
   active: boolean;
+  captured: boolean;
   touchHeld: boolean;
   touchHoldTimer: ReturnType<typeof setTimeout> | null;
 }
@@ -55,7 +56,11 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
 
   function cleanup() {
     if (!candidate) return;
-    if (candidate.touchHoldTimer !== null) clearTimeout(candidate.touchHoldTimer);
+    const current = candidate;
+    if (current.touchHoldTimer !== null) clearTimeout(current.touchHoldTimer);
+    if (current.captured) {
+      try { options.rail.releasePointerCapture(current.pointerId); } catch { /* Capture can be lost before cleanup. */ }
+    }
     candidate = null;
     window.removeEventListener('keydown', cancelOnEscape);
     window.removeEventListener('blur', cancelOnBlur);
@@ -81,6 +86,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
       startY: event.clientY,
       startScrollLeft: options.rail.scrollLeft,
       active: false,
+      captured: false,
       touchHeld: false,
       touchHoldTimer: null
     };
@@ -118,7 +124,13 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
         return;
       }
       if (decision !== 'pan') return;
-      candidate.active = true;
+      if (!candidate.active) {
+        try {
+          options.rail.setPointerCapture(candidate.pointerId);
+          candidate.captured = true;
+        } catch { /* Synthetic or detached rails can pan without capture. */ }
+        candidate.active = true;
+      }
       suppressClick = true;
       event.preventDefault();
       options.rail.scrollLeft = candidate.startScrollLeft - dx;
