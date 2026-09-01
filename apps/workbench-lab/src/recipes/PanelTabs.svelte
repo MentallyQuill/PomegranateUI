@@ -126,7 +126,7 @@
           aria-describedby="panel-tab-options-description"
           aria-keyshortcuts="Shift+F10"
           tabindex={tab.selected ? 0 : -1}
-          onclick={() => { if (!controller?.consumeClick()) activate(tab.panelId); }}
+          onclick={(event) => { if (!controller?.consumeClick(event)) activate(tab.panelId); }}
           onfocus={(event) => controller?.reveal(event.currentTarget)}
           onkeydown={(event) => handleKey(event, tab.panelId, index)}
           oncontextmenu={(event) => controller?.contextMenu(event, tab.panelId)}

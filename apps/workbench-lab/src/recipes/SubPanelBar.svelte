@@ -45,8 +45,6 @@
     open: (options: { label: string; items: readonly TabOrderItem[]; invokingTab: HTMLElement }) => void;
   }>();
   let controller = $state<TabRailController>();
-  let pendingTouchPointer: number | null = null;
-  let suppressCancelledTouchClick = false;
 
   $effect(() => {
     const rail = tablist;
@@ -55,14 +53,11 @@
     const next = createTabRailController({
       rail,
       onContextRequest: ({ id, anchor, source }) => {
-        pendingTouchPointer = null;
         menu?.open(panelId, id as SubPanelId, anchor, source);
       }
     });
     controller = next;
     return () => {
-      pendingTouchPointer = null;
-      suppressCancelledTouchClick = false;
       if (controller === next) controller = undefined;
       next.destroy();
     };
@@ -140,47 +135,7 @@
     });
   }
 
-  function pointerDown(event: PointerEvent, subPanelId: SubPanelId) {
-    if (event.button === 0) suppressCancelledTouchClick = false;
-    if (event.pointerType === 'touch' && event.button === 0) pendingTouchPointer = event.pointerId;
-    controller?.pointerDown(event, subPanelId);
-  }
-
-  function pointerMove(event: PointerEvent) {
-    if (pendingTouchPointer === event.pointerId && event.pointerType === 'touch') {
-      suppressCancelledTouchClick = true;
-      pendingTouchPointer = null;
-    }
-    controller?.pointerMove(event);
-  }
-
-  function pointerUp(event: PointerEvent) {
-    if (pendingTouchPointer === event.pointerId) pendingTouchPointer = null;
-    controller?.pointerUp(event);
-  }
-
-  function pointerCancel(event: PointerEvent) {
-    if (pendingTouchPointer === event.pointerId) {
-      pendingTouchPointer = null;
-      suppressCancelledTouchClick = true;
-    }
-    controller?.pointerCancel(event);
-  }
-
-  function consumeClick() {
-    const cancelledTouch = suppressCancelledTouchClick;
-    suppressCancelledTouchClick = false;
-    return cancelledTouch || controller?.consumeClick();
-  }
-
-  function handleWindowBlur() {
-    if (pendingTouchPointer === null) return;
-    pendingTouchPointer = null;
-    suppressCancelledTouchClick = true;
-  }
 </script>
-
-<svelte:window onblur={handleWindowBlur} />
 
 {#if panel && tabs.length > 0}
   <nav
@@ -198,9 +153,9 @@
         aria-label={`${panel.name} sub-panels`}
         tabindex="-1"
         style="width: 100%; height: 100%; overflow-x: auto; scrollbar-width: none;"
-        onpointermove={pointerMove}
-        onpointerup={pointerUp}
-        onpointercancel={pointerCancel}
+        onpointermove={(event) => controller?.pointerMove(event)}
+        onpointerup={(event) => controller?.pointerUp(event)}
+        onpointercancel={(event) => controller?.pointerCancel(event)}
       >
         {#each tabs as tab, index (tab.subPanelId)}
           <span data-sub-panel-tab-item={tab.subPanelIdAttribute}>
@@ -215,11 +170,11 @@
               aria-describedby="sub-panel-tab-options-description"
               aria-keyshortcuts="Shift+F10"
               tabindex={tab.selected ? 0 : -1}
-              onclick={() => { if (!consumeClick()) void activate(tab.subPanelId); }}
+              onclick={(event) => { if (!controller?.consumeClick(event)) void activate(tab.subPanelId); }}
               onfocus={(event) => controller?.reveal(event.currentTarget)}
               onkeydown={(event) => handleKey(event, tab.subPanelId, index)}
               oncontextmenu={(event) => controller?.contextMenu(event, tab.subPanelId)}
-              onpointerdown={(event) => pointerDown(event, tab.subPanelId)}
+              onpointerdown={(event) => controller?.pointerDown(event, tab.subPanelId)}
               ondragstart={(event) => event.preventDefault()}
             >{tab.name}</button>
           </span>

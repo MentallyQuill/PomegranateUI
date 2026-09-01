@@ -13,7 +13,7 @@ export interface TabRailController {
   pointerCancel(event: PointerEvent): void;
   contextMenu(event: MouseEvent, id: string): void;
   keyboardContext(event: KeyboardEvent, id: string): void;
-  consumeClick(): boolean;
+  consumeClick(event: MouseEvent): boolean;
   reveal(tab: HTMLElement): void;
   sync(): void;
   destroy(): void;
@@ -44,13 +44,19 @@ interface TouchContext {
   readonly until: number;
 }
 
+interface SuppressedGesture {
+  readonly pointerId: number;
+  readonly pointerType: string;
+  readonly anchor: HTMLElement;
+}
+
 function anchorFor(event: Event): HTMLElement | null {
   return event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
 }
 
 export function createTabRailController(options: TabRailControllerOptions): TabRailController {
   let candidate: Candidate | null = null;
-  let suppressClick = false;
+  let suppressedGesture: SuppressedGesture | null = null;
   let touchContext: TouchContext | null = null;
   const handledContexts = new WeakSet<Event>();
   const resizeObserver = typeof ResizeObserver === 'undefined'
@@ -67,6 +73,14 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
     options.rail.dataset.panning = String(panning);
   }
 
+  function suppressCandidate(current: Candidate) {
+    suppressedGesture = {
+      pointerId: current.pointerId,
+      pointerType: current.pointerType,
+      anchor: current.anchor
+    };
+  }
+
   function cleanup() {
     setPanning(false);
     if (!candidate) return;
@@ -78,17 +92,44 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
     candidate = null;
     window.removeEventListener('keydown', cancelOnEscape);
     window.removeEventListener('blur', cancelOnBlur);
+    window.removeEventListener('pointerup', finishOnWindowPointerUp);
+    window.removeEventListener('pointercancel', cancelOnWindowPointer);
+    window.removeEventListener('pointerout', cancelOnWindowExit);
+    window.removeEventListener('scroll', cancelOnScroll, true);
   }
 
   function cancelOnEscape(event: KeyboardEvent) {
     if (event.key !== 'Escape' || !candidate) return;
     event.preventDefault();
-    if (candidate.active) suppressClick = true;
+    suppressCandidate(candidate);
     cleanup();
   }
 
   function cancelOnBlur() {
-    if (candidate?.active) suppressClick = true;
+    if (candidate) suppressCandidate(candidate);
+    cleanup();
+  }
+
+  function finishOnWindowPointerUp(event: PointerEvent) {
+    if (!candidate || candidate.pointerId !== event.pointerId) return;
+    if (candidate.active || candidate.touchHeld) suppressCandidate(candidate);
+    cleanup();
+  }
+
+  function cancelOnWindowPointer(event: PointerEvent) {
+    if (!candidate || candidate.pointerId !== event.pointerId) return;
+    suppressCandidate(candidate);
+    cleanup();
+  }
+
+  function cancelOnWindowExit(event: PointerEvent) {
+    if (event.relatedTarget !== null) return;
+    cancelOnWindowPointer(event);
+  }
+
+  function cancelOnScroll() {
+    if (!candidate || candidate.active) return;
+    suppressCandidate(candidate);
     cleanup();
   }
 
@@ -110,7 +151,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
       current.touchHoldTimer = setTimeout(() => {
         if (candidate !== current) return;
         current.touchHeld = true;
-        suppressClick = true;
+        suppressCandidate(current);
         touchContext = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
         options.onContextRequest({ id: current.id, anchor: current.anchor, source: 'touch' });
       }, 500);
@@ -126,9 +167,14 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
   return Object.freeze({
     pointerDown(event: PointerEvent, id: string) {
       if (event.button !== 0 || !id || candidate) return;
+      suppressedGesture = null;
       candidate = startCandidate(event, id);
       window.addEventListener('keydown', cancelOnEscape);
       window.addEventListener('blur', cancelOnBlur);
+      window.addEventListener('pointerup', finishOnWindowPointerUp);
+      window.addEventListener('pointercancel', cancelOnWindowPointer);
+      window.addEventListener('pointerout', cancelOnWindowExit);
+      window.addEventListener('scroll', cancelOnScroll, true);
     },
 
     pointerMove(event: PointerEvent) {
@@ -136,11 +182,15 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
       const dx = event.clientX - candidate.startX;
       const dy = event.clientY - candidate.startY;
       if (candidate.pointerType === 'touch') {
-        if (railPanDecision({ dx, dy }) !== 'pending') cleanup();
+        if (railPanDecision({ dx, dy }) !== 'pending') {
+          suppressCandidate(candidate);
+          cleanup();
+        }
         return;
       }
       const decision = railPanDecision({ dx, dy });
       if (decision === 'cancelled') {
+        suppressCandidate(candidate);
         cleanup();
         return;
       }
@@ -153,22 +203,18 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
         candidate.active = true;
         setPanning(true);
       }
-      suppressClick = true;
+      suppressCandidate(candidate);
       event.preventDefault();
       options.rail.scrollLeft = candidate.startScrollLeft - dx;
       sync();
     },
 
     pointerUp(event: PointerEvent) {
-      if (!candidate || candidate.pointerId !== event.pointerId) return;
-      if (candidate.active || candidate.touchHeld) suppressClick = true;
-      cleanup();
+      finishOnWindowPointerUp(event);
     },
 
     pointerCancel(event: PointerEvent) {
-      if (!candidate || candidate.pointerId !== event.pointerId) return;
-      if (candidate.active) suppressClick = true;
-      cleanup();
+      cancelOnWindowPointer(event);
     },
 
     contextMenu(event: MouseEvent, id: string) {
@@ -193,10 +239,13 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
       options.onContextRequest({ id, anchor, source: 'keyboard' });
     },
 
-    consumeClick() {
-      const value = suppressClick;
-      suppressClick = false;
-      return value;
+    consumeClick(event: MouseEvent) {
+      if (!suppressedGesture || event.detail === 0) return false;
+      if (event instanceof PointerEvent && event.pointerId !== suppressedGesture.pointerId) return false;
+      const anchor = anchorFor(event);
+      if (anchor && anchor !== suppressedGesture.anchor) return false;
+      suppressedGesture = null;
+      return true;
     },
 
     reveal(tab: HTMLElement) {
@@ -218,7 +267,8 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
       cleanup();
       resizeObserver?.disconnect();
       options.rail.removeEventListener('scroll', sync);
-      suppressClick = false;
+      suppressedGesture = null;
+      touchContext = null;
     }
   });
 }

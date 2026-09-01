@@ -381,6 +381,13 @@ test('phone sub-panel rail keeps natural tabs, truthful cues, fixed Add, and opa
   const account = rail.getByRole('tab', { name: names[0] });
   await account.click({ button: 'right' });
   const actions = page.getByRole('dialog', { name: `${names[0]} sub-panel actions` });
+  const rename = actions.getByRole('button', { name: 'Rename' });
+  const reorder = actions.getByRole('button', { name: 'Reorder sub-panels…' });
+  await expect(rename).toBeFocused();
+  await rename.press('Shift+Tab');
+  await expect(reorder).toBeFocused();
+  await reorder.press('Tab');
+  await expect(rename).toBeFocused();
   const sheet = await actions.evaluate((node) => {
     const box = node.getBoundingClientRect();
     const background = getComputedStyle(node).backgroundColor;
@@ -478,8 +485,23 @@ async function freshTouchTap(
 ) {
   await target.element.dispatchEvent('pointerdown', target.event(pointerId));
   await target.element.dispatchEvent('pointerup', target.event(pointerId));
-  await target.element.dispatchEvent('click');
+  await pointerClick(target, pointerId);
   await expect(target.account).toHaveAttribute('aria-selected', 'true');
+}
+
+async function pointerClick(
+  target: Awaited<ReturnType<typeof syntheticTouchTarget>>,
+  pointerId: number
+) {
+  await target.element.evaluate((node, init) => node.dispatchEvent(new PointerEvent('click', {
+    bubbles: true,
+    button: 0,
+    detail: 1,
+    pointerId: init.pointerId,
+    pointerType: 'touch',
+    clientX: init.clientX,
+    clientY: init.clientY
+  })), target.event(pointerId));
 }
 
 async function syntheticTouchSwipe(
@@ -496,11 +518,29 @@ test('a completed sub-panel touch swipe does not swallow the next fresh tap', as
   await openClean(page);
   const target = await syntheticTouchTarget(page);
   await syntheticTouchSwipe(target, 69);
-  await target.element.dispatchEvent('click');
+  await pointerClick(target, 69);
   await expect(target.appearance).toHaveAttribute('aria-selected', 'true');
   await syntheticTouchSwipe(target, 70);
   await expect(target.appearance).toHaveAttribute('aria-selected', 'true');
   await freshTouchTap(target, 71);
+});
+
+test('sub-panel touch jitter remains a tap until the shared seven-pixel threshold', async ({ page }) => {
+  await openClean(page);
+  const target = await syntheticTouchTarget(page);
+  const startX = target.event(76).clientX;
+  await target.element.dispatchEvent('pointerdown', target.event(76));
+  await target.element.dispatchEvent('pointermove', target.event(76, startX - 6));
+  await target.element.dispatchEvent('pointerup', target.event(76, startX - 6));
+  await pointerClick(target, 76);
+  await expect(target.account).toHaveAttribute('aria-selected', 'true');
+
+  await target.appearance.click();
+  await target.element.dispatchEvent('pointerdown', target.event(77));
+  await target.element.dispatchEvent('pointermove', target.event(77, startX - 7));
+  await target.element.dispatchEvent('pointerup', target.event(77, startX - 7));
+  await pointerClick(target, 77);
+  await expect(target.appearance).toHaveAttribute('aria-selected', 'true');
 });
 
 test('sub-panel pointer cancellation suppresses its click but allows the next fresh tap', async ({ page }) => {
@@ -510,7 +550,7 @@ test('sub-panel pointer cancellation suppresses its click but allows the next fr
   await target.element.dispatchEvent('pointercancel', target.event(72));
   await page.waitForTimeout(550);
   await expect(page.getByRole('dialog', { name: `${names[0]} sub-panel actions` })).toHaveCount(0);
-  await target.element.dispatchEvent('click');
+  await pointerClick(target, 72);
   await expect(target.appearance).toHaveAttribute('aria-selected', 'true');
   await freshTouchTap(target, 73);
 });
@@ -522,7 +562,7 @@ test('sub-panel window blur suppresses its click but allows the next fresh tap',
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await page.waitForTimeout(550);
   await expect(page.getByRole('dialog', { name: `${names[0]} sub-panel actions` })).toHaveCount(0);
-  await target.element.dispatchEvent('click');
+  await pointerClick(target, 74);
   await expect(target.appearance).toHaveAttribute('aria-selected', 'true');
   await freshTouchTap(target, 75);
 });

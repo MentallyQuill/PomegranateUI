@@ -605,6 +605,13 @@ test('compact Panel actions and reorder dialog are opaque bounded bottom sheets'
   await settings.click({ button: 'right' });
   const actions = page.getByRole('dialog', { name: 'Settings Panel actions' });
   await expect(actions).toBeVisible();
+  const panelName = actions.getByRole('textbox', { name: 'Panel name' });
+  const reorderPanels = actions.getByRole('button', { name: 'Reorder Panels…' });
+  await expect(panelName).toBeFocused();
+  await panelName.press('Shift+Tab');
+  await expect(reorderPanels).toBeFocused();
+  await reorderPanels.press('Tab');
+  await expect(panelName).toBeFocused();
   const actionStyle = await actions.evaluate((node) => {
     const box = node.getBoundingClientRect();
     const style = getComputedStyle(node);
@@ -623,7 +630,7 @@ test('compact Panel actions and reorder dialog are opaque bounded bottom sheets'
   expect(await colorAlpha(actionStyle.background)).toBe(1);
   expect(await colorAlpha(actionStyle.backdrop)).toBeGreaterThan(0);
 
-  await actions.getByRole('button', { name: 'Reorder Panels…' }).click();
+  await reorderPanels.click();
   const order = page.getByRole('dialog', { name: 'Reorder Panels' });
   const orderStyle = await order.evaluate((node) => {
     const box = node.getBoundingClientRect();

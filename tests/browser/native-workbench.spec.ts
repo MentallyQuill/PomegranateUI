@@ -314,6 +314,33 @@ test('Panel order row dragging scrolls while handle cancellation commits nothing
   await expect(directTabs).toHaveText(before);
 });
 
+test('one Escape cancels an active Panel reorder gesture, closes, and restores focus', async ({ page }) => {
+  const panelTabs = page.getByRole('tablist', { name: 'Panels' });
+  const directTabs = panelTabs.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
+  const settings = panelTabs.getByRole('tab', { name: 'Settings' });
+  const before = await directTabs.allTextContents();
+  await settings.click({ button: 'right' });
+  await page.getByRole('dialog', { name: 'Settings Panel actions' })
+    .getByRole('button', { name: 'Reorder Panels…' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Reorder Panels' });
+  const handle = dialog.getByRole('button', { name: 'Reorder Settings' });
+  const sceneRow = dialog.getByRole('listitem').filter({ hasText: 'Scene' });
+  const handleBox = await handle.boundingBox();
+  const sceneBox = await sceneRow.boundingBox();
+  if (!handleBox || !sceneBox) throw new Error('Expected active reorder geometry.');
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x + handleBox.width / 2, sceneBox.y + 4, { steps: 8 });
+  await expect(page.locator('[data-pom-part="tab.drag-preview"]')).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(settings).toBeFocused();
+  await page.mouse.up();
+  await expect(directTabs).toHaveText(before);
+});
+
 test('Panel order keyboard moves persist and Cancel does not roll back committed commands', async ({ page }) => {
   const panelTabs = page.getByRole('tablist', { name: 'Panels' });
   const directTabs = panelTabs.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
@@ -400,6 +427,35 @@ test('Panel tab drag pans an overflowing rail without activation or reorder', as
   expect(await rail.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
   await expect(rail.getByRole('tab')).toHaveText(beforeOrder);
   await expect(rail.getByRole('tab', { selected: true })).toHaveText(activeBefore ?? '');
+});
+
+test('Panel tab jitter remains a click until the shared seven-pixel threshold', async ({ page }) => {
+  const rail = page.getByRole('tablist', { name: 'Panels' });
+  const scene = rail.getByRole('tab', { name: 'Scene' });
+  const library = rail.getByRole('tab', { name: 'Library' });
+  const box = await library.boundingBox();
+  const element = await library.elementHandle();
+  if (!box || !element) throw new Error('Expected Panel tab geometry.');
+  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  const pointer = (pointerId: number, x: number) => ({
+    pointerId, pointerType: 'mouse', isPrimary: true, button: 0, clientX: x, clientY: start.y
+  });
+  const click = async (pointerId: number, x: number) => element.evaluate((node, init) => (
+    node.dispatchEvent(new PointerEvent('click', { bubbles: true, detail: 1, ...init }))
+  ), pointer(pointerId, x));
+
+  await element.dispatchEvent('pointerdown', pointer(81, start.x));
+  await element.dispatchEvent('pointermove', pointer(81, start.x - 6));
+  await element.dispatchEvent('pointerup', pointer(81, start.x - 6));
+  await click(81, start.x - 6);
+  await expect(library).toHaveAttribute('aria-selected', 'true');
+
+  await scene.click();
+  await element.dispatchEvent('pointerdown', pointer(82, start.x));
+  await element.dispatchEvent('pointermove', pointer(82, start.x - 7));
+  await element.dispatchEvent('pointerup', pointer(82, start.x - 7));
+  await click(82, start.x - 7);
+  await expect(scene).toHaveAttribute('aria-selected', 'true');
 });
 
 test('Panel arrows and boundaries activate and reveal without changing order', async ({ page }) => {

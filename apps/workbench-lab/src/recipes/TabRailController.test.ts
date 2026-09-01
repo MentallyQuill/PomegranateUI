@@ -6,6 +6,10 @@ function pointer(type: string, init: PointerEventInit): PointerEvent {
   return new PointerEvent(type, { bubbles: true, button: 0, pointerId: 1, ...init });
 }
 
+function click(init: PointerEventInit = {}): PointerEvent {
+  return pointer('click', { detail: 1, ...init });
+}
+
 function withCurrentTarget<EventType extends Event>(event: EventType, currentTarget: HTMLElement): EventType {
   Object.defineProperty(event, 'currentTarget', { value: currentTarget });
   return event;
@@ -47,7 +51,7 @@ describe('TabRailController', () => {
     controller.pointerMove(pointer('pointermove', { clientX: 80, pointerType: 'mouse' }));
 
     expect(rail.scrollLeft).toBe(20);
-    expect(controller.consumeClick()).toBe(true);
+    expect(controller.consumeClick(click({ pointerId: 1, pointerType: 'mouse' }))).toBe(true);
     expect(rail.dataset.overflowBefore).toBe('true');
     controller.destroy();
   });
@@ -127,7 +131,7 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
-  it('does not capture or release for a vertical mouse cancellation', () => {
+  it('does not capture or release for a vertical mouse cancellation and suppresses only its click', () => {
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
     configureRail(rail);
@@ -143,11 +147,11 @@ describe('TabRailController', () => {
     expect(capture).not.toHaveBeenCalled();
     expect(release).not.toHaveBeenCalled();
     expect(rail.scrollLeft).toBe(0);
-    expect(controller.consumeClick()).toBe(false);
+    expect(controller.consumeClick(click({ pointerId: 1, pointerType: 'mouse' }))).toBe(true);
     controller.destroy();
   });
 
-  it('leaves touch scrolling alone after touch movement cancels the hold candidate', () => {
+  it('leaves touch scrolling native after movement while suppressing that gesture click', () => {
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
     configureRail(rail);
@@ -157,7 +161,82 @@ describe('TabRailController', () => {
     controller.pointerMove(pointer('pointermove', { clientX: 80, pointerType: 'touch' }));
 
     expect(rail.scrollLeft).toBe(0);
-    expect(controller.consumeClick()).toBe(false);
+    expect(controller.consumeClick(click({ pointerId: 1, pointerType: 'touch' }))).toBe(true);
+    controller.destroy();
+  });
+
+  it('keeps one-to-six pixel pointer jitter tappable and cancels activation at seven pixels', () => {
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const controller = createTabRailController({ rail, onContextRequest: vi.fn() });
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 11, pointerType: 'touch' }), 'settings');
+    controller.pointerMove(pointer('pointermove', { clientX: 94, pointerId: 11, pointerType: 'touch' }));
+    controller.pointerUp(pointer('pointerup', { clientX: 94, pointerId: 11, pointerType: 'touch' }));
+    expect(controller.consumeClick(click({ pointerId: 11, pointerType: 'touch' }))).toBe(false);
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 12, pointerType: 'touch' }), 'settings');
+    controller.pointerMove(pointer('pointermove', { clientX: 93, pointerId: 12, pointerType: 'touch' }));
+    controller.pointerUp(pointer('pointerup', { clientX: 93, pointerId: 12, pointerType: 'touch' }));
+    expect(controller.consumeClick(click({ pointerId: 12, pointerType: 'touch' }))).toBe(true);
+    controller.destroy();
+  });
+
+  it('suppresses only the cancelled pointer gesture and never a keyboard-generated click', () => {
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const controller = createTabRailController({ rail, onContextRequest: vi.fn() });
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 21, pointerType: 'pen' }), 'settings');
+    controller.pointerMove(pointer('pointermove', { clientX: 93, pointerId: 21, pointerType: 'pen' }));
+    expect(controller.consumeClick(new MouseEvent('click', { detail: 0 }))).toBe(false);
+    expect(controller.consumeClick(click({ pointerId: 22, pointerType: 'pen' }))).toBe(false);
+    expect(controller.consumeClick(click({ pointerId: 21, pointerType: 'pen' }))).toBe(true);
+    controller.destroy();
+  });
+
+  it('clears stale suppression when a fresh independent pointer gesture begins', () => {
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const controller = createTabRailController({ rail, onContextRequest: vi.fn() });
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 31, pointerType: 'mouse' }), 'settings');
+    controller.pointerMove(pointer('pointermove', { clientX: 80, pointerId: 31, pointerType: 'mouse' }));
+    controller.pointerUp(pointer('pointerup', { clientX: 80, pointerId: 31, pointerType: 'mouse' }));
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 32, pointerType: 'mouse' }), 'settings');
+    controller.pointerUp(pointer('pointerup', { clientX: 100, pointerId: 32, pointerType: 'mouse' }));
+
+    expect(controller.consumeClick(click({ pointerId: 32, pointerType: 'mouse' }))).toBe(false);
+    controller.destroy();
+  });
+
+  it('cancels pending holds on scroll and global pointer exit without self-cancelling an active pan', () => {
+    vi.useFakeTimers();
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const onContextRequest = vi.fn<(request: TabRailContextRequest) => void>();
+    const controller = createTabRailController({ rail, onContextRequest });
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 41, pointerType: 'touch' }), 'settings');
+    rail.dispatchEvent(new Event('scroll', { bubbles: false }));
+    vi.advanceTimersByTime(500);
+    expect(onContextRequest).not.toHaveBeenCalled();
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 42, pointerType: 'touch' }), 'settings');
+    window.dispatchEvent(pointer('pointerout', { pointerId: 42, pointerType: 'touch', relatedTarget: null }));
+    vi.advanceTimersByTime(500);
+    expect(onContextRequest).not.toHaveBeenCalled();
+
+    controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 43, pointerType: 'mouse' }), 'settings');
+    controller.pointerMove(pointer('pointermove', { clientX: 80, pointerId: 43, pointerType: 'mouse' }));
+    rail.dispatchEvent(new Event('scroll', { bubbles: false }));
+    controller.pointerMove(pointer('pointermove', { clientX: 70, pointerId: 43, pointerType: 'mouse' }));
+    expect(rail.scrollLeft).toBe(30);
+    expect(rail.dataset.panning).toBe('true');
     controller.destroy();
   });
 
@@ -177,7 +256,7 @@ describe('TabRailController', () => {
 
     expect(onContextRequest).toHaveBeenCalledTimes(1);
     expect(onContextRequest).toHaveBeenLastCalledWith({ id: 'settings', anchor: settings, source: 'touch' });
-    expect(controller.consumeClick()).toBe(true);
+    expect(controller.consumeClick(click({ pointerId: 2, pointerType: 'touch' }))).toBe(true);
     const native = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), settings);
     controller.contextMenu(native, 'settings');
     const independent = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), library);
@@ -232,17 +311,17 @@ describe('TabRailController', () => {
     controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerType: 'pen' }), 'settings');
     controller.pointerMove(pointer('pointermove', { clientX: 80, pointerType: 'pen' }));
     controller.pointerCancel(pointer('pointercancel', { clientX: 80, pointerType: 'pen' }));
-    expect(controller.consumeClick()).toBe(true);
+    expect(controller.consumeClick(click({ pointerId: 1, pointerType: 'pen' }))).toBe(true);
 
     controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerType: 'mouse' }), 'settings');
     controller.pointerMove(pointer('pointermove', { clientX: 80, pointerType: 'mouse' }));
     window.dispatchEvent(new Event('blur'));
-    expect(controller.consumeClick()).toBe(true);
+    expect(controller.consumeClick(click({ pointerId: 1, pointerType: 'mouse' }))).toBe(true);
 
     controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerType: 'mouse' }), 'settings');
     controller.pointerMove(pointer('pointermove', { clientX: 80, pointerType: 'mouse' }));
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    expect(controller.consumeClick()).toBe(true);
+    expect(controller.consumeClick(click({ pointerId: 1, pointerType: 'mouse' }))).toBe(true);
     controller.destroy();
   });
 

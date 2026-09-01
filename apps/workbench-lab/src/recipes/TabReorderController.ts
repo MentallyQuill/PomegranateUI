@@ -118,7 +118,6 @@ export function createTabReorderController(options: TabReorderOptions): TabReord
 
   function escapeCancel(event: KeyboardEvent) {
     if (event.key !== 'Escape' || !candidate) return;
-    event.preventDefault();
     if (candidate.active) suppressNextClick();
     cleanup();
   }

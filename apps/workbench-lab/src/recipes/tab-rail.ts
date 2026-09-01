@@ -4,11 +4,13 @@ export interface TabRailOverflowInput {
   readonly scrollLeft: number;
   readonly clientWidth: number;
   readonly scrollWidth: number;
+  readonly tolerance?: number;
 }
 
 export interface TabRailRevealInput extends TabRailOverflowInput {
   readonly tabLeft: number;
   readonly tabRight: number;
+  readonly padding?: number;
 }
 
 export function railPanDecision(input: {
@@ -24,17 +26,21 @@ export function railPanDecision(input: {
 }
 
 export function tabRailOverflow(input: TabRailOverflowInput): { before: boolean; after: boolean } {
+  const tolerance = input.tolerance ?? 1;
   return {
-    before: input.scrollLeft > 1,
-    after: input.scrollLeft + input.clientWidth < input.scrollWidth - 1
+    before: input.scrollLeft > tolerance,
+    after: input.scrollLeft + input.clientWidth < input.scrollWidth - tolerance
   };
 }
 
 export function revealTabScrollLeft(input: TabRailRevealInput): number {
+  const padding = input.padding ?? 0;
   const maxScrollLeft = Math.max(0, input.scrollWidth - input.clientWidth);
-  if (input.tabLeft < input.scrollLeft) return Math.max(0, Math.min(input.tabLeft, maxScrollLeft));
-  if (input.tabRight > input.scrollLeft + input.clientWidth) {
-    return Math.max(0, Math.min(input.tabRight - input.clientWidth, maxScrollLeft));
+  if (input.tabLeft - padding < input.scrollLeft) {
+    return Math.max(0, Math.min(input.tabLeft - padding, maxScrollLeft));
+  }
+  if (input.tabRight + padding > input.scrollLeft + input.clientWidth) {
+    return Math.max(0, Math.min(input.tabRight + padding - input.clientWidth, maxScrollLeft));
   }
   return Math.max(0, Math.min(input.scrollLeft, maxScrollLeft));
 }
