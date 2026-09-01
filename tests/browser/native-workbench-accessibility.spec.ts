@@ -374,6 +374,12 @@ test('native workbench keeps literal relationships and keyboard navigation witho
   expect(sceneTabId).toBeTruthy();
   await expect(page.locator(`#${scenePanelId}`)).toHaveAttribute('aria-labelledby', sceneTabId!);
   await expect(scene.locator('xpath=..')).toHaveAttribute('data-pomegranate-panel-tab', 'scene');
+  await expect(scene).toHaveAttribute('aria-keyshortcuts', 'Shift+F10');
+  const optionsDescriptionId = await scene.getAttribute('aria-describedby');
+  expect(optionsDescriptionId).toBeTruthy();
+  await expect(page.locator(`#${optionsDescriptionId}`)).toHaveText(
+    'Right-click, press and hold, or press Shift+F10 for tab options.'
+  );
   const order = await tabs.allTextContents();
   await page.getByRole('tab', { name: 'Library' }).press('Control+Shift+ArrowLeft');
   await expect(tabs).toHaveText(order);

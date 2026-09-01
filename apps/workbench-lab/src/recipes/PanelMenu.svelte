@@ -20,7 +20,6 @@
   let source = $state<TabRailContextRequest['source']>('pointer');
   let menu = $state<HTMLElement>();
   let nameInput = $state<HTMLInputElement>();
-  let openState = $state(false);
   let restoreTargetAfterClose = false;
   const mayCreateFirstSubPanel = $derived(Boolean(target && !target.subPanels?.length));
 
@@ -34,7 +33,6 @@
     restoreTargetAfterClose = true;
     if (typeof menu.showPopover !== 'function') {
       menu.setAttribute('data-fallback-open', '');
-      openState = true;
       requestAnimationFrame(opened);
       return;
     }
@@ -103,7 +101,6 @@
     restoreTargetAfterClose = restore;
     if (menu && typeof menu.hidePopover !== 'function') {
       menu.removeAttribute('data-fallback-open');
-      openState = false;
       if (restore) restoreFocus();
       restoreTargetAfterClose = false;
     } else if (isMenuOpen()) menu?.hidePopover();
@@ -129,8 +126,7 @@
   }
 
   function handleToggle(event: ToggleEvent) {
-    openState = event.newState === 'open';
-    if (openState) requestAnimationFrame(opened);
+    if (event.newState === 'open') requestAnimationFrame(opened);
     else {
       if (restoreTargetAfterClose) restoreFocus();
       restoreTargetAfterClose = false;

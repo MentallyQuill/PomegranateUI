@@ -114,6 +114,7 @@
           aria-controls={tab.surfaceId}
           aria-selected={tab.selected}
           aria-describedby="panel-tab-options-description"
+          aria-keyshortcuts="Shift+F10"
           tabindex={tab.selected ? 0 : -1}
           onclick={() => { if (!controller?.consumeClick()) activate(tab.panelId); }}
           onfocus={(event) => controller?.reveal(event.currentTarget)}
@@ -128,7 +129,7 @@
   <span data-tab-rail-edge="before" aria-hidden="true"></span>
   <span data-tab-rail-edge="after" aria-hidden="true"></span>
 </div>
-<span id="panel-tab-options-description" class="visually-hidden">Right-click or press and hold a tab for options.</span>
+<span id="panel-tab-options-description" class="visually-hidden">Right-click, press and hold, or press Shift+F10 for tab options.</span>
 
 <PanelMenu
   bind:this={menu}
