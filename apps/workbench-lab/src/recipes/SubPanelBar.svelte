@@ -1,10 +1,15 @@
 <script lang="ts">
-  import { onDestroy, tick } from 'svelte';
+  import { tick } from 'svelte';
   import type { PanelId, SubPanelId, WorkbenchState } from '@pomegranate-ui/contracts';
   import { selectSubPanelTabs, type WorkbenchStore } from '@pomegranate-ui/core';
-  import { createTabReorderController } from './TabReorderController.js';
-
-  type DialogMode = 'create' | 'rename' | 'layout' | 'move' | 'delete';
+  import SubPanelMenu from './SubPanelMenu.svelte';
+  import type { SubPanelDialogRequest } from './SubPanelDialog.svelte';
+  import TabOrderDialog, { type TabOrderItem } from './TabOrderDialog.svelte';
+  import {
+    createTabRailController,
+    type TabRailContextRequest,
+    type TabRailController
+  } from './TabRailController.js';
 
   let {
     store,
@@ -13,15 +18,12 @@
     class: className = ''
   }: {
     store: WorkbenchStore;
-    onrequest: (request: { mode: DialogMode; panelId: PanelId; subPanelId?: SubPanelId }) => void;
+    onrequest: (request: SubPanelDialogRequest) => void;
     onduplicate: (panelId: PanelId, subPanelId: SubPanelId) => void;
     class?: string;
   } = $props();
 
   let workbench = $state<WorkbenchState>();
-  let selectorOpen = $state(false);
-  let actionsOpen = $state(false);
-  let tablist = $state<HTMLElement>();
   $effect(() => {
     const current = store;
     workbench = current.getState();
@@ -30,25 +32,62 @@
   const panel = $derived(workbench?.panels.find((candidate) => candidate.id === workbench?.activePanelId));
   const tabs = $derived(workbench ? selectSubPanelTabs(workbench) : []);
   const active = $derived(tabs.find((tab) => tab.selected));
+  let tablist = $state<HTMLElement>();
+  let menu = $state<{
+    open: (
+      panelId: PanelId,
+      subPanelId: SubPanelId,
+      anchor: HTMLElement,
+      source: TabRailContextRequest['source']
+    ) => void;
+  }>();
+  let orderDialog = $state<{
+    open: (options: { label: string; items: readonly TabOrderItem[]; invokingTab: HTMLElement }) => void;
+  }>();
+  let controller = $state<TabRailController>();
+  let pendingTouchPointer: number | null = null;
+  let suppressCancelledTouchClick = false;
 
-  const drag = createTabReorderController({
-    getItems: () => tabs.flatMap((tab) => {
-      const element = tablist?.querySelector<HTMLElement>(`[data-sub-panel-tab="${CSS.escape(tab.subPanelIdAttribute)}"]`)?.closest<HTMLElement>('[data-tab-reorder-item]');
-      return element ? [{ id: tab.subPanelId, element }] : [];
-    }),
-    commit: (subPanelId, toIndex) => {
-      if (!panel) return;
-      store.dispatch({ type: 'sub-panel.reorder', panelId: panel.id, subPanelId: subPanelId as SubPanelId, toIndex });
-      void tick().then(() => focusTab(toIndex));
-    }
+  $effect(() => {
+    const rail = tablist;
+    if (!rail || !panel) return;
+    const panelId = panel.id;
+    const next = createTabRailController({
+      rail,
+      onContextRequest: ({ id, anchor, source }) => {
+        pendingTouchPointer = null;
+        menu?.open(panelId, id as SubPanelId, anchor, source);
+      }
+    });
+    controller = next;
+    return () => {
+      pendingTouchPointer = null;
+      suppressCancelledTouchClick = false;
+      if (controller === next) controller = undefined;
+      next.destroy();
+    };
   });
-  onDestroy(drag.destroy);
 
   function scrollOwner(panelId: PanelId): HTMLElement | null {
     return document.querySelector<HTMLElement>(`[data-pomegranate-panel="${CSS.escape(panelId)}"]`);
   }
 
-  async function activate(subPanelId: SubPanelId) {
+  function tabElement(subPanelId: SubPanelId) {
+    return tablist?.querySelector<HTMLButtonElement>(
+      `[data-sub-panel-tab="${CSS.escape(subPanelId)}"]`
+    );
+  }
+
+  function reveal(subPanelId: SubPanelId, focus = false) {
+    void tick().then(() => {
+      const tab = tabElement(subPanelId);
+      if (!tab) return;
+      if (focus) tab.focus();
+      controller?.reveal(tab);
+    });
+  }
+
+  async function activate(subPanelId: SubPanelId, focus = false) {
     if (!panel) return;
     const incoming = tabs.find((tab) => tab.subPanelId === subPanelId);
     const currentScrollTop = scrollOwner(panel.id)?.scrollTop ?? 0;
@@ -58,23 +97,23 @@
       subPanelId,
       currentScrollTop
     });
-    selectorOpen = false;
-    actionsOpen = false;
     if (!result.ok) return;
     await tick();
     const owner = scrollOwner(panel.id);
     if (owner) owner.scrollTop = incoming?.scrollTop ?? 0;
+    reveal(subPanelId, focus);
   }
 
-  function focusTab(index: number) {
-    const clamped = Math.max(0, Math.min(tabs.length - 1, index));
-    document.querySelector<HTMLButtonElement>(`[data-sub-panel-tab="${CSS.escape(tabs[clamped]!.subPanelId)}"]`)?.focus();
+  function focusAndActivate(index: number) {
+    if (!tabs.length) return;
+    const wrapped = (index + tabs.length) % tabs.length;
+    const tab = tabs[wrapped];
+    if (tab) void activate(tab.subPanelId, true);
   }
 
   function handleKey(event: KeyboardEvent, subPanelId: SubPanelId, index: number) {
-    if (event.shiftKey && event.key === 'F10') {
-      event.preventDefault();
-      actionsOpen = true;
+    if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
+      controller?.keyboardContext(event, subPanelId);
       return;
     }
     if (event.key === 'Enter' || event.key === ' ') {
@@ -84,39 +123,63 @@
     }
     if (event.key === 'Home' || event.key === 'End') {
       event.preventDefault();
-      focusTab(event.key === 'Home' ? 0 : tabs.length - 1);
+      focusAndActivate(event.key === 'Home' ? 0 : tabs.length - 1);
       return;
     }
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
-    const direction = event.key === 'ArrowLeft' ? -1 : 1;
-    if (event.ctrlKey && event.shiftKey) {
-      store.dispatch({
-        type: 'sub-panel.reorder',
-        panelId: panel!.id,
-        subPanelId,
-        toIndex: Math.max(0, Math.min(tabs.length - 1, index + direction))
-      });
-      void tick().then(() => focusTab(Math.max(0, Math.min(tabs.length - 1, index + direction))));
-    } else focusTab(index + direction);
+    focusAndActivate(index + (event.key === 'ArrowLeft' ? -1 : 1));
   }
 
-  function request(mode: DialogMode) {
+  function openSubPanelOrder(_panelId: PanelId, _subPanelId: SubPanelId, invokingTab: HTMLElement) {
     if (!panel) return;
-    onrequest({ mode, panelId: panel.id, ...(mode === 'create' || !active ? {} : { subPanelId: active.subPanelId }) });
-    selectorOpen = false;
-    actionsOpen = false;
+    orderDialog?.open({
+      label: `Reorder ${panel.name} sub-panels`,
+      items: tabs.map((tab) => ({ id: tab.subPanelId, name: tab.name, active: tab.selected })),
+      invokingTab
+    });
   }
 
-  function handleWindowKey(event: KeyboardEvent) {
-    if (event.key !== 'Escape' || (!selectorOpen && !actionsOpen)) return;
-    event.preventDefault();
-    selectorOpen = false;
-    actionsOpen = false;
+  function pointerDown(event: PointerEvent, subPanelId: SubPanelId) {
+    if (event.pointerType === 'touch' && event.button === 0) pendingTouchPointer = event.pointerId;
+    controller?.pointerDown(event, subPanelId);
+  }
+
+  function pointerMove(event: PointerEvent) {
+    if (pendingTouchPointer === event.pointerId && event.pointerType === 'touch') {
+      suppressCancelledTouchClick = true;
+      pendingTouchPointer = null;
+    }
+    controller?.pointerMove(event);
+  }
+
+  function pointerUp(event: PointerEvent) {
+    if (pendingTouchPointer === event.pointerId) pendingTouchPointer = null;
+    controller?.pointerUp(event);
+  }
+
+  function pointerCancel(event: PointerEvent) {
+    if (pendingTouchPointer === event.pointerId) {
+      pendingTouchPointer = null;
+      suppressCancelledTouchClick = true;
+    }
+    controller?.pointerCancel(event);
+  }
+
+  function consumeClick() {
+    const cancelledTouch = suppressCancelledTouchClick;
+    suppressCancelledTouchClick = false;
+    return cancelledTouch || controller?.consumeClick();
+  }
+
+  function handleWindowBlur() {
+    if (pendingTouchPointer === null) return;
+    pendingTouchPointer = null;
+    suppressCancelledTouchClick = true;
   }
 </script>
 
-<svelte:window onkeydown={handleWindowKey} />
+<svelte:window onblur={handleWindowBlur} />
 
 {#if panel && tabs.length > 0}
   <nav
@@ -125,74 +188,70 @@
     data-sub-panel-layout={active?.layoutId}
     aria-label={`${panel.name} sub-panel navigation`}
   >
-    <div bind:this={tablist} class="sub-panel-tabs" role="tablist" aria-label={`${panel.name} sub-panels`}>
-      {#each tabs as tab, index (tab.subPanelId)}
-        <span data-tab-reorder-item>
-          <button
-            type="button"
-            data-pom-part="button.surface"
-            data-tab-touch-reorder-grip
-            data-sub-panel-tab={tab.subPanelIdAttribute}
-            role="tab"
-            id={tab.tabId}
-            aria-controls={tab.surfaceId}
-            aria-selected={tab.selected}
-            tabindex={tab.selected ? 0 : -1}
-            onclick={() => { if (!drag.consumeClick()) void activate(tab.subPanelId); }}
-            onkeydown={(event) => handleKey(event, tab.subPanelId, index)}
-            onpointerdown={(event) => drag.pointerDown(event, tab.subPanelId)}
-            onpointermove={drag.pointerMove}
-            onpointerup={drag.pointerUp}
-            onpointercancel={drag.pointerCancel}
-            oncontextmenu={(event) => { event.preventDefault(); if (tab.selected) actionsOpen = true; }}
-          >{tab.name}</button>
-        </span>
-      {/each}
-      <button class="sub-panel-add" type="button" data-pom-part="button.surface" aria-label="Add sub-panel" onclick={() => request('create')}>+</button>
-    </div>
-
-    <button
-      class="sub-panel-selector-trigger"
-      type="button"
-      data-pom-part="button.surface"
-      aria-haspopup="listbox"
-      aria-expanded={selectorOpen}
-      data-sub-panel-selector-trigger
-      onclick={() => { selectorOpen = !selectorOpen; actionsOpen = false; }}
-    ><span>{active?.name}</span><span aria-hidden="true">⌄</span></button>
-    <button
-      class="sub-panel-actions-trigger"
-      type="button"
-      data-pom-part="button.surface"
-      aria-label={`Manage ${active?.name ?? 'sub-panel'}`}
-      aria-haspopup="menu"
-      aria-expanded={actionsOpen}
-      data-sub-panel-actions-trigger
-      onclick={() => { actionsOpen = !actionsOpen; selectorOpen = false; }}
-    >•••</button>
-
-    {#if selectorOpen}
-      <div class="sub-panel-selector" data-pom-part="menu.surface" role="listbox" aria-label={`${panel.name} sub-panels`}>
-        {#each tabs as tab (tab.subPanelId)}
-          <button
-            type="button"
-            role="option"
-            aria-selected={tab.selected}
-            onclick={() => void activate(tab.subPanelId)}
-          >{tab.name}</button>
+    <div class="sub-panel-tab-rail-shell" data-tab-rail-shell style="min-width: 0; flex: 1 1 auto; height: 100%;">
+      <div
+        bind:this={tablist}
+        class="sub-panel-tabs"
+        data-tab-rail-scroll
+        role="tablist"
+        aria-label={`${panel.name} sub-panels`}
+        tabindex="-1"
+        style="width: 100%; height: 100%; overflow-x: auto; scrollbar-width: none;"
+        onpointermove={pointerMove}
+        onpointerup={pointerUp}
+        onpointercancel={pointerCancel}
+      >
+        {#each tabs as tab, index (tab.subPanelId)}
+          <span data-sub-panel-tab-item={tab.subPanelIdAttribute}>
+            <button
+              type="button"
+              data-pom-part="button.surface"
+              data-sub-panel-tab={tab.subPanelIdAttribute}
+              role="tab"
+              id={tab.tabId}
+              aria-controls={tab.surfaceId}
+              aria-selected={tab.selected}
+              aria-describedby="sub-panel-tab-options-description"
+              aria-keyshortcuts="Shift+F10"
+              tabindex={tab.selected ? 0 : -1}
+              onclick={() => { if (!consumeClick()) void activate(tab.subPanelId); }}
+              onfocus={(event) => controller?.reveal(event.currentTarget)}
+              onkeydown={(event) => handleKey(event, tab.subPanelId, index)}
+              oncontextmenu={(event) => controller?.contextMenu(event, tab.subPanelId)}
+              onpointerdown={(event) => pointerDown(event, tab.subPanelId)}
+              ondragstart={(event) => event.preventDefault()}
+            >{tab.name}</button>
+          </span>
         {/each}
-        <button type="button" onclick={() => request('create')}>Add sub-panel</button>
       </div>
-    {/if}
-
-    {#if actionsOpen && active}
-      <div class="sub-panel-actions-menu" data-pom-part="menu.surface" role="menu" aria-label={`${active.name} actions`}>
-        <button type="button" role="menuitem" onclick={() => request('rename')}>Rename</button>
-        <button type="button" role="menuitem" onclick={() => { onduplicate(panel.id, active.subPanelId); actionsOpen = false; }}>Duplicate</button>
-        <button type="button" role="menuitem" onclick={() => request('layout')}>Change layout</button>
-        <button type="button" role="menuitem" onclick={() => request('move')}>Move Widgets</button>
-        <button type="button" role="menuitem" onclick={() => request('delete')}>Delete</button>
-      </div>
-    {/if}
+      <span data-tab-rail-edge="before" aria-hidden="true"></span>
+      <span data-tab-rail-edge="after" aria-hidden="true"></span>
+    </div>
+    <button
+      class="sub-panel-add"
+      type="button"
+      data-pom-part="button.surface"
+      aria-label="Add sub-panel"
+      onclick={() => onrequest({ mode: 'create', panelId: panel.id })}
+    >+</button>
   </nav>
+  <span id="sub-panel-tab-options-description" class="visually-hidden">Right-click, press and hold, or press Shift+F10 for tab options.</span>
+
+  <SubPanelMenu
+    bind:this={menu}
+    {store}
+    {onrequest}
+    {onduplicate}
+    onreordersubpanels={openSubPanelOrder}
+  />
+
+  <TabOrderDialog
+    bind:this={orderDialog}
+    onmove={(id, toIndex) => store.dispatch({
+      type: 'sub-panel.reorder',
+      panelId: panel.id,
+      subPanelId: id as SubPanelId,
+      toIndex
+    })}
+  />
 {/if}

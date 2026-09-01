@@ -2338,9 +2338,9 @@ main[data-pom-theme-root].left-collapsed .workbench-surface {
 }
 @media (max-width: 860px) {
   .sub-panel-bar { position: sticky; top: 0; flex-basis: 44px; min-height: 44px; }
-  .sub-panel-tabs { display: none; }
+  .sub-panel-tabs { display: flex; }
   .sub-panel-selector-trigger {
-    display: flex;
+    display: none;
     flex: 1 1 auto;
     align-items: center;
     justify-content: space-between;
@@ -2349,7 +2349,7 @@ main[data-pom-theme-root].left-collapsed .workbench-surface {
     padding: 0 12px;
   }
   .sub-panel-actions-trigger {
-    display: block;
+    display: none;
     flex: 0 0 44px;
     width: 44px;
     min-height: 44px;
