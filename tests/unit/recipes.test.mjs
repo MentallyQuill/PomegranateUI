@@ -125,6 +125,7 @@ test('copy-owned navigation recipes expose semantic rails and host-owned actions
   assert.match(subPanelBar, /oncontextrequest\?\.\(\{[\s\S]*panelId: panel\.id,[\s\S]*subPanelId: tab\.subPanelId/);
   assert.match(subPanelDialog, /invokingTab\?: HTMLElement/);
   assert.match(subPanelDialog, /onclose=\{restoreFocus\}/);
+  assert.match(subPanelDialog, /\[data-pomegranate-panel-tab="\$\{CSS\.escape\(panel\.id\)\}"\] \[role="tab"\]/);
 });
 
 test('recipe copy preflights every destination before writing an upgrade', async () => {

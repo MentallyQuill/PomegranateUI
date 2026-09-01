@@ -144,6 +144,37 @@ test('create, rename, layout, duplicate, move, delete, and persistence operate t
   await expect(page.getByRole('article', { name: 'Provider Credentials' })).toBeVisible();
 });
 
+test('deleting one of two sub-panels restores focus to the owning Panel tab after flattening', async ({ page }) => {
+  await openClean(page);
+  await page.getByText('Developer tools', { exact: true }).click();
+  await page.getByRole('button', { name: 'Create Panel' }).click();
+  const createPanel = page.getByRole('dialog', { name: 'Create a Panel' });
+  await createPanel.getByRole('textbox', { name: 'Panel name' }).fill('Focus Return');
+  await createPanel.getByRole('button', { name: 'Create Panel' }).click();
+  await page.getByText('Developer tools', { exact: true }).click();
+
+  const panelTab = page.getByRole('tab', { name: 'Focus Return' });
+  await expect(panelTab).toHaveAttribute('aria-selected', 'true');
+  await panelTab.click({ button: 'right' });
+  await page.getByRole('dialog', { name: 'Focus Return Panel actions' })
+    .getByRole('button', { name: 'Create first sub-panel' }).click();
+  const createSubPanel = page.getByRole('dialog', { name: 'Create sub-panel' });
+  await createSubPanel.getByLabel('Sub-panel name').fill('Focus Notes');
+  await createSubPanel.getByRole('button', { name: 'Apply' }).click();
+
+  const tablist = page.getByRole('tablist', { name: 'Focus Return sub-panels' });
+  await expect(tablist.getByRole('tab')).toHaveCount(2);
+  const focusNotes = tablist.getByRole('tab', { name: 'Focus Notes' });
+  await focusNotes.click({ button: 'right' });
+  await page.getByRole('dialog', { name: 'Focus Notes sub-panel actions' })
+    .getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('dialog', { name: 'Delete sub-panel' })
+    .getByRole('button', { name: 'Delete sub-panel' }).click();
+
+  await expect(tablist).toHaveCount(0);
+  await expect(panelTab).toBeFocused();
+});
+
 test('sub-panel context actions use the exact inactive target and restore focus', async ({ page }) => {
   await openClean(page);
   const tablist = page.getByRole('tablist', { name: 'Settings sub-panels' });

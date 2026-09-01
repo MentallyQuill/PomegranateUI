@@ -102,10 +102,15 @@
   }
 
   function restoreFocus() {
-    const fallback = document.querySelector<HTMLElement>(
+    const activeSubPanelTab = document.querySelector<HTMLElement>(
       '[role="tablist"][aria-label$="sub-panels"] [role="tab"][aria-selected="true"]'
     );
-    const target = invokingTab?.isConnected ? invokingTab : fallback;
+    const owningPanelTab = panel
+      ? document.querySelector<HTMLElement>(
+          `[data-pomegranate-panel-tab="${CSS.escape(panel.id)}"] [role="tab"]`
+        )
+      : null;
+    const target = invokingTab?.isConnected ? invokingTab : activeSubPanelTab ?? owningPanelTab;
     invokingTab = undefined;
     queueMicrotask(() => target?.focus());
   }

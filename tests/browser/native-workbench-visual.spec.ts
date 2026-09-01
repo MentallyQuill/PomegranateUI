@@ -21,6 +21,7 @@ const maintainedThemes = [
   { label: 'Bunny' as const, id: 'bunny', slug: 'bunny' },
   { label: 'Ash & Amber' as const, id: 'ash-amber', slug: 'ash-amber' }
 ] as const;
+const reviewedLongSubPanelName = 'Session History: Worldbuilding Reference Notes';
 
 async function selectTheme(page: Page, label: ThemeLabel) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
@@ -86,7 +87,7 @@ async function seedOverflowingSubPanels(page: Page) {
   await expect(settings).toHaveAttribute('aria-selected', 'true');
   for (const name of [
     'Research Notes: Narrative Continuity Archive',
-    'Session History: Worldbuilding Reference Notes',
+    reviewedLongSubPanelName,
     'Continuity Index'
   ]) {
     await page.getByRole('button', { name: 'Add sub-panel' }).click();
@@ -658,11 +659,24 @@ test('all maintained themes freeze phone rails, actions, ordering, and desktop o
     await expect(actions).toBeVisible();
     await shot(page, `actions-phone-${theme.slug}.png`);
 
+    await page.keyboard.press('Escape');
+    await subPanelRail.getByRole('tab', { name: reviewedLongSubPanelName }).click();
+    await target.click({ button: 'right' });
+    await expect(actions).toBeVisible();
     await actions.getByRole('button', { name: 'Reorder sub-panels…' }).click();
     const order = page.getByRole('dialog', { name: 'Reorder Settings sub-panels' });
     await expect(order.getByRole('listitem')).toHaveCount(9);
+    const reviewedRow = order.getByRole('listitem').filter({ hasText: reviewedLongSubPanelName });
+    await expect(reviewedRow.locator('.tab-order-active')).toHaveText('Active');
+    await reviewedRow.scrollIntoViewIfNeeded();
+    expect(await reviewedRow.evaluate((row) => {
+      const rowRect = row.getBoundingClientRect();
+      const listRect = row.parentElement!.getBoundingClientRect();
+      return rowRect.top >= listRect.top - 0.5 && rowRect.bottom <= listRect.bottom + 0.5;
+    })).toBe(true);
     await shot(page, `order-phone-${theme.slug}.png`);
     await order.getByRole('button', { name: 'Done' }).click();
+    await subPanelRail.getByRole('tab', { name: 'Continuity Index' }).click();
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await setRailPosition(panelRail, 'middle');
