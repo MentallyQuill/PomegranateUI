@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -265,7 +265,11 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(panelActions).toHaveAttribute('data-fallback-open');
     await fireEvent.click(within(panelActions).getByRole('button', { name: 'Reorder Panels…', hidden: true }));
     const orderDialog = await screen.findByRole('dialog', { name: 'Reorder Panels' });
-    await user.click(within(orderDialog).getByRole('button', { name: 'Move Settings up' }));
+    await waitFor(() => expect(within(orderDialog).getByRole('button', { name: 'Reorder Scene' })).toHaveFocus());
+    const moveSettingsUp = within(orderDialog).getByRole('button', { name: 'Move Settings up' });
+    moveSettingsUp.focus();
+    expect(moveSettingsUp).toHaveFocus();
+    await userEvent.setup({ document: moveSettingsUp.ownerDocument, delay: null }).keyboard('{Enter}');
     expect(panelOrder()).toEqual(['Scene', 'Settings', 'Library']);
     expect(within(panelTablist).getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
     await user.click(within(orderDialog).getByRole('button', { name: 'Done' }));
