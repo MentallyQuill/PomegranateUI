@@ -3701,7 +3701,15 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
   }
-  main[data-pom-theme-root] .panel-menu-surface button { min-width: 44px; min-height: 44px; }
+  main[data-pom-theme-root] .panel-menu-surface button {
+    min-width: 44px;
+    min-height: 44px;
+    border: var(--pom-border-width, 1px) solid var(--pom-material-button-border, var(--line));
+    border-radius: var(--pom-radius-small, .45rem);
+    color: var(--pom-color-text, var(--ink));
+    background: var(--pom-material-button, rgb(255 255 255 / 4%));
+    box-shadow: var(--pom-material-button-inset, none);
+  }
   main[data-pom-theme-root] dialog.tab-order-dialog {
     width: 100vw;
     max-width: none;

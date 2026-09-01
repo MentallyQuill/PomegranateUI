@@ -152,6 +152,7 @@
             class="tab-order-handle"
             data-tab-order-handle
             data-tab-touch-reorder-grip
+            data-tab-reorder-label={item.name}
             aria-label={`Reorder ${item.name}`}
             onpointerdown={(event) => drag.pointerDown(event, item.id)}
             onpointermove={(event) => drag.pointerMove(event)}
@@ -252,12 +253,21 @@
       border-radius: var(--pom-radius-large, .75rem) var(--pom-radius-large, .75rem) 0 0;
       background: var(--pom-material-opaque, var(--pom-color-canvas));
     }
-    ol { max-height: min(20rem, calc(80vh - 10rem)); }
-    li { grid-template-columns: 44px minmax(0, 1fr) auto auto; }
+    ol {
+      display: flex;
+      flex-direction: column;
+      max-height: min(20rem, calc(80vh - 10rem));
+    }
+    li {
+      grid-template-columns: 44px minmax(0, 1fr) auto auto;
+      grid-template-rows: auto auto;
+      flex: 0 0 auto;
+      min-height: 80px;
+    }
     .tab-order-handle { grid-column: 1; grid-row: 1 / span 2; }
-    .tab-order-name { grid-column: 2; grid-row: 1; }
+    .tab-order-name { grid-column: 2 / 5; grid-row: 1; }
     .tab-order-active { grid-column: 2; grid-row: 2; }
-    li > button:nth-of-type(2) { grid-column: 3; grid-row: 1 / span 2; }
-    li > button:nth-of-type(3) { grid-column: 4; grid-row: 1 / span 2; }
+    li > button:nth-of-type(2) { grid-column: 3; grid-row: 2; }
+    li > button:nth-of-type(3) { grid-column: 4; grid-row: 2; }
   }
 </style>

@@ -260,7 +260,9 @@ test('Reorder Panels exposes full names and reorders only from a dedicated handl
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(handleBox.x + handleBox.width / 2, sceneBox.y + 4, { steps: 8 });
-  await expect(page.locator('[data-pom-part="tab.drag-preview"]')).toBeVisible();
+  const dragPreview = page.locator('[data-pom-part="tab.drag-preview"]');
+  await expect(dragPreview).toBeVisible();
+  await expect(dragPreview).toHaveText('Settings');
   await page.mouse.up();
 
   await expect(directTabs).toHaveText(['Settings', 'Scene', 'Library']);
@@ -323,6 +325,10 @@ test('Panel order keyboard moves persist and Cancel does not roll back committed
   const dialog = page.getByRole('dialog', { name: 'Reorder Panels' });
   const moveUp = dialog.getByRole('button', { name: 'Move Settings up' });
   await moveUp.focus();
+  await moveUp.press('Enter');
+  await expect(directTabs).toHaveText(['Scene', 'Settings', 'Library']);
+  await dialog.getByRole('button', { name: 'Move Settings down' }).press('Enter');
+  await expect(directTabs).toHaveText(['Scene', 'Library', 'Settings']);
   await moveUp.press('Enter');
   await expect(directTabs).toHaveText(['Scene', 'Settings', 'Library']);
   await dialog.getByRole('button', { name: 'Cancel' }).click();

@@ -14,6 +14,7 @@
     readonly mode: SubPanelDialogMode;
     readonly panelId: PanelId;
     readonly subPanelId?: SubPanelId;
+    readonly invokingTab?: HTMLElement;
   }
 
   let { store }: { store: WorkbenchStore } = $props();
@@ -24,6 +25,7 @@
   let name = $state('New sub-panel');
   let layoutId = $state<SubPanelLayoutId>('single');
   let targetSubPanelId = $state<SubPanelId | undefined>();
+  let invokingTab: HTMLElement | undefined;
 
   const activeSubPanel = $derived(panel?.subPanels?.find((candidate) => candidate.id === subPanelId));
   const moveTargets = $derived(panel?.subPanels?.filter((candidate) => candidate.id !== subPanelId && !candidate.hidden) ?? []);
@@ -42,6 +44,7 @@
     name = request.mode === 'rename' && nextSubPanel ? nextSubPanel.name : 'New sub-panel';
     layoutId = nextSubPanel?.layoutId ?? 'single';
     targetSubPanelId = nextPanel?.subPanels?.find((candidate) => candidate.id !== request.subPanelId && !candidate.hidden)?.id;
+    invokingTab = request.invokingTab;
     dialog.showModal?.();
   }
 
@@ -90,6 +93,15 @@
     dialog.close?.();
   }
 
+  function restoreFocus() {
+    const fallback = document.querySelector<HTMLElement>(
+      '[role="tablist"][aria-label$="sub-panels"] [role="tab"][aria-selected="true"]'
+    );
+    const target = invokingTab?.isConnected ? invokingTab : fallback;
+    invokingTab = undefined;
+    queueMicrotask(() => target?.focus());
+  }
+
   export function duplicate(panelId: PanelId, sourceSubPanelId: SubPanelId) {
     const state = store.getState();
     const sourcePanel = state.panels.find((candidate) => candidate.id === panelId);
@@ -122,7 +134,7 @@
   }
 </script>
 
-<dialog bind:this={dialog} class="sub-panel-dialog" data-pom-part="dialog.surface" aria-labelledby="sub-panel-dialog-title">
+<dialog bind:this={dialog} class="sub-panel-dialog" data-pom-part="dialog.surface" aria-labelledby="sub-panel-dialog-title" onclose={restoreFocus}>
   <form onsubmit={submit}>
     <h2 id="sub-panel-dialog-title">{title}</h2>
     {#if mode === 'create' || mode === 'rename'}

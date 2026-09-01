@@ -87,7 +87,7 @@ export function createTabReorderController(options: TabReorderOptions): TabReord
     proxy.className = 'tab-reorder-proxy';
     proxy.dataset.pomPart = 'tab.drag-preview';
     proxy.setAttribute('aria-hidden', 'true');
-    proxy.textContent = current.handle.textContent?.trim() ?? '';
+    proxy.textContent = current.handle.dataset.tabReorderLabel ?? current.handle.textContent?.trim() ?? '';
     proxy.style.width = `${box.width}px`;
     proxy.style.height = `${box.height}px`;
     (current.source.closest<HTMLElement>('dialog[open]')
