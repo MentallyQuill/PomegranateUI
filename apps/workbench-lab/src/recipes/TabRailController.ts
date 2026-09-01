@@ -277,9 +277,9 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
         return;
       }
       if (!id || !anchor || handledContexts.has(event)) return;
-      if (secondaryContext?.id === id && secondaryContext.anchor === anchor) clearSecondaryContext();
       handledContexts.add(event);
       event.preventDefault();
+      if (secondaryContext?.id === id && secondaryContext.anchor === anchor) return;
       options.onContextRequest({ id, anchor, source: 'pointer' });
     },
 

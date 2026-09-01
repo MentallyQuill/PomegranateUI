@@ -394,7 +394,7 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
-  it('uses native contextmenu as the secondary-pointer fallback without reopening on pointer release', async () => {
+  it('defers an early native contextmenu until secondary pointer release', async () => {
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
     configureRail(rail);
@@ -418,7 +418,9 @@ describe('TabRailController', () => {
 
     controller.pointerDown(secondaryDown, 'settings');
     controller.contextMenu(native, 'settings');
+    expect(onContextRequest).not.toHaveBeenCalled();
     controller.pointerUp(secondaryUp);
+    expect(onContextRequest).not.toHaveBeenCalled();
     await Promise.resolve();
 
     expect(onContextRequest).toHaveBeenCalledOnce();

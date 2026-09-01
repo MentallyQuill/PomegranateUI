@@ -238,6 +238,28 @@ test('Panel context actions target an inactive tab without activating it and res
   await expect(page.getByRole('dialog', { name: 'Reference Library Panel actions' })).toBeVisible();
 });
 
+test('an early native contextmenu waits for secondary pointer release', async ({ page }) => {
+  const scene = page.getByRole('tab', { name: 'Scene' });
+  const library = page.getByRole('tab', { name: 'Library' });
+  const pointer = {
+    button: 2,
+    buttons: 2,
+    cancelable: true,
+    clientX: 120,
+    clientY: 24,
+    pointerId: 71,
+    pointerType: 'mouse'
+  };
+
+  await library.dispatchEvent('pointerdown', pointer);
+  await library.dispatchEvent('contextmenu', { ...pointer, buttons: 0 });
+  await expect(page.getByRole('dialog', { name: 'Library Panel actions' })).not.toBeVisible();
+  await library.dispatchEvent('pointerup', { ...pointer, buttons: 0 });
+
+  await expect(page.getByRole('dialog', { name: 'Library Panel actions' })).toBeVisible();
+  await expect(scene).toHaveAttribute('aria-selected', 'true');
+});
+
 test('Reorder Panels exposes full names and reorders only from a dedicated handle', async ({ page }) => {
   const panelTabs = page.getByRole('tablist', { name: 'Panels' });
   const directTabs = panelTabs.locator(':scope > [data-pomegranate-panel-tab] > [role="tab"]');
