@@ -351,7 +351,7 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
-  it('opens secondary-pointer context actions immediately and consumes the later native duplicate', () => {
+  it('opens secondary-pointer context actions after pointer release and consumes the later native duplicate', async () => {
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
     configureRail(rail);
@@ -367,15 +367,62 @@ describe('TabRailController', () => {
       pointerId: 71,
       pointerType: 'mouse'
     }), settings);
+    const secondaryUp = withCurrentTarget(pointer('pointerup', {
+      button: 2,
+      cancelable: true,
+      clientX: 12,
+      clientY: 34,
+      pointerId: 71,
+      pointerType: 'mouse'
+    }), settings);
     const native = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), settings);
 
     controller.pointerDown(secondaryDown, 'settings');
+    expect(onContextRequest).not.toHaveBeenCalled();
+    controller.pointerUp(secondaryUp);
+    expect(onContextRequest).not.toHaveBeenCalled();
+    await Promise.resolve();
+
     expect(onContextRequest).toHaveBeenCalledOnce();
     expect(onContextRequest).toHaveBeenCalledWith({ id: 'settings', anchor: settings, source: 'pointer' });
     expect(secondaryDown.defaultPrevented).toBe(true);
+    expect(secondaryUp.defaultPrevented).toBe(true);
 
     controller.contextMenu(native, 'settings');
     expect(onContextRequest).toHaveBeenCalledOnce();
+    expect(native.defaultPrevented).toBe(true);
+    controller.destroy();
+  });
+
+  it('uses native contextmenu as the secondary-pointer fallback without reopening on pointer release', async () => {
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const onContextRequest = vi.fn<(request: TabRailContextRequest) => void>();
+    const controller = createTabRailController({ rail, onContextRequest });
+    const settings = tab('settings');
+    rail.append(settings);
+    const secondaryDown = withCurrentTarget(pointer('pointerdown', {
+      button: 2,
+      cancelable: true,
+      pointerId: 72,
+      pointerType: 'mouse'
+    }), settings);
+    const native = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), settings);
+    const secondaryUp = withCurrentTarget(pointer('pointerup', {
+      button: 2,
+      cancelable: true,
+      pointerId: 72,
+      pointerType: 'mouse'
+    }), settings);
+
+    controller.pointerDown(secondaryDown, 'settings');
+    controller.contextMenu(native, 'settings');
+    controller.pointerUp(secondaryUp);
+    await Promise.resolve();
+
+    expect(onContextRequest).toHaveBeenCalledOnce();
+    expect(onContextRequest).toHaveBeenCalledWith({ id: 'settings', anchor: settings, source: 'pointer' });
     expect(native.defaultPrevented).toBe(true);
     controller.destroy();
   });

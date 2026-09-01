@@ -44,6 +44,13 @@ interface ContextDuplicate {
   readonly until: number;
 }
 
+interface SecondaryContextCandidate {
+  readonly pointerId: number;
+  readonly id: string;
+  readonly anchor: HTMLElement;
+  releaseQueued: boolean;
+}
+
 interface SuppressedGesture {
   readonly pointerId: number;
   readonly pointerType: string;
@@ -58,6 +65,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
   let candidate: Candidate | null = null;
   let suppressedGesture: SuppressedGesture | null = null;
   let contextDuplicate: ContextDuplicate | null = null;
+  let secondaryContext: SecondaryContextCandidate | null = null;
   const handledContexts = new WeakSet<Event>();
   const resizeObserver = typeof ResizeObserver === 'undefined'
     ? null
@@ -79,6 +87,37 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
       pointerType: current.pointerType,
       anchor: current.anchor
     };
+  }
+
+  function clearSecondaryContext(current: SecondaryContextCandidate | null = secondaryContext) {
+    if (!current || secondaryContext !== current) return;
+    secondaryContext = null;
+    window.removeEventListener('pointerup', finishSecondaryContext);
+    window.removeEventListener('pointercancel', cancelSecondaryContext);
+    window.removeEventListener('blur', cancelSecondaryOnBlur);
+  }
+
+  function cancelSecondaryOnBlur() {
+    clearSecondaryContext();
+  }
+
+  function finishSecondaryContext(event: PointerEvent) {
+    const current = secondaryContext;
+    if (!current || current.pointerId !== event.pointerId) return false;
+    event.preventDefault();
+    if (current.releaseQueued) return true;
+    current.releaseQueued = true;
+    queueMicrotask(() => {
+      if (secondaryContext !== current) return;
+      clearSecondaryContext(current);
+      contextDuplicate = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
+      options.onContextRequest({ id: current.id, anchor: current.anchor, source: 'pointer' });
+    });
+    return true;
+  }
+
+  function cancelSecondaryContext(event: PointerEvent) {
+    if (secondaryContext?.pointerId === event.pointerId) clearSecondaryContext();
   }
 
   function cleanup() {
@@ -169,9 +208,12 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
       if (event.button === 2) {
         const anchor = anchorFor(event);
         if (!id || !anchor) return;
-        contextDuplicate = { id, anchor, until: performance.now() + 1000 };
+        clearSecondaryContext();
+        secondaryContext = { pointerId: event.pointerId, id, anchor, releaseQueued: false };
+        window.addEventListener('pointerup', finishSecondaryContext);
+        window.addEventListener('pointercancel', cancelSecondaryContext);
+        window.addEventListener('blur', cancelSecondaryOnBlur);
         event.preventDefault();
-        options.onContextRequest({ id, anchor, source: 'pointer' });
         return;
       }
       if (event.button !== 0 || !id || candidate) return;
@@ -218,6 +260,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
     },
 
     pointerUp(event: PointerEvent) {
+      if (finishSecondaryContext(event)) return;
       finishOnWindowPointerUp(event);
     },
 
@@ -234,6 +277,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
         return;
       }
       if (!id || !anchor || handledContexts.has(event)) return;
+      if (secondaryContext?.id === id && secondaryContext.anchor === anchor) clearSecondaryContext();
       handledContexts.add(event);
       event.preventDefault();
       options.onContextRequest({ id, anchor, source: 'pointer' });
@@ -273,6 +317,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
 
     destroy() {
       cleanup();
+      clearSecondaryContext();
       resizeObserver?.disconnect();
       options.rail.removeEventListener('scroll', sync);
       suppressedGesture = null;
