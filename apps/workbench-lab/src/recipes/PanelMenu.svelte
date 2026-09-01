@@ -2,6 +2,7 @@
   import type { PanelId, PanelState } from '@pomegranate-ui/contracts';
   import { asPanelId, asWidgetInstanceId } from '@pomegranate-ui/contracts';
   import type { WorkbenchStore } from '@pomegranate-ui/core';
+  import type { TabRailContextRequest } from './TabRailController.js';
 
   let {
     store,
@@ -16,14 +17,14 @@
   let name = $state('');
   let target = $state<PanelState>();
   let targetAnchor = $state<HTMLElement>();
-  let source = $state<'pointer' | 'keyboard'>('pointer');
+  let source = $state<TabRailContextRequest['source']>('pointer');
   let menu = $state<HTMLElement>();
   let nameInput = $state<HTMLInputElement>();
   let openState = $state(false);
   let restoreTargetAfterClose = false;
   const mayCreateFirstSubPanel = $derived(Boolean(target && !target.subPanels?.length));
 
-  export function open(panelId: PanelId, anchor: HTMLElement, requestSource: 'pointer' | 'keyboard') {
+  export function open(panelId: PanelId, anchor: HTMLElement, requestSource: TabRailContextRequest['source']) {
     const panel = store.getState().panels.find((candidate) => candidate.id === panelId);
     if (!panel || !menu) return;
     target = panel;

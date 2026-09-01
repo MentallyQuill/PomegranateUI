@@ -3,7 +3,11 @@
   import type { PanelId, WorkbenchState } from '@pomegranate-ui/contracts';
   import { selectPanelTabs, type WorkbenchStore } from '@pomegranate-ui/core';
   import PanelMenu from './PanelMenu.svelte';
-  import { createTabRailController, type TabRailController } from './TabRailController.js';
+  import {
+    createTabRailController,
+    type TabRailContextRequest,
+    type TabRailController
+  } from './TabRailController.js';
 
   let {
     store,
@@ -26,7 +30,7 @@
   const tabs = $derived(workbench ? selectPanelTabs(workbench) : []);
   let tablist = $state<HTMLElement>();
   let menu = $state<{
-    open: (panelId: PanelId, anchor: HTMLElement, source: 'pointer' | 'keyboard') => void;
+    open: (panelId: PanelId, anchor: HTMLElement, source: TabRailContextRequest['source']) => void;
   }>();
   let controller = $state<TabRailController>();
 

@@ -399,6 +399,25 @@ test('phone portrait touch exploration preserves Panel order and document contai
     await dispatchHeldTouchDrag(page, start, end);
     await expect(tablist.getByRole('tab')).toHaveText(beforeOrder);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+    await tablist.evaluate((node) => { node.scrollLeft = 0; });
+    const settings = tablist.getByRole('tab', { name: 'Settings' });
+    const settingsBox = await settings.boundingBox();
+    if (!settingsBox) throw new Error('Expected stationary touch target geometry.');
+    const hold = {
+      x: settingsBox.x + settingsBox.width / 2,
+      y: settingsBox.y + settingsBox.height / 2
+    };
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [hold] });
+    await page.waitForTimeout(550);
+    const menu = page.getByRole('dialog', { name: 'Settings Panel actions' });
+    await expect(menu).toBeVisible();
+    await expect(menu).toHaveAttribute('data-context-source', 'touch');
+    await expect(tablist.getByRole('tab', { name: 'Notes' })).toHaveAttribute('aria-selected', 'true');
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.keyboard.press('Escape');
+    await expect(settings).toBeFocused();
   } finally {
     await context.close();
   }
