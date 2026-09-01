@@ -351,6 +351,35 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
+  it('opens secondary-pointer context actions immediately and consumes the later native duplicate', () => {
+    const rail = document.body.appendChild(document.createElement('div'));
+    cleanup.push(rail);
+    configureRail(rail);
+    const onContextRequest = vi.fn<(request: TabRailContextRequest) => void>();
+    const controller = createTabRailController({ rail, onContextRequest });
+    const settings = tab('settings');
+    rail.append(settings);
+    const secondaryDown = withCurrentTarget(pointer('pointerdown', {
+      button: 2,
+      cancelable: true,
+      clientX: 12,
+      clientY: 34,
+      pointerId: 71,
+      pointerType: 'mouse'
+    }), settings);
+    const native = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), settings);
+
+    controller.pointerDown(secondaryDown, 'settings');
+    expect(onContextRequest).toHaveBeenCalledOnce();
+    expect(onContextRequest).toHaveBeenCalledWith({ id: 'settings', anchor: settings, source: 'pointer' });
+    expect(secondaryDown.defaultPrevented).toBe(true);
+
+    controller.contextMenu(native, 'settings');
+    expect(onContextRequest).toHaveBeenCalledOnce();
+    expect(native.defaultPrevented).toBe(true);
+    controller.destroy();
+  });
+
   it('synchronizes overflow on scroll and resize, then reveals by rail-local geometry after document movement', () => {
     const resizeCallbacks: ResizeObserverCallback[] = [];
     vi.stubGlobal('ResizeObserver', class {

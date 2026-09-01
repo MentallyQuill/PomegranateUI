@@ -38,7 +38,7 @@ interface Candidate {
   touchHoldTimer: ReturnType<typeof setTimeout> | null;
 }
 
-interface TouchContext {
+interface ContextDuplicate {
   readonly id: string;
   readonly anchor: HTMLElement;
   readonly until: number;
@@ -57,7 +57,7 @@ function anchorFor(event: Event): HTMLElement | null {
 export function createTabRailController(options: TabRailControllerOptions): TabRailController {
   let candidate: Candidate | null = null;
   let suppressedGesture: SuppressedGesture | null = null;
-  let touchContext: TouchContext | null = null;
+  let contextDuplicate: ContextDuplicate | null = null;
   const handledContexts = new WeakSet<Event>();
   const resizeObserver = typeof ResizeObserver === 'undefined'
     ? null
@@ -152,7 +152,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
         if (candidate !== current) return;
         current.touchHeld = true;
         suppressCandidate(current);
-        touchContext = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
+        contextDuplicate = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
         options.onContextRequest({ id: current.id, anchor: current.anchor, source: 'touch' });
       }, 500);
     }
@@ -166,6 +166,14 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
 
   return Object.freeze({
     pointerDown(event: PointerEvent, id: string) {
+      if (event.button === 2) {
+        const anchor = anchorFor(event);
+        if (!id || !anchor) return;
+        contextDuplicate = { id, anchor, until: performance.now() + 1000 };
+        event.preventDefault();
+        options.onContextRequest({ id, anchor, source: 'pointer' });
+        return;
+      }
       if (event.button !== 0 || !id || candidate) return;
       suppressedGesture = null;
       candidate = startCandidate(event, id);
@@ -219,9 +227,9 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
 
     contextMenu(event: MouseEvent, id: string) {
       const anchor = anchorFor(event);
-      if (touchContext && performance.now() > touchContext.until) touchContext = null;
-      if (touchContext && touchContext.id === id && touchContext.anchor === anchor) {
-        touchContext = null;
+      if (contextDuplicate && performance.now() > contextDuplicate.until) contextDuplicate = null;
+      if (contextDuplicate && contextDuplicate.id === id && contextDuplicate.anchor === anchor) {
+        contextDuplicate = null;
         event.preventDefault();
         return;
       }
@@ -268,7 +276,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
       resizeObserver?.disconnect();
       options.rail.removeEventListener('scroll', sync);
       suppressedGesture = null;
-      touchContext = null;
+      contextDuplicate = null;
     }
   });
 }
