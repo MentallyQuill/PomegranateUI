@@ -4,6 +4,23 @@ import { ASH_AMBER_TARGET } from '../../../apps/workbench-lab/src/themes/ash-amb
 import { DEEP_CURRENT_TARGET } from '../../../apps/workbench-lab/src/themes/deep-current.js';
 import { bestContrastingText, hexToHsv, hsvToHex, mixHex } from './color.js';
 import { createThemeDraft, projectThemeDraft } from './draft.js';
+import type { ThemeCanvasAuthoringProfile } from './semantic-canvas.js';
+
+const AUTHORABLE_CANVAS = {
+  defaults: { imageStrength: 100, overlayStrength: 100, gradientAngle: 90, vignetteStrength: 100 },
+  layers: [
+    { layer: { kind: 'solid', color: { role: 'canvas' } } },
+    {
+      authoringGroup: 'image',
+      layer: { kind: 'image', assetId: 'image.ash-amber-stage', fit: 'cover', x: 0.5, y: 0.5, opacity: 0.8, blurPx: 0, saturation: 1, blend: 'normal' }
+    },
+    {
+      authoringGroup: 'overlay',
+      layer: { kind: 'linear-gradient', angle: 90, stops: [{ color: { role: 'canvas', alpha: 0.8 }, position: 0 }, { color: { role: 'surface', alpha: 0.4 }, position: 1 }] }
+    },
+    { authoringGroup: 'vignette', layer: { kind: 'veil', mode: 'vignette', color: { role: 'canvas' }, opacity: 0.5 } }
+  ]
+} as const satisfies ThemeCanvasAuthoringProfile;
 
 describe('Theme draft color math', () => {
   it.each([
@@ -77,6 +94,42 @@ describe('Theme draft projection', () => {
     expect(result.target.theme.assets).toEqual(DEEP_CURRENT_TARGET.theme.assets);
     expect(result.target.ambient.colorRole).toBe('accent');
     expect(DEEP_CURRENT_TARGET).toEqual(before);
+  });
+
+  it('resolves edited semantic canvas roles and applies treatment only to declared groups', () => {
+    const draft = createThemeDraft(ASH_AMBER_TARGET, AUTHORABLE_CANVAS.defaults);
+    const edited = {
+      ...draft,
+      colors: { ...draft.colors, canvas: '#101820', glass: '#203040' },
+      canvas: { imageStrength: 40, overlayStrength: 50, gradientAngle: 125, vignetteStrength: 20 }
+    };
+    const result = projectThemeDraft(ASH_AMBER_TARGET, edited, ASH_AMBER_TARGET.ambient, AUTHORABLE_CANVAS);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.canvasAvailability).toEqual({ image: true, overlay: true, vignette: true });
+    expect(result.target.canvas.layers).toEqual([
+      { kind: 'solid', color: '#101820' },
+      expect.objectContaining({ kind: 'image', opacity: 0.32 }),
+      { kind: 'linear-gradient', angle: 125, stops: [{ color: '#10182066', position: 0 }, { color: '#20304033', position: 1 }] },
+      { kind: 'veil', mode: 'vignette', color: '#101820', opacity: 0.1 }
+    ]);
+  });
+
+  it('reports absent image authoring without rejecting overlay edits', () => {
+    const profile = {
+      ...AUTHORABLE_CANVAS,
+      layers: AUTHORABLE_CANVAS.layers.filter((entry) => !('authoringGroup' in entry) || entry.authoringGroup !== 'image')
+    } satisfies ThemeCanvasAuthoringProfile;
+    const result = projectThemeDraft(
+      ASH_AMBER_TARGET,
+      createThemeDraft(ASH_AMBER_TARGET, profile.defaults),
+      ASH_AMBER_TARGET.ambient,
+      profile
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.canvasAvailability).toEqual({ image: false, overlay: true, vignette: true });
   });
 
   it('keeps an invalid or inaccessible projection out of the applied target', () => {

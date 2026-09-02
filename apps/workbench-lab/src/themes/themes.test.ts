@@ -91,6 +91,19 @@ describe('Workbench Lab theme conformance', () => {
     }
   });
 
+  it('declares data-only canvas authoring profiles for every Lab preset', () => {
+    expect(LAB_THEME_PRESETS.map(({ id, canvasAuthoring }) => ({
+      id,
+      groups: [...new Set(canvasAuthoring.layers.flatMap(({ authoringGroup }) => authoringGroup ? [authoringGroup] : []))],
+      defaults: canvasAuthoring.defaults
+    }))).toEqual([
+      expect.objectContaining({ id: 'deep-current', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) }),
+      expect.objectContaining({ id: 'pom-neutral', groups: expect.arrayContaining(['overlay', 'vignette']) }),
+      expect.objectContaining({ id: 'bunny', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) }),
+      expect.objectContaining({ id: 'ash-amber', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) })
+    ]);
+  });
+
   it('pins Ash & Amber to the corrected neutral palette, semantic chrome, and restrained amber canvas accents', () => {
     const ash = LAB_THEME_TARGETS.find(({ id }) => id === 'ash-amber')?.target;
 

@@ -57,6 +57,27 @@ describe('Lab Theme authoring controller', () => {
     expect(controller.getAuthoringSnapshot().diagnostics).toEqual([]);
   });
 
+  it.each(['deep-current', 'ash-amber'] as const)('recolors and treats the %s canvas through preset data', (id) => {
+    const controller = createLabThemeController({ initialId: id });
+    const next = editable(controller);
+    next.draft.colors.canvas = '#101820';
+    next.draft.canvas = { imageStrength: 40, overlayStrength: 50, gradientAngle: 125, vignetteStrength: 20 };
+
+    expect(controller.editDraft(next).ok).toBe(true);
+    expect(controller.getAuthoringSnapshot().canvasAvailability).toEqual({ image: true, overlay: true, vignette: true });
+    expect(controller.getSnapshot().resolved.canvas.layers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'image' }),
+      expect.objectContaining({ kind: 'linear-gradient', angle: 125 })
+    ]));
+    const overlay = controller.getSnapshot().resolved.canvas.layers.find((layer) => layer.kind === 'linear-gradient' && layer.angle === 125);
+    expect(overlay).toMatchObject({ stops: expect.arrayContaining([expect.objectContaining({ color: expect.stringMatching(/^#101820/i) })]) });
+  });
+
+  it('derives canvas control availability from preset profile data', () => {
+    const controller = createLabThemeController({ initialId: 'pom-neutral' });
+    expect(controller.getAuthoringSnapshot().canvasAvailability).toEqual({ image: false, overlay: true, vignette: true });
+  });
+
   it('resets only the active base and keeps independent valid drafts while switching', () => {
     const controller = createLabThemeController();
     const deep = editable(controller);

@@ -13,9 +13,14 @@ import { contrastRatio } from './conformance.js';
 import type { ThemeAssetRegistry } from './assets.js';
 import { resolveThemeTarget } from './resolve-target.js';
 import type { ThemeDiagnostic } from './resolve.js';
+import {
+  resolveThemeCanvasAuthoringProfile,
+  type ThemeCanvasAuthoringProfile,
+  type ThemeCanvasAvailability
+} from './semantic-canvas.js';
 
 export type ThemeDraftProjection =
-  | { readonly ok: true; readonly target: ThemeTargetBundle; readonly diagnostics: readonly [] }
+  | { readonly ok: true; readonly target: ThemeTargetBundle; readonly canvasAvailability: ThemeCanvasAvailability; readonly diagnostics: readonly [] }
   | { readonly ok: false; readonly diagnostics: readonly ThemeDiagnostic[] };
 
 export const DEFAULT_THEME_CANVAS_DRAFT: ThemeCanvasDraft = Object.freeze({
@@ -85,7 +90,8 @@ function localAssetRegistry(target: ThemeTargetBundle): ThemeAssetRegistry {
 export function projectThemeDraft(
   base: ThemeTargetBundle,
   draft: ThemeDraft,
-  ambient: AmbientProfile
+  ambient: AmbientProfile,
+  canvasProfile?: ThemeCanvasAuthoringProfile
 ): ThemeDraftProjection {
   const parsedBase = ThemeTargetBundleSchema.safeParse(base);
   const parsedDraft = ThemeDraftSchema.safeParse(draft);
@@ -115,27 +121,44 @@ export function projectThemeDraft(
         focus: mixHex(colors.ambient, colors.text, 0.18)
       }
     : { [ambientRole]: colors.ambient };
+  const projectedColors = {
+    ...parsedBase.data.theme.colors,
+    canvas: colors.canvas,
+    surface: colors.glass,
+    surfaceElevated: mixHex(colors.glass, colors.text, 0.08),
+    surfaceInset: mixHex(colors.glass, colors.canvas, 0.18),
+    chrome: colors.chrome,
+    text: colors.text,
+    textMuted: mixHex(colors.text, colors.glass, 0.30),
+    textFaint: mixHex(colors.text, colors.glass, 0.45),
+    warning: colors.source,
+    ...ambientColorOverrides
+  };
+  const canvasProjection = canvasProfile
+    ? resolveThemeCanvasAuthoringProfile(projectedColors, canvasProfile, parsedDraft.data.canvas)
+    : null;
+  if (canvasProjection && !canvasProjection.ok) {
+    return {
+      ok: false,
+      diagnostics: Object.freeze(canvasProjection.diagnostics.map((entry) => Object.freeze({
+        code: 'THEME_SCHEMA_INVALID' as const,
+        path: Object.freeze(['canvas', ...entry.path]),
+        message: entry.message
+      })))
+    };
+  }
+  const canvasAvailability: ThemeCanvasAvailability = canvasProjection
+    ? canvasProjection.availability
+    : Object.freeze({ image: false, overlay: false, vignette: false });
   const candidate = ThemeTargetBundleSchema.parse({
     ...parsedBase.data,
     theme: {
       ...parsedBase.data.theme,
-      colors: {
-        ...parsedBase.data.theme.colors,
-        canvas: colors.canvas,
-        surface: colors.glass,
-        surfaceElevated: mixHex(colors.glass, colors.text, 0.08),
-        surfaceInset: mixHex(colors.glass, colors.canvas, 0.18),
-        chrome: colors.chrome,
-        text: colors.text,
-        textMuted: mixHex(colors.text, colors.glass, 0.30),
-        textFaint: mixHex(colors.text, colors.glass, 0.45),
-        warning: colors.source,
-        ...ambientColorOverrides
-      }
+      colors: projectedColors
     },
     canvas: {
       ...parsedBase.data.canvas,
-      layers: parsedBase.data.canvas.layers.map((layer, index) => (
+      layers: canvasProjection?.layers ?? parsedBase.data.canvas.layers.map((layer, index) => (
         index === 0 && layer.kind === 'solid' ? { ...layer, color: colors.canvas } : layer
       ))
     },
@@ -160,5 +183,5 @@ export function projectThemeDraft(
   }
   const resolution = resolveThemeTarget(candidate, localAssetRegistry(candidate));
   if (!resolution.ok) return resolution;
-  return { ok: true, target: deepFreeze(candidate), diagnostics: [] };
+  return { ok: true, target: deepFreeze(candidate), canvasAvailability, diagnostics: [] };
 }

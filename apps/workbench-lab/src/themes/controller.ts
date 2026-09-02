@@ -22,6 +22,8 @@ import {
   type ResolvedAmbientProfile,
   type ResolvedThemeTarget,
   type ThemeAssetRegistry,
+  type ThemeCanvasAuthoringProfile,
+  type ThemeCanvasAvailability,
   type ThemeDevicePolicy,
   type ThemeDiagnostic
 } from '@pomegranate-ui/theme';
@@ -66,6 +68,7 @@ export interface LabThemeAuthoringSnapshot {
   readonly lastValidEditable: PersistedThemeDraft;
   readonly applied: LabThemeSnapshot;
   readonly diagnostics: readonly LabThemeDiagnostic[];
+  readonly canvasAvailability: ThemeCanvasAvailability;
   readonly dirty: boolean;
 }
 
@@ -192,20 +195,36 @@ function cloneEditable(value: unknown): unknown {
   }
 }
 
-function seedDraft(id: LabThemeId, target: ThemeTargetBundle): PersistedThemeDraft {
-  const draft = createThemeDraft(target);
+function seedDraft(
+  id: LabThemeId,
+  target: ThemeTargetBundle,
+  canvasAuthoring?: ThemeCanvasAuthoringProfile
+): PersistedThemeDraft {
+  const draft = createThemeDraft(target, canvasAuthoring?.defaults);
   return PersistedThemeDraftSchema.parse({
-    schemaVersion: 'pomegranate.ui.persisted-theme-draft.v1',
+    schemaVersion: 'pomegranate.ui.persisted-theme-draft.v2',
     draft: { ...draft, materials: defaultMaterialControls(id) },
     ambient: target.ambient
   });
 }
 
-function sameColors(left: PersistedThemeDraft, right: PersistedThemeDraft): boolean {
+function samePaletteAndCanvas(left: PersistedThemeDraft, right: PersistedThemeDraft): boolean {
   return Object.keys(left.draft.colors).every((role) => (
     left.draft.colors[role as keyof PersistedThemeDraft['draft']['colors']]
       === right.draft.colors[role as keyof PersistedThemeDraft['draft']['colors']]
+  )) && Object.keys(left.draft.canvas).every((control) => (
+    left.draft.canvas[control as keyof PersistedThemeDraft['draft']['canvas']]
+      === right.draft.canvas[control as keyof PersistedThemeDraft['draft']['canvas']]
   ));
+}
+
+function canvasAvailability(profile?: ThemeCanvasAuthoringProfile): ThemeCanvasAvailability {
+  const groups = profile?.layers.map(({ authoringGroup }) => authoringGroup) ?? [];
+  return Object.freeze({
+    image: groups.includes('image'),
+    overlay: groups.includes('overlay'),
+    vignette: groups.includes('vignette')
+  });
 }
 
 export function createLabThemeController(options: {
@@ -265,12 +284,13 @@ export function createLabThemeController(options: {
   const applyPersisted = (id: LabThemeId, persisted: PersistedThemeDraft): ThemeActivationResult => {
     const base = rawTarget(id);
     if (!base) return { ok: false, diagnostics: unknownPresetDiagnostic(id) };
-    const seed = seedDraft(id, base);
+    const canvasAuthoring = byId.get(id)?.canvasAuthoring;
+    const seed = seedDraft(id, base, canvasAuthoring);
     let candidate: ThemeTargetBundle;
-    if (sameColors(seed, persisted)) {
+    if (samePaletteAndCanvas(seed, persisted)) {
       candidate = { ...base, ambient: persisted.ambient };
     } else {
-      const projection = projectThemeDraft(base, persisted.draft, persisted.ambient);
+      const projection = projectThemeDraft(base, persisted.draft, persisted.ambient, canvasAuthoring);
       if (!projection.ok) return projection;
       candidate = projection.target;
     }
@@ -294,16 +314,17 @@ export function createLabThemeController(options: {
   const fallback = preferred.ok ? preferred : resolveRawPreset('deep-current');
   if (!fallback.ok) throw new Error('The Workbench Lab Deep Current theme must resolve successfully.');
   let snapshot = fallback.snapshot;
-  let editable: unknown = seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!);
+  let editable: unknown = seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!, byId.get(snapshot.activeId)?.canvasAuthoring);
   let authoringDiagnostics: readonly LabThemeDiagnostic[] = Object.freeze([]);
   let dirty = false;
   validDrafts.set(snapshot.activeId, editable as PersistedThemeDraft);
 
   const authoring = (): LabThemeAuthoringSnapshot => Object.freeze({
     editable,
-    lastValidEditable: structuredClone(validDrafts.get(snapshot.activeId) ?? seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!)),
+    lastValidEditable: structuredClone(validDrafts.get(snapshot.activeId) ?? seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!, byId.get(snapshot.activeId)?.canvasAuthoring)),
     applied: snapshot,
     diagnostics: authoringDiagnostics,
+    canvasAvailability: canvasAvailability(byId.get(snapshot.activeId)?.canvasAuthoring),
     dirty
   });
 
@@ -340,7 +361,7 @@ export function createLabThemeController(options: {
       if (!raw.ok) return raw;
       const activeId = raw.snapshot.activeId;
       const target = rawTarget(activeId)!;
-      const persisted = validDrafts.get(activeId) ?? seedDraft(activeId, target);
+      const persisted = validDrafts.get(activeId) ?? seedDraft(activeId, target, byId.get(activeId)?.canvasAuthoring);
       const result = applyPersisted(activeId, persisted);
       if (!result.ok) return result;
       snapshot = result.snapshot;
@@ -372,7 +393,7 @@ export function createLabThemeController(options: {
     },
     editDraft,
     resetDraft(): ThemeDraftEditResult {
-      const next = seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!);
+      const next = seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!, byId.get(snapshot.activeId)?.canvasAuthoring);
       const result = editDraft(next);
       if (result.ok) {
         dirty = false;
@@ -406,7 +427,10 @@ export function createLabThemeController(options: {
         authoringDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['storage'], 'Theme draft storage is unavailable.');
         return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
       }
-      const loaded = await loadPersistedThemeDraft(options.draftStorage);
+      const loaded = await loadPersistedThemeDraft(
+        options.draftStorage,
+        byId.get(snapshot.activeId)?.canvasAuthoring?.defaults
+      );
       if (!loaded.ok) {
         authoringDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['storage'], loaded.message);
         return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
