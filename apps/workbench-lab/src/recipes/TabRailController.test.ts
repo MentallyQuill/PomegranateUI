@@ -213,8 +213,7 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
-  it('cancels pending holds on scroll and global pointer exit without self-cancelling an active pan', () => {
-    vi.useFakeTimers();
+  it('cancels touch candidates on scroll and global pointer exit without self-cancelling an active pan', () => {
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
     configureRail(rail);
@@ -223,12 +222,10 @@ describe('TabRailController', () => {
 
     controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 41, pointerType: 'touch' }), 'settings');
     rail.dispatchEvent(new Event('scroll', { bubbles: false }));
-    vi.advanceTimersByTime(500);
     expect(onContextRequest).not.toHaveBeenCalled();
 
     controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 42, pointerType: 'touch' }), 'settings');
     window.dispatchEvent(pointer('pointerout', { pointerId: 42, pointerType: 'touch', relatedTarget: null }));
-    vi.advanceTimersByTime(500);
     expect(onContextRequest).not.toHaveBeenCalled();
 
     controller.pointerDown(pointer('pointerdown', { clientX: 100, pointerId: 43, pointerType: 'mouse' }), 'settings');
@@ -240,8 +237,7 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
-  it('commits one touch context request after a stationary hold is released and suppresses its native duplicate', async () => {
-    vi.useFakeTimers();
+  it('keeps a stationary touch as a normal tap and suppresses its native context menu', async () => {
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
     configureRail(rail);
@@ -252,7 +248,6 @@ describe('TabRailController', () => {
     const controller = createTabRailController({ rail, onContextRequest });
 
     controller.pointerDown(withCurrentTarget(pointer('pointerdown', { clientX: 100, pointerId: 2, pointerType: 'touch' }), settings), 'settings');
-    vi.advanceTimersByTime(500);
 
     expect(onContextRequest).not.toHaveBeenCalled();
     const native = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), settings);
@@ -261,19 +256,22 @@ describe('TabRailController', () => {
     controller.pointerUp(pointer('pointerup', { pointerId: 2, pointerType: 'touch' }));
     await Promise.resolve();
 
-    expect(onContextRequest).toHaveBeenCalledTimes(1);
-    expect(onContextRequest).toHaveBeenLastCalledWith({ id: 'settings', anchor: settings, source: 'touch' });
-    expect(controller.consumeClick(click({ pointerId: 2, pointerType: 'touch' }))).toBe(true);
+    expect(onContextRequest).not.toHaveBeenCalled();
+    const afterRelease = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), settings);
+    controller.contextMenu(afterRelease, 'settings');
+    expect(onContextRequest).not.toHaveBeenCalled();
+    expect(controller.consumeClick(click({ pointerId: 2, pointerType: 'touch' }))).toBe(false);
     const independent = withCurrentTarget(new MouseEvent('contextmenu', { cancelable: true }), library);
     controller.contextMenu(independent, 'library');
-    expect(onContextRequest).toHaveBeenCalledTimes(2);
+    expect(onContextRequest).toHaveBeenCalledTimes(1);
+    expect(onContextRequest).toHaveBeenLastCalledWith({ id: 'library', anchor: library, source: 'pointer' });
     expect(native.defaultPrevented).toBe(true);
+    expect(afterRelease.defaultPrevented).toBe(true);
     expect(independent.defaultPrevented).toBe(true);
     controller.destroy();
   });
 
-  it('cancels pending touch holds on movement, early completion, cancellation, blur, Escape, and destroy', () => {
-    vi.useFakeTimers();
+  it('never synthesizes touch context requests from completion or cancellation paths', () => {
     const rail = document.body.appendChild(document.createElement('div'));
     cleanup.push(rail);
     configureRail(rail);
@@ -296,14 +294,12 @@ describe('TabRailController', () => {
     window.dispatchEvent(new Event('blur'));
     down(5);
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    vi.advanceTimersByTime(500);
     expect(onContextRequest).not.toHaveBeenCalled();
     controller.destroy();
 
     const destroyed = createTabRailController({ rail, onContextRequest });
     destroyed.pointerDown(withCurrentTarget(pointer('pointerdown', { clientX: 100, pointerType: 'touch' }), settings), 'settings');
     destroyed.destroy();
-    vi.advanceTimersByTime(500);
     expect(onContextRequest).not.toHaveBeenCalled();
   });
 
@@ -462,8 +458,7 @@ describe('TabRailController', () => {
     controller.destroy();
   });
 
-  it('disconnects observation, removes scroll synchronization, and cancels a pending touch hold on destroy', () => {
-    vi.useFakeTimers();
+  it('disconnects observation, removes scroll synchronization, and clears a pending touch on destroy', () => {
     const disconnect = vi.fn();
     vi.stubGlobal('ResizeObserver', class {
       disconnect = disconnect;
@@ -479,10 +474,8 @@ describe('TabRailController', () => {
     controller.destroy();
     rail.dataset.overflowAfter = 'unchanged';
     rail.dispatchEvent(new Event('scroll'));
-    vi.advanceTimersByTime(500);
 
     expect(disconnect).toHaveBeenCalledOnce();
     expect(rail.dataset.overflowAfter).toBe('unchanged');
-    expect(vi.getTimerCount()).toBe(0);
   });
 });

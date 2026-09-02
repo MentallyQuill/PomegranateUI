@@ -121,12 +121,23 @@ async function setRailPosition(rail: ReturnType<Page['locator']>, position: 'sta
 
 async function panRail(page: Page, rail: ReturnType<Page['locator']>) {
   await setRailPosition(rail, 'start');
-  const box = await rail.boundingBox();
-  if (!box) throw new Error('Expected visible rail geometry for panning.');
-  const startX = Math.min(box.x + box.width - 16, Math.max(box.x + 112, box.x + box.width / 2));
-  await page.mouse.move(startX, box.y + box.height / 2);
+  const start = await rail.evaluate((node) => {
+    const railRect = node.getBoundingClientRect();
+    const candidates = [...node.querySelectorAll<HTMLElement>('[role="tab"]')]
+      .map((tab) => tab.getBoundingClientRect())
+      .filter((rect) => Math.min(rect.right, railRect.right) - Math.max(rect.left, railRect.left) >= 24);
+    const target = candidates.at(-1);
+    if (!target) return null;
+    return {
+      x: Math.min(target.right - 8, railRect.right - 8),
+      y: target.top + target.height / 2,
+      deltaX: Math.min(96, Math.max(16, Math.min(target.right - 8, railRect.right - 8) - railRect.left - 8))
+    };
+  });
+  if (!start) throw new Error('Expected a visible tab target for rail panning.');
+  await page.mouse.move(start.x, start.y);
   await page.mouse.down();
-  await page.mouse.move(startX - 96, box.y + box.height / 2, { steps: 8 });
+  await page.mouse.move(start.x - start.deltaX, start.y, { steps: 8 });
   await page.mouse.up();
   expect(await rail.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
 }
@@ -156,6 +167,7 @@ async function proveRailGeometry(page: Page, viewport: { name: string; width: nu
   await setRailPosition(panelRail, 'end');
   await expect.poll(() => panelRail.getAttribute('data-overflow-after')).toBe('false');
   await setRailPosition(panelRail, 'start');
+  await panelRail.evaluate((node: HTMLElement) => node.focus());
   await panelRail.getByRole('tab').last().evaluate((node: HTMLElement) => node.focus());
   await expect.poll(() => panelRail.evaluate((node) => node.scrollLeft), {
     message: `${viewport.name} Panel auto-reveal`
@@ -189,6 +201,7 @@ async function proveRailGeometry(page: Page, viewport: { name: string; width: nu
   await setRailPosition(subPanelRail, 'end');
   await expect.poll(() => subPanelRail.getAttribute('data-overflow-after')).toBe('false');
   await setRailPosition(subPanelRail, 'start');
+  await subPanelRail.evaluate((node: HTMLElement) => node.focus());
   await subPanelRail.getByRole('tab').last().evaluate((node: HTMLElement) => node.focus());
   await expect.poll(() => subPanelRail.evaluate((node) => node.scrollLeft), {
     message: `${viewport.name} sub-panel auto-reveal`

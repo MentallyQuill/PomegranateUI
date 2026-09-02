@@ -3610,6 +3610,9 @@ main[data-pom-theme-root] [data-tab-rail-scroll] > * {
   min-width: max-content !important;
   height: 100%;
 }
+main[data-pom-theme-root] :is(.panel-tab-actions-trigger, .sub-panel-tab-actions-trigger) {
+  display: none;
+}
 main[data-pom-theme-root] [data-tab-rail-scroll] [role="tab"] {
   box-sizing: border-box;
   width: auto !important;
@@ -3648,6 +3651,31 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
   }
   main[data-pom-theme-root] [data-tab-rail-scroll]:is([data-overflow-before="true"], [data-overflow-after="true"])[data-panning="true"] {
     cursor: grabbing;
+  }
+}
+
+@media (pointer: coarse) {
+  main[data-pom-theme-root] :is([data-pomegranate-panel-tab], [data-sub-panel-tab-item]) {
+    display: flex;
+    align-items: stretch;
+  }
+  main[data-pom-theme-root] :is(.panel-tab-actions-trigger, .sub-panel-tab-actions-trigger) {
+    box-sizing: border-box;
+    display: grid;
+    flex: 0 0 44px;
+    place-items: center;
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-right: var(--pom-border-width, 1px) solid var(--pom-material-button-border, var(--line));
+    border-radius: 0;
+    color: var(--pom-color-text, var(--ink));
+    background: color-mix(in srgb, var(--pom-color-selection) 20%, transparent);
+    box-shadow: var(--pom-material-button-inset, none);
+    font: 600 18px/1 var(--pom-font-ui, sans-serif);
+    touch-action: manipulation;
   }
 }
 

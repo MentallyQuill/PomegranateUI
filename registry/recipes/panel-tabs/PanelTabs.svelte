@@ -65,12 +65,17 @@
     }
   }
 
+  function revealItem(element: HTMLElement) {
+    const item = element.closest<HTMLElement>('[data-pomegranate-panel-tab]');
+    revealInRail(item && item.getBoundingClientRect().width > 0 ? item : element);
+  }
+
   function reveal(panelId: PanelId, focus = false) {
     void tick().then(() => {
       const tab = tabElement(panelId);
       if (!tab) return;
       if (focus) tab.focus();
-      revealInRail(tab);
+      revealItem(tab);
     });
   }
 
@@ -144,11 +149,23 @@
           aria-keyshortcuts="Shift+F10"
           tabindex={tab.selected ? 0 : -1}
           onclick={(event) => activate(tab.panelId, event.currentTarget)}
-          onfocus={() => reveal(tab.panelId)}
+          onfocus={(event) => revealItem(event.currentTarget)}
           onkeydown={(event) => handleKey(event, tab.panelId, index)}
           oncontextmenu={(event) => context(event, tab.panelId, 'pointer')}
           ondragstart={(event) => event.preventDefault()}
         >{tab.name}</button>
+        {#if tab.selected && oncontextrequest}
+          <button
+            class="panel-tab-actions-trigger"
+            type="button"
+            data-pom-part="button.surface"
+            data-panel-tab-actions-trigger
+            aria-label={`Open ${tab.name} Panel actions`}
+            aria-haspopup="dialog"
+            onclick={(event) => context(event, tab.panelId, 'pointer')}
+            onfocus={(event) => revealItem(event.currentTarget)}
+          ><span aria-hidden="true">…</span></button>
+        {/if}
       </div>
     {/each}
   </div>
@@ -166,3 +183,21 @@
     onclick={requestReorder}
   >Reorder Panels</button>
 {/if}
+
+<style>
+  .panel-tab-actions-trigger { display: none; }
+  @media (pointer: coarse) {
+    [data-pomegranate-panel-tab] { display: flex; align-items: stretch; }
+    .panel-tab-actions-trigger {
+      box-sizing: border-box;
+      display: grid;
+      flex: 0 0 44px;
+      place-items: center;
+      width: 44px;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0;
+      touch-action: manipulation;
+    }
+  }
+</style>

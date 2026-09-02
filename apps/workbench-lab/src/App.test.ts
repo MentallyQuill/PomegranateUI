@@ -14,6 +14,50 @@ afterEach(() => {
 });
 
 describe('Svelte Workbench Lab mockup', () => {
+  it('exposes one active Panel action trigger and retargets it when the active tab changes', async () => {
+    const user = userEvent.setup();
+    const { container } = render(App);
+
+    expect(container.querySelectorAll('[data-panel-tab-actions-trigger]')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Open Scene Panel actions', hidden: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Library Panel actions', hidden: true })).toBeNull();
+
+    await user.click(screen.getByRole('tab', { name: 'Library' }));
+    expect(container.querySelectorAll('[data-panel-tab-actions-trigger]')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Open Scene Panel actions', hidden: true })).toBeNull();
+    const trigger = screen.getByRole('button', { name: 'Open Library Panel actions', hidden: true });
+    await fireEvent.click(trigger);
+
+    const actions = container.querySelector<HTMLElement>('.panel-menu-surface:not(.sub-panel-menu-surface)');
+    if (!actions) throw new Error('Expected the shared Panel action surface.');
+    expect(actions).toHaveAttribute('aria-label', 'Library Panel actions');
+    expect(actions).toHaveAttribute('data-context-source', 'pointer');
+    expect(actions).toHaveAttribute('data-fallback-open');
+  });
+
+  it('exposes one active sub-panel action trigger that opens its menu immediately', async () => {
+    const user = userEvent.setup();
+    const { container } = render(App);
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+
+    expect(container.querySelectorAll('[data-sub-panel-tab-actions-trigger]')).toHaveLength(1);
+    const accountTrigger = screen.getByRole('button', {
+      name: 'Open Account and Access sub-panel actions',
+      hidden: true
+    });
+    expect(screen.queryByRole('button', {
+      name: 'Open Appearance and Accessibility sub-panel actions',
+      hidden: true
+    })).toBeNull();
+
+    await fireEvent.click(accountTrigger);
+    const actions = container.querySelector<HTMLElement>('.sub-panel-menu-surface');
+    if (!actions) throw new Error('Expected the shared sub-panel action surface.');
+    expect(actions).toHaveAttribute('aria-label', 'Account and Access sub-panel actions');
+    expect(actions).toHaveAttribute('data-context-source', 'pointer');
+    expect(actions).toHaveAttribute('data-fallback-open');
+  });
+
   it('renders exactly six Settings sub-panel tabs and switches the active Widget owner', async () => {
     const user = userEvent.setup();
     render(App);

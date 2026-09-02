@@ -73,12 +73,16 @@
     );
   }
 
+  function revealItem(element: HTMLElement) {
+    controller?.reveal(element.closest<HTMLElement>('[data-sub-panel-tab-item]') ?? element);
+  }
+
   function reveal(subPanelId: SubPanelId, focus = false) {
     void tick().then(() => {
       const tab = tabElement(subPanelId);
       if (!tab) return;
       if (focus) tab.focus();
-      controller?.reveal(tab);
+      revealItem(tab);
     });
   }
 
@@ -171,12 +175,24 @@
               aria-keyshortcuts="Shift+F10"
               tabindex={tab.selected ? 0 : -1}
               onclick={(event) => { if (!controller?.consumeClick(event)) void activate(tab.subPanelId); }}
-              onfocus={(event) => controller?.reveal(event.currentTarget)}
+              onfocus={(event) => revealItem(event.currentTarget)}
               onkeydown={(event) => handleKey(event, tab.subPanelId, index)}
               oncontextmenu={(event) => controller?.contextMenu(event, tab.subPanelId)}
               onpointerdown={(event) => controller?.pointerDown(event, tab.subPanelId)}
               ondragstart={(event) => event.preventDefault()}
             >{tab.name}</button>
+            {#if tab.selected}
+              <button
+                class="sub-panel-tab-actions-trigger"
+                type="button"
+                data-pom-part="button.surface"
+                data-sub-panel-tab-actions-trigger
+                aria-label={`Open ${tab.name} sub-panel actions`}
+                aria-haspopup="dialog"
+                onclick={(event) => menu?.open(panel.id, tab.subPanelId, event.currentTarget, 'pointer')}
+                onfocus={(event) => revealItem(event.currentTarget)}
+              ><span aria-hidden="true">…</span></button>
+            {/if}
           </span>
         {/each}
       </div>
@@ -191,7 +207,7 @@
       onclick={() => onrequest({ mode: 'create', panelId: panel.id })}
     >+</button>
   </nav>
-  <span id="sub-panel-tab-options-description" class="visually-hidden">Right-click, press and hold, or press Shift+F10 for tab options.</span>
+  <span id="sub-panel-tab-options-description" class="visually-hidden">Right-click or press Shift+F10 for tab options.</span>
 
   <SubPanelMenu
     bind:this={menu}
