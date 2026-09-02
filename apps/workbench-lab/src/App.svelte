@@ -41,8 +41,12 @@
   const runtime = createLabRuntime();
   const storage = createLocalLayoutStorage();
   const { store, catalog, rendererRegistry } = runtime;
-  const requestedSurface = new URLSearchParams(window.location.search).get('surface');
-  const requestedSurfaceState = new URLSearchParams(window.location.search).get('surfaceState');
+  const locationParameters = new URLSearchParams(window.location.search);
+  const requestedDeveloperMode = locationParameters.get('dev');
+  const developerToolsEnabled = requestedDeveloperMode === '1'
+    || (requestedDeveloperMode === null && ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname));
+  const requestedSurface = locationParameters.get('surface');
+  const requestedSurfaceState = locationParameters.get('surfaceState');
   const requestedType = requestedSurface ? asWidgetType(requestedSurface) : null;
   const requestedDefinition = requestedType ? IMPLEMENTED_SURFACES.find(({ type }) => type === requestedType) : undefined;
   const requestedFixture = requestedType && IMPLEMENTED_SURFACE_TYPES.has(requestedType) ? getSurfaceFixture(requestedType) : undefined;
@@ -411,6 +415,7 @@
   data-surface-preview-family={requestedDefinition?.family}
   data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}
+  data-workbench-developer-tools={developerToolsEnabled ? 'enabled' : 'disabled'}
   style={themeSnapshot.cssText}
 >
   <ThemeCanvas layers={themeSnapshot.compiled.canvas} />
@@ -435,50 +440,52 @@
       <LayoutUndo {store} />
       <IconAction label="Focus reading" action="focus-reading" pressed={focusMode} onclick={() => { focusMode = !focusMode; }} />
       <span class="runtime-status" aria-label={hostContext.systemStatus}><i></i><span aria-hidden="true">Ready</span></span>
-      <WorkbenchDeveloperDrawer>
-        <p class="developer-panel-identity" aria-label="Workbench context"><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
-        <div class="theme-targets" role="group" aria-label="Visual target">
-          {#each LAB_THEME_PRESETS as preset (preset.id)}
+      {#if developerToolsEnabled}
+        <WorkbenchDeveloperDrawer>
+          <p class="developer-panel-identity" aria-label="Workbench context"><span>{activePanel?.templateId ?? 'No Panel'}</span><strong>{activePanel?.name ?? 'No active Panel'}</strong></p>
+          <div class="theme-targets" role="group" aria-label="Visual target">
+            {#each LAB_THEME_PRESETS as preset (preset.id)}
+              <button
+                type="button"
+                data-pom-part="button.surface"
+                aria-label={preset.target.theme.label}
+                aria-pressed={themeSnapshot.activeId === preset.id}
+                onclick={() => activateTheme(preset.id)}
+              >{preset.target.theme.label}</button>
+            {/each}
+          </div>
+          <div class="dock-controls">
+            {#if requestedFixture}
+              <label class="surface-preview-control">State
+                <select
+                  data-pom-part="field.surface"
+                  aria-label="Surface preview state"
+                  value={hostContext.surfaceState}
+                  onchange={(event) => { hostContext.surfaceState = event.currentTarget.value; }}
+                >
+                  {#each requestedFixture.states as fixtureState}<option value={fixtureState}>{fixtureState}</option>{/each}
+                </select>
+              </label>
+            {/if}
             <button
+              class="developer-create-panel"
               type="button"
               data-pom-part="button.surface"
-              aria-label={preset.target.theme.label}
-              aria-pressed={themeSnapshot.activeId === preset.id}
-              onclick={() => activateTheme(preset.id)}
-            >{preset.target.theme.label}</button>
-          {/each}
-        </div>
-        <div class="dock-controls">
-          {#if requestedFixture}
-            <label class="surface-preview-control">State
-              <select
-                data-pom-part="field.surface"
-                aria-label="Surface preview state"
-                value={hostContext.surfaceState}
-                onchange={(event) => { hostContext.surfaceState = event.currentTarget.value; }}
-              >
-                {#each requestedFixture.states as fixtureState}<option value={fixtureState}>{fixtureState}</option>{/each}
-              </select>
-            </label>
-          {/if}
-          <button
-            class="developer-create-panel"
-            type="button"
-            data-pom-part="button.surface"
-            hidden={themeSnapshot.compiled.theme.recipes.shellPresentation === 'instrumented'}
-            onclick={openPanelDialog}
-          >Create Panel</button>
-          <button type="button" data-pom-part="button.surface" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
-        </div>
-        <div class="persistence-actions">
-          <button type="button" data-pom-part="button.surface" onclick={() => void save()}>Save layout</button>
-          <button type="button" data-pom-part="button.surface" onclick={() => void reload()}>Reload saved layout</button>
-          <button type="button" data-pom-part="button.surface" onclick={() => void clear()}>Clear saved layout</button>
-        </div>
-        <p role="status" aria-live="polite">{status}</p>
-        <details><summary>Event log</summary><ol>{#each eventLog as entry}<li>{entry}</li>{/each}</ol></details>
-        <details><summary>Native contract evidence</summary><ul>{#each FIRST_SLICE_CONTRACT_IDS as id}<li>{id}</li>{/each}</ul></details>
-      </WorkbenchDeveloperDrawer>
+              hidden={themeSnapshot.compiled.theme.recipes.shellPresentation === 'instrumented'}
+              onclick={openPanelDialog}
+            >Create Panel</button>
+            <button type="button" data-pom-part="button.surface" aria-pressed={leftCollapsed} onclick={() => { leftCollapsed = !leftCollapsed; }}>Collapse left dock</button>
+          </div>
+          <div class="persistence-actions">
+            <button type="button" data-pom-part="button.surface" onclick={() => void save()}>Save layout</button>
+            <button type="button" data-pom-part="button.surface" onclick={() => void reload()}>Reload saved layout</button>
+            <button type="button" data-pom-part="button.surface" onclick={() => void clear()}>Clear saved layout</button>
+          </div>
+          <p role="status" aria-live="polite">{status}</p>
+          <details><summary>Event log</summary><ol>{#each eventLog as entry}<li>{entry}</li>{/each}</ol></details>
+          <details><summary>Native contract evidence</summary><ul>{#each FIRST_SLICE_CONTRACT_IDS as id}<li>{id}</li>{/each}</ul></details>
+        </WorkbenchDeveloperDrawer>
+      {/if}
     </div>
   </header>
 

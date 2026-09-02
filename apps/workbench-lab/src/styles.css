@@ -3741,6 +3741,31 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
   }
 }
 
+/* Public chrome omits Lab-only developer controls; explicit developer mode
+   keeps its flyout outside the clipped responsive shelf. */
+@media (max-width: 1180px) {
+  main[data-workbench-developer-tools="disabled"] .shelf-actions { width: 44px; }
+  main[data-workbench-developer-tools="disabled"][data-pom-shell-presentation="instrumented"] .top-shelf {
+    grid-template-columns: 160px minmax(0, 1fr) 44px 44px;
+  }
+  main[data-workbench-developer-tools="enabled"][data-pom-shell-presentation="instrumented"] .top-shelf:has(.workbench-developer-drawer[open]) {
+    overflow: visible;
+  }
+}
+@media (max-width: 680px) {
+  main[data-workbench-developer-tools="disabled"] .top-shelf {
+    grid-template-columns: 50px minmax(0, 1fr) 44px;
+  }
+  main[data-workbench-developer-tools="disabled"][data-pom-shell-presentation="instrumented"] .top-shelf {
+    grid-template-columns: 50px minmax(0, 1fr) 44px 44px;
+  }
+}
+@media (max-width: 520px) {
+  main[data-workbench-developer-tools="disabled"][data-pom-shell-presentation="instrumented"] .top-shelf {
+    grid-template-columns: 44px minmax(0, 1fr) 44px 44px;
+  }
+}
+
 /* Final drag-discovery authority must follow compact/instrumented collapse rules. */
 main[data-pom-theme-root].left-collapsed[data-drag-reveal-left="true"] .workbench-surface {
   --pom-left-width: var(--pom-drag-reveal-width, 286px) !important;

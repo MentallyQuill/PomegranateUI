@@ -678,6 +678,41 @@ test('Developer tools uses a centered inline SVG and an independent 44px accessi
   expect(Math.abs((geometry.icon.top + geometry.icon.bottom) / 2 - (geometry.button.top + geometry.button.bottom) / 2)).toBeLessThanOrEqual(1);
 });
 
+test('normal public mode removes the developer gear and reclaims its compact chrome slot', async ({ page }) => {
+  const url = new URL(labOrigin);
+  url.searchParams.set('dev', '0');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url.href);
+
+  const root = page.locator('main[data-pom-theme-root]');
+  await expect(root).toHaveAttribute('data-workbench-developer-tools', 'disabled');
+  await expect(page.locator('[data-workbench-developer-drawer]')).toHaveCount(0);
+  const geometry = await page.locator('.shelf-actions').evaluate((node) => {
+    const box = node.getBoundingClientRect();
+    return { width: box.width, right: box.right, viewport: innerWidth };
+  });
+  expect(geometry.width).toBe(44);
+  expect(geometry.right).toBe(geometry.viewport);
+});
+
+test('explicit developer mode opens a hittable drawer on mobile', async ({ page }) => {
+  const url = new URL(labOrigin);
+  url.searchParams.set('dev', '1');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url.href);
+
+  const root = page.locator('main[data-pom-theme-root]');
+  await page.getByText('Developer tools', { exact: true }).click();
+  const surface = page.locator('.developer-drawer-surface');
+  await expect(surface).toBeVisible();
+  expect(await surface.evaluate((node) => {
+    const box = node.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + 24);
+    return hit !== null && node.contains(hit);
+  })).toBe(true);
+  await expect(root).toHaveAttribute('data-workbench-developer-tools', 'enabled');
+});
+
 test('wide text-profile Developer tools keeps a centered 44px SVG launcher', async ({ page }) => {
   await openFresh(page, 1440, 900);
   await selectTheme(page, 'Ash & Amber');
