@@ -5,6 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WidgetManifest } from '@pomegranate-ui/contracts';
+import { createCatalogController, createWidgetRegistry } from '@pomegranate-ui/core';
 
 import { createLabHostContext, type LabHostContext } from '../mockup/host-context.js';
 import { createCatalogManifests } from '../mockup/catalog.js';
@@ -12,6 +13,22 @@ import { createLabThemeController } from '../themes/controller.js';
 import { createLabRuntime } from '../mockup/widgets.js';
 import CatalogWidgetPreview from './CatalogWidgetPreview.svelte';
 import WidgetCatalog from './WidgetCatalog.svelte';
+
+const EXPECTED_CATALOG_ICON_SYMBOLS: Readonly<Record<string, string>> = Object.freeze({
+  'category.story': 'mi-512482',
+  'category.library': 'mi-511528',
+  'category.systems': 'mi-511777',
+  'category.settings': 'mi-512616',
+  'category.extensions': 'mi-511722',
+  'cast.profile': 'mi-512690',
+  'model.routing': 'mi-511724',
+  'theme.contrast': 'mi-511741',
+  'provider.connection': 'mi-511728',
+  'status.sound': 'mi-513035',
+  'backdrop.image': 'mi-512362',
+  'background.queue': 'mi-512524',
+  'status.info': 'mi-511836'
+});
 
 afterEach(() => {
   cleanup();
@@ -81,6 +98,53 @@ function renderCatalog(options: {
 }
 
 describe('WidgetCatalog', () => {
+  it('fails closed when a known Widget manifest carries an unmapped icon key', () => {
+    const manifest = createCatalogManifests().find(({ type }) => type === 'settings.group.account-access')!;
+    const invalidIconManifest = {
+      ...manifest,
+      catalog: { ...manifest.catalog!, iconKey: 'unknown.catalog-icon' }
+    } satisfies WidgetManifest;
+    const registry = createWidgetRegistry();
+    expect(registry.register(invalidIconManifest).ok).toBe(true);
+    const catalog = createCatalogController(registry);
+    catalog.open('expanded');
+    const runtime = createLabRuntime();
+
+    expect(() => render(WidgetCatalog, {
+      catalog,
+      rendererRegistry: runtime.rendererRegistry,
+      hostContext: previewHostContext(),
+      instanceCounts: {},
+      oncreate: vi.fn()
+    })).toThrow('Missing authoritative catalog icon for unknown.catalog-icon.');
+  });
+
+  it('resolves all 94 manifests to the expected 13 source symbols in Visual and Compact modes', async () => {
+    const user = userEvent.setup();
+    const manifests = createCatalogManifests();
+    const { container } = renderCatalog();
+    const iconKeys = new Set(manifests.map((manifest) => manifest.catalog!.iconKey));
+
+    expect(manifests).toHaveLength(94);
+    expect(iconKeys).toEqual(new Set(Object.keys(EXPECTED_CATALOG_ICON_SYMBOLS)));
+
+    const assertModeIcons = () => {
+      const results = [...container.querySelectorAll<HTMLElement>('[data-catalog-result]')];
+      expect(results).toHaveLength(94);
+      for (const manifest of manifests) {
+        const iconKey = manifest.catalog!.iconKey;
+        const expectedSymbol = EXPECTED_CATALOG_ICON_SYMBOLS[iconKey];
+        expect(expectedSymbol, `${manifest.type} must use an authoritative icon key`).toBeDefined();
+        const result = container.querySelector<HTMLElement>(`[data-widget-type="${manifest.type}"]`)!;
+        expect(result.querySelector(`svg[data-catalog-icon="${iconKey}"] use`), `${manifest.type} icon`).toHaveAttribute('href', `#${expectedSymbol}`);
+      }
+    };
+
+    assertModeIcons();
+    await user.click(screen.getByRole('button', { name: 'Compact' }));
+    assertModeIcons();
+  });
+
   it('renders the fixed source controls and all 94 whole-result shared previews', async () => {
     const { container } = renderCatalog();
     const dialog = screen.getByRole('dialog', { name: 'Widget Catalog' });

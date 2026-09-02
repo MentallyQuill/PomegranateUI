@@ -249,7 +249,9 @@
   }
 
   function catalogIconSymbol(iconKey: string | undefined): string {
-    return catalogIconSymbols[iconKey ?? ''] ?? catalogIconSymbols['status.info']!;
+    const symbol = iconKey ? catalogIconSymbols[iconKey] : undefined;
+    if (!symbol) throw new Error(`Missing authoritative catalog icon for ${iconKey ?? '<missing>'}.`);
+    return symbol;
   }
 
   function closeCatalog() {
