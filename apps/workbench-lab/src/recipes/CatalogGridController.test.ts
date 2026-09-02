@@ -79,6 +79,7 @@ describe('CatalogGridController', () => {
       getPreviewWidth: () => 286,
       getResultKey: (result) => result === narrow ? 'narrow' : 'wide',
       getResultShape: (result) => result === narrow ? 'narrow' : 'wide',
+      getResultMeasureElement: (result) => result,
       createResizeObserver: () => null
     });
     controller.sync();
@@ -93,6 +94,43 @@ describe('CatalogGridController', () => {
     expect(wide.style.gridColumnEnd).toBe('span 2');
     expect(narrow.style.gridRowEnd).toBe('span 18');
     expect(wide.style.gridRowEnd).toBe('span 19');
+    controller.destroy();
+  });
+
+  it('measures intrinsic content when clearing the grid span collapses the result box to one row', () => {
+    const scroll = document.body.appendChild(document.createElement('div'));
+    cleanup.push(scroll);
+    setClientWidth(scroll, 2172);
+    const result = document.createElement('article');
+    const content = result.appendChild(document.createElement('div'));
+    content.style.height = '286px';
+    result.style.gridRowEnd = 'span 19';
+    Object.defineProperty(result, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => {
+        const span = Number.parseInt(result.style.gridRowEnd.replace('span ', ''), 10);
+        const height = Number.isFinite(span) ? span * 16 - 8 : 8;
+        return rect(0, height);
+      }
+    });
+    Object.defineProperty(content, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => rect(0, Number.parseFloat(content.style.height))
+    });
+    const options = {
+      getScrollElement: () => scroll,
+      getResults: () => [result],
+      getPreviewWidth: () => 286,
+      getResultKey: () => 'result',
+      getResultShape: () => 'medium' as const,
+      getResultMeasureElement: () => content,
+      createResizeObserver: () => null
+    };
+    const controller = createCatalogGridController(options);
+
+    controller.sync();
+
+    expect(result.style.gridRowEnd).toBe('span 19');
     controller.destroy();
   });
 
@@ -123,6 +161,7 @@ describe('CatalogGridController', () => {
       getPreviewWidth: () => 286,
       getResultKey: (result) => result === first ? 'first' : 'second',
       getResultShape: () => 'medium',
+      getResultMeasureElement: (result) => result,
       createResizeObserver: () => null
     });
 
@@ -134,6 +173,60 @@ describe('CatalogGridController', () => {
 
     expect(scroll.scrollTop).toBe(200);
     expect(second.getBoundingClientRect().top - scroll.getBoundingClientRect().top).toBe(20);
+    controller.destroy();
+  });
+
+  it('captures a visible result when the scroll owner is at its top', () => {
+    const scroll = document.body.appendChild(document.createElement('div'));
+    cleanup.push(scroll);
+    scroll.scrollTop = 0;
+    Object.defineProperty(scroll, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => rect(100, 500, 2172)
+    });
+    const result = document.createElement('article');
+    Object.defineProperty(result, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => rect(120, 80)
+    });
+    const controller = createCatalogGridController({
+      getScrollElement: () => scroll,
+      getResults: () => [result],
+      getPreviewWidth: () => 286,
+      getResultKey: () => 'first',
+      getResultShape: () => 'medium',
+      getResultMeasureElement: (result) => result,
+      createResizeObserver: () => null
+    });
+
+    expect(controller.captureAnchor()).toEqual({ key: 'first', offset: 20 });
+    controller.destroy();
+  });
+
+  it('does not capture a result entirely below the scroll viewport', () => {
+    const scroll = document.body.appendChild(document.createElement('div'));
+    cleanup.push(scroll);
+    scroll.scrollTop = 100;
+    Object.defineProperty(scroll, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => rect(100, 500, 2172)
+    });
+    const result = document.createElement('article');
+    Object.defineProperty(result, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => rect(650, 80)
+    });
+    const controller = createCatalogGridController({
+      getScrollElement: () => scroll,
+      getResults: () => [result],
+      getPreviewWidth: () => 286,
+      getResultKey: () => 'below',
+      getResultShape: () => 'medium',
+      getResultMeasureElement: (result) => result,
+      createResizeObserver: () => null
+    });
+
+    expect(controller.captureAnchor()).toBeNull();
     controller.destroy();
   });
 
@@ -166,6 +259,7 @@ describe('CatalogGridController', () => {
       getPreviewWidth: () => 286,
       getResultKey: () => 'result',
       getResultShape: () => 'medium',
+      getResultMeasureElement: (result) => result,
       createResizeObserver
     });
     controller.sync();

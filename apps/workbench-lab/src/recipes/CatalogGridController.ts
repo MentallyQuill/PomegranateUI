@@ -25,6 +25,7 @@ export interface CatalogGridControllerOptions {
   readonly getPreviewWidth: () => number;
   readonly getResultKey: (result: HTMLElement) => string;
   readonly getResultShape: (result: HTMLElement) => WidgetShape;
+  readonly getResultMeasureElement: (result: HTMLElement) => Element;
   readonly createResizeObserver?: (callback: () => void) => CatalogGridResizeObserver | null;
   readonly getComputedStyle?: (element: Element) => CSSStyleDeclaration;
 }
@@ -92,7 +93,10 @@ export function createCatalogGridController(options: CatalogGridControllerOption
 
   function updateObservation(scrollElement: HTMLElement | null, results: readonly HTMLElement[]): void {
     if (!resizeObserver) return;
-    const current = new Set<Element>(scrollElement ? [scrollElement, ...results] : results);
+    const measuredElements = results.map((result) => options.getResultMeasureElement(result));
+    const current = new Set<Element>(scrollElement
+      ? [scrollElement, ...results, ...measuredElements]
+      : [...results, ...measuredElements]);
     for (const element of observed) {
       if (current.has(element)) continue;
       resizeObserver.unobserve(element);
@@ -133,7 +137,7 @@ export function createCatalogGridController(options: CatalogGridControllerOption
       result.style.gridColumnEnd = `span ${catalogShapeSpan(options.getResultShape(result), columns)}`;
     }
     for (const result of results) {
-      const height = result.getBoundingClientRect().height;
+      const height = options.getResultMeasureElement(result).getBoundingClientRect().height;
       result.style.gridRowEnd = `span ${catalogRowSpan(height, CATALOG_GRID_ROW_HEIGHT, CATALOG_GRID_GAP)}`;
     }
   }
@@ -141,16 +145,17 @@ export function createCatalogGridController(options: CatalogGridControllerOption
   function captureAnchor(): CatalogScrollAnchor | null {
     if (destroyed) return null;
     const scrollElement = options.getScrollElement();
-    if (!scrollElement || scrollElement.scrollTop <= 0) return null;
-    const regionTop = scrollElement.getBoundingClientRect().top;
-    const firstVisible = options.getResults().find(
-      (result) => result.getBoundingClientRect().bottom > regionTop + 1
-    );
-    if (!firstVisible) return null;
-    return Object.freeze({
-      key: options.getResultKey(firstVisible),
-      offset: firstVisible.getBoundingClientRect().top - regionTop
-    });
+    if (!scrollElement) return null;
+    const regionRect = scrollElement.getBoundingClientRect();
+    for (const result of options.getResults()) {
+      const resultRect = result.getBoundingClientRect();
+      if (resultRect.bottom <= regionRect.top || resultRect.top >= regionRect.bottom) continue;
+      return Object.freeze({
+        key: options.getResultKey(result),
+        offset: resultRect.top - regionRect.top
+      });
+    }
+    return null;
   }
 
   function restoreAnchor(anchor: CatalogScrollAnchor | null): void {
