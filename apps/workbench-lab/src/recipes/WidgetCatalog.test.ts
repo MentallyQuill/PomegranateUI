@@ -5,7 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WidgetManifest } from '@pomegranate-ui/contracts';
-import { createCatalogController, createWidgetRegistry } from '@pomegranate-ui/core';
+import { createCatalogController, createWidgetRegistry, type CatalogController } from '@pomegranate-ui/core';
 
 import { createLabHostContext, type LabHostContext } from '../mockup/host-context.js';
 import { createCatalogManifests } from '../mockup/catalog.js';
@@ -97,7 +97,211 @@ function renderCatalog(options: {
   return { ...runtime, ...rendered, oncreate, onplace: options.onplace };
 }
 
+function trackCatalogSubscriptions(catalog: CatalogController) {
+  const active = new Set<() => void>();
+  const tracked = Object.freeze({
+    ...catalog,
+    subscribe(listener: (state: ReturnType<CatalogController['getState']>) => void) {
+      const unsubscribe = catalog.subscribe(listener);
+      const trackedUnsubscribe = () => {
+        if (!active.delete(trackedUnsubscribe)) return;
+        unsubscribe();
+      };
+      active.add(trackedUnsubscribe);
+      return trackedUnsubscribe;
+    }
+  }) satisfies CatalogController;
+  return { catalog: tracked, active };
+}
+
+function trackCatalogRenderLifecycle() {
+  let nextFrame = 0;
+  const activeFrames = new Set<number>();
+  const requestFrame = vi.fn((_callback: FrameRequestCallback) => {
+    nextFrame += 1;
+    activeFrames.add(nextFrame);
+    return nextFrame;
+  });
+  const cancelFrame = vi.fn((frame: number) => { activeFrames.delete(frame); });
+  vi.stubGlobal('requestAnimationFrame', requestFrame);
+  vi.stubGlobal('cancelAnimationFrame', cancelFrame);
+
+  const mutationObservers = new Set<object>();
+  const resizeObservers = new Set<object>();
+  const mutationDisconnect = vi.fn();
+  const resizeDisconnect = vi.fn();
+  class InstrumentedMutationObserver {
+    constructor(_callback: MutationCallback) {
+      mutationObservers.add(this);
+    }
+    disconnect = () => {
+      mutationDisconnect();
+      mutationObservers.delete(this);
+    };
+    observe = vi.fn();
+    takeRecords = vi.fn(() => []);
+  }
+  class InstrumentedResizeObserver {
+    constructor(_callback: ResizeObserverCallback) {
+      resizeObservers.add(this);
+    }
+    disconnect = () => {
+      resizeDisconnect();
+      resizeObservers.delete(this);
+    };
+    observe = vi.fn();
+    unobserve = vi.fn();
+  }
+  vi.stubGlobal('MutationObserver', InstrumentedMutationObserver);
+  vi.stubGlobal('ResizeObserver', InstrumentedResizeObserver);
+
+  const listeners = new Map<EventTarget, Map<string, Set<EventListenerOrEventListenerObject>>>();
+  const originalAdd = EventTarget.prototype.addEventListener;
+  const originalRemove = EventTarget.prototype.removeEventListener;
+  let renderBoundaryActive = false;
+  const isCatalogTarget = (target: EventTarget) => target === window
+    || target === document
+    || target instanceof HTMLDialogElement;
+  const listenerKey = (type: string, options?: boolean | AddEventListenerOptions) => `${type}:${typeof options === 'boolean' ? options : options?.capture === true}`;
+  // Svelte delegates ordinary handlers through document, while Testing Library adds
+  // document reset handlers during render. A connected dialog is the component-owned
+  // listener target; detached dialog handlers cannot remain active side effects.
+  const listenerCount = () => [...listeners.entries()]
+    .filter(([target]) => target instanceof HTMLDialogElement && target.isConnected)
+    .reduce((total, [, byType]) => total + [...byType.values()]
+      .reduce((typeTotal, registered) => typeTotal + registered.size, 0), 0);
+  vi.spyOn(EventTarget.prototype, 'addEventListener').mockImplementation(function (
+    this: EventTarget,
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions
+  ) {
+    originalAdd.call(this, type, listener, options);
+    if (!renderBoundaryActive || !listener || !isCatalogTarget(this)) return;
+    const byType = listeners.get(this) ?? new Map<string, Set<EventListenerOrEventListenerObject>>();
+    const registered = byType.get(listenerKey(type, options)) ?? new Set<EventListenerOrEventListenerObject>();
+    registered.add(listener);
+    byType.set(listenerKey(type, options), registered);
+    listeners.set(this, byType);
+  });
+  vi.spyOn(EventTarget.prototype, 'removeEventListener').mockImplementation(function (
+    this: EventTarget,
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions
+  ) {
+    originalRemove.call(this, type, listener, options);
+    const registered = listeners.get(this)?.get(listenerKey(type, options));
+    if (!listener || !registered) return;
+    registered.delete(listener);
+  });
+
+  return {
+    beginRenderBoundary: () => { renderBoundaryActive = true; },
+    endRenderBoundary: () => { renderBoundaryActive = false; },
+    snapshot: (subscriptions = 0) => ({
+      subscriptions,
+      frames: activeFrames.size,
+      mutationObservers: mutationObservers.size,
+      resizeObservers: resizeObservers.size,
+      listeners: listenerCount(),
+      dialogs: document.querySelectorAll('dialog[aria-label="Widget Catalog"]').length,
+      results: document.querySelectorAll('[data-catalog-result]').length,
+      previews: document.querySelectorAll('[data-catalog-preview]').length
+    }),
+    requestFrame,
+    cancelFrame,
+    mutationDisconnect,
+    resizeDisconnect
+  };
+}
+
 describe('WidgetCatalog', () => {
+  it('recovers a failed unknown-icon render without residual catalog lifecycle state', async () => {
+    const lifecycle = trackCatalogRenderLifecycle();
+    const invalidManifest = createCatalogManifests().find(({ type }) => type === 'settings.group.account-access')!;
+    const invalidRegistry = createWidgetRegistry();
+    expect(invalidRegistry.register({
+      ...invalidManifest,
+      catalog: { ...invalidManifest.catalog!, iconKey: 'unknown.catalog-icon' }
+    } satisfies WidgetManifest).ok).toBe(true);
+    const invalidCatalog = createCatalogController(invalidRegistry);
+    invalidCatalog.open('expanded');
+    const failed = trackCatalogSubscriptions(invalidCatalog);
+
+    lifecycle.beginRenderBoundary();
+    expect(() => render(WidgetCatalog, {
+      catalog: failed.catalog,
+      rendererRegistry: createLabRuntime().rendererRegistry,
+      hostContext: previewHostContext(),
+      instanceCounts: {},
+      oncreate: vi.fn()
+    })).toThrow('Missing authoritative catalog icon for unknown.catalog-icon.');
+    lifecycle.endRenderBoundary();
+    await tick();
+    await tick();
+
+    expect(lifecycle.snapshot(failed.active.size)).toEqual({
+      subscriptions: 0,
+      frames: 0,
+      mutationObservers: 0,
+      resizeObservers: 0,
+      listeners: 0,
+      dialogs: 0,
+      results: 0,
+      previews: 0
+    });
+
+    const runtime = createLabRuntime();
+    runtime.catalog.open('expanded');
+    const recovered = trackCatalogSubscriptions(runtime.catalog);
+    lifecycle.beginRenderBoundary();
+    const rendered = render(WidgetCatalog, {
+      catalog: recovered.catalog,
+      rendererRegistry: runtime.rendererRegistry,
+      hostContext: previewHostContext(),
+      instanceCounts: {},
+      oncreate: vi.fn()
+    });
+    lifecycle.endRenderBoundary();
+    await tick();
+    await tick();
+
+    const results = [...rendered.container.querySelectorAll<HTMLElement>('[data-catalog-result]')];
+    expect(results).toHaveLength(94);
+    for (const manifest of createCatalogManifests()) {
+      const iconKey = manifest.catalog!.iconKey;
+      const result = rendered.container.querySelector<HTMLElement>(`[data-widget-type="${manifest.type}"]`)!;
+      expect(result.querySelector(`svg[data-catalog-icon="${iconKey}"] use`)).toHaveAttribute('href', `#${EXPECTED_CATALOG_ICON_SYMBOLS[iconKey]}`);
+    }
+    expect(lifecycle.snapshot(recovered.active.size)).toEqual({
+      subscriptions: 1,
+      frames: 1,
+      mutationObservers: 94,
+      resizeObservers: 1,
+      listeners: 1,
+      dialogs: 1,
+      results: 94,
+      previews: 94
+    });
+
+    rendered.unmount();
+    expect(lifecycle.snapshot(recovered.active.size)).toEqual({
+      subscriptions: 0,
+      frames: 0,
+      mutationObservers: 0,
+      resizeObservers: 0,
+      listeners: 0,
+      dialogs: 0,
+      results: 0,
+      previews: 0
+    });
+    expect(lifecycle.requestFrame).toHaveBeenCalledTimes(1);
+    expect(lifecycle.cancelFrame).toHaveBeenCalledTimes(1);
+    expect(lifecycle.mutationDisconnect).toHaveBeenCalledTimes(94);
+    expect(lifecycle.resizeDisconnect).toHaveBeenCalledTimes(1);
+  });
+
   it('fails closed when a known Widget manifest carries an unmapped icon key', () => {
     const manifest = createCatalogManifests().find(({ type }) => type === 'settings.group.account-access')!;
     const invalidIconManifest = {

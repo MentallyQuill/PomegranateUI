@@ -155,6 +155,18 @@
     'status.info': 'mi-511836'
   });
 
+  function catalogIconSymbol(iconKey: string | undefined): string {
+    const symbol = iconKey ? catalogIconSymbols[iconKey] : undefined;
+    if (!symbol) throw new Error(`Missing authoritative catalog icon for ${iconKey ?? '<missing>'}.`);
+    return symbol;
+  }
+
+  function assertInitialCatalogIcons() {
+    for (const manifest of catalog.getState().results) catalogIconSymbol(manifest.catalog?.iconKey);
+  }
+
+  assertInitialCatalogIcons();
+
   let catalogSnapshot: CatalogState | undefined = $state();
   let dialog: HTMLDialogElement;
   let searchInput: HTMLInputElement | undefined = $state();
@@ -246,12 +258,6 @@
     const context = catalogContexts[String(manifest.type)];
     if (!context) throw new Error(`Missing authoritative catalog context for ${manifest.type}.`);
     return context.replaceAll('-', ' ');
-  }
-
-  function catalogIconSymbol(iconKey: string | undefined): string {
-    const symbol = iconKey ? catalogIconSymbols[iconKey] : undefined;
-    if (!symbol) throw new Error(`Missing authoritative catalog icon for ${iconKey ?? '<missing>'}.`);
-    return symbol;
   }
 
   function closeCatalog() {
