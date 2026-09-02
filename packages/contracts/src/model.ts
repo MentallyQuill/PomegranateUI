@@ -22,6 +22,8 @@ export const SubPanelLayoutIdSchema = z.enum(['single', 'two-equal', 'three-equa
 export type SubPanelLayoutId = z.infer<typeof SubPanelLayoutIdSchema>;
 export const WidgetShapeSchema = z.enum(['narrow', 'medium', 'wide', 'stage', 'strip']);
 export type WidgetShape = z.infer<typeof WidgetShapeSchema>;
+export const WidgetMultiplicitySchema = z.enum(['single', 'multiple']);
+export type WidgetMultiplicity = z.infer<typeof WidgetMultiplicitySchema>;
 
 export type WidgetPlacementHint =
   | {
@@ -41,6 +43,7 @@ export interface WidgetCatalogMetadata {
   readonly keywords: readonly string[];
   readonly iconKey: string;
   readonly shape: WidgetShape;
+  readonly multiplicity: WidgetMultiplicity;
   readonly minColumns: number;
   readonly geometry: {
     readonly minHeight: number;
@@ -192,6 +195,7 @@ export const WidgetCatalogMetadataSchema = z.object({
   ),
   iconKey: unpaddedString('Widget catalog iconKey'),
   shape: WidgetShapeSchema,
+  multiplicity: WidgetMultiplicitySchema,
   minColumns: z.number().int().positive(),
   geometry: z.object({
     minHeight: finiteNumber.positive(),

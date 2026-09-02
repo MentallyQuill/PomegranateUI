@@ -97,6 +97,7 @@ describe('public contracts', () => {
         keywords: ['story', 'transcript'],
         iconKey: 'story.transcript',
         shape: 'stage',
+        multiplicity: 'single',
         minColumns: 2,
         geometry: { minHeight: 320, idealHeight: 560, maxHeight: 720 },
         supportedStates: ['ready', 'loading', 'failure']
@@ -109,6 +110,7 @@ describe('public contracts', () => {
       keywords: ['story', 'transcript'],
       iconKey: 'story.transcript',
       shape: 'stage',
+      multiplicity: 'single',
       minColumns: 2,
       geometry: { minHeight: 320, idealHeight: 560, maxHeight: 720 },
       supportedStates: ['ready', 'loading', 'failure']
@@ -129,6 +131,7 @@ describe('public contracts', () => {
         keywords: ['story', 'story'],
         iconKey: 'story.transcript',
         shape: 'stage',
+        multiplicity: 'single',
         minColumns: 2,
         geometry: { minHeight: 320, idealHeight: 560, maxHeight: 720 },
         supportedStates: ['ready']
@@ -152,6 +155,7 @@ describe('public contracts', () => {
         keywords: ['story'],
         iconKey: 'story.transcript',
         shape: 'stage',
+        multiplicity: 'single',
         minColumns: 2,
         geometry: { minHeight: 720, idealHeight: 560, maxHeight: 320 },
         supportedStates: ['ready']
@@ -175,6 +179,7 @@ describe('public contracts', () => {
         keywords: ['story'],
         iconKey: 'story.transcript',
         shape: 'stage',
+        multiplicity: 'single',
         minColumns: 2,
         geometry: { minHeight: 320, idealHeight: 560, maxHeight: 720 },
         supportedStates: ['ready', 'ready']
@@ -182,6 +187,33 @@ describe('public contracts', () => {
     });
 
     expect(parsed.success).toBe(false);
+  });
+
+  it('requires a valid Widget Catalog multiplicity', () => {
+    const metadata = {
+      category: 'story',
+      purpose: 'Read the current story transcript.',
+      keywords: ['story', 'transcript'],
+      iconKey: 'story.transcript',
+      shape: 'stage',
+      multiplicity: 'single',
+      minColumns: 2,
+      geometry: { minHeight: 320, idealHeight: 560, maxHeight: 720 },
+      supportedStates: ['ready']
+    } as const;
+    const manifest = {
+      type: widgetType,
+      version: '1.0.0',
+      title: 'Story transcript',
+      capabilities: ['story.read'],
+      defaultConfiguration: {},
+      defaultPlacement: { kind: 'docked', regionRole: 'stage', shelfId: 'primary' }
+    } as const;
+
+    expect(WidgetManifestSchema.parse({ ...manifest, catalog: metadata }).catalog?.multiplicity).toBe('single');
+    expect(WidgetManifestSchema.safeParse({ ...manifest, catalog: { ...metadata, multiplicity: 'many' } }).success).toBe(false);
+    const { multiplicity: _multiplicity, ...withoutMultiplicity } = metadata;
+    expect(WidgetManifestSchema.safeParse({ ...manifest, catalog: withoutMultiplicity }).success).toBe(false);
   });
 
   it('uses exact state and snapshot schema discriminants', () => {
