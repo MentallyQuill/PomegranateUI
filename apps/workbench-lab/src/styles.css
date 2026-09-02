@@ -326,13 +326,13 @@ main[data-active-panel="surface-preview"] .surface-contract-facts { display: gri
 .catalog-preview-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: center; gap: 2px 8px; min-width: 0; padding: 3px 8px 2px; border: var(--pom-border-width, 1px) solid var(--line); border-radius: var(--pom-radius-small, .45rem); color: var(--muted); background: var(--pom-material-button, rgb(255 255 255 / 4%)); font: 8px/10px var(--pom-font-ui, "Segoe UI", sans-serif); }
 .catalog-preview-output { color: var(--ink); font-family: var(--pom-font-technical, monospace); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .widget-catalog .catalog-preview-scale { appearance: none; grid-column: 1 / -1; width: 100%; min-height: 8px; height: 8px; margin: 0; padding: 0; border: 0; background: transparent; accent-color: var(--pom-color-focus, var(--ember)); cursor: ew-resize; }
-.catalog-preview-scale::-webkit-slider-runnable-track { height: 2px; border-radius: 999px; background: linear-gradient(90deg, var(--line-strong), var(--pom-color-focus, var(--ember)) 39.09%, var(--line-strong)); }
+.catalog-preview-scale::-webkit-slider-runnable-track { height: 2px; border-radius: 999px; background: linear-gradient(90deg, var(--line-strong) 0, var(--line-strong) 1px, transparent 1px, transparent calc(39.09% - 1px), var(--pom-color-focus, var(--ember)) calc(39.09% - 1px), var(--pom-color-focus, var(--ember)) calc(39.09% + 1px), transparent calc(39.09% + 1px), transparent calc(100% - 1px), var(--line-strong) calc(100% - 1px)); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 36%); }
 .catalog-preview-scale::-webkit-slider-thumb { appearance: none; width: 10px; height: 10px; margin-top: -4px; border: 1px solid var(--ink); border-radius: 50%; background: var(--pom-material-widget, var(--glass)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--pom-color-focus, var(--ember)) 18%, transparent); }
 .catalog-preview-scale:focus-visible { outline: 1px solid var(--pom-color-focus, var(--ember)); outline-offset: 2px; }
 .catalog-view { display: flex; align-items: center; }
 .catalog-filter-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0 10px 6px; }
 .catalog-filters, .catalog-utilities { display: flex; flex: 0 1 auto; flex-wrap: wrap; gap: 4px; min-width: 0; }
-.widget-catalog .catalog-view button, .widget-catalog .catalog-filters button, .widget-catalog .catalog-utilities button { min-height: 24px; padding: 0 8px; white-space: nowrap; color: var(--muted); font: 9px/12px var(--pom-font-ui, "Segoe UI", sans-serif); }
+.widget-catalog .catalog-view button, .widget-catalog .catalog-filters button, .widget-catalog .catalog-utilities button { min-height: 27px; padding: 0 8px; white-space: nowrap; color: var(--muted); font: 9px/12px var(--pom-font-ui, "Segoe UI", sans-serif); }
 .widget-catalog button[aria-pressed="true"] { border-color: var(--line-strong); color: var(--pom-color-focus); background: color-mix(in srgb, var(--ember) 12%, var(--pom-material-button, transparent)); }
 .active-catalog-filter { margin: 0 10px 6px; padding: 5px 7px; border-left: 2px solid color-mix(in srgb, var(--pom-color-focus, var(--ember)) 46%, transparent); color: var(--muted); background: color-mix(in srgb, var(--pom-color-focus, var(--ember)) 7%, transparent); font: 9px/12px var(--pom-font-ui, "Segoe UI", sans-serif); }
 .active-catalog-filter[hidden] { display: none; }
@@ -347,8 +347,11 @@ main[data-active-panel="surface-preview"] .surface-contract-facts { display: gri
 .catalog-results > [data-catalog-result].is-on-panel { cursor: default; }
 .catalog-results > [data-catalog-result].is-on-panel .catalog-widget-preview { opacity: .64; filter: saturate(.65); }
 .catalog-widget-identity { display: flex; align-items: baseline; gap: 6px; min-width: 0; padding: 0 2px; pointer-events: none; }
+.catalog-identity-name { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; min-width: 0; }
 .catalog-widget-identity strong { flex: 0 0 auto; color: var(--ink); font: 500 10px/14px var(--pom-font-ui, "Segoe UI", sans-serif); white-space: nowrap; }
-.catalog-widget-identity span { min-width: 0; overflow: hidden; color: var(--muted); font: 8px/12px var(--pom-font-ui, "Segoe UI", sans-serif); text-overflow: ellipsis; white-space: nowrap; }
+.catalog-widget-identity > span { min-width: 0; overflow: hidden; color: var(--muted); font: 8px/12px var(--pom-font-ui, "Segoe UI", sans-serif); text-overflow: ellipsis; white-space: nowrap; }
+[data-catalog-icon] { display: inline-grid; flex: 0 0 auto; place-items: center; width: 13px; height: 13px; color: var(--pom-color-focus, var(--ember)); }
+[data-catalog-icon] svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .catalog-widget-preview { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; border: var(--pom-border-width, 1px) solid var(--line); color: var(--muted); background: radial-gradient(circle at 72% 35%, color-mix(in srgb, var(--pom-color-focus, var(--ember)) 12%, transparent), transparent 44%), color-mix(in srgb, var(--pom-color-canvas) 98%, transparent); pointer-events: none; container-type: inline-size; }
 .catalog-widget-preview > .implemented-widget { box-sizing: border-box; width: 100%; height: 100%; min-height: 0; overflow: hidden; border: 0; box-shadow: none; }
 .catalog-widget-preview .surface-anatomy { min-height: 0; height: 100%; overflow: hidden; }

@@ -7,7 +7,8 @@
   import {
     catalogPreviewLabel,
     createCatalogGridController,
-    type CatalogGridController
+    type CatalogGridController,
+    type CatalogScrollAnchor
   } from './CatalogGridController.js';
   import CatalogWidgetPreview from './CatalogWidgetPreview.svelte';
 
@@ -49,6 +50,9 @@
   let resultsElement: HTMLElement | undefined = $state();
   let gridController: CatalogGridController | undefined;
   let returnFocus: HTMLElement | null = null;
+  let restackRevision = 0;
+  let pendingAnchor: CatalogScrollAnchor | null = null;
+  let pendingRestoreFrame: number | null = null;
 
   const getResults = () => resultsElement
     ? [...resultsElement.querySelectorAll<HTMLElement>(':scope > [data-catalog-result]')]
@@ -67,7 +71,6 @@
       dialog.showModal();
       void tick().then(() => {
         searchInput?.focus({ preventScroll: true });
-        gridController?.sync();
       });
     }
     if (!catalogSnapshot.open && dialog.open) {
@@ -83,7 +86,18 @@
     catalogSnapshot.results;
     catalogSnapshot.resultMode;
     catalogSnapshot.previewWidth;
-    void tick().then(() => gridController?.sync());
+    const revision = restackRevision;
+    const anchor = pendingAnchor;
+    pendingAnchor = null;
+    void tick().then(() => {
+      if (revision !== restackRevision) return;
+      gridController?.sync();
+      if (pendingRestoreFrame !== null) cancelAnimationFrame(pendingRestoreFrame);
+      pendingRestoreFrame = requestAnimationFrame(() => {
+        if (revision === restackRevision) gridController?.restoreAnchor(anchor);
+        pendingRestoreFrame = null;
+      });
+    });
   });
 
   onMount(() => {
@@ -95,19 +109,43 @@
       getResultShape: (result) => (result.dataset.previewShape ?? 'medium') as WidgetShape,
       getResultMeasureElement: (result) => result.querySelector('[data-catalog-result-content]') ?? result
     });
-    gridController.sync();
   });
-  onDestroy(() => gridController?.destroy());
+  onDestroy(() => {
+    if (pendingRestoreFrame !== null) cancelAnimationFrame(pendingRestoreFrame);
+    gridController?.destroy();
+  });
 
-  async function restack(update: () => void) {
-    const anchor = gridController?.captureAnchor() ?? null;
+  function restack(update: () => void) {
+    pendingAnchor = gridController?.captureAnchor() ?? null;
+    restackRevision += 1;
+    if (pendingRestoreFrame !== null) {
+      cancelAnimationFrame(pendingRestoreFrame);
+      pendingRestoreFrame = null;
+    }
     update();
-    await tick();
-    gridController?.sync();
-    requestAnimationFrame(() => gridController?.restoreAnchor(anchor));
+  }
+
+  function catalogContextLabel(manifest: WidgetManifest): string {
+    const type = String(manifest.type);
+    const category = manifest.catalog?.category;
+    if (category === 'settings') {
+      if (type === 'settings.living-world-controls' || type.includes('raw-')) return 'active story';
+      if (/(theme|appearance|reading|sound|accessibility)/.test(type)) return 'global device';
+      return 'global host';
+    }
+    if (category === 'library') return type.startsWith('story.') ? 'active story' : 'global filtered';
+    if (category === 'systems') return /(private-history|dramatic-irony|promise-ledger|multiplayer)/.test(type) ? 'host only' : 'active story';
+    if (type === 'story.turn-versions' || type === 'story.turn-inspector') return 'selected turn';
+    if (type === 'runtime.background-work') return 'global runtime';
+    return 'active story';
   }
 
   function closeCatalog() {
+    restackRevision += 1;
+    if (pendingRestoreFrame !== null) {
+      cancelAnimationFrame(pendingRestoreFrame);
+      pendingRestoreFrame = null;
+    }
     catalog.close();
   }
 
@@ -128,8 +166,11 @@
   }
 
   function activateResult(event: MouseEvent | KeyboardEvent, manifest: WidgetManifest, unavailable: boolean) {
+    if (event instanceof KeyboardEvent) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      if (event.key === ' ') event.preventDefault();
+    }
     if (unavailable) return;
-    if (event instanceof KeyboardEvent && event.key !== 'Enter') return;
     const result = event.currentTarget as HTMLElement;
     if (onplace) onplace(manifest, result);
     else oncreate(manifest);
@@ -240,23 +281,30 @@
             role="button"
             tabindex="0"
             aria-disabled={unavailable}
-            aria-label={unavailable ? `${manifest.title}, already on this Panel` : `${manifest.title}, place on this Panel`}
+            aria-label={unavailable ? `${manifest.title}, already on this Panel` : `${manifest.title}, drag to place on this Panel. Press Space for keyboard placement.`}
             onclick={(event) => activateResult(event, manifest, unavailable)}
             onkeydown={(event) => activateResult(event, manifest, unavailable)}
           >
             <div class="catalog-result-content" data-catalog-result-content>
               {#if catalogSnapshot.resultMode === 'compact'}
-                <span class="catalog-compact-sample" aria-hidden="true"></span>
-                <span class="catalog-compact-copy"><strong>{manifest.title}</strong><span>{manifest.catalog?.category} · {manifest.catalog?.shape}</span></span>
-                <span class="catalog-compact-state">{unavailable ? 'On Panel' : 'Place'}</span>
+                <span class="catalog-compact-sample" data-catalog-icon={manifest.catalog?.iconKey} aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg>
+                </span>
+                <span class="catalog-compact-copy"><strong>{manifest.title}</strong><span>{manifest.catalog?.category} · {catalogContextLabel(manifest)} · {manifest.catalog?.shape}</span></span>
+                <span class="catalog-compact-state">{unavailable ? 'On Panel' : 'Drag'}</span>
               {:else}
-                <div class="catalog-widget-identity">
-                  <strong>{manifest.title}</strong>
+                <div class="catalog-widget-identity" data-catalog-widget-identity>
+                  <div class="catalog-identity-name">
+                    <span data-catalog-icon={manifest.catalog?.iconKey} aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg>
+                    </span>
+                    <strong>{manifest.title}</strong>
+                  </div>
                   <span>{manifest.catalog?.purpose}</span>
                 </div>
                 <CatalogWidgetPreview {manifest} {rendererRegistry} {hostContext} />
                 {#if count > 0}<span class="catalog-instance-state">{manifest.catalog?.multiplicity === 'single' ? 'On Panel' : `${count} here`}</span>{/if}
-                {#if !unavailable}<span class="catalog-drag-hint">Place on Panel</span>{/if}
+                {#if !unavailable}<span class="catalog-drag-hint">Drag to Panel</span>{/if}
               {/if}
             </div>
           </article>

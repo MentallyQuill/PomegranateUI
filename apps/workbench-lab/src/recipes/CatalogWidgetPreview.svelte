@@ -1,4 +1,4 @@
-<script lang="ts" generics="THostContext">
+<script lang="ts">
   import { onMount, tick } from 'svelte';
   import {
     asWidgetInstanceId,
@@ -9,6 +9,7 @@
     WidgetRendererProps,
     WidgetRendererRegistry
   } from '@pomegranate-ui/svelte';
+  import type { LabHostContext } from '../mockup/host-context.js';
 
   let {
     manifest,
@@ -17,8 +18,8 @@
     configuration = {}
   }: {
     manifest: WidgetManifest;
-    rendererRegistry: WidgetRendererRegistry<THostContext>;
-    hostContext: THostContext;
+    rendererRegistry: WidgetRendererRegistry<LabHostContext>;
+    hostContext: LabHostContext;
     configuration?: JsonObject;
   } = $props();
 
@@ -36,22 +37,34 @@
       presentation: 'compact'
     }
   });
-  const dispatch: WidgetRendererProps<THostContext>['dispatch'] = () => {
+  const dispatch: WidgetRendererProps<LabHostContext>['dispatch'] = () => {
     throw new Error('Catalog previews cannot dispatch Workbench commands.');
   };
 
   onMount(() => {
     let observer: MutationObserver | undefined;
+    let cancelled = false;
     const removeGeneratedIds = () => {
+      if (cancelled || !previewHost) return;
       for (const element of previewHost.querySelectorAll<HTMLElement>('[id]')) element.removeAttribute('id');
     };
     void tick().then(() => {
+      if (cancelled) return;
       removeGeneratedIds();
-      if (typeof MutationObserver === 'undefined') return;
+      if (cancelled || typeof MutationObserver === 'undefined') return;
       observer = new MutationObserver(removeGeneratedIds);
+      if (cancelled) {
+        observer.disconnect();
+        observer = undefined;
+        return;
+      }
       observer.observe(previewHost, { subtree: true, childList: true, attributes: true, attributeFilter: ['id'] });
     });
-    return () => observer?.disconnect();
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+      observer = undefined;
+    };
   });
 </script>
 
