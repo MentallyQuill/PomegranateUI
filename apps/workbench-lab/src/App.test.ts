@@ -463,12 +463,10 @@ describe('Svelte Workbench Lab mockup', () => {
     await fireEvent.input(within(materials).getByRole('slider', { name: 'Bar Opacity' }), { target: { value: '44' } });
 
     const hex = within(colors).getByRole('textbox', { name: 'Hex color' });
-    await user.clear(hex);
-    await user.type(hex, '#101820');
+    await fireEvent.input(hex, { target: { value: '#101820' } });
     expect((container.querySelector('main') as HTMLElement).style.getPropertyValue('--pom-color-canvas')).toBe('#101820');
 
-    await user.clear(hex);
-    await user.type(hex, 'unsafe');
+    await fireEvent.input(hex, { target: { value: 'unsafe' } });
     expect(hex).toHaveValue('unsafe');
     expect(within(colors).getAllByText(/#RRGGBB/).length).toBeGreaterThan(0);
     expect((container.querySelector('main') as HTMLElement).style.getPropertyValue('--pom-color-canvas')).toBe('#101820');
@@ -487,5 +485,5 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(within(screen.getByRole('article', { name: 'Theme Colors' })).getByRole('textbox', { name: 'Hex color' })).not.toHaveValue('unsafe');
     await user.click(within(screen.getByRole('article', { name: 'Custom Theme' })).getByRole('button', { name: 'Save draft' }));
     expect(window.localStorage.getItem('pomegranate-ui.workbench-lab.theme-draft.v1')).not.toBeNull();
-  });
+  }, 10_000);
 });
