@@ -59,7 +59,7 @@
       <WorldStateWidget />
     {:else if instance.type === 'story.room-ambience' && instance.configuration.presentation === 'atmospheric' && contentVisible}
       <RoomAmbienceWidget />
-    {:else if instance.type === 'systems.promise-ledger' && instance.configuration.presentation === 'atmospheric' && contentVisible}
+    {:else if (instance.type === 'systems.promise-ledger' || instance.type === 'systems.temporal-ledger') && instance.configuration.presentation === 'atmospheric' && contentVisible}
       <PromiseLedgerWidget />
     {:else if instance.type === 'story.personas' && instance.configuration.presentation === 'recording' && contentVisible}
       <PersonasWidget />

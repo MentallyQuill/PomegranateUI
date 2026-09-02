@@ -1,8 +1,9 @@
-import { asWidgetType, type WidgetType } from '@pomegranate-ui/contracts';
+import type { WidgetType } from '@pomegranate-ui/contracts';
 
 import { createCatalogManifests } from './catalog.js';
+import { SURFACE_FIXTURES } from './surface-fixtures.js';
 
-export type ImplementedSurfaceFamily = 'settings' | 'story' | 'library' | 'systems';
+export type ImplementedSurfaceFamily = 'settings' | 'story' | 'library' | 'systems' | 'extensions';
 
 export interface ImplementedSurfaceDefinition {
   readonly type: WidgetType;
@@ -10,75 +11,17 @@ export interface ImplementedSurfaceDefinition {
   readonly family: ImplementedSurfaceFamily;
 }
 
-const IMPLEMENTED_TYPES = Object.freeze([
-  'settings.provider-credentials',
-  'settings.connections',
-  'settings.model-assignments',
-  'settings.theme',
-  'settings.custom-theme',
-  'settings.accessibility',
-  'settings.maintenance',
-  'settings.prompt-editor',
-  'story.transcript',
-  'story.composer',
-  'story.context',
-  'story.turn-progress',
-  'story.live-technical-detail',
-  'story.turn-versions',
-  'story.turn-inspector',
-  'story.player-condition',
-  'story.cast-condition',
-  'story.room-ambience',
-  'story.scene-backdrop',
-  'runtime.background-work',
-  'library.workspace',
-  'library.stories',
-  'library.characters',
-  'story.characters',
-  'library.personas',
-  'story.personas',
-  'library.lore',
-  'story.lorebooks',
-  'library.new-story',
-  'library.character-card',
-  'story.character-card',
-  'library.persona-card',
-  'library.greetings-quick-start',
-  'library.lore-entries',
-  'library.lore-entry-editor',
-  'library.lorebook-details',
-  'library.lore-relationships',
-  'library.lore-generator',
-  'library.lived-location-builder',
-  'systems.cast',
-  'systems.background-presences',
-  'systems.world-state',
-  'systems.promise-ledger',
-  'systems.attire',
-  'systems.genre-style',
-  'systems.dialogue-agency',
-  'systems.offscreen-life',
-  'systems.living-world',
-  'systems.institutions-charter',
-  'systems.institution-diagnostics',
-  'systems.background-life',
-  'systems.character-relationships'
-] as const);
-
-const manifestByType = new Map(createCatalogManifests().map((manifest) => [manifest.type, manifest]));
-
 function familyFor(category: string): ImplementedSurfaceFamily {
-  if (category === 'settings' || category === 'story' || category === 'library' || category === 'systems') return category;
+  if (category === 'settings' || category === 'story' || category === 'library' || category === 'systems' || category === 'extensions') return category;
   throw new Error(`Implemented surface uses unsupported family ${category}.`);
 }
 
 export const IMPLEMENTED_SURFACES: readonly ImplementedSurfaceDefinition[] = Object.freeze(
-  IMPLEMENTED_TYPES.map((rawType) => {
-    const type = asWidgetType(rawType);
-    const manifest = manifestByType.get(type);
-    if (!manifest?.catalog) throw new Error(`Implemented surface manifest is missing: ${type}.`);
+  createCatalogManifests().map((manifest) => {
+    if (!manifest.catalog) throw new Error(`Implemented surface catalog metadata is missing: ${manifest.type}.`);
+    if (!SURFACE_FIXTURES.has(manifest.type)) throw new Error(`Implemented surface fixture is missing: ${manifest.type}.`);
     return Object.freeze({
-      type,
+      type: manifest.type,
       title: manifest.title,
       family: familyFor(manifest.catalog.category)
     });
@@ -93,5 +36,5 @@ export const IMPLEMENTED_SURFACE_TOTALS = Object.freeze(
   IMPLEMENTED_SURFACES.reduce((totals, surface) => {
     totals[surface.family] += 1;
     return totals;
-  }, { settings: 0, story: 0, library: 0, systems: 0 })
+  }, { story: 0, library: 0, systems: 0, settings: 0, extensions: 0 } as Record<ImplementedSurfaceFamily, number>)
 );
