@@ -87,13 +87,18 @@
     },
     {
       "id": "theme-settings",
-      "revision": 1,
+      "revision": 2,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
       "files": [
+        "AmbientLight.svelte",
         "AmbientPosition.svelte",
         "ColorPlane.svelte",
         "HueControl.svelte",
-        "ThemeSettings.svelte"
+        "CustomTheme.svelte",
+        "ThemeAuthoringTypes.ts",
+        "ThemeCanvasSettings.svelte",
+        "ThemeColors.svelte",
+        "ThemeMaterials.svelte"
       ],
       "dependencies": [
         "@pomegranate-ui/contracts",
@@ -105,10 +110,15 @@
         "POM-RENDER-A4B0DF2967"
       ],
       "sha256": {
+        "AmbientLight.svelte": "3C812CE6A5CA9CB70A9588BEB56EA45170FA608A5DD0F7B439419F20599E1CC6",
         "AmbientPosition.svelte": "C3B6C929BDB704E606F184D961C70D10414AA4BC381C8CB855C7F133D3BAF3AF",
         "ColorPlane.svelte": "C68F0A836D3A4F5A70E7DA83DC5E9EBFBE1E5561F9492F5F14B955AB13213A60",
         "HueControl.svelte": "0804D5BDBE0AA7B29FD8260E900DEE0855079F3926F7DF6F51CC7EE6A548E6E3",
-        "ThemeSettings.svelte": "63BD0E38B9212ED66763BB7F44FDE09DEFE434F33931AA492BECF0AE72153BE2"
+        "CustomTheme.svelte": "C79945D4214B17166B1FC8F425617F2437AF6E27A3EC37540B7F40BA02CF5063",
+        "ThemeAuthoringTypes.ts": "B6F66EE57A83E0B0DC1A16EA3C416FB99FAB945A155A9EC9413CC3D8B8C66A56",
+        "ThemeCanvasSettings.svelte": "B7FDC86BA55DC9E261BCD10B48491FA2942B943C3401B75C1DA24429EED47E98",
+        "ThemeColors.svelte": "BF0FFC6AF39D1940B7859281042C2C2C5D70F099D45DF5D0E8037E8B026E24C9",
+        "ThemeMaterials.svelte": "B125B12E499346C786745641A7B27217FA7426ECA79422022F5E42A2F493E9B6"
       }
     },
     {

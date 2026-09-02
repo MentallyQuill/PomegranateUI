@@ -197,7 +197,7 @@ test('a wide Deep session converges to the same mobile composition after materia
   await page.setViewportSize({ width: 1440, height: 900 });
   await fresh(page);
   await openAppearanceSettings(page);
-  const themeSettings = page.getByRole('article', { name: 'Custom Theme' });
+  const themeSettings = page.getByRole('article', { name: 'Theme Materials' });
   for (const label of ['Glass Density', 'Bar Opacity', 'Selected Strength', 'Frost Level']) {
     await themeSettings.getByRole('slider', { name: label }).fill('0');
   }

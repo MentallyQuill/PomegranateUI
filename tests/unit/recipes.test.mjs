@@ -36,7 +36,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
     'workbench-surface'
   ]);
   for (const entry of manifest.recipes) {
-    assert.equal(entry.revision, 1);
+    assert.equal(entry.revision, entry.id === 'theme-settings' ? 2 : 1);
     assert.equal(entry.compatiblePomegranateRange, '>=0.1.0-private.0 <0.2.0');
     assert.ok(entry.dependencies.includes('svelte'));
     assert.ok(entry.rendererContractIds.length > 0);
@@ -44,7 +44,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
     assert.ok(entry.files.every((file) => !file.includes('\\')));
     assert.ok(Object.values(entry.sha256).every((hash) => /^[0-9A-F]{64}$/.test(hash)));
     const owned = (await readdir(path.join(root, 'registry', 'recipes', entry.id)))
-      .filter((file) => file.endsWith('.svelte'))
+      .filter((file) => file.endsWith('.svelte') || file.endsWith('.ts'))
       .sort();
     assert.deepEqual(owned, [...entry.files].sort());
   }
@@ -55,7 +55,18 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
 test('recipe check mode validates actual source hashes', () => {
   const result = run(['--check']);
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /Recipe registry verified: 8 recipes, 20 files\./);
+  assert.match(result.stdout, /Recipe registry verified: 8 recipes, 25 files\./);
+});
+
+test('theme authoring recipe exposes five focused elements through one shared port', async () => {
+  const recipeRoot = path.join(root, 'registry', 'recipes', 'theme-settings');
+  const expected = ['AmbientLight.svelte', 'AmbientPosition.svelte', 'ColorPlane.svelte', 'CustomTheme.svelte', 'HueControl.svelte', 'ThemeAuthoringTypes.ts', 'ThemeCanvasSettings.svelte', 'ThemeColors.svelte', 'ThemeMaterials.svelte'];
+  assert.deepEqual((await readdir(recipeRoot)).sort(), expected);
+  const combined = (await Promise.all(expected.map((file) => readFile(path.join(recipeRoot, file), 'utf8')))).join('\n');
+  for (const element of ['overview', 'colors', 'materials', 'canvas', 'ambient']) {
+    assert.match(combined, new RegExp(`data-theme-authoring-element="${element}"`));
+  }
+  assert.doesNotMatch(combined, /presentation\s*[=:]|compact-theme|theme-settings-owner/);
 });
 
 test('recipe copy is clean and refuses to overwrite adopter edits', async () => {

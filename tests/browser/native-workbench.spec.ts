@@ -621,7 +621,7 @@ test('native workbench POM-PANEL-0C32491298 POM-PANEL-E6D6A0E64B appends menu do
   await invokeWidgetAction(worldState, 'Dock left');
   await expect(leftDock.getByRole('article')).toHaveCount(3);
   await expect(leftDock.getByRole('article').nth(0)).toHaveAttribute('aria-label', 'Characters (Story)');
-  await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Custom Theme');
+  await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Theme Materials');
   await expect(leftDock.getByRole('article').nth(2)).toHaveAttribute('aria-label', 'World State');
 });
 
@@ -657,39 +657,39 @@ test('Deep Current dock separators resize with keyboard and persist exact bounde
 });
 
 test('Deep Current Widgets merge into an accessible persistent tab group and reorder', async ({ page }) => {
-  const customTheme = page.getByRole('article', { name: 'Custom Theme' });
+  const customTheme = page.getByRole('article', { name: 'Theme Materials' });
   const characters = page.getByRole('article', { name: 'Characters (Story)' });
   await dragToWidgetTab(page, widgetDragSurface(customTheme), characters);
 
   const group = page.getByRole('group', { name: 'Widget group' })
     .filter({ has: page.getByRole('tab', { name: 'Characters (Story)' }) });
-  await expect(group.getByRole('tab')).toHaveText(['Characters (Story)', 'Custom Theme']);
-  await expect(group.getByRole('tab', { name: 'Custom Theme' })).toHaveAttribute('aria-selected', 'true');
+  await expect(group.getByRole('tab')).toHaveText(['Characters (Story)', 'Theme Materials']);
+  await expect(group.getByRole('tab', { name: 'Theme Materials' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('article', { name: 'Characters (Story)' })).toHaveCount(0);
 
   await group.getByRole('tab', { name: 'Characters (Story)' }).click();
   await expect(page.getByRole('article', { name: 'Characters (Story)' })).toBeVisible();
-  await expect(page.getByRole('article', { name: 'Custom Theme' })).toHaveCount(0);
+  await expect(page.getByRole('article', { name: 'Theme Materials' })).toHaveCount(0);
 
-  await group.getByRole('tab', { name: 'Custom Theme' }).press('Control+Shift+ArrowLeft');
-  await expect(group.getByRole('tab')).toHaveText(['Custom Theme', 'Characters (Story)']);
+  await group.getByRole('tab', { name: 'Theme Materials' }).press('Control+Shift+ArrowLeft');
+  await expect(group.getByRole('tab')).toHaveText(['Theme Materials', 'Characters (Story)']);
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
   const restored = page.getByRole('group', { name: 'Widget group' })
     .filter({ has: page.getByRole('tab', { name: 'Characters (Story)' }) });
-  await expect(restored.getByRole('tab')).toHaveText(['Custom Theme', 'Characters (Story)']);
+  await expect(restored.getByRole('tab')).toHaveText(['Theme Materials', 'Characters (Story)']);
   await expect(restored.getByRole('tab', { name: 'Characters (Story)' })).toHaveAttribute('aria-selected', 'true');
 });
 
 test('dragging an inactive grouped Widget holds that Widget rather than the active tab', async ({ page }) => {
-  const customTheme = page.getByRole('article', { name: 'Custom Theme' });
+  const customTheme = page.getByRole('article', { name: 'Theme Materials' });
   const characters = page.getByRole('article', { name: 'Characters (Story)' });
   await dragToWidgetTab(page, widgetDragSurface(customTheme), characters);
 
   const group = page.getByRole('group', { name: 'Widget group' });
   await group.getByRole('tab', { name: 'Characters (Story)' }).click();
-  const inactiveTab = group.getByRole('tab', { name: 'Custom Theme' });
+  const inactiveTab = group.getByRole('tab', { name: 'Theme Materials' });
   const target = page.getByRole('article', { name: 'World State' });
   const tabBox = await inactiveTab.boundingBox();
   const targetBox = await target.boundingBox();
@@ -703,7 +703,7 @@ test('dragging an inactive grouped Widget holds that Widget rather than the acti
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
 
   const held = page.locator('[data-pom-part="widget.drag-preview"]');
-  await expect(held).toContainText('Custom Theme');
+  await expect(held).toContainText('Theme Materials');
   await expect(held).not.toContainText('Characters (Story)');
   await page.keyboard.press('Escape');
   await page.mouse.up();
@@ -868,7 +868,7 @@ test('dragging to a collapsed edge reveals and widens that dock before commit', 
 });
 
 test('grouped Widget tabs reorder horizontally without accidental detachment', async ({ page }) => {
-  const customTheme = page.getByRole('article', { name: 'Custom Theme' });
+  const customTheme = page.getByRole('article', { name: 'Theme Materials' });
   const characters = page.getByRole('article', { name: 'Characters (Story)' });
   await dragToWidgetTab(page, widgetDragSurface(customTheme), characters);
 
@@ -886,9 +886,9 @@ test('grouped Widget tabs reorder horizontally without accidental detachment', a
   await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height + 160, { steps: 4 });
   await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
   await page.mouse.up();
-  await expect(group.getByRole('tab')).toHaveText(['Custom Theme', 'Characters (Story)']);
-  await group.getByRole('tab', { name: 'Custom Theme' }).click();
-  const renderedTheme = page.getByRole('article', { name: 'Custom Theme' }).locator('xpath=ancestor::*[@data-widget-type][1]');
+  await expect(group.getByRole('tab')).toHaveText(['Theme Materials', 'Characters (Story)']);
+  await group.getByRole('tab', { name: 'Theme Materials' }).click();
+  const renderedTheme = page.getByRole('article', { name: 'Theme Materials' }).locator('xpath=ancestor::*[@data-widget-type][1]');
   await expect(renderedTheme).toHaveAttribute('data-pomegranate-placement', 'docked');
   await group.getByRole('tab', { name: 'Characters (Story)' }).click();
   const renderedCharacters = page.getByRole('article', { name: 'Characters (Story)' }).locator('xpath=ancestor::*[@data-widget-type][1]');
@@ -1360,8 +1360,15 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
   }
 });
 
-test('all 52 reviewed Widget surfaces expose exact ready, state, focus, and responsive contracts', async ({ page }) => {
+test('all 56 reviewed Widget surfaces expose exact ready, state, focus, and responsive contracts', async ({ page }) => {
   test.setTimeout(120_000);
+  const themeAuthoringElements = new Map<string, string>([
+    ['settings.custom-theme', 'overview'],
+    ['settings.theme-colors', 'colors'],
+    ['settings.theme-materials', 'materials'],
+    ['settings.theme-canvas', 'canvas'],
+    ['settings.theme-ambient', 'ambient']
+  ]);
   const presentationTitleOverrides = new Map<string, string>([
     ['settings.connections', 'AI Connections'],
     ['settings.custom-theme', 'Custom Theme'],
@@ -1380,9 +1387,17 @@ test('all 52 reviewed Widget surfaces expose exact ready, state, focus, and resp
     await expect(article).toHaveAttribute('aria-label', expectedPresentationTitle);
     const implemented = article.locator(`[data-surface-type="${surface.type}"]`);
     await expect(implemented).toHaveAttribute('data-surface-state', 'ready');
-    await expect(implemented.locator('.surface-scope')).toHaveText(fixture.scope);
-    await expect(implemented.locator('.surface-contract-facts dt')).toHaveText(fixture.rows.map(([label]) => label));
-    await expect(implemented.locator('.surface-actions button, .widget-content.composer > button')).toHaveText(fixture.actions);
+    const themeAuthoringElement = themeAuthoringElements.get(surface.type);
+    if (themeAuthoringElement) {
+      await expect(implemented.locator(`[data-theme-authoring-element="${themeAuthoringElement}"]`)).toHaveCount(1);
+      if (surface.type === 'settings.custom-theme') {
+        await expect(implemented.locator('.theme-authoring-actions button')).toHaveText(fixture.actions);
+      }
+    } else {
+      await expect(implemented.locator('.surface-scope')).toHaveText(fixture.scope);
+      await expect(implemented.locator('.surface-contract-facts dt')).toHaveText(fixture.rows.map(([label]) => label));
+      await expect(implemented.locator('.surface-actions button, .widget-content.composer > button')).toHaveText(fixture.actions);
+    }
 
     const containment = await article.evaluate((root) => {
       const elements = [root, ...root.querySelectorAll<HTMLElement>('*')];
@@ -1436,7 +1451,7 @@ test('all 52 reviewed Widget surfaces expose exact ready, state, focus, and resp
   }
 });
 
-test('Catalog preserves all 94 identities, honest previews, search, and placement', async ({ page }) => {
+test('Catalog preserves all 98 identities, honest previews, search, and placement', async ({ page }) => {
   test.setTimeout(120_000);
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Create Panel' }).click();
@@ -1449,12 +1464,12 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
   await openWidgetCatalog(page);
   const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
   const results = catalog.getByRole('listitem');
-  await expect(results).toHaveCount(94);
-  await expect(catalog.locator('.catalog-miniature')).toHaveCount(94);
-  await expect(catalog.locator('[data-renderer-status="implemented"]')).toHaveCount(52);
+  await expect(results).toHaveCount(98);
+  await expect(catalog.locator('.catalog-miniature')).toHaveCount(98);
+  await expect(catalog.locator('[data-renderer-status="implemented"]')).toHaveCount(56);
   await expect(catalog.locator('[data-renderer-status="unavailable"]')).toHaveCount(42);
 
-  for (const [category, total] of [['story', 12], ['library', 19], ['systems', 21], ['settings', 39], ['extensions', 3]] as const) {
+  for (const [category, total] of [['story', 12], ['library', 19], ['systems', 21], ['settings', 43], ['extensions', 3]] as const) {
     await catalog.getByRole('button', { name: category, exact: true }).click();
     await expect(results, `${category} Catalog total`).toHaveCount(total);
   }
@@ -1467,31 +1482,31 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
 
   await catalog.getByRole('button', { name: 'Compact', exact: true }).click();
   await expect(catalog.locator('.catalog-miniature')).toHaveCount(0);
-  await expect(results).toHaveCount(94);
+  await expect(results).toHaveCount(98);
   await catalog.getByRole('button', { name: 'Visual', exact: true }).click();
-  await expect(catalog.locator('.catalog-miniature')).toHaveCount(94);
+  await expect(catalog.locator('.catalog-miniature')).toHaveCount(98);
 
   await catalog.getByRole('button', { name: /^Add / }).evaluateAll((buttons) => {
     for (const button of buttons) (button as HTMLButtonElement).click();
   });
   await catalog.getByRole('button', { name: 'Close Catalog' }).click();
   const activePanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
-  await expect(activePanel.getByRole('article')).toHaveCount(94);
-  await expect(activePanel.locator('.implemented-widget')).toHaveCount(52);
+  await expect(activePanel.getByRole('article')).toHaveCount(98);
+  await expect(activePanel.locator('.implemented-widget')).toHaveCount(56);
   await expect(activePanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(42);
   const identities = await activePanel.locator('[data-widget-type]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-widget-type')));
-  expect(new Set(identities).size).toBe(94);
+  expect(new Set(identities).size).toBe(98);
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
   const restoredPanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
-  await expect(restoredPanel.locator('[data-widget-type]')).toHaveCount(94);
-  await expect(restoredPanel.locator('.implemented-widget')).toHaveCount(52);
+  await expect(restoredPanel.locator('[data-widget-type]')).toHaveCount(98);
+  await expect(restoredPanel.locator('.implemented-widget')).toHaveCount(56);
   await expect(restoredPanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(42);
-  await expect(restoredPanel.getByRole('button', { name: 'Widget actions' })).toHaveCount(94);
+  await expect(restoredPanel.getByRole('button', { name: 'Widget actions' })).toHaveCount(98);
   await expect(restoredPanel.getByRole('menuitem', { name: 'Move to Widget Shelf' })).toHaveCount(0);
   await restoredPanel.evaluate(async (root) => {
-    for (let remaining = 94; remaining > 0; remaining -= 1) {
+    for (let remaining = 98; remaining > 0; remaining -= 1) {
       const trigger = root.querySelector<HTMLButtonElement>('button.action-menu');
       if (!trigger) throw new Error(`Missing Widget actions trigger with ${remaining} Widgets remaining.`);
       trigger.click();
