@@ -35,13 +35,14 @@ describe('Theme draft color math', () => {
 describe('Theme draft projection', () => {
   it('creates the exact six-role Ash and Amber authoring seed', () => {
     expect(createThemeDraft(ASH_AMBER_TARGET)).toEqual({
-      schemaVersion: 'pomegranate.ui.theme-draft.v1',
+      schemaVersion: 'pomegranate.ui.theme-draft.v2',
       baseTargetId: 'ash-amber',
       colors: {
         canvas: '#242321', glass: '#302E2A', chrome: '#625B52',
         ambient: '#51493E', text: '#F3F0EA', source: '#D2B57A'
       },
-      materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 }
+      materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 },
+      canvas: { imageStrength: 100, overlayStrength: 100, gradientAngle: 0, vignetteStrength: 100 }
     });
   });
 

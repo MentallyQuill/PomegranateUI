@@ -3,6 +3,7 @@ import {
   ThemeDraftSchema,
   ThemeTargetBundleSchema,
   type AmbientProfile,
+  type ThemeCanvasDraft,
   type ThemeDraft,
   type ThemeTargetBundle
 } from '@pomegranate-ui/contracts';
@@ -16,6 +17,13 @@ import type { ThemeDiagnostic } from './resolve.js';
 export type ThemeDraftProjection =
   | { readonly ok: true; readonly target: ThemeTargetBundle; readonly diagnostics: readonly [] }
   | { readonly ok: false; readonly diagnostics: readonly ThemeDiagnostic[] };
+
+export const DEFAULT_THEME_CANVAS_DRAFT: ThemeCanvasDraft = Object.freeze({
+  imageStrength: 100,
+  overlayStrength: 100,
+  gradientAngle: 0,
+  vignetteStrength: 100
+});
 
 function schemaDiagnostics(issues: readonly { readonly path: readonly PropertyKey[]; readonly message: string }[]): readonly ThemeDiagnostic[] {
   return Object.freeze(issues.map((issue) => Object.freeze({
@@ -41,10 +49,13 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-export function createThemeDraft(target: ThemeTargetBundle): ThemeDraft {
+export function createThemeDraft(
+  target: ThemeTargetBundle,
+  canvas: ThemeCanvasDraft = DEFAULT_THEME_CANVAS_DRAFT
+): ThemeDraft {
   const parsed = ThemeTargetBundleSchema.parse(target);
   return deepFreeze({
-    schemaVersion: 'pomegranate.ui.theme-draft.v1',
+    schemaVersion: 'pomegranate.ui.theme-draft.v2',
     baseTargetId: parsed.id,
     colors: {
       canvas: parsed.theme.colors.canvas.slice(0, 7),
@@ -59,7 +70,8 @@ export function createThemeDraft(target: ThemeTargetBundle): ThemeDraft {
       barOpacity: materialOpacity(parsed, 'shelf', 60),
       selectedStrength: materialOpacity(parsed, 'selected', 12),
       frostLevel: percentage((parsed.theme.materials.pane?.backdrop.blurPx ?? 20) / 40)
-    }
+    },
+    canvas
   });
 }
 

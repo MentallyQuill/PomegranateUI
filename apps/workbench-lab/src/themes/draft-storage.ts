@@ -1,6 +1,9 @@
 import {
+  PersistedThemeDraftV1Schema,
   PersistedThemeDraftSchema,
+  ThemeCanvasDraftSchema,
   type PersistedThemeDraft,
+  type ThemeCanvasDraft,
   type ThemeDraftStorage
 } from '@pomegranate-ui/contracts';
 
@@ -16,11 +19,37 @@ export function encodePersistedThemeDraft(input: unknown): ThemeDraftCodecResult
   return { ok: true, value: JSON.stringify(parsed.data) };
 }
 
-export function decodePersistedThemeDraft(raw: string): ThemeDraftCodecResult<PersistedThemeDraft> {
+export function migratePersistedThemeDraft(
+  input: unknown,
+  canvasDefaults: ThemeCanvasDraft
+): PersistedThemeDraft | null {
+  const current = PersistedThemeDraftSchema.safeParse(input);
+  if (current.success) return current.data;
+  const legacy = PersistedThemeDraftV1Schema.safeParse(input);
+  const canvas = ThemeCanvasDraftSchema.safeParse(canvasDefaults);
+  if (!legacy.success || !canvas.success) return null;
+  return PersistedThemeDraftSchema.parse({
+    schemaVersion: 'pomegranate.ui.persisted-theme-draft.v2',
+    draft: {
+      ...legacy.data.draft,
+      schemaVersion: 'pomegranate.ui.theme-draft.v2',
+      canvas: canvas.data
+    },
+    ambient: legacy.data.ambient
+  });
+}
+
+export function decodePersistedThemeDraft(
+  raw: string,
+  canvasDefaults?: ThemeCanvasDraft
+): ThemeDraftCodecResult<PersistedThemeDraft> {
   try {
-    const parsed = PersistedThemeDraftSchema.safeParse(JSON.parse(raw));
-    return parsed.success
-      ? { ok: true, value: parsed.data }
+    const input = JSON.parse(raw);
+    const parsed = PersistedThemeDraftSchema.safeParse(input);
+    if (parsed.success) return { ok: true, value: parsed.data };
+    const migrated = canvasDefaults ? migratePersistedThemeDraft(input, canvasDefaults) : null;
+    return migrated
+      ? { ok: true, value: migrated }
       : { ok: false, message: parsed.error.issues[0]?.message ?? 'Stored Theme draft is invalid.' };
   } catch {
     return { ok: false, message: 'Stored Theme draft is not valid JSON.' };
@@ -29,12 +58,13 @@ export function decodePersistedThemeDraft(raw: string): ThemeDraftCodecResult<Pe
 
 export async function loadPersistedThemeDraft(
   storage: ThemeDraftStorage,
+  canvasDefaults?: ThemeCanvasDraft,
   key = LAB_THEME_DRAFT_KEY
 ): Promise<ThemeDraftCodecResult<PersistedThemeDraft | null>> {
   try {
     const raw = await storage.load(key);
     if (raw === null) return { ok: true, value: null };
-    return decodePersistedThemeDraft(raw);
+    return decodePersistedThemeDraft(raw, canvasDefaults);
   } catch {
     return { ok: false, message: 'Theme draft storage is unavailable.' };
   }
