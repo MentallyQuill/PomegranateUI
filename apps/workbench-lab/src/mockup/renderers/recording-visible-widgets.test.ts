@@ -34,6 +34,8 @@ function recordingHostContext(activeId: 'deep-current' | 'pom-neutral' | 'bunny'
     resetMaterialControls: () => undefined,
     openSettings: () => undefined,
     editDraft: (next) => controller.editDraft(next),
+    editColorHex: (role, value) => controller.editColorHex(role, value),
+    editColorRgb: (role, channel, value) => controller.editColorRgb(role, channel, value),
     resetDraft: () => controller.resetDraft(),
     saveDraft: () => controller.saveDraft()
   }, 'ready', resolveLabShowcaseMediaProfile(activeId));

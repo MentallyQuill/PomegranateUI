@@ -21,5 +21,5 @@
   </dl>
   {#if theme.authoring.diagnostics.length}<ul class="theme-authoring-diagnostics" aria-label="Theme diagnostics">{#each theme.authoring.diagnostics as diagnostic}<li>{diagnostic.message}</li>{/each}</ul>{/if}
   <p class="theme-authoring-status" role="status" aria-live="polite">{status}</p>
-  <footer class="theme-authoring-actions"><button type="button" data-pom-part="button.surface" onclick={reset}>Reset</button><button type="button" data-pom-part="button.surface" onclick={save} disabled={theme.authoring.diagnostics.length > 0}>Save draft</button></footer>
+  <footer class="theme-authoring-actions"><button type="button" data-pom-part="button.surface" onclick={reset}>Reset</button><button type="button" data-pom-part="button.surface" onclick={save} disabled={theme.authoring.diagnostics.length > 0 || theme.authoring.saving}>{theme.authoring.saving ? 'Saving…' : 'Save draft'}</button></footer>
 </div>

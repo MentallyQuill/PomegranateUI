@@ -112,26 +112,33 @@ export function projectThemeDraft(
   }
 
   const colors = parsedDraft.data.colors;
+  const seedColors = createThemeDraft(parsedBase.data).colors;
+  const changed = Object.fromEntries(Object.keys(colors).map((role) => [
+    role,
+    colors[role as keyof typeof colors].toLowerCase() !== seedColors[role as keyof typeof seedColors].toLowerCase()
+  ])) as Record<keyof typeof colors, boolean>;
   const ambientRole = parsedAmbient.data.colorRole;
-  const ambientColorOverrides = ambientRole === 'accent'
+  const ambientColorOverrides = (changed.ambient || changed.text) && ambientRole === 'accent'
     ? {
         textOnAccent: bestContrastingText(colors.ambient),
         accent: colors.ambient,
         selection: colors.ambient,
         focus: mixHex(colors.ambient, colors.text, 0.18)
       }
-    : { [ambientRole]: colors.ambient };
+    : changed.ambient ? { [ambientRole]: colors.ambient } : {};
   const projectedColors = {
     ...parsedBase.data.theme.colors,
-    canvas: colors.canvas,
-    surface: colors.glass,
-    surfaceElevated: mixHex(colors.glass, colors.text, 0.08),
-    surfaceInset: mixHex(colors.glass, colors.canvas, 0.18),
-    chrome: colors.chrome,
-    text: colors.text,
-    textMuted: mixHex(colors.text, colors.glass, 0.30),
-    textFaint: mixHex(colors.text, colors.glass, 0.45),
-    warning: colors.source,
+    ...(changed.canvas ? { canvas: colors.canvas } : {}),
+    ...(changed.glass ? { surface: colors.glass } : {}),
+    ...(changed.glass || changed.text ? { surfaceElevated: mixHex(colors.glass, colors.text, 0.08) } : {}),
+    ...(changed.glass || changed.canvas ? { surfaceInset: mixHex(colors.glass, colors.canvas, 0.18) } : {}),
+    ...(changed.chrome ? { chrome: colors.chrome } : {}),
+    ...(changed.text ? { text: colors.text } : {}),
+    ...(changed.text || changed.glass ? {
+      textMuted: mixHex(colors.text, colors.glass, 0.30),
+      textFaint: mixHex(colors.text, colors.glass, 0.45)
+    } : {}),
+    ...(changed.source ? { warning: colors.source } : {}),
     ...ambientColorOverrides
   };
   const canvasProjection = canvasProfile
@@ -149,7 +156,7 @@ export function projectThemeDraft(
   }
   const canvasAvailability: ThemeCanvasAvailability = canvasProjection
     ? canvasProjection.availability
-    : Object.freeze({ image: false, overlay: false, vignette: false });
+    : Object.freeze({ image: false, overlay: false, gradient: false, vignette: false });
   const candidate = ThemeTargetBundleSchema.parse({
     ...parsedBase.data,
     theme: {
@@ -165,11 +172,13 @@ export function projectThemeDraft(
     ambient: parsedAmbient.data
   });
   const unsafeBackgrounds = [
-    ['canvas', colors.canvas],
-    ['glass', colors.glass],
-    ['chrome', colors.chrome]
-  ].filter(([, background]) => (
-    contrastRatio(colors.text, background!) < candidate.theme.accessibility.minimumContrast
+    { role: 'canvas', background: colors.canvas, changed: changed.canvas },
+    { role: 'glass', background: colors.glass, changed: changed.glass },
+    { role: 'chrome', background: colors.chrome, changed: changed.chrome }
+  ].filter(({ background, changed: backgroundChanged }) => (
+    (changed.text || backgroundChanged)
+    &&
+    contrastRatio(colors.text, background) < candidate.theme.accessibility.minimumContrast
   ));
   if (unsafeBackgrounds.length > 0) {
     return {
@@ -177,7 +186,7 @@ export function projectThemeDraft(
       diagnostics: Object.freeze([Object.freeze({
         code: 'THEME_CONTRAST_UNSAFE' as const,
         path: Object.freeze(['colors', 'text']),
-        message: `Authored text does not meet the ${candidate.theme.accessibility.minimumContrast}:1 contrast floor against ${unsafeBackgrounds.map(([role]) => role).join(', ')}.`
+        message: `Authored text does not meet the ${candidate.theme.accessibility.minimumContrast}:1 contrast floor against ${unsafeBackgrounds.map(({ role }) => role).join(', ')}.`
       })])
     };
   }

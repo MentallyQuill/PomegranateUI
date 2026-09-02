@@ -176,6 +176,12 @@ const THEME_ELEMENT_FIXTURES = Object.freeze([
   { id: 'settings-theme-ambient', type: 'settings.theme-ambient', lane: 2, order: 1 }
 ] as const);
 
+const LEGACY_APPEARANCE_FIXTURES = Object.freeze([
+  { id: 'settings-reading-layout', type: 'settings.reading-layout', lane: 1, order: 0 },
+  { id: 'settings-sound-motion', type: 'settings.sound-motion', lane: 1, order: 1 },
+  { id: 'settings-accessibility', type: 'settings.accessibility', lane: 2, order: 0 }
+] as const);
+
 function visiblePlacement(placement: WidgetPlacement | undefined): VisibleWidgetPlacement | undefined {
   return placement?.kind === 'shelved' ? placement.lastVisible : placement;
 }
@@ -203,6 +209,30 @@ export function upgradeThemeAuthoringWidgets(state: WorkbenchState): WorkbenchSt
   const settingsId = asPanelId('settings');
   const appearanceId = asSubPanelId('settings-appearance-accessibility');
   if (state.panels.some(({ id }) => id === settingsId)) {
+    for (const fixture of LEGACY_APPEARANCE_FIXTURES) {
+      const id = asWidgetInstanceId(fixture.id);
+      const widget = widgets[id];
+      const placement = placements[id];
+      const visible = visiblePlacement(placement);
+      const assignment = assignmentByType.get(asWidgetType(fixture.type));
+      if (
+        widget?.type !== asWidgetType(fixture.type)
+        || !placement
+        || visible?.kind !== 'docked'
+        || visible.panelId !== settingsId
+        || visible.subPanelId !== appearanceId
+        || visible.lane !== fixture.lane
+        || visible.order !== fixture.order
+        || !assignment
+      ) continue;
+      placements[id] = replaceVisible(placement, {
+        ...visible,
+        lane: assignment.lane,
+        regionId: `column-${assignment.lane + 1}`,
+        order: assignment.order
+      });
+      changed = true;
+    }
     for (const fixture of THEME_ELEMENT_FIXTURES) {
       const type = asWidgetType(fixture.type);
       const alreadyPlaced = Object.values(widgets).some((widget) => {

@@ -13,6 +13,11 @@ const COLOR_ROLES = new Set<string>(THEME_COLOR_ROLES);
 export interface SemanticCanvasColorReference {
   readonly role: ThemeColorRole;
   readonly alpha?: number;
+  /** Keeps a deliberately authored canvas tone while the referenced role is still at its preset value. */
+  readonly baseline?: {
+    readonly roleValue: string;
+    readonly authoredValue: string;
+  };
 }
 
 export interface SemanticCanvasGradientStop {
@@ -51,6 +56,7 @@ export interface ThemeCanvasAuthoringProfile {
 export interface ThemeCanvasAvailability {
   readonly image: boolean;
   readonly overlay: boolean;
+  readonly gradient: boolean;
   readonly vignette: boolean;
 }
 
@@ -115,7 +121,22 @@ function resolveColor(
     return null;
   }
 
-  const source = colors[role as ThemeColorRole];
+  const roleSource = colors[role as ThemeColorRole];
+  const baseline = (reference as SemanticCanvasColorReference).baseline;
+  if (baseline && (!EXACT_HEX.test(baseline.roleValue) || !EXACT_HEX.test(baseline.authoredValue))) {
+    diagnostics.push({
+      code: 'THEME_CANVAS_RECIPE_INVALID',
+      path: [...path, 'baseline'],
+      message: `Canvas color baseline for '${role}' must contain exact hex values.`,
+      role
+    });
+    return null;
+  }
+  const source = baseline
+    && typeof roleSource === 'string'
+    && roleSource.slice(0, 7).toLowerCase() === baseline.roleValue.slice(0, 7).toLowerCase()
+      ? baseline.authoredValue
+      : roleSource;
   if (typeof source !== 'string' || !EXACT_HEX.test(source)) {
     diagnostics.push({
       code: 'THEME_CANVAS_COLOR_ROLE_UNRESOLVED',
@@ -280,6 +301,7 @@ function availabilityFor(layers: readonly AuthorableSemanticCanvasLayer[]): Them
   return Object.freeze({
     image: layers.some(({ authoringGroup }) => authoringGroup === 'image'),
     overlay: layers.some(({ authoringGroup }) => authoringGroup === 'overlay'),
+    gradient: layers.some(({ authoringGroup, layer }) => authoringGroup === 'overlay' && layer.kind === 'linear-gradient'),
     vignette: layers.some(({ authoringGroup }) => authoringGroup === 'vignette')
   });
 }

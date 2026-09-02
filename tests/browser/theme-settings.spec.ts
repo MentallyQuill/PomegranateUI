@@ -134,6 +134,18 @@ test('Theme Colors propagates all semantic roles and preserves the last valid ta
   await hex.fill('#f3fbf8');
   await expect(settings.colors.getByRole('list', { name: 'Color diagnostics' })).toHaveCount(0);
   await expect(settings.overview.getByRole('list', { name: 'Theme diagnostics' })).toHaveCount(0);
+
+  await settings.colors.getByRole('button', { name: 'Canvas', exact: true }).click();
+  const red = settings.colors.getByRole('textbox', { name: 'Red' });
+  await red.fill('999');
+  await expect(red).toHaveValue('999');
+  await expect(settings.colors.getByRole('list', { name: 'Color diagnostics' })).toContainText('0 to 255');
+  await expect(settings.overview.getByRole('button', { name: 'Save draft' })).toBeDisabled();
+  await settings.materials.getByRole('slider', { name: 'Glass Density' }).fill('61');
+  await expect(red).toHaveValue('999');
+  await red.fill('16');
+  await expect(settings.colors.getByRole('list', { name: 'Color diagnostics' })).toHaveCount(0);
+  await expect(settings.materials.getByRole('slider', { name: 'Glass Density' })).toHaveValue('61');
   await expect(root).toHaveAttribute('data-workbench-revision', revision!);
 });
 
@@ -167,8 +179,9 @@ test('Materials and Ambient elements control their semantic bindings', async ({ 
 });
 
 for (const target of [
-  { label: 'Deep Current', id: 'deep-current' },
-  { label: 'Ash & Amber', id: 'ash-amber' }
+  { label: 'Deep Current', id: 'deep-current', image: true, canvas: '#101820', rgb: 'rgb(16, 24, 32)' },
+  { label: 'PomOS', id: 'pom-neutral', image: false, canvas: '#f8fbff', rgb: 'rgb(248, 251, 255)' },
+  { label: 'Ash & Amber', id: 'ash-amber', image: true, canvas: '#101820', rgb: 'rgb(16, 24, 32)' }
 ] as const) {
   test(`${target.label} Canvas controls recolor and rotate the rendered overlay`, async ({ page }) => {
     await fresh(page);
@@ -177,8 +190,8 @@ for (const target of [
     const settings = await openAppearance(page);
 
     await settings.colors.getByRole('button', { name: 'Canvas', exact: true }).click();
-    await settings.colors.getByRole('textbox', { name: 'Hex color' }).fill('#101820');
-    await expect(page.locator('[data-pom-canvas-layer="solid"]')).toHaveCSS('background-color', 'rgb(16, 24, 32)');
+    await settings.colors.getByRole('textbox', { name: 'Hex color' }).fill(target.canvas);
+    await expect(page.locator('[data-pom-canvas-layer="solid"]')).toHaveCSS('background-color', target.rgb);
 
     const before = await page.locator('[data-pom-canvas-layer="linear-gradient"]').evaluateAll((layers) => layers.map((layer) => layer.getAttribute('style')));
     await settings.canvas.getByRole('slider', { name: 'Gradient Direction' }).fill('125');
@@ -191,8 +204,35 @@ for (const target of [
     await settings.canvas.getByRole('slider', { name: 'Overlay Strength' }).fill('35');
     const faded = await page.locator('[data-pom-canvas-layer="linear-gradient"]').evaluateAll((layers) => layers.map((layer) => layer.getAttribute('style')));
     expect(faded).not.toEqual(rotated);
+
+    const image = settings.canvas.getByRole('slider', { name: 'Image Strength' });
+    if (target.image) {
+      const beforeImage = await page.locator('[data-pom-canvas-layer="image"]').getAttribute('style');
+      await image.fill('37');
+      await expect.poll(() => page.locator('[data-pom-canvas-layer="image"]').getAttribute('style')).not.toBe(beforeImage);
+    } else await expect(image).toBeDisabled();
+
+    const beforeVignette = await page.locator('[data-pom-canvas-layer]').evaluateAll((layers) => layers.map((layer) => layer.getAttribute('style')));
+    await settings.canvas.getByRole('slider', { name: 'Vignette Strength' }).fill('42');
+    await expect.poll(() => page.locator('[data-pom-canvas-layer]').evaluateAll((layers) => layers.map((layer) => layer.getAttribute('style')))).not.toEqual(beforeVignette);
   });
 }
+
+test('Bunny exposes its image, four-corner overlay, and vignette without a fake gradient control', async ({ page }) => {
+  await fresh(page);
+  await selectTheme(page, 'Bunny');
+  const settings = await openAppearance(page);
+  await expect(settings.canvas.getByRole('slider', { name: 'Gradient Direction' })).toBeDisabled();
+  for (const [name, selector] of [
+    ['Image Strength', '[data-pom-canvas-layer="image"]'],
+    ['Overlay Strength', '[data-pom-canvas-layer="four-corner"]'],
+    ['Vignette Strength', '[data-pom-canvas-layer="veil"]']
+  ] as const) {
+    const before = await page.locator(selector).getAttribute('style');
+    await settings.canvas.getByRole('slider', { name }).fill('36');
+    await expect.poll(() => page.locator(selector).getAttribute('style')).not.toBe(before);
+  }
+});
 
 test('Canvas exposes preset-backed availability instead of theme-specific branches', async ({ page }) => {
   await fresh(page);

@@ -165,6 +165,20 @@
     return result;
   }
 
+  function editThemeColorHex(role: import('@pomegranate-ui/contracts').ThemeDraftColorRole, value: string) {
+    const result = themeController.editColorHex(role, value);
+    hostContext.theme.authoring = result.authoring;
+    if (result.ok) applyThemeSnapshot(themeController.getSnapshot());
+    return result;
+  }
+
+  function editThemeColorRgb(role: import('@pomegranate-ui/contracts').ThemeDraftColorRole, channel: 0 | 1 | 2, value: string) {
+    const result = themeController.editColorRgb(role, channel, value);
+    hostContext.theme.authoring = result.authoring;
+    if (result.ok) applyThemeSnapshot(themeController.getSnapshot());
+    return result;
+  }
+
   function resetThemeDraft() {
     const result = themeController.resetDraft();
     hostContext.theme.authoring = result.authoring;
@@ -176,7 +190,9 @@
   }
 
   async function saveThemeDraft() {
-    const result = await themeController.saveDraft();
+    const pending = themeController.saveDraft();
+    hostContext.theme.authoring = themeController.getAuthoringSnapshot();
+    const result = await pending;
     hostContext.theme.authoring = result.authoring;
     status = result.ok ? 'Theme draft saved on this device.' : result.diagnostics[0]?.message ?? 'Theme draft could not be saved.';
     return result;
@@ -198,6 +214,8 @@
     resetMaterialControls,
     openSettings: () => { store.dispatch({ type: 'panel.activate', panelId: LAB_PANEL_IDS.settings }); },
     editDraft: editThemeDraft,
+    editColorHex: editThemeColorHex,
+    editColorRgb: editThemeColorRgb,
     resetDraft: resetThemeDraft,
     saveDraft: saveThemeDraft
   }, initialSurfaceState, resolveLabShowcaseMediaProfile(initialThemeSnapshot.activeId)));

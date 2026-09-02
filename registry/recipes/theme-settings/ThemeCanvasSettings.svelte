@@ -3,7 +3,7 @@
   import { diagnosticsFor, editableThemeDraft, type ThemeAuthoringPort } from './ThemeAuthoringTypes.js';
 
   let { theme }: { theme: ThemeAuthoringPort } = $props();
-  const controls = [['imageStrength', 'Image Strength', 100, 'image'], ['overlayStrength', 'Overlay Strength', 100, 'overlay'], ['gradientAngle', 'Gradient Direction', 359, 'overlay'], ['vignetteStrength', 'Vignette Strength', 100, 'vignette']] as const;
+  const controls = [['imageStrength', 'Image Strength', 100, 'image'], ['overlayStrength', 'Overlay Strength', 100, 'overlay'], ['gradientAngle', 'Gradient Direction', 359, 'gradient'], ['vignetteStrength', 'Vignette Strength', 100, 'vignette']] as const;
   const draft = $derived(editableThemeDraft(theme));
   const diagnostics = $derived(diagnosticsFor(theme, ['canvas']));
   function setCanvas(id: (typeof controls)[number][0], value: number) {

@@ -1,10 +1,12 @@
 import {
   PersistedThemeDraftSchema,
   DEFAULT_SURFACE_EXPRESSION,
+  THEME_DRAFT_COLOR_ROLES,
   type PersistedThemeDraft,
   type PresentationProfileDefinition,
   type ThemeDraftStorage,
-  type ThemeTargetBundle
+  type ThemeTargetBundle,
+  type ThemeDraftColorRole
 } from '@pomegranate-ui/contracts';
 import {
   compilePresentationProfile,
@@ -69,7 +71,12 @@ export interface LabThemeAuthoringSnapshot {
   readonly applied: LabThemeSnapshot;
   readonly diagnostics: readonly LabThemeDiagnostic[];
   readonly canvasAvailability: ThemeCanvasAvailability;
+  readonly colorInputs: {
+    readonly hex: Readonly<Record<ThemeDraftColorRole, string>>;
+    readonly rgb: Readonly<Record<ThemeDraftColorRole, readonly [string, string, string]>>;
+  };
   readonly dirty: boolean;
+  readonly saving: boolean;
 }
 
 export type ThemeActivationResult =
@@ -91,6 +98,8 @@ export interface LabThemeController {
   setMaterialControl(id: LabMaterialControlId, value: number): ThemeActivationResult;
   resetMaterialControls(): ThemeActivationResult;
   editDraft(next: unknown): ThemeDraftEditResult;
+  editColorHex(role: ThemeDraftColorRole, value: string): ThemeDraftEditResult;
+  editColorRgb(role: ThemeDraftColorRole, channel: 0 | 1 | 2, value: string): ThemeDraftEditResult;
   resetDraft(): ThemeDraftEditResult;
   saveDraft(): Promise<ThemeDraftSaveResult>;
   loadDraft(): Promise<ThemeDraftEditResult>;
@@ -208,14 +217,20 @@ function seedDraft(
   });
 }
 
-function samePaletteAndCanvas(left: PersistedThemeDraft, right: PersistedThemeDraft): boolean {
-  return Object.keys(left.draft.colors).every((role) => (
-    left.draft.colors[role as keyof PersistedThemeDraft['draft']['colors']]
-      === right.draft.colors[role as keyof PersistedThemeDraft['draft']['colors']]
-  )) && Object.keys(left.draft.canvas).every((control) => (
-    left.draft.canvas[control as keyof PersistedThemeDraft['draft']['canvas']]
-      === right.draft.canvas[control as keyof PersistedThemeDraft['draft']['canvas']]
-  ));
+const EXACT_HEX = /^#[0-9a-f]{6}$/i;
+
+function rgbChannels(hex: string): [string, string, string] {
+  return [
+    String(Number.parseInt(hex.slice(1, 3), 16)),
+    String(Number.parseInt(hex.slice(3, 5), 16)),
+    String(Number.parseInt(hex.slice(5, 7), 16))
+  ];
+}
+
+function rgbHex(values: readonly string[]): string | null {
+  const numbers = values.map(Number);
+  if (numbers.some((value) => !Number.isInteger(value) || value < 0 || value > 255)) return null;
+  return `#${numbers.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
 }
 
 function canvasAvailability(profile?: ThemeCanvasAuthoringProfile): ThemeCanvasAvailability {
@@ -223,6 +238,7 @@ function canvasAvailability(profile?: ThemeCanvasAuthoringProfile): ThemeCanvasA
   return Object.freeze({
     image: groups.includes('image'),
     overlay: groups.includes('overlay'),
+    gradient: profile?.layers.some(({ authoringGroup, layer }) => authoringGroup === 'overlay' && layer.kind === 'linear-gradient') ?? false,
     vignette: groups.includes('vignette')
   });
 }
@@ -285,15 +301,9 @@ export function createLabThemeController(options: {
     const base = rawTarget(id);
     if (!base) return { ok: false, diagnostics: unknownPresetDiagnostic(id) };
     const canvasAuthoring = byId.get(id)?.canvasAuthoring;
-    const seed = seedDraft(id, base, canvasAuthoring);
-    let candidate: ThemeTargetBundle;
-    if (samePaletteAndCanvas(seed, persisted)) {
-      candidate = { ...base, ambient: persisted.ambient };
-    } else {
-      const projection = projectThemeDraft(base, persisted.draft, persisted.ambient, canvasAuthoring);
-      if (!projection.ok) return projection;
-      candidate = projection.target;
-    }
+    const projection = projectThemeDraft(base, persisted.draft, persisted.ambient, canvasAuthoring);
+    if (!projection.ok) return projection;
+    const candidate = projection.target;
     const resolution = resolveThemeTarget(candidate, assetRegistry);
     if (!resolution.ok) return resolution;
     return createSnapshot(
@@ -317,40 +327,118 @@ export function createLabThemeController(options: {
   let editable: unknown = seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!, byId.get(snapshot.activeId)?.canvasAuthoring);
   let authoringDiagnostics: readonly LabThemeDiagnostic[] = Object.freeze([]);
   let dirty = false;
+  let saving = false;
+  let editRevision = 0;
+  let pendingSave: Promise<ThemeDraftSaveResult> | null = null;
+  const colorInputDiagnostics = new Map<ThemeDraftColorRole, LabThemeDiagnostic>();
+  const colorHexInputs = Object.fromEntries(THEME_DRAFT_COLOR_ROLES.map((role) => [
+    role,
+    (editable as PersistedThemeDraft).draft.colors[role]
+  ])) as Record<ThemeDraftColorRole, string>;
+  const colorRgbInputs = Object.fromEntries(THEME_DRAFT_COLOR_ROLES.map((role) => [
+    role,
+    rgbChannels((editable as PersistedThemeDraft).draft.colors[role])
+  ])) as Record<ThemeDraftColorRole, [string, string, string]>;
   validDrafts.set(snapshot.activeId, editable as PersistedThemeDraft);
+
+  const combinedDiagnostics = (): readonly LabThemeDiagnostic[] => Object.freeze([
+    ...authoringDiagnostics,
+    ...colorInputDiagnostics.values()
+  ]);
+
+  const syncColorInputs = (draft: PersistedThemeDraft): void => {
+    for (const role of THEME_DRAFT_COLOR_ROLES) {
+      if (colorInputDiagnostics.has(role)) continue;
+      colorHexInputs[role] = draft.draft.colors[role];
+      colorRgbInputs[role] = rgbChannels(draft.draft.colors[role]);
+    }
+  };
+
+  const clearColorInputDiagnostics = (): void => {
+    colorInputDiagnostics.clear();
+  };
 
   const authoring = (): LabThemeAuthoringSnapshot => Object.freeze({
     editable,
     lastValidEditable: structuredClone(validDrafts.get(snapshot.activeId) ?? seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!, byId.get(snapshot.activeId)?.canvasAuthoring)),
     applied: snapshot,
-    diagnostics: authoringDiagnostics,
+    diagnostics: combinedDiagnostics(),
     canvasAvailability: canvasAvailability(byId.get(snapshot.activeId)?.canvasAuthoring),
-    dirty
+    colorInputs: Object.freeze({
+      hex: Object.freeze({ ...colorHexInputs }),
+      rgb: Object.freeze(Object.fromEntries(THEME_DRAFT_COLOR_ROLES.map((role) => [
+        role,
+        Object.freeze([...colorRgbInputs[role]])
+      ])) as Record<ThemeDraftColorRole, readonly [string, string, string]>)
+    }),
+    dirty,
+    saving
   });
 
   const editDraft = (next: unknown): ThemeDraftEditResult => {
+    editRevision += 1;
     editable = cloneEditable(next);
     dirty = true;
     const parsed = PersistedThemeDraftSchema.safeParse(next);
     if (!parsed.success) {
       authoringDiagnostics = schemaDiagnostics(parsed.error.issues);
-      return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
+      return { ok: false, authoring: authoring(), diagnostics: combinedDiagnostics() };
     }
     if (parsed.data.draft.baseTargetId !== snapshot.activeId) {
       authoringDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['draft', 'baseTargetId'], 'Draft base target must match the active target.');
-      return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
+      return { ok: false, authoring: authoring(), diagnostics: combinedDiagnostics() };
     }
     const result = applyPersisted(snapshot.activeId, parsed.data);
     if (!result.ok) {
       authoringDiagnostics = result.diagnostics;
-      return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
+      return { ok: false, authoring: authoring(), diagnostics: combinedDiagnostics() };
     }
     editable = parsed.data;
     snapshot = result.snapshot;
     authoringDiagnostics = Object.freeze([]);
     validDrafts.set(snapshot.activeId, parsed.data);
     dirtyDrafts.set(snapshot.activeId, true);
+    syncColorInputs(parsed.data);
     return { ok: true, authoring: authoring() };
+  };
+
+  const editColorHex = (role: ThemeDraftColorRole, value: string): ThemeDraftEditResult => {
+    colorHexInputs[role] = value;
+    if (!EXACT_HEX.test(value)) {
+      editRevision += 1;
+      dirty = true;
+      dirtyDrafts.set(snapshot.activeId, true);
+      colorInputDiagnostics.set(role, Object.freeze({
+        code: 'THEME_SCHEMA_INVALID',
+        path: Object.freeze(['draft', 'colors', role]),
+        message: `${role} must be an exact #RRGGBB color.`
+      }));
+      const diagnostics = combinedDiagnostics();
+      return { ok: false, authoring: authoring(), diagnostics };
+    }
+    colorInputDiagnostics.delete(role);
+    const normalized = value.toLowerCase();
+    colorHexInputs[role] = normalized;
+    colorRgbInputs[role] = rgbChannels(normalized);
+    const current = structuredClone(validDrafts.get(snapshot.activeId) ?? authoring().lastValidEditable);
+    current.draft.colors[role] = normalized;
+    return editDraft(current);
+  };
+
+  const editColorRgb = (role: ThemeDraftColorRole, channel: 0 | 1 | 2, value: string): ThemeDraftEditResult => {
+    colorRgbInputs[role][channel] = value;
+    const nextHex = rgbHex(colorRgbInputs[role]);
+    if (nextHex !== null) return editColorHex(role, nextHex);
+    editRevision += 1;
+    dirty = true;
+    dirtyDrafts.set(snapshot.activeId, true);
+    colorInputDiagnostics.set(role, Object.freeze({
+      code: 'THEME_SCHEMA_INVALID',
+      path: Object.freeze(['draft', 'colors', role, channel]),
+      message: 'RGB channels must be whole numbers from 0 to 255.'
+    }));
+    const diagnostics = combinedDiagnostics();
+    return { ok: false, authoring: authoring(), diagnostics };
   };
 
   return Object.freeze({
@@ -367,6 +455,9 @@ export function createLabThemeController(options: {
       snapshot = result.snapshot;
       editable = persisted;
       authoringDiagnostics = Object.freeze([]);
+      clearColorInputDiagnostics();
+      syncColorInputs(persisted);
+      editRevision += 1;
       dirty = dirtyDrafts.get(activeId) ?? false;
       validDrafts.set(activeId, persisted);
       try { options.preference?.write(activeId); } catch { /* In-memory activation remains usable. */ }
@@ -392,7 +483,11 @@ export function createLabThemeController(options: {
       return result.ok ? { ok: true, snapshot } : { ok: false, diagnostics: result.diagnostics };
     },
     editDraft,
+    editColorHex,
+    editColorRgb,
     resetDraft(): ThemeDraftEditResult {
+      clearColorInputDiagnostics();
+      authoringDiagnostics = Object.freeze([]);
       const next = seedDraft(snapshot.activeId, rawTarget(snapshot.activeId)!, byId.get(snapshot.activeId)?.canvasAuthoring);
       const result = editDraft(next);
       if (result.ok) {
@@ -402,25 +497,50 @@ export function createLabThemeController(options: {
       }
       return result;
     },
-    async saveDraft(): Promise<ThemeDraftSaveResult> {
+    saveDraft(): Promise<ThemeDraftSaveResult> {
+      if (pendingSave) return pendingSave;
+      const inputDiagnostics = combinedDiagnostics();
+      if (inputDiagnostics.length > 0) {
+        return Promise.resolve({ ok: false, authoring: authoring(), diagnostics: inputDiagnostics });
+      }
       const parsed = PersistedThemeDraftSchema.safeParse(editable);
       if (!parsed.success) {
         authoringDiagnostics = schemaDiagnostics(parsed.error.issues);
-        return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
+        const diagnostics = combinedDiagnostics();
+        return Promise.resolve({ ok: false, authoring: authoring(), diagnostics });
       }
       if (!options.draftStorage) {
         authoringDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['storage'], 'Theme draft storage is unavailable.');
-        return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
+        const diagnostics = combinedDiagnostics();
+        return Promise.resolve({ ok: false, authoring: authoring(), diagnostics });
       }
-      const saved = await savePersistedThemeDraft(options.draftStorage, parsed.data);
-      if (!saved.ok) {
-        authoringDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['storage'], saved.message);
-        return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
-      }
-      dirty = false;
-      dirtyDrafts.set(snapshot.activeId, false);
-      authoringDiagnostics = Object.freeze([]);
-      return { ok: true, authoring: authoring() };
+      const savedRevision = editRevision;
+      const savedId = snapshot.activeId;
+      saving = true;
+      const operation = (async (): Promise<ThemeDraftSaveResult> => {
+        const saved = await savePersistedThemeDraft(options.draftStorage!, parsed.data);
+        if (!saved.ok) {
+          const storageDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['storage'], saved.message);
+          authoringDiagnostics = editRevision === savedRevision && snapshot.activeId === savedId
+            ? storageDiagnostics
+            : Object.freeze([...authoringDiagnostics, ...storageDiagnostics]);
+          saving = false;
+          const diagnostics = combinedDiagnostics();
+          return { ok: false, authoring: authoring(), diagnostics };
+        }
+        if (editRevision === savedRevision && snapshot.activeId === savedId) {
+          dirty = false;
+          dirtyDrafts.set(savedId, false);
+          authoringDiagnostics = Object.freeze([]);
+        }
+        saving = false;
+        return { ok: true, authoring: authoring() };
+      })();
+      pendingSave = operation;
+      void operation.finally(() => {
+        if (pendingSave === operation) pendingSave = null;
+      });
+      return operation;
     },
     async loadDraft(): Promise<ThemeDraftEditResult> {
       if (!options.draftStorage) {
@@ -438,6 +558,8 @@ export function createLabThemeController(options: {
       if (loaded.value === null || loaded.value.draft.baseTargetId !== snapshot.activeId) {
         return { ok: true, authoring: authoring() };
       }
+      clearColorInputDiagnostics();
+      authoringDiagnostics = Object.freeze([]);
       const result = editDraft(loaded.value);
       if (result.ok) {
         dirty = false;

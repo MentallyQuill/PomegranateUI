@@ -1,4 +1,4 @@
-import { PersistedThemeDraftSchema, type PersistedThemeDraft } from '@pomegranate-ui/contracts';
+import { PersistedThemeDraftSchema, type PersistedThemeDraft, type ThemeDraftColorRole } from '@pomegranate-ui/contracts';
 
 import type {
   LabThemeAuthoringSnapshot,
@@ -9,6 +9,8 @@ import type {
 export interface ThemeAuthoringPort {
   readonly authoring: LabThemeAuthoringSnapshot;
   readonly editDraft: (next: unknown) => ThemeDraftEditResult;
+  readonly editColorHex: (role: ThemeDraftColorRole, value: string) => ThemeDraftEditResult;
+  readonly editColorRgb: (role: ThemeDraftColorRole, channel: 0 | 1 | 2, value: string) => ThemeDraftEditResult;
   readonly resetDraft: () => ThemeDraftEditResult;
   readonly saveDraft: () => Promise<ThemeDraftSaveResult>;
 }
@@ -20,7 +22,17 @@ export interface EyeDropperPort {
 
 export function editableThemeDraft(theme: ThemeAuthoringPort): PersistedThemeDraft {
   const editable = PersistedThemeDraftSchema.safeParse(theme.authoring.editable);
-  return structuredClone(editable.success ? editable.data : theme.authoring.lastValidEditable);
+  if (editable.success) return structuredClone(editable.data);
+  const raw = structuredClone(theme.authoring.editable) as Record<string, unknown> | null;
+  const draft = raw && typeof raw === 'object' ? raw.draft as Record<string, unknown> | null : null;
+  if (
+    draft && typeof draft === 'object'
+    && draft.colors && typeof draft.colors === 'object'
+    && draft.materials && typeof draft.materials === 'object'
+    && draft.canvas && typeof draft.canvas === 'object'
+    && raw?.ambient && typeof raw.ambient === 'object'
+  ) return raw as unknown as PersistedThemeDraft;
+  return structuredClone(theme.authoring.lastValidEditable);
 }
 
 export function diagnosticsFor(

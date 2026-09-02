@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   asPanelId,
+  asSubPanelId,
   asWidgetInstanceId,
   asWidgetType,
   type WorkbenchState
@@ -128,5 +129,54 @@ describe('shipped Settings sub-panel migration', () => {
       expect(Object.values(migrated.widgets).filter((widget) => widget.type === type && migrated.placements[widget.id]?.panelId === LAB_PANEL_IDS.settings)).toHaveLength(1);
     }
     expect(upgradeThemeAuthoringWidgets(migrated)).toBe(migrated);
+  });
+
+  it('moves the shipped pre-element Appearance Widgets before inserting Theme elements', () => {
+    const source = createLabState();
+    const removed = [
+      asWidgetInstanceId('settings-theme-colors'),
+      asWidgetInstanceId('settings-theme-materials'),
+      asWidgetInstanceId('settings-theme-canvas'),
+      asWidgetInstanceId('settings-theme-ambient')
+    ];
+    const widgets = { ...source.widgets };
+    const placements = { ...source.placements };
+    for (const id of removed) {
+      delete widgets[id];
+      delete placements[id];
+    }
+    const appearanceId = asSubPanelId('settings-appearance-accessibility');
+    placements[asWidgetInstanceId('settings-reading-layout')] = {
+      kind: 'docked', panelId: settingsId, subPanelId: appearanceId,
+      lane: 1, regionId: 'column-2', shelfId: 'primary', order: 0
+    };
+    placements[asWidgetInstanceId('settings-sound-motion')] = {
+      kind: 'docked', panelId: settingsId, subPanelId: appearanceId,
+      lane: 1, regionId: 'column-2', shelfId: 'primary', order: 1
+    };
+    placements[asWidgetInstanceId('settings-accessibility')] = {
+      kind: 'docked', panelId: settingsId, subPanelId: appearanceId,
+      lane: 2, regionId: 'column-3', shelfId: 'primary', order: 0
+    };
+
+    const migrated = upgradeThemeAuthoringWidgets({ ...source, widgets, placements });
+    const appearance = Object.entries(migrated.placements).flatMap(([id, placement]) => {
+      const visible = placement.kind === 'shelved' ? placement.lastVisible : placement;
+      return visible.kind === 'docked' && visible.panelId === settingsId && visible.subPanelId === appearanceId
+        ? [`${visible.lane}|${visible.order}|${migrated.widgets[id]?.type}`]
+        : [];
+    }).sort();
+
+    expect(appearance).toEqual([
+      '0|0|settings.theme',
+      '0|1|settings.custom-theme',
+      '0|2|settings.reading-layout',
+      '1|0|settings.theme-colors',
+      '1|1|settings.theme-materials',
+      '1|2|settings.sound-motion',
+      '2|0|settings.theme-canvas',
+      '2|1|settings.theme-ambient',
+      '2|2|settings.accessibility'
+    ]);
   });
 });

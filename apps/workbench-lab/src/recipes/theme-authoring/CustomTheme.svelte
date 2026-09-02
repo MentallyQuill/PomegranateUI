@@ -29,6 +29,8 @@
   <p class="theme-authoring-status" role="status" aria-live="polite">{status}</p>
   <footer class="theme-authoring-actions">
     <button type="button" data-pom-part="button.surface" onclick={reset}>Reset</button>
-    <button type="button" data-pom-part="button.surface" onclick={save} disabled={theme.authoring.diagnostics.length > 0}>Save draft</button>
+    <button type="button" data-pom-part="button.surface" onclick={save} disabled={theme.authoring.diagnostics.length > 0 || theme.authoring.saving}>
+      {theme.authoring.saving ? 'Saving…' : 'Save draft'}
+    </button>
   </footer>
 </div>

@@ -1,4 +1,5 @@
 import type { LabThemeId } from '../themes/presets.js';
+import type { ThemeDraftColorRole } from '@pomegranate-ui/contracts';
 import type { LabMaterialControlId, LabMaterialControls } from '../themes/material-controls.js';
 import type { LabThemeAuthoringSnapshot, ThemeDraftEditResult, ThemeDraftSaveResult } from '../themes/controller.js';
 import type { LabShowcaseMediaProfile } from './showcase-media.js';
@@ -27,6 +28,8 @@ export interface LabThemeHostContext {
   readonly resetMaterialControls: () => void;
   readonly openSettings: () => void;
   readonly editDraft: (next: unknown) => ThemeDraftEditResult;
+  readonly editColorHex: (role: ThemeDraftColorRole, value: string) => ThemeDraftEditResult;
+  readonly editColorRgb: (role: ThemeDraftColorRole, channel: 0 | 1 | 2, value: string) => ThemeDraftEditResult;
   readonly resetDraft: () => ThemeDraftEditResult;
   readonly saveDraft: () => Promise<ThemeDraftSaveResult>;
 }

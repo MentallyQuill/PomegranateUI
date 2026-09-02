@@ -427,6 +427,15 @@ test('Theme Settings freezes the focused wide and compact authoring surfaces', a
   await fresh(page, 1440, 900);
   await openAppearanceSettings(page);
   await shot(page, 'wide-theme-settings.png');
+  for (const theme of [
+    { label: 'PomOS' as const, id: 'pom-neutral' },
+    { label: 'Bunny' as const, id: 'bunny' },
+    { label: 'Ash & Amber' as const, id: 'ash-amber' }
+  ]) {
+    await selectTheme(page, theme.label);
+    await openAppearanceSettings(page);
+    await shot(page, `wide-theme-settings-${theme.id}.png`);
+  }
 
   await fresh(page, 390, 844);
   await openAppearanceSettings(page);

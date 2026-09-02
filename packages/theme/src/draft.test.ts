@@ -74,6 +74,15 @@ describe('Theme draft projection', () => {
     expect(result.target.theme.colors.accent).toBe('#C18A3D');
   });
 
+  it('preserves every preset-owned color when only canvas treatment is projected', () => {
+    const draft = createThemeDraft(ASH_AMBER_TARGET, AUTHORABLE_CANVAS.defaults);
+    const result = projectThemeDraft(ASH_AMBER_TARGET, draft, ASH_AMBER_TARGET.ambient, AUTHORABLE_CANVAS);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.target.theme.colors).toEqual(ASH_AMBER_TARGET.theme.colors);
+  });
+
   it('projects semantic roles without mutating V3 recipes, assets, success, danger, or the base target', () => {
     const before = structuredClone(DEEP_CURRENT_TARGET);
     const draft = createThemeDraft(DEEP_CURRENT_TARGET);
@@ -107,7 +116,7 @@ describe('Theme draft projection', () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.canvasAvailability).toEqual({ image: true, overlay: true, vignette: true });
+    expect(result.canvasAvailability).toEqual({ image: true, overlay: true, gradient: true, vignette: true });
     expect(result.target.canvas.layers).toEqual([
       { kind: 'solid', color: '#101820' },
       expect.objectContaining({ kind: 'image', opacity: 0.32 }),
@@ -129,7 +138,7 @@ describe('Theme draft projection', () => {
     );
 
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.canvasAvailability).toEqual({ image: false, overlay: true, vignette: true });
+    if (result.ok) expect(result.canvasAvailability).toEqual({ image: false, overlay: true, gradient: true, vignette: true });
   });
 
   it('keeps an invalid or inaccessible projection out of the applied target', () => {
