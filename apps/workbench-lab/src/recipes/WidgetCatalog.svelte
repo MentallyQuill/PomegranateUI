@@ -586,7 +586,11 @@
   <div
     class="catalog-placement-proxy"
     data-catalog-placement-proxy
+    data-widget-type={placementSnapshot.proxy.manifestType}
+    data-placement-phase={placementSnapshot.phase}
     data-placement-input={placementSnapshot.proxy.input}
+    data-placement-x={placementSnapshot.proxy.x}
+    data-placement-y={placementSnapshot.proxy.y}
     aria-hidden="true"
     style={`--pom-placement-x:${placementSnapshot.proxy.x - placementSnapshot.proxy.offsetX}px;--pom-placement-y:${placementSnapshot.proxy.y - placementSnapshot.proxy.offsetY}px;--pom-placement-width:${placementSnapshot.proxy.width}px;--pom-placement-height:${placementSnapshot.proxy.height}px`}
   >

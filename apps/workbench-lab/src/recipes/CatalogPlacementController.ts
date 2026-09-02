@@ -103,17 +103,17 @@ function targetIdentity(element: HTMLElement, manifest: WidgetManifest): Catalog
   const rawLane = element.dataset.subPanelLane;
   const lane = rawLane === undefined ? undefined : Number(rawLane);
   const shelfId = manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.shelfId : 'primary';
-  const laneId = typeof lane === 'number' && Number.isInteger(lane) && lane >= 0 ? `lane-${lane}` : 'lane-none';
+  const validLane = typeof lane === 'number' && Number.isInteger(lane) && lane >= 0 ? lane : undefined;
   const identity = {
-    id: `${panelId}:${subPanel ?? 'panel'}:${regionId}:${laneId}:${shelfId}`,
+    id: JSON.stringify([panelId, subPanel ?? null, regionId, validLane ?? null, shelfId]),
     panelId,
     regionId,
     regionRole,
     shelfId,
     ...(subPanel ? { subPanelId: subPanel } : {})
   };
-  return typeof lane === 'number' && Number.isInteger(lane) && lane >= 0
-    ? Object.freeze({ ...identity, lane })
+  return validLane !== undefined
+    ? Object.freeze({ ...identity, lane: validLane })
     : Object.freeze(identity);
 }
 

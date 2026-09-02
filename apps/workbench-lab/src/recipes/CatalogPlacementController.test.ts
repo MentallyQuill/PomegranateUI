@@ -52,6 +52,10 @@ function appendTarget(root: HTMLElement, regionId: string, role: string, label: 
   return target;
 }
 
+function targetId(regionId: string, lane: number, subPanelId: string | null = null): string {
+  return JSON.stringify(['panel-story', subPanelId, regionId, lane, 'primary']);
+}
+
 describe('CatalogPlacementController', () => {
   afterEach(() => {
     document.body.replaceChildren();
@@ -83,6 +87,57 @@ describe('CatalogPlacementController', () => {
       element: second
     }));
     expect(onCommit).not.toHaveBeenCalledWith(manifest, expect.objectContaining({ element: first }));
+    controller.destroy();
+  });
+
+  it('encodes colon-containing target components without identity collisions', () => {
+    const root = document.body.appendChild(document.createElement('main'));
+    root.dataset.pomegranatePanel = 'panel:story';
+    const firstScope = root.appendChild(document.createElement('div'));
+    firstScope.dataset.subPanel = 'scope:a';
+    const first = firstScope.appendChild(document.createElement('section'));
+    first.dataset.pomegranateRegionSurface = 'b';
+    first.dataset.pomegranateRegionRole = 'stage';
+    first.dataset.subPanelLane = '0';
+    first.setAttribute('aria-label', 'First adversarial region');
+    const secondScope = root.appendChild(document.createElement('div'));
+    secondScope.dataset.subPanel = 'scope';
+    const second = secondScope.appendChild(document.createElement('section'));
+    second.dataset.pomegranateRegionSurface = 'a:b';
+    second.dataset.pomegranateRegionRole = 'stage';
+    second.dataset.subPanelLane = '0';
+    second.setAttribute('aria-label', 'Second adversarial region');
+    for (const target of [first, second]) {
+      Object.defineProperty(target, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => new DOMRect(100, 100, 400, 300)
+      });
+    }
+    const origin = document.body.appendChild(document.createElement('article'));
+    Object.defineProperty(origin, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(10, 10, 286, 360)
+    });
+    const onCommit = vi.fn();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit
+    });
+
+    controller.keyDown(new KeyboardEvent('keydown', { key: ' ', cancelable: true }), manifest, origin);
+    const [firstTarget, secondTarget] = controller.getState().targets;
+    expect(firstTarget?.identity.id).not.toBe(secondTarget?.identity.id);
+    controller.keyDown(new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }), manifest, origin);
+    controller.keyDown(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }), manifest, origin);
+
+    expect(onCommit).toHaveBeenCalledOnce();
+    expect(onCommit).toHaveBeenCalledWith(manifest, expect.objectContaining({
+      identity: expect.objectContaining({ panelId: 'panel:story', subPanelId: 'scope', regionId: 'a:b', lane: 0 }),
+      element: second
+    }));
     controller.destroy();
   });
 
@@ -391,7 +446,7 @@ describe('CatalogPlacementController', () => {
     expect(controller.getState()).toMatchObject({
       phase: 'lifted',
       input: 'keyboard',
-      selectedTargetId: 'panel-story:panel:stage:lane-0:primary',
+      selectedTargetId: targetId('stage', 0),
       proxy: {
         input: 'keyboard',
         manifestType: 'story.transcript',
@@ -401,7 +456,7 @@ describe('CatalogPlacementController', () => {
         height: 352
       }
     });
-    expect(target).toHaveAttribute('data-catalog-placement-target', 'panel-story:panel:stage:lane-0:primary');
+    expect(target).toHaveAttribute('data-catalog-placement-target', targetId('stage', 0));
     expect(target).toHaveClass('is-catalog-placement-target', 'is-catalog-target-active');
     expect(target).toHaveAttribute('tabindex', '0');
     expect(target).toHaveAttribute('role', 'button');
@@ -425,7 +480,7 @@ describe('CatalogPlacementController', () => {
     controller.keyDown(new KeyboardEvent('keydown', { key: ' ', cancelable: true }), manifest, origin);
     controller.keyDown(new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }), manifest, origin);
 
-    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:right:lane-1:primary');
+    expect(controller.getState().selectedTargetId).toBe(targetId('right', 1));
     expect(first).not.toHaveClass('is-catalog-target-active');
     expect(first).toHaveAttribute('tabindex', '-1');
     expect(second).toHaveClass('is-catalog-target-active');
@@ -433,10 +488,10 @@ describe('CatalogPlacementController', () => {
     expect(second).toHaveFocus();
 
     controller.keyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }), manifest, origin);
-    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:stage:lane-0:primary');
+    expect(controller.getState().selectedTargetId).toBe(targetId('stage', 0));
 
     controller.keyDown(new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true }), manifest, origin);
-    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:right:lane-1:primary');
+    expect(controller.getState().selectedTargetId).toBe(targetId('right', 1));
     controller.destroy();
   });
 
@@ -540,7 +595,7 @@ describe('CatalogPlacementController', () => {
     document.dispatchEvent(pointerEvent('pointermove', { clientX: 550, clientY: 150 }));
 
     expect(controller.getState().proxy).toMatchObject({ x: 550, y: 150 });
-    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:right:lane-1:primary');
+    expect(controller.getState().selectedTargetId).toBe(targetId('right', 1));
     expect(first).not.toHaveClass('is-catalog-target-active');
     expect(second).toHaveClass('is-catalog-target-active');
 
