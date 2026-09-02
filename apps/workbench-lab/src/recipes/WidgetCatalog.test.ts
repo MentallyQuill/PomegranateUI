@@ -117,19 +117,28 @@ function trackCatalogSubscriptions(catalog: CatalogController) {
 function createEmittingCatalog(catalog: CatalogController) {
   const listeners = new Set<(state: CatalogState) => void>();
   let state = catalog.getState();
+  let prepareSnapshot: ((next: CatalogState) => boolean) | undefined;
   const emitting = Object.freeze({
     ...catalog,
     getState: () => state,
     subscribe(listener: (next: CatalogState) => void) {
       listeners.add(listener);
       return () => { listeners.delete(listener); };
+    },
+    setCatalogSnapshotPreflight(preflight: (next: CatalogState) => boolean) {
+      prepareSnapshot = preflight;
+      return () => {
+        if (prepareSnapshot === preflight) prepareSnapshot = undefined;
+      };
     }
   }) satisfies CatalogController;
   return {
     catalog: emitting,
     emit(next: CatalogState) {
+      if (prepareSnapshot && !prepareSnapshot(next)) return false;
       state = next;
       for (const listener of listeners) listener(next);
+      return true;
     },
     listeners
   };
@@ -363,13 +372,15 @@ describe('WidgetCatalog', () => {
     runtime.catalog.open('expanded');
     const emitting = createEmittingCatalog(runtime.catalog);
     const tracked = trackCatalogSubscriptions(emitting.catalog);
+    const invariantErrors = vi.fn();
     lifecycle.beginRenderBoundary();
     const rendered = render(WidgetCatalog, {
       catalog: tracked.catalog,
       rendererRegistry: runtime.rendererRegistry,
       hostContext: previewHostContext(),
       instanceCounts: {},
-      oncreate: vi.fn()
+      oncreate: vi.fn(),
+      onCatalogInvariantError: invariantErrors
     });
     lifecycle.endRenderBoundary();
     await tick();
@@ -385,6 +396,8 @@ describe('WidgetCatalog', () => {
     expect(before.dialogs).toBe(1);
     expect(before.results).toBe(94);
     expect(before.previews).toBe(94);
+    const downstream = vi.fn();
+    emitting.catalog.subscribe(downstream);
     const validState = runtime.catalog.getState();
     const first = validState.results[0]!;
     const invalidState = Object.freeze({
@@ -395,7 +408,25 @@ describe('WidgetCatalog', () => {
       } satisfies WidgetManifest, ...validState.results.slice(1)])
     });
 
-    expect(() => emitting.emit(invalidState)).toThrow('Missing authoritative catalog icon for unknown.catalog-icon.');
+    let invalidResult: boolean | undefined;
+    let invalidError: unknown;
+    try {
+      invalidResult = emitting.emit(invalidState);
+    } catch (error) {
+      invalidError = error;
+    }
+    expect({
+      result: invalidResult,
+      error: invalidError instanceof Error ? invalidError.message : invalidError,
+      retainedPreviousState: emitting.catalog.getState() === validState,
+      downstreamCalls: downstream.mock.calls.length
+    }).toEqual({
+      result: false,
+      error: undefined,
+      retainedPreviousState: true,
+      downstreamCalls: 0
+    });
+    expect(invariantErrors).toHaveBeenCalledWith(expect.objectContaining({ message: 'Missing authoritative catalog icon for unknown.catalog-icon.' }));
     await tick();
     await tick();
 
@@ -403,22 +434,43 @@ describe('WidgetCatalog', () => {
     expect(rendered.container.querySelectorAll('svg[data-catalog-icon] use')).toHaveLength(94);
     expect(lifecycle.snapshot(tracked.active.size)).toEqual(before);
 
+    const subsequentValidState = Object.freeze({ ...validState, previewWidth: 300 });
+    expect(emitting.emit(subsequentValidState)).toBe(true);
+    expect(emitting.catalog.getState()).toBe(subsequentValidState);
+    expect(downstream).toHaveBeenCalledTimes(1);
+    expect(downstream).toHaveBeenLastCalledWith(subsequentValidState);
+    await tick();
+    await tick();
+    expect(screen.getByRole('slider', { name: 'Preview size' })).toHaveValue('300');
+    expect(rendered.container.querySelectorAll('[data-catalog-result]')).toHaveLength(94);
+    expect(lifecycle.snapshot(tracked.active.size)).toEqual(before);
+
     rendered.unmount();
-    expect(lifecycle.snapshot(tracked.active.size)).toEqual({
+    const unmounted = lifecycle.snapshot(tracked.active.size);
+    expect({
+      subscriptions: unmounted.subscriptions,
+      frames: unmounted.frames,
+      mutationObservers: unmounted.mutationObservers,
+      resizeObservers: unmounted.resizeObservers,
+      componentWindowRegistrations: unmounted.listeners.componentWindowRegistrations,
+      rawUnmatchedDialogRegistrations: unmounted.listeners.rawUnmatchedDialogRegistrations,
+      activeComponentOwnedListeners: unmounted.listeners.activeComponentOwnedListeners,
+      dialogs: unmounted.dialogs,
+      results: unmounted.results,
+      previews: unmounted.previews
+    }).toEqual({
       subscriptions: 0,
       frames: 0,
       mutationObservers: 0,
       resizeObservers: 0,
-      listeners: {
-        frameworkDocumentDelegates: 0,
-        componentWindowRegistrations: 0,
-        rawUnmatchedDialogRegistrations: 1,
-        activeComponentOwnedListeners: 0
-      },
+      componentWindowRegistrations: 0,
+      rawUnmatchedDialogRegistrations: 1,
+      activeComponentOwnedListeners: 0,
       dialogs: 0,
       results: 0,
       previews: 0
     });
+    expect(unmounted.listeners.frameworkDocumentDelegates).toBeGreaterThanOrEqual(0);
     } finally {
       lifecycle.restore();
     }

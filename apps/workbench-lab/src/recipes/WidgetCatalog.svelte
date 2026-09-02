@@ -12,6 +12,10 @@
   } from './CatalogGridController.js';
   import CatalogWidgetPreview from './CatalogWidgetPreview.svelte';
 
+  type CatalogSnapshotPreflightController = CatalogController & {
+    setCatalogSnapshotPreflight?: (preflight: (next: CatalogState) => boolean) => () => void;
+  };
+
   let {
     catalog,
     rendererRegistry,
@@ -19,6 +23,7 @@
     instanceCounts = {},
     oncreate,
     onplace,
+    onCatalogInvariantError,
     class: className = ''
   }: {
     catalog: CatalogController;
@@ -27,6 +32,7 @@
     instanceCounts?: Readonly<Record<string, number>>;
     oncreate: (manifest: WidgetManifest) => void;
     onplace?: (manifest: WidgetManifest, result: HTMLElement) => void;
+    onCatalogInvariantError?: (error: Error) => void;
     class?: string;
   } = $props();
 
@@ -171,6 +177,21 @@
     return state;
   }
 
+  function acceptsCatalogSnapshot(next: CatalogState): boolean {
+    try {
+      assertCatalogIcons(next);
+      return true;
+    } catch (error) {
+      const invariant = error instanceof Error ? error : new Error(String(error));
+      try {
+        onCatalogInvariantError?.(invariant);
+      } catch {
+        // An error boundary cannot disrupt an external catalog dispatch.
+      }
+      return false;
+    }
+  }
+
   let catalogSnapshot: CatalogState | undefined = $state(getInitialCatalogState());
   let dialog: HTMLDialogElement;
   let searchInput: HTMLInputElement | undefined = $state();
@@ -187,13 +208,18 @@
     : [];
 
   $effect(() => {
-    const current = catalog;
+    const current = catalog as CatalogSnapshotPreflightController;
     const updateSnapshot = (next: CatalogState) => {
-      assertCatalogIcons(next);
+      if (!acceptsCatalogSnapshot(next)) return;
       catalogSnapshot = next;
     };
+    const clearPreflight = current.setCatalogSnapshotPreflight?.(acceptsCatalogSnapshot);
     updateSnapshot(current.getState());
-    return current.subscribe(updateSnapshot);
+    const unsubscribe = current.subscribe(updateSnapshot);
+    return () => {
+      clearPreflight?.();
+      unsubscribe();
+    };
   });
 
   $effect(() => {
