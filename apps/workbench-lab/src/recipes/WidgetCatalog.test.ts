@@ -169,33 +169,76 @@ describe('WidgetCatalog', () => {
     expect(disabledPlace).not.toHaveBeenCalled();
   });
 
-  it('restacks width, search, and category changes with only the newest anchor restoration', async () => {
+  it('measures intrinsic content and lets only the newest rapid restack restore its anchor', async () => {
     let nextFrame = 0;
-    const frames = new Map<number, FrameRequestCallback>();
+    const callbacks = new Map<number, FrameRequestCallback>();
+    const pendingFrames = new Set<number>();
     const requestFrame = vi.fn((callback: FrameRequestCallback) => {
       nextFrame += 1;
-      frames.set(nextFrame, callback);
+      callbacks.set(nextFrame, callback);
+      pendingFrames.add(nextFrame);
       return nextFrame;
     });
-    const cancelFrame = vi.fn((id: number) => { frames.delete(id); });
+    const cancelFrame = vi.fn((id: number) => { pendingFrames.delete(id); });
+    const executeFrame = (id: number) => {
+      pendingFrames.delete(id);
+      callbacks.get(id)?.(0);
+    };
     vi.stubGlobal('requestAnimationFrame', requestFrame);
     vi.stubGlobal('cancelAnimationFrame', cancelFrame);
     const user = userEvent.setup();
     const { container } = renderCatalog();
     const results = container.querySelector<HTMLElement>('[data-catalog-results]')!;
     Object.defineProperty(results, 'clientWidth', { configurable: true, value: 600 });
+    let resultTop = 20;
+    vi.spyOn(results, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, top: 0, right: 600, bottom: 500, left: 0, width: 600, height: 500, toJSON: () => ({})
+    });
     const firstResult = results.querySelector<HTMLElement>('[data-catalog-result]')!;
     const firstContent = firstResult.querySelector<HTMLElement>('[data-catalog-result-content]')!;
+    vi.spyOn(firstResult, 'getBoundingClientRect').mockImplementation(() => ({
+      x: 0, y: resultTop, top: resultTop, right: 286, bottom: resultTop + 100, left: 0, width: 286, height: 100, toJSON: () => ({})
+    }));
     vi.spyOn(firstContent, 'getBoundingClientRect').mockReturnValue({
       x: 0, y: 0, top: 0, right: 286, bottom: 160, left: 0, width: 286, height: 160, toJSON: () => ({})
     });
+
+    await tick();
+    await tick();
+    for (const id of [...pendingFrames]) executeFrame(id);
 
     const slider = screen.getByRole('slider', { name: 'Preview size' });
     await fireEvent.input(slider, { target: { value: '300' } });
     await tick();
     await tick();
-    expect(frames.size).toBe(1);
-    const firstFrame = [...frames.keys()][0]!;
+    expect(pendingFrames.size).toBe(1);
+    const firstFrame = [...pendingFrames][0]!;
+
+    resultTop = 70;
+    await fireEvent.input(slider, { target: { value: '320' } });
+    await tick();
+    await tick();
+    const secondFrame = [...pendingFrames][0]!;
+    expect(secondFrame).not.toBe(firstFrame);
+    expect(cancelFrame).toHaveBeenCalledWith(firstFrame);
+
+    executeFrame(firstFrame);
+    expect(results.scrollTop).toBe(0);
+
+    resultTop = 90;
+    await fireEvent.input(slider, { target: { value: '340' } });
+    await tick();
+    await tick();
+    expect(cancelFrame).toHaveBeenCalledWith(secondFrame);
+    expect(pendingFrames.size).toBe(1);
+    const newestFrame = [...pendingFrames][0]!;
+
+    resultTop = 120;
+    executeFrame(secondFrame);
+    expect(results.scrollTop).toBe(0);
+    executeFrame(newestFrame);
+    expect(results.scrollTop).toBe(30);
+    expect(pendingFrames.size).toBe(0);
 
     const search = screen.getByRole('searchbox', { name: 'Search Widgets' });
     await fireEvent.input(search, { target: { value: 'access' } });
@@ -205,13 +248,25 @@ describe('WidgetCatalog', () => {
     await tick();
     await tick();
 
-    expect(cancelFrame).toHaveBeenCalledWith(firstFrame);
-    expect(frames.size).toBe(1);
-    expect(results.style.getPropertyValue('--pom-catalog-preview-width')).toBe('300px');
+    expect(pendingFrames.size).toBe(1);
+    executeFrame([...pendingFrames][0]!);
+    expect(pendingFrames.size).toBe(0);
+    expect(results.style.getPropertyValue('--pom-catalog-preview-width')).toBe('340px');
     expect(results.style.getPropertyValue('--pom-catalog-columns')).toBe('1');
-    expect(results.querySelector<HTMLElement>('[data-catalog-result]')?.style.gridRowEnd).toMatch(/^span \d+$/);
-    for (const callback of frames.values()) callback(0);
-    expect(frames.size).toBe(1);
+    expect(firstResult.style.gridRowEnd).toBe('span 11');
+  });
+
+  it('does not sync or enqueue restoration after destruction wins the pending tick', async () => {
+    const requestFrame = vi.fn((_callback: FrameRequestCallback) => 1);
+    vi.stubGlobal('requestAnimationFrame', requestFrame);
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+
+    const rendered = renderCatalog();
+    rendered.unmount();
+    await tick();
+    await tick();
+
+    expect(requestFrame).not.toHaveBeenCalled();
   });
 
   it('uses Compact as the same one-column result tree without previews or preview sizing', async () => {
@@ -226,16 +281,27 @@ describe('WidgetCatalog', () => {
     expect(container.querySelectorAll('[data-catalog-result]')).toHaveLength(94);
     const first = container.querySelector<HTMLElement>('[data-catalog-result]')!;
     expect(within(first).getByText('Drag')).toBeVisible();
-    expect(first.querySelector('[data-catalog-icon] svg')).not.toBeNull();
     expect(first.querySelector('.catalog-compact-copy span')).toHaveTextContent(/^settings · global device · medium$/i);
+
+    const accountAccess = container.querySelector<HTMLElement>('[data-widget-type="settings.group.account-access"]')!;
+    const stories = container.querySelector<HTMLElement>('[data-widget-type="library.stories"]')!;
+    const newStory = container.querySelector<HTMLElement>('[data-widget-type="library.new-story"]')!;
+    const cast = container.querySelector<HTMLElement>('[data-widget-type="systems.cast"]')!;
+    expect(accountAccess.querySelector('svg[data-catalog-icon="category.settings"] use')).toHaveAttribute('href', '#mi-512616');
+    expect(stories.querySelector('.catalog-compact-copy span')).toHaveTextContent('library · global · medium');
+    expect(newStory.querySelector('.catalog-compact-copy span')).toHaveTextContent('library · global workflow · wide');
+    expect(cast.querySelector('.catalog-compact-copy span')).toHaveTextContent('systems · active story present frame · medium');
+    expect(stories.querySelector('svg[data-catalog-icon="category.library"] use')).toHaveAttribute('href', '#mi-511528');
+    expect(cast.querySelector('svg[data-catalog-icon="category.systems"] use')).toHaveAttribute('href', '#mi-511777');
   });
 
   it('uses the authoritative visual identity and drag copy', () => {
     const { container } = renderCatalog();
     const first = container.querySelector<HTMLElement>('[data-catalog-result]')!;
+    const accountAccess = container.querySelector<HTMLElement>('[data-widget-type="settings.group.account-access"]')!;
 
     expect(first).toHaveAccessibleName(/drag to place on this Panel\. Press Space for keyboard placement\.$/i);
-    expect(first.querySelector('[data-catalog-widget-identity] [data-catalog-icon] svg')).not.toBeNull();
+    expect(accountAccess.querySelector('[data-catalog-widget-identity] svg[data-catalog-icon="category.settings"] use')).toHaveAttribute('href', '#mi-512616');
     expect(within(first).getByText('Drag to Panel')).toBeVisible();
   });
 
