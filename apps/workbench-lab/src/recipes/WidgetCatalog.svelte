@@ -13,7 +13,7 @@
   import CatalogWidgetPreview from './CatalogWidgetPreview.svelte';
 
   type CatalogSnapshotPreflightController = CatalogController & {
-    setCatalogSnapshotPreflight?: (preflight: (next: CatalogState) => boolean) => () => void;
+    registerCatalogSnapshotPreflight?: (preflight: (next: CatalogState) => boolean) => () => void;
   };
 
   let {
@@ -213,11 +213,11 @@
       if (!acceptsCatalogSnapshot(next)) return;
       catalogSnapshot = next;
     };
-    const clearPreflight = current.setCatalogSnapshotPreflight?.(acceptsCatalogSnapshot);
+    const unregisterPreflight = current.registerCatalogSnapshotPreflight?.(acceptsCatalogSnapshot);
     updateSnapshot(current.getState());
     const unsubscribe = current.subscribe(updateSnapshot);
     return () => {
-      clearPreflight?.();
+      unregisterPreflight?.();
       unsubscribe();
     };
   });
