@@ -251,6 +251,15 @@
   });
 
   const activePanel = $derived(workbench.panels.find((panel) => panel.id === workbench.activePanelId));
+  const catalogInstanceCounts = $derived.by(() => {
+    const counts: Record<string, number> = {};
+    for (const [instanceId, instance] of Object.entries(workbench.widgets)) {
+      const placement = workbench.placements[instanceId];
+      if (!placement || placement.kind === 'shelved' || placement.panelId !== workbench.activePanelId) continue;
+      counts[instance.type] = (counts[instance.type] ?? 0) + 1;
+    }
+    return counts;
+  });
 
   function syncCompactDockDefaults(isCompact = compactWorkbenchMedia?.matches ?? false) {
     const shouldCollapse = isCompact
@@ -540,7 +549,14 @@
     </WorkbenchSurface>
   </section>
 
-  <WidgetCatalog {catalog} oncreate={addFromCatalog} class="widget-catalog" />
+  <WidgetCatalog
+    {catalog}
+    {rendererRegistry}
+    {hostContext}
+    instanceCounts={catalogInstanceCounts}
+    oncreate={addFromCatalog}
+    class="widget-catalog"
+  />
 
   {#if focusedFrame}
     <FocusedWidget
