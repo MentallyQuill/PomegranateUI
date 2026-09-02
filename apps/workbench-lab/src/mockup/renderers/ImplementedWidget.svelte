@@ -1,6 +1,10 @@
 <script lang="ts">
   import type { WidgetRendererProps } from '@pomegranate-ui/svelte';
-  import ThemeSettings from '../../recipes/ThemeSettings.svelte';
+  import AmbientLight from '../../recipes/theme-authoring/AmbientLight.svelte';
+  import CustomTheme from '../../recipes/theme-authoring/CustomTheme.svelte';
+  import ThemeCanvasSettings from '../../recipes/theme-authoring/ThemeCanvasSettings.svelte';
+  import ThemeColors from '../../recipes/theme-authoring/ThemeColors.svelte';
+  import ThemeMaterials from '../../recipes/theme-authoring/ThemeMaterials.svelte';
   import WidgetAnatomy from '../../recipes/WidgetAnatomy.svelte';
   import WidgetStateSurface from '../../recipes/WidgetStateSurface.svelte';
   import { createEyeDropperAdapter } from '../../themes/eyedropper.js';
@@ -38,12 +42,15 @@
   >
     <WidgetStateSurface {state} />
     {#if instance.type === 'settings.custom-theme' && contentVisible}
-      <ThemeSettings
-        theme={hostContext.theme}
-        {eyedropper}
-        contract={fixture}
-        presentation={instance.configuration.presentation === 'compact' ? 'compact' : 'full'}
-      />
+      <CustomTheme theme={hostContext.theme} />
+    {:else if instance.type === 'settings.theme-colors' && contentVisible}
+      <ThemeColors theme={hostContext.theme} {eyedropper} />
+    {:else if instance.type === 'settings.theme-materials' && contentVisible}
+      <ThemeMaterials theme={hostContext.theme} />
+    {:else if instance.type === 'settings.theme-canvas' && contentVisible}
+      <ThemeCanvasSettings theme={hostContext.theme} />
+    {:else if instance.type === 'settings.theme-ambient' && contentVisible}
+      <AmbientLight theme={hostContext.theme} />
     {:else if instance.type === 'story.composer' && instance.configuration.surfacePreview !== true && contentVisible}
       <ComposerWidget {hostContext} />
     {:else if instance.type === 'story.transcript' && instance.configuration.surfacePreview !== true && contentVisible}

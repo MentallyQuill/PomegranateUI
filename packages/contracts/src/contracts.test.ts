@@ -50,8 +50,8 @@ describe('public contracts', () => {
     expect(contracts.CANVAS_SCHEMA_VERSION).toBe('pomegranate.ui.canvas.v1');
     expect(contracts.AMBIENT_SCHEMA_VERSION).toBe('pomegranate.ui.ambient.v1');
     expect(contracts.THEME_TARGET_SCHEMA_VERSION).toBe('pomegranate.ui.theme-target.v1');
-    expect(contracts.THEME_DRAFT_SCHEMA_VERSION).toBe('pomegranate.ui.theme-draft.v1');
-    expect(contracts.PERSISTED_THEME_DRAFT_SCHEMA_VERSION).toBe('pomegranate.ui.persisted-theme-draft.v1');
+    expect(contracts.THEME_DRAFT_SCHEMA_VERSION).toBe('pomegranate.ui.theme-draft.v2');
+    expect(contracts.PERSISTED_THEME_DRAFT_SCHEMA_VERSION).toBe('pomegranate.ui.persisted-theme-draft.v2');
     expect(typeof (contracts.ThemeTargetBundleSchema as { safeParse?: unknown } | undefined)?.safeParse).toBe('function');
     expect(typeof (contracts.PersistedThemeDraftSchema as { safeParse?: unknown } | undefined)?.safeParse).toBe('function');
   });
