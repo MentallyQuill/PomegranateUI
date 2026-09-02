@@ -99,9 +99,9 @@ function renderCatalog(options: {
 
 function trackCatalogSubscriptions(catalog: CatalogController) {
   const active = new Set<() => void>();
-  const tracked = Object.freeze({
-    ...catalog,
-    subscribe(listener: (state: ReturnType<CatalogController['getState']>) => void) {
+  const tracked = Object.create(catalog) as CatalogController;
+  Object.defineProperty(tracked, 'subscribe', {
+    value(listener: (state: ReturnType<CatalogController['getState']>) => void) {
       const unsubscribe = catalog.subscribe(listener);
       const trackedUnsubscribe = () => {
         if (!active.delete(trackedUnsubscribe)) return;
@@ -110,52 +110,37 @@ function trackCatalogSubscriptions(catalog: CatalogController) {
       active.add(trackedUnsubscribe);
       return trackedUnsubscribe;
     }
-  }) satisfies CatalogController;
+  });
+  Object.freeze(tracked);
   return { catalog: tracked, active };
 }
 
-function createEmittingCatalog(catalog: CatalogController) {
+function createStructuralCatalog(catalog: CatalogController) {
   const listeners = new Set<(state: CatalogState) => void>();
   let state = catalog.getState();
-  let legacyPreflight: ((next: CatalogState) => boolean) | undefined;
-  const preflights = new Set<(next: CatalogState) => boolean>();
-  const emitting = Object.freeze({
+  let optionalPreflightReads = 0;
+  const emitting = {
     ...catalog,
     getState: () => state,
     subscribe(listener: (next: CatalogState) => void) {
       listeners.add(listener);
       return () => { listeners.delete(listener); };
-    },
-    setCatalogSnapshotPreflight(preflight: (next: CatalogState) => boolean) {
-      legacyPreflight = preflight;
-      return () => {
-        if (legacyPreflight === preflight) legacyPreflight = undefined;
-      };
-    },
-    registerCatalogSnapshotPreflight(preflight: (next: CatalogState) => boolean) {
-      preflights.add(preflight);
-      return () => { preflights.delete(preflight); };
     }
-  }) satisfies CatalogController;
+  } satisfies CatalogController;
+  Object.defineProperty(emitting, 'registerCatalogSnapshotPreflight', {
+    get() {
+      optionalPreflightReads += 1;
+      return undefined;
+    }
+  });
   return {
-    catalog: emitting,
+    catalog: Object.freeze(emitting),
     emit(next: CatalogState) {
-      let accepted = true;
-      for (const preflight of [legacyPreflight, ...preflights]) {
-        if (!preflight) continue;
-        try {
-          if (!preflight(next)) accepted = false;
-        } catch {
-          accepted = false;
-        }
-      }
-      if (!accepted) return false;
       state = next;
       for (const listener of listeners) listener(next);
-      return true;
     },
     listeners,
-    preflightCount: () => preflights.size + Number(legacyPreflight !== undefined)
+    optionalPreflightReads: () => optionalPreflightReads
   };
 }
 
@@ -380,99 +365,14 @@ describe('WidgetCatalog', () => {
     }
   });
 
-  it('keeps catalog snapshot preflights additive across catalog owners and cleanup', async () => {
-    const runtime = createLabRuntime();
-    runtime.catalog.open('expanded');
-    const emitting = createEmittingCatalog(runtime.catalog);
-    const validState = runtime.catalog.getState();
-    const first = validState.results[0]!;
-    const invalidState = Object.freeze({
-      ...validState,
-      results: Object.freeze([{
-        ...first,
-        catalog: { ...first.catalog!, iconKey: 'unknown.catalog-icon' }
-      } satisfies WidgetManifest, ...validState.results.slice(1)])
-    });
-    const priorGuard = vi.fn((next: CatalogState) => next.results.every((manifest) => manifest.catalog?.iconKey !== 'unknown.catalog-icon'));
-    const clearPriorGuard = emitting.catalog.setCatalogSnapshotPreflight(priorGuard);
-    const firstErrors = vi.fn(() => { throw new Error('first boundary failed'); });
-    const secondErrors = vi.fn();
-    let firstCatalog: ReturnType<typeof render> | undefined;
-    let secondCatalog: ReturnType<typeof render> | undefined;
-    try {
-      firstCatalog = render(WidgetCatalog, {
-        catalog: emitting.catalog,
-        rendererRegistry: runtime.rendererRegistry,
-        hostContext: previewHostContext(),
-        instanceCounts: {},
-        oncreate: vi.fn(),
-        onCatalogInvariantError: firstErrors
-      });
-      await tick();
-      await tick();
-      const afterFirstMount = emitting.preflightCount();
-
-      secondCatalog = render(WidgetCatalog, {
-        catalog: emitting.catalog,
-        rendererRegistry: runtime.rendererRegistry,
-        hostContext: previewHostContext(),
-        instanceCounts: {},
-        oncreate: vi.fn(),
-        onCatalogInvariantError: secondErrors
-      });
-      await tick();
-      await tick();
-      expect({ afterFirstMount, afterSecondMount: emitting.preflightCount() }).toEqual({
-        afterFirstMount: 2,
-        afterSecondMount: 3
-      });
-
-      const downstream = vi.fn();
-      emitting.catalog.subscribe(downstream);
-      expect(emitting.emit(invalidState)).toBe(false);
-      expect(emitting.catalog.getState()).toBe(validState);
-      expect(priorGuard).toHaveBeenCalledWith(invalidState);
-      expect(firstErrors).toHaveBeenCalledWith(expect.objectContaining({ message: 'Missing authoritative catalog icon for unknown.catalog-icon.' }));
-      expect(secondErrors).toHaveBeenCalledWith(expect.objectContaining({ message: 'Missing authoritative catalog icon for unknown.catalog-icon.' }));
-      expect(downstream).not.toHaveBeenCalled();
-
-      secondCatalog.unmount();
-      secondCatalog = undefined;
-      expect(emitting.preflightCount()).toBe(2);
-      const secondErrorCount = secondErrors.mock.calls.length;
-      expect(emitting.emit(invalidState)).toBe(false);
-      expect(firstErrors).toHaveBeenCalledTimes(2);
-      expect(secondErrors).toHaveBeenCalledTimes(secondErrorCount);
-      expect(emitting.catalog.getState()).toBe(validState);
-      expect(downstream).not.toHaveBeenCalled();
-
-      firstCatalog.unmount();
-      firstCatalog = undefined;
-      expect(emitting.preflightCount()).toBe(1);
-      expect(emitting.emit(invalidState)).toBe(false);
-      expect(emitting.catalog.getState()).toBe(validState);
-      expect(downstream).not.toHaveBeenCalled();
-
-      const subsequentValidState = Object.freeze({ ...validState, previewWidth: 300 });
-      expect(emitting.emit(subsequentValidState)).toBe(true);
-      expect(emitting.catalog.getState()).toBe(subsequentValidState);
-      expect(downstream).toHaveBeenLastCalledWith(subsequentValidState);
-    } finally {
-      secondCatalog?.unmount();
-      firstCatalog?.unmount();
-      clearPriorGuard();
-    }
-    expect(emitting.preflightCount()).toBe(0);
-  });
-
-  it('rejects a later unknown-icon emission before replacing the valid catalog state', async () => {
+  it('isolates later invalid structural snapshots without registering a precommit owner', async () => {
     const lifecycle = trackCatalogRenderLifecycle();
     try {
     const runtime = createLabRuntime();
     runtime.catalog.open('expanded');
-    const emitting = createEmittingCatalog(runtime.catalog);
+    const emitting = createStructuralCatalog(runtime.catalog);
     const tracked = trackCatalogSubscriptions(emitting.catalog);
-    const invariantErrors = vi.fn();
+    const invariantErrors = vi.fn(() => { throw new Error('observer failed'); });
     lifecycle.beginRenderBoundary();
     const rendered = render(WidgetCatalog, {
       catalog: tracked.catalog,
@@ -496,6 +396,11 @@ describe('WidgetCatalog', () => {
     expect(before.dialogs).toBe(1);
     expect(before.results).toBe(94);
     expect(before.previews).toBe(94);
+    expect({
+      optionalPreflightReads: emitting.optionalPreflightReads()
+    }).toEqual({
+      optionalPreflightReads: 0
+    });
     const downstream = vi.fn();
     emitting.catalog.subscribe(downstream);
     const validState = runtime.catalog.getState();
@@ -508,24 +413,22 @@ describe('WidgetCatalog', () => {
       } satisfies WidgetManifest, ...validState.results.slice(1)])
     });
 
-    let invalidResult: boolean | undefined;
     let invalidError: unknown;
     try {
-      invalidResult = emitting.emit(invalidState);
+      emitting.emit(invalidState);
     } catch (error) {
       invalidError = error;
     }
     expect({
-      result: invalidResult,
       error: invalidError instanceof Error ? invalidError.message : invalidError,
-      retainedPreviousState: emitting.catalog.getState() === validState,
+      externalStateCommitted: emitting.catalog.getState() === invalidState,
       downstreamCalls: downstream.mock.calls.length
     }).toEqual({
-      result: false,
       error: undefined,
-      retainedPreviousState: true,
-      downstreamCalls: 0
+      externalStateCommitted: true,
+      downstreamCalls: 1
     });
+    expect(downstream).toHaveBeenLastCalledWith(invalidState);
     expect(invariantErrors).toHaveBeenCalledWith(expect.objectContaining({ message: 'Missing authoritative catalog icon for unknown.catalog-icon.' }));
     await tick();
     await tick();
@@ -535,9 +438,9 @@ describe('WidgetCatalog', () => {
     expect(lifecycle.snapshot(tracked.active.size)).toEqual(before);
 
     const subsequentValidState = Object.freeze({ ...validState, previewWidth: 300 });
-    expect(emitting.emit(subsequentValidState)).toBe(true);
+    emitting.emit(subsequentValidState);
     expect(emitting.catalog.getState()).toBe(subsequentValidState);
-    expect(downstream).toHaveBeenCalledTimes(1);
+    expect(downstream).toHaveBeenCalledTimes(2);
     expect(downstream).toHaveBeenLastCalledWith(subsequentValidState);
     await tick();
     await tick();

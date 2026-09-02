@@ -12,10 +12,6 @@
   } from './CatalogGridController.js';
   import CatalogWidgetPreview from './CatalogWidgetPreview.svelte';
 
-  type CatalogSnapshotPreflightController = CatalogController & {
-    registerCatalogSnapshotPreflight?: (preflight: (next: CatalogState) => boolean) => () => void;
-  };
-
   let {
     catalog,
     rendererRegistry,
@@ -208,18 +204,12 @@
     : [];
 
   $effect(() => {
-    const current = catalog as CatalogSnapshotPreflightController;
     const updateSnapshot = (next: CatalogState) => {
       if (!acceptsCatalogSnapshot(next)) return;
       catalogSnapshot = next;
     };
-    const unregisterPreflight = current.registerCatalogSnapshotPreflight?.(acceptsCatalogSnapshot);
-    updateSnapshot(current.getState());
-    const unsubscribe = current.subscribe(updateSnapshot);
-    return () => {
-      unregisterPreflight?.();
-      unsubscribe();
-    };
+    updateSnapshot(catalog.getState());
+    return catalog.subscribe(updateSnapshot);
   });
 
   $effect(() => {
