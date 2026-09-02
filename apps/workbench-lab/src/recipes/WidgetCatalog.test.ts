@@ -5,7 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WidgetManifest } from '@pomegranate-ui/contracts';
-import { createCatalogController, createWidgetRegistry, type CatalogController } from '@pomegranate-ui/core';
+import { createCatalogController, createWidgetRegistry, type CatalogController, type CatalogState } from '@pomegranate-ui/core';
 
 import { createLabHostContext, type LabHostContext } from '../mockup/host-context.js';
 import { createCatalogManifests } from '../mockup/catalog.js';
@@ -114,6 +114,27 @@ function trackCatalogSubscriptions(catalog: CatalogController) {
   return { catalog: tracked, active };
 }
 
+function createEmittingCatalog(catalog: CatalogController) {
+  const listeners = new Set<(state: CatalogState) => void>();
+  let state = catalog.getState();
+  const emitting = Object.freeze({
+    ...catalog,
+    getState: () => state,
+    subscribe(listener: (next: CatalogState) => void) {
+      listeners.add(listener);
+      return () => { listeners.delete(listener); };
+    }
+  }) satisfies CatalogController;
+  return {
+    catalog: emitting,
+    emit(next: CatalogState) {
+      state = next;
+      for (const listener of listeners) listener(next);
+    },
+    listeners
+  };
+}
+
 function trackCatalogRenderLifecycle() {
   let nextFrame = 0;
   const activeFrames = new Set<number>();
@@ -163,14 +184,15 @@ function trackCatalogRenderLifecycle() {
     || target === document
     || target instanceof HTMLDialogElement;
   const listenerKey = (type: string, options?: boolean | AddEventListenerOptions) => `${type}:${typeof options === 'boolean' ? options : options?.capture === true}`;
-  // Svelte delegates ordinary handlers through document, while Testing Library adds
-  // document reset handlers during render. A connected dialog is the component-owned
-  // listener target; detached dialog handlers cannot remain active side effects.
-  const listenerCount = () => [...listeners.entries()]
-    .filter(([target]) => target instanceof HTMLDialogElement && target.isConnected)
-    .reduce((total, [, byType]) => total + [...byType.values()]
-      .reduce((typeTotal, registered) => typeTotal + registered.size, 0), 0);
-  vi.spyOn(EventTarget.prototype, 'addEventListener').mockImplementation(function (
+  // Svelte's document delegates are intentionally process-scoped. Keep raw dialog
+  // registrations distinct from listeners that still have a production-reachable
+  // target; this harness itself is the only strong owner of detached dialog targets.
+  const listenerCountFor = (target: EventTarget) => [...listeners.get(target)?.values() ?? []]
+    .reduce((total, registered) => total + registered.size, 0);
+  const dialogListenerCount = (predicate: (dialog: HTMLDialogElement) => boolean) => [...listeners.entries()]
+    .filter(([target]) => target instanceof HTMLDialogElement && predicate(target))
+    .reduce((total, [target]) => total + listenerCountFor(target), 0);
+  const addSpy = vi.spyOn(EventTarget.prototype, 'addEventListener').mockImplementation(function (
     this: EventTarget,
     type: string,
     listener: EventListenerOrEventListenerObject | null,
@@ -184,7 +206,7 @@ function trackCatalogRenderLifecycle() {
     byType.set(listenerKey(type, options), registered);
     listeners.set(this, byType);
   });
-  vi.spyOn(EventTarget.prototype, 'removeEventListener').mockImplementation(function (
+  const removeSpy = vi.spyOn(EventTarget.prototype, 'removeEventListener').mockImplementation(function (
     this: EventTarget,
     type: string,
     listener: EventListenerOrEventListenerObject | null,
@@ -204,7 +226,12 @@ function trackCatalogRenderLifecycle() {
       frames: activeFrames.size,
       mutationObservers: mutationObservers.size,
       resizeObservers: resizeObservers.size,
-      listeners: listenerCount(),
+      listeners: {
+        frameworkDocumentDelegates: listenerCountFor(document),
+        componentWindowRegistrations: listenerCountFor(window),
+        rawUnmatchedDialogRegistrations: dialogListenerCount(() => true),
+        activeComponentOwnedListeners: listenerCountFor(window) + dialogListenerCount((dialog) => dialog.isConnected)
+      },
       dialogs: document.querySelectorAll('dialog[aria-label="Widget Catalog"]').length,
       results: document.querySelectorAll('[data-catalog-result]').length,
       previews: document.querySelectorAll('[data-catalog-preview]').length
@@ -212,13 +239,19 @@ function trackCatalogRenderLifecycle() {
     requestFrame,
     cancelFrame,
     mutationDisconnect,
-    resizeDisconnect
+    resizeDisconnect,
+    restore() {
+      addSpy.mockRestore();
+      removeSpy.mockRestore();
+      vi.unstubAllGlobals();
+    }
   };
 }
 
 describe('WidgetCatalog', () => {
   it('recovers a failed unknown-icon render without residual catalog lifecycle state', async () => {
     const lifecycle = trackCatalogRenderLifecycle();
+    try {
     const invalidManifest = createCatalogManifests().find(({ type }) => type === 'settings.group.account-access')!;
     const invalidRegistry = createWidgetRegistry();
     expect(invalidRegistry.register({
@@ -246,7 +279,12 @@ describe('WidgetCatalog', () => {
       frames: 0,
       mutationObservers: 0,
       resizeObservers: 0,
-      listeners: 0,
+      listeners: {
+        frameworkDocumentDelegates: 0,
+        componentWindowRegistrations: 0,
+        rawUnmatchedDialogRegistrations: 0,
+        activeComponentOwnedListeners: 0
+      },
       dialogs: 0,
       results: 0,
       previews: 0
@@ -269,9 +307,12 @@ describe('WidgetCatalog', () => {
 
     const results = [...rendered.container.querySelectorAll<HTMLElement>('[data-catalog-result]')];
     expect(results).toHaveLength(94);
+    const iconUses = rendered.container.querySelectorAll('svg[data-catalog-icon] use');
+    expect(iconUses).toHaveLength(94);
     for (const manifest of createCatalogManifests()) {
       const iconKey = manifest.catalog!.iconKey;
       const result = rendered.container.querySelector<HTMLElement>(`[data-widget-type="${manifest.type}"]`)!;
+      expect(result.querySelectorAll('svg[data-catalog-icon] use')).toHaveLength(1);
       expect(result.querySelector(`svg[data-catalog-icon="${iconKey}"] use`)).toHaveAttribute('href', `#${EXPECTED_CATALOG_ICON_SYMBOLS[iconKey]}`);
     }
     expect(lifecycle.snapshot(recovered.active.size)).toEqual({
@@ -279,7 +320,12 @@ describe('WidgetCatalog', () => {
       frames: 1,
       mutationObservers: 94,
       resizeObservers: 1,
-      listeners: 1,
+      listeners: {
+        frameworkDocumentDelegates: 7,
+        componentWindowRegistrations: 0,
+        rawUnmatchedDialogRegistrations: 1,
+        activeComponentOwnedListeners: 1
+      },
       dialogs: 1,
       results: 94,
       previews: 94
@@ -291,7 +337,12 @@ describe('WidgetCatalog', () => {
       frames: 0,
       mutationObservers: 0,
       resizeObservers: 0,
-      listeners: 0,
+      listeners: {
+        frameworkDocumentDelegates: 1,
+        componentWindowRegistrations: 0,
+        rawUnmatchedDialogRegistrations: 1,
+        activeComponentOwnedListeners: 0
+      },
       dialogs: 0,
       results: 0,
       previews: 0
@@ -300,6 +351,77 @@ describe('WidgetCatalog', () => {
     expect(lifecycle.cancelFrame).toHaveBeenCalledTimes(1);
     expect(lifecycle.mutationDisconnect).toHaveBeenCalledTimes(94);
     expect(lifecycle.resizeDisconnect).toHaveBeenCalledTimes(1);
+    } finally {
+      lifecycle.restore();
+    }
+  });
+
+  it('rejects a later unknown-icon emission before replacing the valid catalog state', async () => {
+    const lifecycle = trackCatalogRenderLifecycle();
+    try {
+    const runtime = createLabRuntime();
+    runtime.catalog.open('expanded');
+    const emitting = createEmittingCatalog(runtime.catalog);
+    const tracked = trackCatalogSubscriptions(emitting.catalog);
+    lifecycle.beginRenderBoundary();
+    const rendered = render(WidgetCatalog, {
+      catalog: tracked.catalog,
+      rendererRegistry: runtime.rendererRegistry,
+      hostContext: previewHostContext(),
+      instanceCounts: {},
+      oncreate: vi.fn()
+    });
+    lifecycle.endRenderBoundary();
+    await tick();
+    await tick();
+    const before = lifecycle.snapshot(tracked.active.size);
+    expect(before.subscriptions).toBe(1);
+    expect(before.frames).toBe(1);
+    expect(before.mutationObservers).toBe(94);
+    expect(before.resizeObservers).toBe(1);
+    expect(before.listeners.componentWindowRegistrations).toBe(0);
+    expect(before.listeners.rawUnmatchedDialogRegistrations).toBe(1);
+    expect(before.listeners.activeComponentOwnedListeners).toBe(1);
+    expect(before.dialogs).toBe(1);
+    expect(before.results).toBe(94);
+    expect(before.previews).toBe(94);
+    const validState = runtime.catalog.getState();
+    const first = validState.results[0]!;
+    const invalidState = Object.freeze({
+      ...validState,
+      results: Object.freeze([{
+        ...first,
+        catalog: { ...first.catalog!, iconKey: 'unknown.catalog-icon' }
+      } satisfies WidgetManifest, ...validState.results.slice(1)])
+    });
+
+    expect(() => emitting.emit(invalidState)).toThrow('Missing authoritative catalog icon for unknown.catalog-icon.');
+    await tick();
+    await tick();
+
+    expect(rendered.container.querySelectorAll('[data-catalog-result]')).toHaveLength(94);
+    expect(rendered.container.querySelectorAll('svg[data-catalog-icon] use')).toHaveLength(94);
+    expect(lifecycle.snapshot(tracked.active.size)).toEqual(before);
+
+    rendered.unmount();
+    expect(lifecycle.snapshot(tracked.active.size)).toEqual({
+      subscriptions: 0,
+      frames: 0,
+      mutationObservers: 0,
+      resizeObservers: 0,
+      listeners: {
+        frameworkDocumentDelegates: 0,
+        componentWindowRegistrations: 0,
+        rawUnmatchedDialogRegistrations: 1,
+        activeComponentOwnedListeners: 0
+      },
+      dialogs: 0,
+      results: 0,
+      previews: 0
+    });
+    } finally {
+      lifecycle.restore();
+    }
   });
 
   it('fails closed when a known Widget manifest carries an unmapped icon key', () => {

@@ -161,13 +161,17 @@
     return symbol;
   }
 
-  function assertInitialCatalogIcons() {
-    for (const manifest of catalog.getState().results) catalogIconSymbol(manifest.catalog?.iconKey);
+  function assertCatalogIcons(state: CatalogState) {
+    for (const manifest of state.results) catalogIconSymbol(manifest.catalog?.iconKey);
   }
 
-  assertInitialCatalogIcons();
+  function getInitialCatalogState(): CatalogState {
+    const state = catalog.getState();
+    assertCatalogIcons(state);
+    return state;
+  }
 
-  let catalogSnapshot: CatalogState | undefined = $state();
+  let catalogSnapshot: CatalogState | undefined = $state(getInitialCatalogState());
   let dialog: HTMLDialogElement;
   let searchInput: HTMLInputElement | undefined = $state();
   let resultsElement: HTMLElement | undefined = $state();
@@ -184,8 +188,12 @@
 
   $effect(() => {
     const current = catalog;
-    catalogSnapshot = current.getState();
-    return current.subscribe((next) => { catalogSnapshot = next; });
+    const updateSnapshot = (next: CatalogState) => {
+      assertCatalogIcons(next);
+      catalogSnapshot = next;
+    };
+    updateSnapshot(current.getState());
+    return current.subscribe(updateSnapshot);
   });
 
   $effect(() => {
