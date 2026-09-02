@@ -432,6 +432,8 @@ describe('WidgetCatalog', () => {
     expect(invariantErrors).toHaveBeenCalledWith(expect.objectContaining({ message: 'Missing authoritative catalog icon for unknown.catalog-icon.' }));
     await tick();
     await tick();
+    expect(emitting.optionalPreflightReads()).toBe(0);
+    expect(invariantErrors).toHaveBeenCalledTimes(1);
 
     expect(rendered.container.querySelectorAll('[data-catalog-result]')).toHaveLength(94);
     expect(rendered.container.querySelectorAll('svg[data-catalog-icon] use')).toHaveLength(94);
@@ -444,6 +446,8 @@ describe('WidgetCatalog', () => {
     expect(downstream).toHaveBeenLastCalledWith(subsequentValidState);
     await tick();
     await tick();
+    expect(emitting.optionalPreflightReads()).toBe(0);
+    expect(invariantErrors).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('slider', { name: 'Preview size' })).toHaveValue('300');
     expect(rendered.container.querySelectorAll('[data-catalog-result]')).toHaveLength(94);
     expect(lifecycle.snapshot(tracked.active.size)).toEqual(before);
@@ -474,6 +478,8 @@ describe('WidgetCatalog', () => {
       previews: 0
     });
     expect(unmounted.listeners.frameworkDocumentDelegates).toBeGreaterThanOrEqual(0);
+    expect(emitting.optionalPreflightReads()).toBe(0);
+    expect(invariantErrors).toHaveBeenCalledTimes(1);
     } finally {
       lifecycle.restore();
     }
