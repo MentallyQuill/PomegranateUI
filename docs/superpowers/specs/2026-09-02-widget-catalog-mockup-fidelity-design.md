@@ -79,6 +79,10 @@ query, primary category, and one active utility filter. It accepts an optional
 host adapter that evaluates Favorites, Recent, On this Panel, and Fits this
 layout without importing DOM, Svelte, or product concepts.
 
+Catalog metadata declares `multiplicity: 'single' | 'multiple'`. The Lab's 94
+manifests carry the reviewed value explicitly; the Catalog never infers
+singleton behavior from rendered DOM or a title/type convention.
+
 Full close clears query and contextual placement filters while retaining
 display preferences. A placement suspension keeps the complete controller
 state plus result-scroll anchor until placement commits or cancels.
@@ -127,4 +131,3 @@ Tests must prove behavior rather than source text:
   Bunny, and Ash and Amber;
 - final `npm.cmd run check` on Windows after an explicit
   `PORTS_4173_4174_FREE` ownership receipt.
-

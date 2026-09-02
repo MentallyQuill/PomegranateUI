@@ -26,41 +26,49 @@
 ### Task 1: Reusable Catalog preferences, utilities, and suspension
 
 **Files:**
+- Modify: `packages/contracts/src/model.ts`
+- Modify: `packages/contracts/src/contracts.test.ts`
 - Modify: `packages/core/src/catalog.ts`
 - Modify: `packages/core/src/catalog.test.ts`
+- Modify: `apps/workbench-lab/src/mockup/catalog.ts`
 
 **Interfaces:**
 - Produces: `CatalogUtility = 'favorites' | 'recent' | 'on-panel' | 'fits-layout'`
 - Produces: `CatalogHostAdapter.matchesUtility(manifest, utility): boolean`
+- Produces: required catalog metadata `multiplicity: 'single' | 'multiple'`
 - Produces: `CatalogState.previewWidth`, `CatalogState.utility`, `CatalogState.suspended`
 - Produces: `setPreviewWidth`, `setUtility`, `suspend`, and `resume` controller methods
 
-- [ ] **Step 1: Add failing controller tests**
+- [ ] **Step 1: Add failing metadata and controller tests**
 
-  Add literal expectations proving width clamps to 200 and 420, defaults to 286,
+  Require explicit `single`/`multiple` multiplicity in parsed catalog metadata
+  and reject missing/invalid values. Add literal expectations proving width
+  clamps to 200 and 420, defaults to 286,
   utility filtering composes with query/category filtering, a thrown adapter does
   not block other results, close retains view/width/category preferences while
   clearing query, and suspend/resume preserves the exact immutable snapshot.
 
 - [ ] **Step 2: Run the focused test and verify RED**
 
-  Run: `npm.cmd exec vitest run packages/core/src/catalog.test.ts`
+  Run: `npm.cmd exec vitest run packages/contracts/src/contracts.test.ts packages/core/src/catalog.test.ts`
 
   Expected: compile/assertion failures because the new state and methods do not exist.
 
 - [ ] **Step 3: Implement the minimal framework-neutral state**
 
-  Add the union, adapter option, normalized width helper, new state fields, and
-  methods. Keep `snapshot` frozen and filter adapter failures locally.
+  Add the multiplicity union/schema, update all 94 Lab manifests with explicit
+  reviewed multiplicity, then add the adapter option, normalized width helper,
+  new state fields, and methods. Keep `snapshot` frozen and filter adapter
+  failures locally.
 
 - [ ] **Step 4: Run the focused test and verify GREEN**
 
-  Run: `npm.cmd exec vitest run packages/core/src/catalog.test.ts`
+  Run: `npm.cmd exec vitest run packages/contracts/src/contracts.test.ts packages/core/src/catalog.test.ts`
 
 - [ ] **Step 5: Commit the controller slice**
 
   ```powershell
-  git add packages/core/src/catalog.ts packages/core/src/catalog.test.ts
+  git add packages/contracts/src/model.ts packages/contracts/src/contracts.test.ts packages/core/src/catalog.ts packages/core/src/catalog.test.ts apps/workbench-lab/src/mockup/catalog.ts
   git commit -m "feat: extend catalog display state"
   ```
 
