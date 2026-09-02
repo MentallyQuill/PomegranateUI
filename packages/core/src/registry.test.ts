@@ -21,6 +21,7 @@ function manifest(type = 'story.summary'): WidgetManifest {
       keywords: ['story', 'summary'],
       iconKey: 'story.summary',
       shape: 'medium',
+      multiplicity: 'single',
       minColumns: 1,
       geometry: { minHeight: 160, idealHeight: 240, maxHeight: 480 },
       supportedStates: ['ready', 'failure']
