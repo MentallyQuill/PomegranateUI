@@ -117,7 +117,7 @@ export const SURFACE_FIXTURES: ReadonlyMap<WidgetType, SurfaceFixture> = new Map
   fixture('settings.content', 'system', 'Global Settings · content defaults', [['Intensity', 'Moderate'], ['Excluded themes', '2'], ['Review mode', 'Before applying']], 'Content preferences are staged as defaults and cannot rewrite committed Story material or another participant’s boundaries.', ['Review content changes'], DRAFT),
   fixture('settings.add-ons', 'archive', 'Global host · add-on overview', [['Installed', '2'], ['Enabled', '1'], ['Updates available', 'None']], 'The host owns installation and capabilities; this overview exposes no extension data until its permissions allow it.', ['Manage installed add-ons'], DRAFT),
   fixture('settings.raw-story-data', 'document', 'Active Story · guarded raw data', [['Revision', '42 committed'], ['Sections', '8 typed records'], ['Draft', 'No raw changes']], 'The typed Story owner remains authoritative; raw edits require validation, a consequence review, and an explicit commit.', ['Review raw Story data'], TASK),
-  fixture('settings.default-model', 'assignments', 'Global host · default inference model', [['Provider', 'OpenAI'], ['Model', 'GPT-4.1 mini'], ['Used by', '2 inherited roles']], 'The default model is one shared setting; role-specific assignments can override it without duplicating credentials.', ['Save default model'], DRAFT),
+  fixture('settings.default-model', 'assignments', 'Global host · default inference model', [['Provider', 'Default connected provider'], ['Model', 'Balanced text model'], ['Used by', '2 inherited roles']], 'The default model is one shared setting; role-specific assignments can override it without duplicating credentials.', ['Save default model'], DRAFT),
   fixture('settings.memory-search-model', 'assignments', 'Global host · memory search route', [['Provider', 'Local Engine'], ['Model', 'text-embedding-small'], ['Index compatibility', 'Ready']], 'Changing the search model stages a compatibility check; existing memory data remains untouched until review succeeds.', ['Review model change'], DRAFT),
   fixture('settings.response-limit', 'assignments', 'Global host · response budget', [['Default limit', '1,200 tokens'], ['Narration override', '1,800 tokens'], ['Characters', 'Follow default']], 'Limits are upper bounds for eligible model calls, not promises about response length or fictional progress.', ['Save response limits'], DRAFT),
   fixture('settings.openrouter-routing', 'assignments', 'Global host · OpenRouter policy', [['Routing mode', 'Price and latency'], ['Allowed providers', '3'], ['Fallbacks', '2 ordered']], 'Routing policy selects among explicitly allowed providers; it never exposes keys or changes a role assignment silently.', ['Review routing policy'], DRAFT),
@@ -144,7 +144,6 @@ export const SURFACE_FIXTURES: ReadonlyMap<WidgetType, SurfaceFixture> = new Map
 ].map((entry) => [entry.type, entry]));
 
 export function getSurfaceFixture(type: WidgetType): SurfaceFixture | undefined {
-  if (type === 'systems.temporal-ledger') return SURFACE_FIXTURES.get(asWidgetType('systems.promise-ledger'));
   return SURFACE_FIXTURES.get(type);
 }
 

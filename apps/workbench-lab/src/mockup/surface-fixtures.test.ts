@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { asWidgetType } from '@pomegranate-ui/contracts';
 
 import { createCatalogManifests } from './catalog.js';
 import { SURFACE_FIXTURES } from './surface-fixtures.js';
@@ -28,5 +29,17 @@ describe('Lab surface fixtures', () => {
       .join(' ');
 
     expect(visibleCopy).not.toMatch(/minHeight|maxHeight|idealHeight|renderer unavailable|registry entry/i);
+  });
+
+  it('keeps the default-model example provider and model neutral', () => {
+    const fixture = SURFACE_FIXTURES.get(asWidgetType('settings.default-model'));
+    const visibleCopy = fixture?.rows.flat().join(' ') ?? '';
+
+    expect(visibleCopy).not.toMatch(/OpenAI|GPT-4\.1 mini/i);
+    expect(fixture?.rows).toEqual([
+      ['Provider', 'Default connected provider'],
+      ['Model', 'Balanced text model'],
+      ['Used by', '2 inherited roles']
+    ]);
   });
 });

@@ -1,4 +1,3 @@
-import { asWidgetType } from '@pomegranate-ui/contracts';
 import { createCatalogController, createWidgetRegistry, createWorkbenchStore, type PanelCapabilityPolicy } from '@pomegranate-ui/core';
 import { createWidgetRendererRegistry } from '@pomegranate-ui/svelte';
 
@@ -19,8 +18,6 @@ export function createLabRuntime() {
     const registered = rendererRegistry.register(type, ImplementedWidget);
     if (!registered.ok) throw new Error(registered.error.message);
   }
-  const temporalLedgerRenderer = rendererRegistry.register(asWidgetType('systems.temporal-ledger'), ImplementedWidget);
-  if (!temporalLedgerRenderer.ok) throw new Error(temporalLedgerRenderer.error.message);
   const initialState = createLabState();
   const shipped = new Set(Object.values(LAB_PANEL_IDS));
   const panelPolicy: PanelCapabilityPolicy = {

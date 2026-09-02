@@ -81,8 +81,8 @@ describe('implemented Deep Current surface boundary', () => {
     }
   });
 
-  it('registers the formerly unavailable temporal-ledger renderer', () => {
+  it('does not invent renderer identities outside the authoritative catalog', () => {
     const runtime = createLabRuntime();
-    expect(runtime.rendererRegistry.get(asWidgetType('systems.temporal-ledger'))).toBeDefined();
+    expect(runtime.rendererRegistry.get(asWidgetType('systems.temporal-ledger'))).toBeUndefined();
   });
 });
