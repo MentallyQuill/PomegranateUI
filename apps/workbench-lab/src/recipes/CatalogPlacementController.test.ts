@@ -55,7 +55,142 @@ function appendTarget(root: HTMLElement, regionId: string, role: string, label: 
 describe('CatalogPlacementController', () => {
   afterEach(() => {
     document.body.replaceChildren();
+    vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it('keeps duplicate semantic regions in separate lanes uniquely addressable', () => {
+    const { root, origin, target: first } = placementSurface();
+    const second = appendTarget(root, 'stage', 'stage', 'Second stage lane');
+    const onCommit = vi.fn();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit
+    });
+
+    controller.keyDown(new KeyboardEvent('keydown', { key: ' ', cancelable: true }), manifest, origin);
+    const [firstTarget, secondTarget] = controller.getState().targets;
+    expect(firstTarget?.identity.id).not.toBe(secondTarget?.identity.id);
+
+    controller.keyDown(new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }), manifest, origin);
+    controller.keyDown(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }), manifest, origin);
+
+    expect(onCommit).toHaveBeenCalledWith(manifest, expect.objectContaining({
+      identity: expect.objectContaining({ regionId: 'stage', lane: 1 }),
+      element: second
+    }));
+    expect(onCommit).not.toHaveBeenCalledWith(manifest, expect.objectContaining({ element: first }));
+    controller.destroy();
+  });
+
+  it('interrupts a touch long-press after even one pixel of movement', () => {
+    vi.useFakeTimers();
+    const { root, origin } = placementSurface();
+    const suspend = vi.fn();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend, resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit: vi.fn()
+    });
+
+    controller.pointerDown(pointerEvent('pointerdown', {
+      clientX: 40,
+      clientY: 50,
+      pointerType: 'touch'
+    }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', {
+      clientX: 41,
+      clientY: 50,
+      pointerType: 'touch'
+    }));
+    vi.advanceTimersByTime(300);
+
+    expect(controller.getState().phase).toBe('idle');
+    expect(suspend).not.toHaveBeenCalled();
+    controller.destroy();
+  });
+
+  it('expires stale click suppression and clears it at the next pointer sequence', () => {
+    vi.useFakeTimers();
+    const { root, origin } = placementSurface();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => false,
+      onCommit: vi.fn()
+    });
+
+    controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+    controller.pointerDown(pointerEvent('pointerdown', { pointerId: 2, clientX: 10, clientY: 10 }), manifest, origin);
+    expect(controller.consumeClick()).toBe(false);
+
+    document.dispatchEvent(pointerEvent('pointerup', { pointerId: 2, clientX: 10, clientY: 10 }));
+    controller.pointerDown(pointerEvent('pointerdown', { pointerId: 3, clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { pointerId: 3, clientX: 16, clientY: 10 }));
+    vi.advanceTimersByTime(500);
+    expect(controller.consumeClick()).toBe(false);
+    controller.destroy();
+  });
+
+  it('ignores repeated Enter while a keyboard placement is lifted', () => {
+    const { root, origin } = placementSurface();
+    const onCommit = vi.fn();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit
+    });
+
+    controller.keyDown(new KeyboardEvent('keydown', { key: ' ', cancelable: true }), manifest, origin);
+    const repeatedEnter = new KeyboardEvent('keydown', { key: 'Enter', repeat: true, cancelable: true });
+    expect(controller.keyDown(repeatedEnter, manifest, origin)).toBe(true);
+    expect(repeatedEnter.defaultPrevented).toBe(true);
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(controller.getState().phase).toBe('lifted');
+
+    controller.keyDown(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }), manifest, origin);
+    expect(onCommit).toHaveBeenCalledOnce();
+    controller.destroy();
+  });
+
+  it('captures the active pointer and cancels idempotently on capture loss or window blur', () => {
+    const { root, origin, target } = placementSurface();
+    const resume = vi.fn();
+    const setPointerCapture = vi.fn();
+    const releasePointerCapture = vi.fn();
+    Object.defineProperties(origin, {
+      setPointerCapture: { configurable: true, value: setPointerCapture },
+      hasPointerCapture: { configurable: true, value: () => true },
+      releasePointerCapture: { configurable: true, value: releasePointerCapture }
+    });
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit: vi.fn()
+    });
+
+    controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+    expect(setPointerCapture).toHaveBeenCalledWith(1);
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+    origin.dispatchEvent(pointerEvent('lostpointercapture', { clientX: 16, clientY: 10 }));
+    window.dispatchEvent(new Event('blur'));
+
+    expect(controller.getState().phase).toBe('idle');
+    expect(resume).toHaveBeenCalledOnce();
+    expect(releasePointerCapture).toHaveBeenCalledWith(1);
+    expect(target).not.toHaveAttribute('data-catalog-placement-target');
+    controller.destroy();
   });
 
   it('does not lift a mouse result until movement reaches six pixels', () => {
@@ -256,7 +391,7 @@ describe('CatalogPlacementController', () => {
     expect(controller.getState()).toMatchObject({
       phase: 'lifted',
       input: 'keyboard',
-      selectedTargetId: 'panel-story:panel:stage:primary',
+      selectedTargetId: 'panel-story:panel:stage:lane-0:primary',
       proxy: {
         input: 'keyboard',
         manifestType: 'story.transcript',
@@ -266,7 +401,7 @@ describe('CatalogPlacementController', () => {
         height: 352
       }
     });
-    expect(target).toHaveAttribute('data-catalog-placement-target', 'panel-story:panel:stage:primary');
+    expect(target).toHaveAttribute('data-catalog-placement-target', 'panel-story:panel:stage:lane-0:primary');
     expect(target).toHaveClass('is-catalog-placement-target', 'is-catalog-target-active');
     expect(target).toHaveAttribute('tabindex', '0');
     expect(target).toHaveAttribute('role', 'button');
@@ -283,13 +418,14 @@ describe('CatalogPlacementController', () => {
       getTargetRoot: () => root,
       getInstanceCount: () => 0,
       isCompatibleTarget: () => true,
-      onCommit: vi.fn()
+      onCommit: vi.fn(),
+      requestTargetFocus: (target) => target.focus({ preventScroll: true })
     });
 
     controller.keyDown(new KeyboardEvent('keydown', { key: ' ', cancelable: true }), manifest, origin);
     controller.keyDown(new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }), manifest, origin);
 
-    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:right:primary');
+    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:right:lane-1:primary');
     expect(first).not.toHaveClass('is-catalog-target-active');
     expect(first).toHaveAttribute('tabindex', '-1');
     expect(second).toHaveClass('is-catalog-target-active');
@@ -297,10 +433,10 @@ describe('CatalogPlacementController', () => {
     expect(second).toHaveFocus();
 
     controller.keyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }), manifest, origin);
-    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:stage:primary');
+    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:stage:lane-0:primary');
 
     controller.keyDown(new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true }), manifest, origin);
-    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:right:primary');
+    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:right:lane-1:primary');
     controller.destroy();
   });
 
@@ -404,7 +540,7 @@ describe('CatalogPlacementController', () => {
     document.dispatchEvent(pointerEvent('pointermove', { clientX: 550, clientY: 150 }));
 
     expect(controller.getState().proxy).toMatchObject({ x: 550, y: 150 });
-    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:right:primary');
+    expect(controller.getState().selectedTargetId).toBe('panel-story:panel:right:lane-1:primary');
     expect(first).not.toHaveClass('is-catalog-target-active');
     expect(second).toHaveClass('is-catalog-target-active');
 

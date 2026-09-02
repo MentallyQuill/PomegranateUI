@@ -55,6 +55,7 @@ export interface CatalogPlacementControllerOptions {
   readonly captureScrollAnchor?: () => unknown;
   readonly restoreScrollAnchor?: (anchor: unknown) => void;
   readonly restoreOriginFocus?: (origin: HTMLElement) => void;
+  readonly requestTargetFocus?: (target: HTMLElement) => void;
 }
 
 export interface CatalogPlacementController {
@@ -76,10 +77,12 @@ interface PointerCandidate {
   readonly origin: HTMLElement;
   readonly document: Document;
   holdTimer: ReturnType<typeof setTimeout> | null;
+  captured: boolean;
 }
 
 const TARGET_SELECTOR = '[data-pomegranate-region-surface][data-pomegranate-region-role]';
 const POINTER_LIFT_THRESHOLD = 6;
+const CLICK_SUPPRESSION_MS = 400;
 
 const IDLE_STATE: CatalogPlacementState = Object.freeze({
   phase: 'idle',
@@ -100,8 +103,9 @@ function targetIdentity(element: HTMLElement, manifest: WidgetManifest): Catalog
   const rawLane = element.dataset.subPanelLane;
   const lane = rawLane === undefined ? undefined : Number(rawLane);
   const shelfId = manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.shelfId : 'primary';
+  const laneId = typeof lane === 'number' && Number.isInteger(lane) && lane >= 0 ? `lane-${lane}` : 'lane-none';
   const identity = {
-    id: `${panelId}:${subPanel ?? 'panel'}:${regionId}:${shelfId}`,
+    id: `${panelId}:${subPanel ?? 'panel'}:${regionId}:${laneId}:${shelfId}`,
     panelId,
     regionId,
     regionRole,
@@ -143,6 +147,7 @@ export function createCatalogPlacementController(
   let candidate: PointerCandidate | null = null;
   let suspended = false;
   let suppressNextClick = false;
+  let clickSuppressionTimer: ReturnType<typeof setTimeout> | null = null;
   let savedScrollAnchor: unknown;
   const listeners = new Set<(state: CatalogPlacementState) => void>();
   const targetAttributes = new Map<HTMLElement, {
@@ -165,16 +170,44 @@ export function createCatalogPlacementController(
     }
   };
 
+  const clearClickSuppression = () => {
+    if (clickSuppressionTimer !== null) clearTimeout(clickSuppressionTimer);
+    clickSuppressionTimer = null;
+    suppressNextClick = false;
+  };
+
+  const suppressClickBriefly = () => {
+    clearClickSuppression();
+    suppressNextClick = true;
+    clickSuppressionTimer = setTimeout(() => {
+      clickSuppressionTimer = null;
+      suppressNextClick = false;
+    }, CLICK_SUPPRESSION_MS);
+  };
+
   const removePointerListeners = () => {
-    const ownerDocument = candidate?.document;
+    const activeCandidate = candidate;
+    const ownerDocument = activeCandidate?.document;
     if (!ownerDocument) return;
-    if (candidate && candidate.holdTimer !== null) clearTimeout(candidate.holdTimer);
-    if (candidate) candidate.holdTimer = null;
+    if (activeCandidate.holdTimer !== null) clearTimeout(activeCandidate.holdTimer);
+    activeCandidate.holdTimer = null;
     ownerDocument.removeEventListener('pointermove', handlePointerMove);
     ownerDocument.removeEventListener('pointerup', handlePointerEnd);
     ownerDocument.removeEventListener('pointercancel', handlePointerEnd);
     ownerDocument.removeEventListener('scroll', handleScroll, true);
     ownerDocument.removeEventListener('keydown', handleDocumentKeyDown);
+    activeCandidate.origin.removeEventListener('lostpointercapture', handleLostPointerCapture);
+    activeCandidate.origin.ownerDocument.defaultView?.removeEventListener('blur', handleWindowBlur);
+    if (activeCandidate.captured) {
+      try {
+        if (!activeCandidate.origin.hasPointerCapture || activeCandidate.origin.hasPointerCapture(activeCandidate.pointerId)) {
+          activeCandidate.origin.releasePointerCapture?.(activeCandidate.pointerId);
+        }
+      } catch {
+        // Capture may already have been released by the user agent.
+      }
+      activeCandidate.captured = false;
+    }
   };
 
   const clearTargets = () => {
@@ -290,7 +323,7 @@ export function createCatalogPlacementController(
     }));
     if (input === 'keyboard') {
       candidate.document.addEventListener('keydown', handleDocumentKeyDown);
-      targets[0]?.element.focus({ preventScroll: true });
+      if (targets[0]) options.requestTargetFocus?.(targets[0].element);
     }
     return true;
   };
@@ -299,11 +332,11 @@ export function createCatalogPlacementController(
     if (!candidate || event.pointerId !== candidate.pointerId) return;
     if (state.phase === 'pressing') {
       const distance = Math.hypot(event.clientX - candidate.startX, event.clientY - candidate.startY);
-      if (candidate.pointerType === 'touch' && distance >= POINTER_LIFT_THRESHOLD) {
-        suppressNextClick = true;
+      if (candidate.pointerType === 'touch' && distance > 0) {
+        suppressClickBriefly();
         reset();
       } else if (candidate.pointerType !== 'touch' && distance >= POINTER_LIFT_THRESHOLD) {
-        suppressNextClick = true;
+        suppressClickBriefly();
         lift(event);
       }
       return;
@@ -318,7 +351,7 @@ export function createCatalogPlacementController(
   function handlePointerEnd(event: PointerEvent) {
     if (!candidate || event.pointerId !== candidate.pointerId) return;
     if (state.phase === 'lifted') {
-      suppressNextClick = true;
+      suppressClickBriefly();
       if (event.type !== 'pointercancel' && state.selectedTargetId) commitSelectedTarget();
       else cancelPlacement();
       return;
@@ -328,8 +361,21 @@ export function createCatalogPlacementController(
 
   function handleScroll() {
     if (candidate?.pointerType !== 'touch' || state.phase !== 'pressing') return;
-    suppressNextClick = true;
+    suppressClickBriefly();
     reset();
+  }
+
+  function handleLostPointerCapture(event: Event) {
+    const pointerId = (event as PointerEvent).pointerId;
+    if (!candidate || pointerId !== candidate.pointerId) return;
+    if (state.phase === 'lifted') cancelPlacement();
+    else reset();
+  }
+
+  function handleWindowBlur() {
+    if (!candidate) return;
+    if (state.phase === 'lifted') cancelPlacement();
+    else reset();
   }
 
   const selectTarget = (index: number, focus = true) => {
@@ -342,7 +388,7 @@ export function createCatalogPlacementController(
       target.element.tabIndex = active ? 0 : -1;
     }
     publish(Object.freeze({ ...state, selectedTargetId: selected.identity.id }));
-    if (focus) selected.element.focus({ preventScroll: true });
+    if (focus) options.requestTargetFocus?.(selected.element);
   };
 
   const selectPointerTarget = (element: Element | null, nextState: CatalogPlacementState = state) => {
@@ -394,6 +440,7 @@ export function createCatalogPlacementController(
     }
     if (event.key === 'Enter') {
       event.preventDefault();
+      if (event.repeat) return true;
       return commitSelectedTarget();
     }
     if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) {
@@ -424,6 +471,7 @@ export function createCatalogPlacementController(
       };
     },
     pointerDown(event, manifest, origin) {
+      clearClickSuppression();
       if (event.button !== 0 || candidate || state.phase !== 'idle') return false;
       candidate = {
         pointerId: event.pointerId,
@@ -433,19 +481,28 @@ export function createCatalogPlacementController(
         manifest,
         origin,
         document: origin.ownerDocument,
-        holdTimer: null
+        holdTimer: null,
+        captured: false
       };
       publish(Object.freeze({ ...IDLE_STATE, phase: 'pressing', input: 'pointer' }));
       candidate.document.addEventListener('pointermove', handlePointerMove);
       candidate.document.addEventListener('pointerup', handlePointerEnd);
       candidate.document.addEventListener('pointercancel', handlePointerEnd);
       candidate.document.addEventListener('scroll', handleScroll, true);
+      candidate.origin.addEventListener('lostpointercapture', handleLostPointerCapture);
+      candidate.origin.ownerDocument.defaultView?.addEventListener('blur', handleWindowBlur);
+      try {
+        candidate.origin.setPointerCapture?.(candidate.pointerId);
+        candidate.captured = typeof candidate.origin.setPointerCapture === 'function';
+      } catch {
+        candidate.captured = false;
+      }
       if (candidate.pointerType === 'touch') {
         const touchCandidate = candidate;
         touchCandidate.holdTimer = setTimeout(() => {
           if (candidate !== touchCandidate || state.phase !== 'pressing') return;
           touchCandidate.holdTimer = null;
-          suppressNextClick = true;
+          suppressClickBriefly();
           lift({ clientX: touchCandidate.startX, clientY: touchCandidate.startY });
         }, 300);
       }
@@ -464,19 +521,20 @@ export function createCatalogPlacementController(
         manifest,
         origin,
         document: origin.ownerDocument,
-        holdTimer: null
+        holdTimer: null,
+        captured: false
       };
       return lift({ clientX: candidate.startX, clientY: candidate.startY }, 'keyboard');
     },
     cancel: cancelPlacement,
     consumeClick() {
       const suppressed = suppressNextClick;
-      suppressNextClick = false;
+      clearClickSuppression();
       return suppressed;
     },
     destroy() {
       reset();
-      suppressNextClick = false;
+      clearClickSuppression();
       listeners.clear();
     }
   };

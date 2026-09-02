@@ -309,6 +309,13 @@
         },
         restoreOriginFocus: (origin) => {
           placementReturnOrigin = origin;
+        },
+        requestTargetFocus: (target) => {
+          void tick().then(() => {
+            if (destroyed || dialog?.open || !target.isConnected) return;
+            if (placementController?.getState().phase !== 'lifted') return;
+            target.focus({ preventScroll: true });
+          });
         }
       });
       unsubscribePlacement = placementController.subscribe((next) => {
@@ -394,6 +401,10 @@
   function handleResultKeydown(event: KeyboardEvent, manifest: WidgetManifest, unavailable: boolean) {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     if (event.key === ' ') event.preventDefault();
+    if (event.repeat) {
+      event.preventDefault();
+      return;
+    }
     if (unavailable) return;
     const result = event.currentTarget as HTMLElement;
     if (placementController) {

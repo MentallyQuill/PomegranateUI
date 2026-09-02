@@ -12,6 +12,7 @@ import { createCatalogManifests } from '../mockup/catalog.js';
 import { createLabThemeController } from '../themes/controller.js';
 import { createLabRuntime } from '../mockup/widgets.js';
 import CatalogWidgetPreview from './CatalogWidgetPreview.svelte';
+import type { CatalogPlacementTarget } from './CatalogPlacementController.js';
 import WidgetCatalog from './WidgetCatalog.svelte';
 
 const EXPECTED_CATALOG_ICON_SYMBOLS: Readonly<Record<string, string>> = Object.freeze({
@@ -95,6 +96,46 @@ function renderCatalog(options: {
     ...(options.onplace ? { onplace: options.onplace } : {})
   });
   return { ...runtime, ...rendered, oncreate, onplace: options.onplace };
+}
+
+function pointerEvent(
+  type: string,
+  init: MouseEventInit & { pointerId?: number; pointerType?: string } = {}
+): PointerEvent {
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true, ...init });
+  Object.defineProperties(event, {
+    pointerId: { configurable: true, value: init.pointerId ?? 1 },
+    pointerType: { configurable: true, value: init.pointerType ?? 'mouse' }
+  });
+  return event as PointerEvent;
+}
+
+function renderPlacementCatalog() {
+  const runtime = createLabRuntime();
+  runtime.catalog.open('expanded');
+  const root = document.body.appendChild(document.createElement('main'));
+  root.dataset.pomegranatePanel = 'panel-story';
+  const target = root.appendChild(document.createElement('section'));
+  target.dataset.pomegranateRegionSurface = 'stage';
+  target.dataset.pomegranateRegionRole = 'stage';
+  target.dataset.subPanelLane = '0';
+  target.setAttribute('aria-label', 'Stage region');
+  Object.defineProperty(target, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => new DOMRect(100, 100, 400, 300)
+  });
+  const placementBoundary = vi.fn();
+  const rendered = render(WidgetCatalog, {
+    catalog: runtime.catalog,
+    rendererRegistry: runtime.rendererRegistry,
+    hostContext: previewHostContext(),
+    instanceCounts: {},
+    oncreate: (manifest: WidgetManifest) => placementBoundary(manifest),
+    ontargetplace: (manifest: WidgetManifest, placementTarget: CatalogPlacementTarget) => placementBoundary(manifest, placementTarget),
+    getPlacementTargetRoot: () => root,
+    isPlacementTargetCompatible: () => true
+  });
+  return { ...runtime, ...rendered, root, target, placementBoundary };
 }
 
 function trackCatalogSubscriptions(catalog: CatalogController) {
@@ -587,6 +628,8 @@ describe('WidgetCatalog', () => {
     await user.click(clickResult);
     expect(clicked.oncreate).toHaveBeenCalledTimes(1);
     expect(clicked.oncreate).toHaveBeenCalledWith(expect.objectContaining({ type: clickResult.dataset.widgetType }));
+    await fireEvent.keyDown(clickResult, { key: 'Enter', repeat: true });
+    expect(clicked.oncreate).toHaveBeenCalledTimes(1);
 
     cleanup();
     const onplace = vi.fn();
@@ -618,6 +661,62 @@ describe('WidgetCatalog', () => {
     expect(disabledSpaceAllowed).toBe(false);
     expect(disabledCreate).not.toHaveBeenCalled();
     expect(disabledPlace).not.toHaveBeenCalled();
+  });
+
+  it('mounts production placement wiring through one boundary with modal recede, focus, suppression, and cleanup', async () => {
+    const rendered = renderPlacementCatalog();
+    const result = rendered.container.querySelector<HTMLElement>('[data-widget-type="story.transcript"]')!;
+    const dialog = screen.getByRole('dialog', { name: 'Widget Catalog' });
+    Object.defineProperty(result, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(10, 10, 286, 360)
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => rendered.target
+    });
+
+    await fireEvent.keyDown(result, { key: 'Enter', repeat: true });
+    expect(rendered.placementBoundary).not.toHaveBeenCalled();
+    await fireEvent.keyDown(result, { key: 'Enter' });
+    expect(rendered.placementBoundary).toHaveBeenCalledTimes(1);
+    expect(rendered.placementBoundary.mock.calls[0]).toEqual([expect.objectContaining({ type: 'story.transcript' })]);
+
+    result.focus();
+    await fireEvent.keyDown(result, { key: ' ' });
+    await waitFor(() => expect(dialog).not.toHaveAttribute('open'));
+    await waitFor(() => expect(rendered.target).toHaveFocus());
+    expect(rendered.catalog.getState().suspended).toBe(true);
+    expect(rendered.target).toHaveClass('is-catalog-placement-target', 'is-catalog-target-active');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true, cancelable: true }));
+    expect(rendered.placementBoundary).toHaveBeenCalledTimes(1);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await waitFor(() => expect(dialog).toHaveAttribute('open'));
+    await waitFor(() => expect(result).toHaveFocus());
+    expect(rendered.placementBoundary).toHaveBeenCalledTimes(2);
+    expect(rendered.placementBoundary.mock.calls[1]).toEqual([
+      expect.objectContaining({ type: 'story.transcript' }),
+      expect.objectContaining({ identity: expect.objectContaining({ regionId: 'stage', lane: 0 }) })
+    ]);
+
+    result.dispatchEvent(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 150, clientY: 150 }));
+    document.dispatchEvent(pointerEvent('pointerup', { clientX: 150, clientY: 150 }));
+    await waitFor(() => expect(dialog).toHaveAttribute('open'));
+    expect(rendered.placementBoundary).toHaveBeenCalledTimes(3);
+    await fireEvent.click(result);
+    expect(rendered.placementBoundary).toHaveBeenCalledTimes(3);
+    await fireEvent.click(result);
+    expect(rendered.placementBoundary).toHaveBeenCalledTimes(4);
+
+    await fireEvent.keyDown(result, { key: ' ' });
+    await waitFor(() => expect(rendered.catalog.getState().suspended).toBe(true));
+    rendered.unmount();
+    expect(rendered.catalog.getState().suspended).toBe(false);
+    expect(rendered.target).not.toHaveAttribute('data-catalog-placement-target');
+    expect(rendered.target).not.toHaveClass('is-catalog-placement-target', 'is-catalog-target-active');
+    rendered.root.remove();
   });
 
   it('measures intrinsic content and lets only the newest rapid restack restore its anchor', async () => {

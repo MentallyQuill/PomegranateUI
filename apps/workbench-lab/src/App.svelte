@@ -310,7 +310,9 @@
           : role === 'right-instruments' ? 'right'
             : role === 'composer' ? 'composer' : 'stage');
     const regionId = target?.identity.regionId ?? automaticRegionId;
-    const targetSubPanelId = target?.identity.subPanelId ? asSubPanelId(target.identity.subPanelId) : activeSubPanel?.id;
+    const targetSubPanelId = target
+      ? target.identity.subPanelId ? asSubPanelId(target.identity.subPanelId) : undefined
+      : activeSubPanel?.id;
     const targetLane = target?.identity.lane ?? (targetSubPanelId ? 0 : undefined);
     const shelfId = target?.identity.shelfId
       ?? (manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.shelfId : 'primary');
