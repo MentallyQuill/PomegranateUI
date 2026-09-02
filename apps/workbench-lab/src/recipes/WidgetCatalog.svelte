@@ -10,6 +10,12 @@
     type CatalogGridController,
     type CatalogScrollAnchor
   } from './CatalogGridController.js';
+  import {
+    createCatalogPlacementController,
+    type CatalogPlacementController,
+    type CatalogPlacementState,
+    type CatalogPlacementTarget
+  } from './CatalogPlacementController.js';
   import CatalogWidgetPreview from './CatalogWidgetPreview.svelte';
 
   let {
@@ -19,6 +25,9 @@
     instanceCounts = {},
     oncreate,
     onplace,
+    ontargetplace,
+    getPlacementTargetRoot,
+    isPlacementTargetCompatible,
     onCatalogInvariantError,
     class: className = ''
   }: {
@@ -28,6 +37,9 @@
     instanceCounts?: Readonly<Record<string, number>>;
     oncreate: (manifest: WidgetManifest) => void;
     onplace?: (manifest: WidgetManifest, result: HTMLElement) => void;
+    ontargetplace?: (manifest: WidgetManifest, target: CatalogPlacementTarget) => void;
+    getPlacementTargetRoot?: () => ParentNode | null;
+    isPlacementTargetCompatible?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
     onCatalogInvariantError?: (error: Error) => void;
     class?: string;
   } = $props();
@@ -193,6 +205,12 @@
   let searchInput: HTMLInputElement | undefined = $state();
   let resultsElement: HTMLElement | undefined = $state();
   let gridController: CatalogGridController | undefined;
+  let placementController: CatalogPlacementController | undefined;
+  let unsubscribePlacement: (() => void) | undefined;
+  let placementSnapshot: CatalogPlacementState | undefined = $state();
+  let placementManifest: WidgetManifest | undefined = $state();
+  let placementAnnouncement = $state('');
+  let placementReturnOrigin: HTMLElement | undefined;
   let returnFocus: HTMLElement | null = null;
   let restackRevision = 0;
   let pendingAnchor: CatalogScrollAnchor | null = null;
@@ -214,11 +232,18 @@
 
   $effect(() => {
     if (!dialog || !catalogSnapshot) return;
+    if (catalogSnapshot.open && catalogSnapshot.suspended) {
+      if (dialog.open) dialog.close();
+      return;
+    }
     if (catalogSnapshot.open && !dialog.open) {
-      returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      if (returnFocus === null) returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       dialog.showModal();
       void tick().then(() => {
-        searchInput?.focus({ preventScroll: true });
+        const placementOrigin = placementReturnOrigin;
+        placementReturnOrigin = undefined;
+        if (placementOrigin?.isConnected) placementOrigin.focus({ preventScroll: true });
+        else searchInput?.focus({ preventScroll: true });
       });
     }
     if (!catalogSnapshot.open && dialog.open) {
@@ -258,6 +283,40 @@
       getResultShape: (result) => (result.dataset.previewShape ?? 'medium') as WidgetShape,
       getResultMeasureElement: (result) => result.querySelector('[data-catalog-result-content]') ?? result
     });
+    if (ontargetplace && getPlacementTargetRoot && isPlacementTargetCompatible) {
+      placementController = createCatalogPlacementController({
+        catalog,
+        getTargetRoot: getPlacementTargetRoot,
+        getInstanceCount: (manifest) => instanceCounts[String(manifest.type)] ?? 0,
+        isCompatibleTarget: isPlacementTargetCompatible,
+        onCommit: (manifest, target) => {
+          placementAnnouncement = `${manifest.title} placement committed.`;
+          ontargetplace(manifest, target);
+        },
+        onAnnounce: (message) => { placementAnnouncement = message; },
+        captureScrollAnchor: () => Object.freeze({
+          anchor: gridController?.captureAnchor() ?? null,
+          scrollTop: resultsElement?.scrollTop ?? 0
+        }),
+        restoreScrollAnchor: (value) => {
+          const saved = value as { anchor: CatalogScrollAnchor | null; scrollTop: number } | undefined;
+          if (!saved) return;
+          void tick().then(() => {
+            gridController?.sync();
+            gridController?.restoreAnchor(saved.anchor);
+            if (resultsElement) resultsElement.scrollTop = saved.scrollTop;
+          });
+        },
+        restoreOriginFocus: (origin) => {
+          placementReturnOrigin = origin;
+        }
+      });
+      unsubscribePlacement = placementController.subscribe((next) => {
+        placementSnapshot = next;
+        if (next.instruction) placementAnnouncement = next.instruction;
+        if (next.phase === 'idle') placementManifest = undefined;
+      });
+    }
   });
   onDestroy(() => {
     destroyed = true;
@@ -265,6 +324,10 @@
     pendingAnchor = null;
     if (pendingRestoreFrame !== null) cancelAnimationFrame(pendingRestoreFrame);
     pendingRestoreFrame = null;
+    unsubscribePlacement?.();
+    unsubscribePlacement = undefined;
+    placementController?.destroy();
+    placementController = undefined;
     gridController?.destroy();
   });
 
@@ -309,13 +372,37 @@
     closeCatalog();
   }
 
-  function activateResult(event: MouseEvent | KeyboardEvent, manifest: WidgetManifest, unavailable: boolean) {
-    if (event instanceof KeyboardEvent) {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      if (event.key === ' ') event.preventDefault();
+  function handleResultPointerDown(event: PointerEvent, manifest: WidgetManifest, unavailable: boolean) {
+    if (unavailable || !placementController) return;
+    placementManifest = manifest;
+    placementController.pointerDown(event, manifest, event.currentTarget as HTMLElement);
+  }
+
+  function handleResultClick(event: MouseEvent, manifest: WidgetManifest, unavailable: boolean) {
+    if (placementController?.consumeClick()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
     }
     if (unavailable) return;
     const result = event.currentTarget as HTMLElement;
+    if (placementController) oncreate(manifest);
+    else if (onplace) onplace(manifest, result);
+    else oncreate(manifest);
+  }
+
+  function handleResultKeydown(event: KeyboardEvent, manifest: WidgetManifest, unavailable: boolean) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    if (event.key === ' ') event.preventDefault();
+    if (unavailable) return;
+    const result = event.currentTarget as HTMLElement;
+    if (placementController) {
+      if (event.key === ' ') {
+        placementManifest = manifest;
+        placementController.keyDown(event, manifest, result);
+      } else oncreate(manifest);
+      return;
+    }
     if (onplace) onplace(manifest, result);
     else oncreate(manifest);
   }
@@ -450,8 +537,9 @@
             tabindex="0"
             aria-disabled={unavailable}
             aria-label={unavailable ? `${manifest.title}, already on this Panel` : `${manifest.title}, drag to place on this Panel. Press Space for keyboard placement.`}
-            onclick={(event) => activateResult(event, manifest, unavailable)}
-            onkeydown={(event) => activateResult(event, manifest, unavailable)}
+            onpointerdown={(event) => handleResultPointerDown(event, manifest, unavailable)}
+            onclick={(event) => handleResultClick(event, manifest, unavailable)}
+            onkeydown={(event) => handleResultKeydown(event, manifest, unavailable)}
           >
             <div class="catalog-result-content" data-catalog-result-content>
               {#if catalogSnapshot.resultMode === 'compact'}
@@ -481,3 +569,17 @@
     <footer class="catalog-foot" id="widget-catalog-scroll-status"><span>{catalogSnapshot.results.length} widget{catalogSnapshot.results.length === 1 ? '' : 's'}</span><span>Strictly active story</span></footer>
   {/if}
 </dialog>
+
+<p class="catalog-placement-status visually-hidden" role="status" aria-live="assertive" aria-atomic="true">{placementAnnouncement}</p>
+{#if placementSnapshot?.proxy && placementManifest}
+  <div
+    class="catalog-placement-proxy"
+    data-catalog-placement-proxy
+    data-placement-input={placementSnapshot.proxy.input}
+    aria-hidden="true"
+    style={`--pom-placement-x:${placementSnapshot.proxy.x - placementSnapshot.proxy.offsetX}px;--pom-placement-y:${placementSnapshot.proxy.y - placementSnapshot.proxy.offsetY}px;--pom-placement-width:${placementSnapshot.proxy.width}px;--pom-placement-height:${placementSnapshot.proxy.height}px`}
+  >
+    <div class="catalog-placement-proxy-title">{placementManifest.title}</div>
+    <CatalogWidgetPreview manifest={placementManifest} {rendererRegistry} {hostContext} />
+  </div>
+{/if}

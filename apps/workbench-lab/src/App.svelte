@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
-  import { asPanelId, asWidgetInstanceId, asWidgetType, type PanelId, type SubPanelId, type WidgetManifest, type WorkbenchState } from '@pomegranate-ui/contracts';
+  import { asPanelId, asSubPanelId, asWidgetInstanceId, asWidgetType, type PanelId, type SubPanelId, type WidgetManifest, type WorkbenchState } from '@pomegranate-ui/contracts';
   import { loadLayout, saveLayout } from '@pomegranate-ui/layout';
   import { setWorkbenchContext, toSvelteCatalogStore } from '@pomegranate-ui/svelte';
   import type { WidgetFrameProjection } from '@pomegranate-ui/core';
@@ -28,6 +28,7 @@
   import ThemeCanvas from './recipes/ThemeCanvas.svelte';
   import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
+  import type { CatalogPlacementTarget } from './recipes/CatalogPlacementController.js';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
   import WorkbenchSurface from './recipes/WorkbenchSurface.svelte';
   import WorkbenchDeveloperDrawer from './recipes/WorkbenchDeveloperDrawer.svelte';
@@ -217,6 +218,7 @@
     open(request: { mode: 'create' | 'rename' | 'layout' | 'move' | 'delete'; panelId: PanelId; subPanelId?: SubPanelId; invokingTab?: HTMLElement }): void;
     duplicate(panelId: PanelId, subPanelId: SubPanelId): void;
   };
+  let workbenchElement: HTMLElement;
   let status = $state('Local mockup ready.');
   let contextHintAnnouncedWithoutStorage = false;
   let eventLog: string[] = $state([]);
@@ -284,32 +286,64 @@
     return `left:${frame.placement.x}px;top:${frame.placement.y}px;width:${frame.placement.width}px;min-height:${frame.placement.height}px;z-index:${frame.placement.z}`;
   }
 
-  function addFromCatalog(manifest: WidgetManifest) {
-    const panelId = workbench.activePanelId;
+  function placeFromCatalog(manifest: WidgetManifest, selectedTarget?: CatalogPlacementTarget | HTMLElement) {
+    const target = selectedTarget && 'identity' in selectedTarget ? selectedTarget : undefined;
+    const panelId = target ? asPanelId(target.identity.panelId) : workbench.activePanelId;
     if (!panelId) return;
+    const panel = workbench.panels.find((candidate) => candidate.id === panelId);
+    if (!panel) return;
     const id = asWidgetInstanceId(`catalog-${manifest.type.replace(/[^a-z0-9]+/gi, '-')}-${workbench.revision + 1}`);
-    const activeSubPanel = activePanel?.subPanels?.find((candidate) => candidate.id === activePanel.activeSubPanelId);
+    const activeSubPanel = panel.subPanels?.find((candidate) => candidate.id === panel.activeSubPanelId);
     const role = manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.regionRole : 'stage';
-    const regionId = activePanel?.templateId === 'focus-support.v1'
+    const template = store.templates.resolve(panel);
+    const compatibleRegions = template.ok && manifest.catalog
+      && (template.template.family !== 'columns' || manifest.catalog.minColumns <= template.template.regions.length)
+      ? template.template.regions.filter((region) => region.acceptedShapes.includes(manifest.catalog!.shape))
+      : [];
+    const automaticRegionId = compatibleRegions.find((region) => region.role === role)?.id
+      ?? compatibleRegions[0]?.id
+      ?? (panel.templateId === 'focus-support.v1'
       ? role === 'right-instruments' || role === 'support' ? 'support' : 'focus'
-      : activePanel?.templateId === 'columns.v1'
+      : panel.templateId === 'columns.v1'
         ? 'column-1'
         : role === 'left-instruments' ? 'left'
           : role === 'right-instruments' ? 'right'
-            : role === 'composer' ? 'composer' : 'stage';
+            : role === 'composer' ? 'composer' : 'stage');
+    const regionId = target?.identity.regionId ?? automaticRegionId;
+    const targetSubPanelId = target?.identity.subPanelId ? asSubPanelId(target.identity.subPanelId) : activeSubPanel?.id;
+    const targetLane = target?.identity.lane ?? (targetSubPanelId ? 0 : undefined);
+    const shelfId = target?.identity.shelfId
+      ?? (manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.shelfId : 'primary');
     const result = store.dispatch({
       type: 'widget.create',
       instance: { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} },
       placement: {
         kind: 'docked',
         panelId,
-        ...(activeSubPanel ? { subPanelId: activeSubPanel.id, lane: 0 } : {}),
+        ...(targetSubPanelId ? { subPanelId: targetSubPanelId, lane: targetLane ?? 0 } : {}),
         regionId,
-        shelfId: 'primary',
+        shelfId,
         order: Number.MAX_SAFE_INTEGER
       }
     });
-    status = result.ok ? `${manifest.title} added to ${activePanel?.name ?? 'Panel'}.` : result.error.message;
+    status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
+  }
+
+  function isCatalogPlacementTargetCompatible(manifest: WidgetManifest, target: HTMLElement): boolean {
+    const panel = activePanel;
+    const shape = manifest.catalog?.shape;
+    if (!panel || !shape) return false;
+    if (target.closest<HTMLElement>('[data-pomegranate-panel]')?.dataset.pomegranatePanel !== panel.id) return false;
+    const regionId = target.dataset.pomegranateRegionSurface;
+    const resolution = store.templates.resolve(panel);
+    if (!resolution.ok) return false;
+    if (resolution.template.family === 'columns' && manifest.catalog!.minColumns > resolution.template.regions.length) return false;
+    const region = resolution.template.regions.find((candidate) => candidate.id === regionId);
+    if (!region?.acceptedShapes.includes(shape)) return false;
+    const style = getComputedStyle(target);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none') return false;
+    const rect = target.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
   }
 
   function createPanel(request: { name: string; templateId: string; columns?: number }) {
@@ -498,7 +532,7 @@
     </div>
   </header>
 
-  <section id="workbench" class="workbench-shell" data-pom-part="panel.surface" aria-label="Active Workbench">
+  <section bind:this={workbenchElement} id="workbench" class="workbench-shell" data-pom-part="panel.surface" aria-label="Active Workbench">
     <SubPanelBar
       {store}
       onrequest={openSubPanelDialog}
@@ -554,7 +588,10 @@
     {rendererRegistry}
     {hostContext}
     instanceCounts={catalogInstanceCounts}
-    oncreate={addFromCatalog}
+    oncreate={placeFromCatalog}
+    ontargetplace={placeFromCatalog}
+    getPlacementTargetRoot={() => workbenchElement ?? null}
+    isPlacementTargetCompatible={isCatalogPlacementTargetCompatible}
     class="widget-catalog"
   />
 
