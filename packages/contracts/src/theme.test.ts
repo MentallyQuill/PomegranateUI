@@ -467,9 +467,9 @@ describe('Theme target owner schemas', () => {
 });
 
 const validPersistedDraft = () => ({
-  schemaVersion: 'pomegranate.ui.persisted-theme-draft.v1',
+  schemaVersion: 'pomegranate.ui.persisted-theme-draft.v2',
   draft: {
-    schemaVersion: 'pomegranate.ui.theme-draft.v1',
+    schemaVersion: 'pomegranate.ui.theme-draft.v2',
     baseTargetId: 'ash-amber',
     colors: {
       canvas: '#242321',
@@ -479,7 +479,8 @@ const validPersistedDraft = () => ({
       text: '#F3F0EA',
       source: '#D2B57A'
     },
-    materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 }
+    materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 },
+    canvas: { imageStrength: 72, overlayStrength: 56, gradientAngle: 90, vignetteStrength: 28 }
   },
   ambient: {
     schemaVersion: 'pomegranate.ui.ambient.v1',
@@ -492,10 +493,11 @@ const validPersistedDraft = () => ({
 });
 
 describe('Theme draft authoring schemas', () => {
-  it('round-trips all six Ash and Amber roles and bounded material controls exactly', () => {
+  it('round-trips all six roles plus bounded material and canvas controls exactly', () => {
     const input = validPersistedDraft();
     expect(PersistedThemeDraftSchema.parse(input)).toEqual(input);
     expect(ThemeDraftSchema.parse(input.draft).colors).toEqual(input.draft.colors);
+    expect(ThemeDraftSchema.parse(input.draft).canvas).toEqual(input.draft.canvas);
   });
 
   it.each([
@@ -508,6 +510,10 @@ describe('Theme draft authoring schemas', () => {
     ['decimal control', (value: any) => { value.draft.materials.frostLevel = 50.5; }],
     ['low control', (value: any) => { value.draft.materials.glassDensity = -1; }],
     ['high control', (value: any) => { value.draft.materials.barOpacity = 101; }],
+    ['high image strength', (value: any) => { value.draft.canvas.imageStrength = 101; }],
+    ['low overlay strength', (value: any) => { value.draft.canvas.overlayStrength = -1; }],
+    ['decimal vignette strength', (value: any) => { value.draft.canvas.vignetteStrength = 20.5; }],
+    ['wrapped gradient angle', (value: any) => { value.draft.canvas.gradientAngle = 360; }],
     ['mismatched target IDs', (value: any) => { value.ambient.id = 'deep-current'; }],
     ['unknown role', (value: any) => { value.draft.colors.selector = '*'; }],
     ['missing role', (value: any) => { delete value.draft.colors.source; }],

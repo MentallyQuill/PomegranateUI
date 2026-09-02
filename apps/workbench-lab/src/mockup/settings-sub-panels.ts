@@ -1,6 +1,7 @@
 import {
   asPanelId,
   asSubPanelId,
+  asWidgetInstanceId,
   asWidgetType,
   type PanelId,
   type SubPanelId,
@@ -58,9 +59,13 @@ export const SETTINGS_SUB_PANELS: readonly SettingsSubPanelDefinition[] = Object
     widgets: Object.freeze([
       assignment('settings.theme', 0, 0),
       assignment('settings.custom-theme', 0, 1),
-      assignment('settings.reading-layout', 1, 0),
-      assignment('settings.sound-motion', 1, 1),
-      assignment('settings.accessibility', 2, 0)
+      assignment('settings.reading-layout', 0, 2),
+      assignment('settings.theme-colors', 1, 0),
+      assignment('settings.theme-materials', 1, 1),
+      assignment('settings.sound-motion', 1, 2),
+      assignment('settings.theme-canvas', 2, 0),
+      assignment('settings.theme-ambient', 2, 1),
+      assignment('settings.accessibility', 2, 2)
     ])
   }),
   Object.freeze({
@@ -162,4 +167,98 @@ export function upgradeFlatSettingsPanel(
     subPanels
   };
   return { ...state, panels, placements };
+}
+
+const THEME_ELEMENT_FIXTURES = Object.freeze([
+  { id: 'settings-theme-colors', type: 'settings.theme-colors', lane: 1, order: 0 },
+  { id: 'settings-theme-materials', type: 'settings.theme-materials', lane: 1, order: 1 },
+  { id: 'settings-theme-canvas', type: 'settings.theme-canvas', lane: 2, order: 0 },
+  { id: 'settings-theme-ambient', type: 'settings.theme-ambient', lane: 2, order: 1 }
+] as const);
+
+const LEGACY_APPEARANCE_FIXTURES = Object.freeze([
+  { id: 'settings-reading-layout', type: 'settings.reading-layout', lane: 1, order: 0 },
+  { id: 'settings-sound-motion', type: 'settings.sound-motion', lane: 1, order: 1 },
+  { id: 'settings-accessibility', type: 'settings.accessibility', lane: 2, order: 0 }
+] as const);
+
+function visiblePlacement(placement: WidgetPlacement | undefined): VisibleWidgetPlacement | undefined {
+  return placement?.kind === 'shelved' ? placement.lastVisible : placement;
+}
+
+export function upgradeThemeAuthoringWidgets(state: WorkbenchState): WorkbenchState {
+  let changed = false;
+  const widgets = { ...state.widgets };
+  const placements = { ...state.placements };
+  const legacyId = asWidgetInstanceId('scene-theme-settings');
+  const legacy = widgets[legacyId];
+  const legacyPlacement = visiblePlacement(placements[legacyId]);
+  if (
+    legacy?.type === asWidgetType('settings.custom-theme')
+    && legacyPlacement?.panelId === asPanelId('scene')
+    && legacy.configuration.presentation === 'compact'
+  ) {
+    widgets[legacyId] = {
+      ...legacy,
+      type: asWidgetType('settings.theme-materials'),
+      configuration: {}
+    };
+    changed = true;
+  }
+
+  const settingsId = asPanelId('settings');
+  const appearanceId = asSubPanelId('settings-appearance-accessibility');
+  if (state.panels.some(({ id }) => id === settingsId)) {
+    for (const fixture of LEGACY_APPEARANCE_FIXTURES) {
+      const id = asWidgetInstanceId(fixture.id);
+      const widget = widgets[id];
+      const placement = placements[id];
+      const visible = visiblePlacement(placement);
+      const assignment = assignmentByType.get(asWidgetType(fixture.type));
+      if (
+        widget?.type !== asWidgetType(fixture.type)
+        || !placement
+        || visible?.kind !== 'docked'
+        || visible.panelId !== settingsId
+        || visible.subPanelId !== appearanceId
+        || visible.lane !== fixture.lane
+        || visible.order !== fixture.order
+        || !assignment
+      ) continue;
+      placements[id] = replaceVisible(placement, {
+        ...visible,
+        lane: assignment.lane,
+        regionId: `column-${assignment.lane + 1}`,
+        order: assignment.order
+      });
+      changed = true;
+    }
+    for (const fixture of THEME_ELEMENT_FIXTURES) {
+      const type = asWidgetType(fixture.type);
+      const alreadyPlaced = Object.values(widgets).some((widget) => {
+        const placement = visiblePlacement(placements[widget.id]);
+        return widget.type === type && placement?.panelId === settingsId && placement.subPanelId === appearanceId;
+      });
+      if (alreadyPlaced) continue;
+      const id = asWidgetInstanceId(fixture.id);
+      if (widgets[id] || placements[id]) continue;
+      widgets[id] = { id, type, manifestVersion: '1.0.0', configuration: {} };
+      placements[id] = {
+        kind: 'docked',
+        panelId: settingsId,
+        subPanelId: appearanceId,
+        lane: fixture.lane,
+        regionId: `column-${fixture.lane + 1}`,
+        shelfId: 'primary',
+        order: fixture.order
+      };
+      changed = true;
+    }
+  }
+
+  return changed ? { ...state, widgets, placements } : state;
+}
+
+export function upgradeLabWorkbenchState(state: WorkbenchState): WorkbenchState {
+  return upgradeThemeAuthoringWidgets(upgradeFlatSettingsPanel(state));
 }

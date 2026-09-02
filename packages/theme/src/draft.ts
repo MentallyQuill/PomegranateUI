@@ -3,6 +3,7 @@ import {
   ThemeDraftSchema,
   ThemeTargetBundleSchema,
   type AmbientProfile,
+  type ThemeCanvasDraft,
   type ThemeDraft,
   type ThemeTargetBundle
 } from '@pomegranate-ui/contracts';
@@ -12,10 +13,22 @@ import { contrastRatio } from './conformance.js';
 import type { ThemeAssetRegistry } from './assets.js';
 import { resolveThemeTarget } from './resolve-target.js';
 import type { ThemeDiagnostic } from './resolve.js';
+import {
+  resolveThemeCanvasAuthoringProfile,
+  type ThemeCanvasAuthoringProfile,
+  type ThemeCanvasAvailability
+} from './semantic-canvas.js';
 
 export type ThemeDraftProjection =
-  | { readonly ok: true; readonly target: ThemeTargetBundle; readonly diagnostics: readonly [] }
+  | { readonly ok: true; readonly target: ThemeTargetBundle; readonly canvasAvailability: ThemeCanvasAvailability; readonly diagnostics: readonly [] }
   | { readonly ok: false; readonly diagnostics: readonly ThemeDiagnostic[] };
+
+export const DEFAULT_THEME_CANVAS_DRAFT: ThemeCanvasDraft = Object.freeze({
+  imageStrength: 100,
+  overlayStrength: 100,
+  gradientAngle: 0,
+  vignetteStrength: 100
+});
 
 function schemaDiagnostics(issues: readonly { readonly path: readonly PropertyKey[]; readonly message: string }[]): readonly ThemeDiagnostic[] {
   return Object.freeze(issues.map((issue) => Object.freeze({
@@ -41,10 +54,13 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-export function createThemeDraft(target: ThemeTargetBundle): ThemeDraft {
+export function createThemeDraft(
+  target: ThemeTargetBundle,
+  canvas: ThemeCanvasDraft = DEFAULT_THEME_CANVAS_DRAFT
+): ThemeDraft {
   const parsed = ThemeTargetBundleSchema.parse(target);
   return deepFreeze({
-    schemaVersion: 'pomegranate.ui.theme-draft.v1',
+    schemaVersion: 'pomegranate.ui.theme-draft.v2',
     baseTargetId: parsed.id,
     colors: {
       canvas: parsed.theme.colors.canvas.slice(0, 7),
@@ -59,7 +75,8 @@ export function createThemeDraft(target: ThemeTargetBundle): ThemeDraft {
       barOpacity: materialOpacity(parsed, 'shelf', 60),
       selectedStrength: materialOpacity(parsed, 'selected', 12),
       frostLevel: percentage((parsed.theme.materials.pane?.backdrop.blurPx ?? 20) / 40)
-    }
+    },
+    canvas
   });
 }
 
@@ -73,7 +90,8 @@ function localAssetRegistry(target: ThemeTargetBundle): ThemeAssetRegistry {
 export function projectThemeDraft(
   base: ThemeTargetBundle,
   draft: ThemeDraft,
-  ambient: AmbientProfile
+  ambient: AmbientProfile,
+  canvasProfile?: ThemeCanvasAuthoringProfile
 ): ThemeDraftProjection {
   const parsedBase = ThemeTargetBundleSchema.safeParse(base);
   const parsedDraft = ThemeDraftSchema.safeParse(draft);
@@ -94,47 +112,73 @@ export function projectThemeDraft(
   }
 
   const colors = parsedDraft.data.colors;
+  const seedColors = createThemeDraft(parsedBase.data).colors;
+  const changed = Object.fromEntries(Object.keys(colors).map((role) => [
+    role,
+    colors[role as keyof typeof colors].toLowerCase() !== seedColors[role as keyof typeof seedColors].toLowerCase()
+  ])) as Record<keyof typeof colors, boolean>;
   const ambientRole = parsedAmbient.data.colorRole;
-  const ambientColorOverrides = ambientRole === 'accent'
+  const ambientColorOverrides = (changed.ambient || changed.text) && ambientRole === 'accent'
     ? {
         textOnAccent: bestContrastingText(colors.ambient),
         accent: colors.ambient,
         selection: colors.ambient,
         focus: mixHex(colors.ambient, colors.text, 0.18)
       }
-    : { [ambientRole]: colors.ambient };
+    : changed.ambient ? { [ambientRole]: colors.ambient } : {};
+  const projectedColors = {
+    ...parsedBase.data.theme.colors,
+    ...(changed.canvas ? { canvas: colors.canvas } : {}),
+    ...(changed.glass ? { surface: colors.glass } : {}),
+    ...(changed.glass || changed.text ? { surfaceElevated: mixHex(colors.glass, colors.text, 0.08) } : {}),
+    ...(changed.glass || changed.canvas ? { surfaceInset: mixHex(colors.glass, colors.canvas, 0.18) } : {}),
+    ...(changed.chrome ? { chrome: colors.chrome } : {}),
+    ...(changed.text ? { text: colors.text } : {}),
+    ...(changed.text || changed.glass ? {
+      textMuted: mixHex(colors.text, colors.glass, 0.30),
+      textFaint: mixHex(colors.text, colors.glass, 0.45)
+    } : {}),
+    ...(changed.source ? { warning: colors.source } : {}),
+    ...ambientColorOverrides
+  };
+  const canvasProjection = canvasProfile
+    ? resolveThemeCanvasAuthoringProfile(projectedColors, canvasProfile, parsedDraft.data.canvas)
+    : null;
+  if (canvasProjection && !canvasProjection.ok) {
+    return {
+      ok: false,
+      diagnostics: Object.freeze(canvasProjection.diagnostics.map((entry) => Object.freeze({
+        code: 'THEME_SCHEMA_INVALID' as const,
+        path: Object.freeze(['canvas', ...entry.path]),
+        message: entry.message
+      })))
+    };
+  }
+  const canvasAvailability: ThemeCanvasAvailability = canvasProjection
+    ? canvasProjection.availability
+    : Object.freeze({ image: false, overlay: false, gradient: false, vignette: false });
   const candidate = ThemeTargetBundleSchema.parse({
     ...parsedBase.data,
     theme: {
       ...parsedBase.data.theme,
-      colors: {
-        ...parsedBase.data.theme.colors,
-        canvas: colors.canvas,
-        surface: colors.glass,
-        surfaceElevated: mixHex(colors.glass, colors.text, 0.08),
-        surfaceInset: mixHex(colors.glass, colors.canvas, 0.18),
-        chrome: colors.chrome,
-        text: colors.text,
-        textMuted: mixHex(colors.text, colors.glass, 0.30),
-        textFaint: mixHex(colors.text, colors.glass, 0.45),
-        warning: colors.source,
-        ...ambientColorOverrides
-      }
+      colors: projectedColors
     },
     canvas: {
       ...parsedBase.data.canvas,
-      layers: parsedBase.data.canvas.layers.map((layer, index) => (
+      layers: canvasProjection?.layers ?? parsedBase.data.canvas.layers.map((layer, index) => (
         index === 0 && layer.kind === 'solid' ? { ...layer, color: colors.canvas } : layer
       ))
     },
     ambient: parsedAmbient.data
   });
   const unsafeBackgrounds = [
-    ['canvas', colors.canvas],
-    ['glass', colors.glass],
-    ['chrome', colors.chrome]
-  ].filter(([, background]) => (
-    contrastRatio(colors.text, background!) < candidate.theme.accessibility.minimumContrast
+    { role: 'canvas', background: colors.canvas, changed: changed.canvas },
+    { role: 'glass', background: colors.glass, changed: changed.glass },
+    { role: 'chrome', background: colors.chrome, changed: changed.chrome }
+  ].filter(({ background, changed: backgroundChanged }) => (
+    (changed.text || backgroundChanged)
+    &&
+    contrastRatio(colors.text, background) < candidate.theme.accessibility.minimumContrast
   ));
   if (unsafeBackgrounds.length > 0) {
     return {
@@ -142,11 +186,11 @@ export function projectThemeDraft(
       diagnostics: Object.freeze([Object.freeze({
         code: 'THEME_CONTRAST_UNSAFE' as const,
         path: Object.freeze(['colors', 'text']),
-        message: `Authored text does not meet the ${candidate.theme.accessibility.minimumContrast}:1 contrast floor against ${unsafeBackgrounds.map(([role]) => role).join(', ')}.`
+        message: `Authored text does not meet the ${candidate.theme.accessibility.minimumContrast}:1 contrast floor against ${unsafeBackgrounds.map(({ role }) => role).join(', ')}.`
       })])
     };
   }
   const resolution = resolveThemeTarget(candidate, localAssetRegistry(candidate));
   if (!resolution.ok) return resolution;
-  return { ok: true, target: deepFreeze(candidate), diagnostics: [] };
+  return { ok: true, target: deepFreeze(candidate), canvasAvailability, diagnostics: [] };
 }

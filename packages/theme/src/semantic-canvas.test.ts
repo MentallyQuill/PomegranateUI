@@ -1,11 +1,30 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  resolveThemeCanvasAuthoringProfile,
   resolveSemanticCanvasLayers,
   type SemanticCanvasLayer
 } from './semantic-canvas.js';
 
 describe('semantic canvas recipes', () => {
+  it('preserves an authored baseline color until its semantic role changes', () => {
+    const profile = {
+      defaults: { imageStrength: 100, overlayStrength: 100, gradientAngle: 0, vignetteStrength: 100 },
+      layers: [{
+        layer: {
+          kind: 'solid' as const,
+          color: { role: 'canvas' as const, baseline: { roleValue: '#112233', authoredValue: '#080c0d' } }
+        }
+      }]
+    };
+
+    const baseline = resolveThemeCanvasAuthoringProfile({ canvas: '#112233' }, profile, profile.defaults);
+    const edited = resolveThemeCanvasAuthoringProfile({ canvas: '#445566' }, profile, profile.defaults);
+
+    expect(baseline.ok && baseline.layers).toEqual([{ kind: 'solid', color: '#080C0D' }]);
+    expect(edited.ok && edited.layers).toEqual([{ kind: 'solid', color: '#445566' }]);
+  });
+
   it('maps every layered canvas color through semantic roles without mutating input', () => {
     const colors = {
       canvas: '#112233',

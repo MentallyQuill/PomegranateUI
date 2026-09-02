@@ -223,7 +223,7 @@ test('PomOS Room Ambience keeps compact labels and stable value rows', async ({ 
   }
 });
 
-test('PomOS constrained side stacks expose deterministic internal scroll owners', async ({ page }) => {
+test('PomOS constrained side stacks expose deterministic focused scroll owners', async ({ page }) => {
   await openFresh(page, 1280, 450);
   await activatePomOS(page);
 
@@ -244,7 +244,7 @@ test('PomOS constrained side stacks expose deterministic internal scroll owners'
     };
     return {
       characters: scrollOwner('[data-widget-type="story.characters"] .recording-characters > ul'),
-      theme: scrollOwner('[data-widget-type="settings.custom-theme"] .compact-theme'),
+      materials: scrollOwner('[data-widget-type="settings.theme-materials"] .implemented-widget'),
       ambience: scrollOwner('[data-widget-type="story.room-ambience"] .atmospheric-room-ambience')
     };
   });
@@ -302,7 +302,7 @@ test('PomOS metadata remains legible and the compact composer retains its comple
       storyLabel: fontSize('.story-lockup span'),
       storyMeta: fontSize('.story-lockup small'),
       transcriptKicker: fontSize('.transcript .widget-kicker'),
-      themeControls: fontSize('.compact-theme'),
+      themeControls: fontSize('[data-theme-authoring-element="materials"]'),
       presence: fontSize('[data-testid="character-presence"]'),
       composerStatus: fontSize('.composer-field > .composer-meta')
     };
@@ -895,7 +895,7 @@ test('shared Widget headers retain one-line titles without reserving hidden acti
 
   for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber'] as const) {
     await selectTheme(page, theme);
-    for (const title of ['World State', 'Custom Theme']) {
+    for (const title of ['World State', 'Theme Materials']) {
       const article = page.getByRole('article', { name: title });
       const evidence = await article.evaluate((node) => {
         const heading = node.querySelector('.widget-frame-heading h2');
@@ -1056,8 +1056,8 @@ test('native workbench Catalog supports keyboard placement and stable attributes
   expect(await catalog.evaluate((element) => element.matches(':modal'))).toBe(true);
   expect(await catalog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   expect(await catalog.evaluate((element) => document.elementFromPoint(2, innerHeight / 2) === element)).toBe(true);
-  await expect(catalog.getByRole('listitem')).toHaveCount(94);
-  await expect(catalog.getByText('Scroll results · 94 widgets')).toBeVisible();
+  await expect(catalog.getByRole('listitem')).toHaveCount(98);
+  await expect(catalog.getByText('Scroll results · 98 widgets')).toBeVisible();
   expect(await catalog.getByRole('list').evaluate((list) => list.scrollHeight > list.clientHeight)).toBe(true);
   await catalog.getByRole('button', { name: 'Compact' }).click();
   await expect(catalog).toHaveAttribute('data-result-mode', 'compact');
@@ -1231,7 +1231,7 @@ test.describe('coarse-pointer Deep controls', () => {
 
   test('preserves 44px material-slider hit targets in the exact wide shell', async ({ page }) => {
     await openFresh(page, 1440, 900);
-    const sliders = page.locator('.compact-theme-materials input[type="range"]');
+    const sliders = page.locator('[data-theme-authoring-element="materials"] input[type="range"]');
     await expect(sliders).toHaveCount(4);
     for (const slider of await sliders.all()) {
       expect((await slider.boundingBox())?.height).toBeGreaterThanOrEqual(44);

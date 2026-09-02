@@ -85,7 +85,7 @@ async function invokeWidgetAction(widget: import('@playwright/test').Locator, na
 function technicalRailPresentation(page: Page) {
   return page.locator('main[data-pom-theme-root]').evaluate((root) => {
     const sceneLabel = root.querySelector<HTMLElement>('[data-widget-type="story.room-ambience"] dt')!;
-    const authoring = root.querySelector<HTMLElement>('.compact-theme')!;
+    const authoring = root.querySelector<HTMLElement>('[data-theme-authoring-element="materials"]')!;
     const left = root.querySelector<HTMLElement>('[data-conformance-region="left"]')!.getBoundingClientRect();
     const stage = root.querySelector<HTMLElement>('[data-conformance-region="stage"]')!.getBoundingClientRect();
     const right = root.querySelector<HTMLElement>('[data-conformance-region="right"]')!.getBoundingClientRect();
@@ -153,7 +153,7 @@ test('the Lab loads theme-appropriate character art and independent ambient imag
     { ...ASH_TARGET, portraitAsset: 'ash-amber-character-atlas', canvasAsset: 'ash-amber-stage' }
   ]) {
     await selectTheme(page, target);
-    await expect(page.getByRole('article', { name: 'Custom Theme' }).getByText(target.label, { exact: true })).toBeVisible();
+    await expect(page.getByRole('article', { name: 'Theme Materials' })).toBeVisible();
     const portraits = page.getByRole('article', { name: 'Characters' }).locator('.recording-character-portrait > img');
     await expect(portraits).toHaveCount(4);
     expect(await portraits.evaluateAll((images: HTMLImageElement[], portraitAsset) => images.every((image) => (
@@ -561,7 +561,7 @@ test('material controls have refined geometry and visibly control glass', async 
     await fresh(page);
     await selectTheme(page, target);
     await openAppearanceSettings(page);
-    const settings = page.locator('[data-widget-type="settings.custom-theme"]');
+    const settings = page.locator('[data-widget-type="settings.theme-materials"]');
     const glass = settings.getByRole('slider', { name: 'Glass Density' });
     const frost = settings.getByRole('slider', { name: 'Frost Level' });
     const geometry = await glass.evaluate((input) => {
@@ -593,13 +593,13 @@ test('material controls have refined geometry and visibly control glass', async 
     await glass.fill('0');
     await expect.poll(() => glass.evaluate((input) => getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim())).toBe('0%');
     await frost.fill('0');
-    expect((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).alpha).toBe(0);
-    expect(blurPx((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).backdrop)).toBe(0);
+    expect((await material(page, '[data-widget-type="settings.theme-materials"] > .widget-frame')).alpha).toBe(0);
+    expect(blurPx((await material(page, '[data-widget-type="settings.theme-materials"] > .widget-frame')).backdrop)).toBe(0);
     await glass.fill('100');
     await expect.poll(() => glass.evaluate((input) => getComputedStyle(input).getPropertyValue('--pom-slider-progress').trim())).toBe('100%');
     await frost.fill('100');
-    expect((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).alpha).toBe(1);
-    expect(blurPx((await material(page, '[data-widget-type="settings.custom-theme"] > .widget-frame')).backdrop)).toBe(40);
+    expect((await material(page, '[data-widget-type="settings.theme-materials"] > .widget-frame')).alpha).toBe(1);
+    expect(blurPx((await material(page, '[data-widget-type="settings.theme-materials"] > .widget-frame')).backdrop)).toBe(40);
   }
 });
 
@@ -711,7 +711,7 @@ test('Catalog keeps an opaque neutral modal and no-blur backdrop under reduced t
   expect(backdrop).toEqual({ alpha: 1, backdrop: 'none' });
 });
 
-test('Ash readability expression leaves Deep compact technical rail defaults unchanged', async ({ page }) => {
+test('Ash readability expression leaves shared Theme authoring typography compact', async ({ page }) => {
   await fresh(page);
   const deepRail = await technicalRailPresentation(page);
   expect(deepRail).toMatchObject({
@@ -725,7 +725,7 @@ test('Ash readability expression leaves Deep compact technical rail defaults unc
     expressionRowSize: '11px',
     expressionSliderSize: '11px',
     sceneLabelSize: '10px',
-    authoringSize: '11px'
+    authoringSize: '10px'
   });
   await selectTheme(page, TARGETS[0]);
   expect(await technicalRailPresentation(page)).toEqual(deepRail);
@@ -785,7 +785,7 @@ test('an external non-preset definition renders the same live Workbench tree', a
     expressionRowSize: '',
     expressionSliderSize: '',
     sceneLabelSize: deepRail.sceneLabelSize,
-    authoringSize: '9px'
+    authoringSize: '10px'
   });
   expect(copperRail.geometry.left.x).toBeGreaterThanOrEqual(copperRail.geometry.shell.x);
   expect(copperRail.geometry.right.right).toBeLessThanOrEqual(copperRail.geometry.shell.right);

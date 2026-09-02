@@ -6,7 +6,7 @@ export const CATALOG_TOTALS = Object.freeze({
   "story": 12,
   "library": 19,
   "systems": 21,
-  "settings": 39,
+  "settings": 43,
   "extensions": 3
 } as const);
 
@@ -2563,25 +2563,23 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.custom-theme",
-    "title": "Theme Settings",
+    "title": "Custom Theme",
     "category": "settings",
-    "purpose": "Author, validate, import, export, reset, and apply one complete device theme.",
+    "purpose": "Review, reset, and save the one shared recoverable device theme draft.",
     "keywords": [
-      "Theme Settings",
+      "Custom Theme",
       "custom",
-      "color",
       "appearance",
-      "glass",
-      "ambient",
-      "gradient"
+      "draft",
+      "save"
     ],
     "iconKey": "theme.contrast",
     "shape": "medium",
     "minColumns": 1,
     "geometry": {
-      "minHeight": 360,
-      "idealHeight": 640,
-      "maxHeight": 760
+      "minHeight": 136,
+      "idealHeight": 176,
+      "maxHeight": 240
     },
     "supportedStates": [
       "ready",
@@ -2597,6 +2595,54 @@ const DEFINITIONS = [
       "conflict",
       "success"
     ]
+  },
+  {
+    "type": "settings.theme-colors",
+    "title": "Theme Colors",
+    "category": "settings",
+    "purpose": "Author the six semantic color roles in the shared device theme draft.",
+    "keywords": ["Theme Colors", "semantic", "palette", "eyedropper"],
+    "iconKey": "theme.contrast",
+    "shape": "medium",
+    "minColumns": 1,
+    "geometry": { "minHeight": 260, "idealHeight": 360, "maxHeight": 520 },
+    "supportedStates": ["ready", "loading", "empty", "unavailable", "access-denied", "stale", "offline", "failure", "dirty", "saving", "conflict", "success"]
+  },
+  {
+    "type": "settings.theme-materials",
+    "title": "Theme Materials",
+    "category": "settings",
+    "purpose": "Author glass density, bar opacity, selection strength, and frost in the shared device theme draft.",
+    "keywords": ["Theme Materials", "glass", "opacity", "frost"],
+    "iconKey": "theme.contrast",
+    "shape": "medium",
+    "minColumns": 1,
+    "geometry": { "minHeight": 220, "idealHeight": 280, "maxHeight": 400 },
+    "supportedStates": ["ready", "loading", "empty", "unavailable", "access-denied", "stale", "offline", "failure", "dirty", "saving", "conflict", "success"]
+  },
+  {
+    "type": "settings.theme-canvas",
+    "title": "Theme Canvas",
+    "category": "settings",
+    "purpose": "Author image, overlay, gradient, and vignette treatment in the shared device theme draft.",
+    "keywords": ["Theme Canvas", "image", "overlay", "gradient", "vignette"],
+    "iconKey": "theme.contrast",
+    "shape": "medium",
+    "minColumns": 1,
+    "geometry": { "minHeight": 220, "idealHeight": 300, "maxHeight": 420 },
+    "supportedStates": ["ready", "loading", "empty", "unavailable", "access-denied", "stale", "offline", "failure", "dirty", "saving", "conflict", "success"]
+  },
+  {
+    "type": "settings.theme-ambient",
+    "title": "Ambient Light",
+    "category": "settings",
+    "purpose": "Author ambient position, radius, and power in the shared device theme draft.",
+    "keywords": ["Ambient Light", "position", "radius", "power"],
+    "iconKey": "theme.contrast",
+    "shape": "medium",
+    "minColumns": 1,
+    "geometry": { "minHeight": 200, "idealHeight": 260, "maxHeight": 380 },
+    "supportedStates": ["ready", "loading", "empty", "unavailable", "access-denied", "stale", "offline", "failure", "dirty", "saving", "conflict", "success"]
   },
   {
     "type": "settings.story-reading-layout",

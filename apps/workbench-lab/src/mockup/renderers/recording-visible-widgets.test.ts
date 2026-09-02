@@ -34,6 +34,8 @@ function recordingHostContext(activeId: 'deep-current' | 'pom-neutral' | 'bunny'
     resetMaterialControls: () => undefined,
     openSettings: () => undefined,
     editDraft: (next) => controller.editDraft(next),
+    editColorHex: (role, value) => controller.editColorHex(role, value),
+    editColorRgb: (role, channel, value) => controller.editColorRgb(role, channel, value),
     resetDraft: () => controller.resetDraft(),
     saveDraft: () => controller.saveDraft()
   }, 'ready', resolveLabShowcaseMediaProfile(activeId));
@@ -142,15 +144,10 @@ describe('recording-visible Deep Current Widget anatomy', () => {
     ]);
   });
 
-  it('renders the Scene Custom Theme as the compact recorded authoring instrument', () => {
-    renderSurface('settings.custom-theme', { presentation: 'compact' });
+  it('renders the same focused Theme Materials element used by Scene and Settings', () => {
+    renderSurface('settings.theme-materials');
 
-    expect(screen.getByText('Deep Current')).toBeVisible();
-    expect(screen.getByText('Edited')).toBeVisible();
-    const roles = screen.getByRole('group', { name: 'Semantic theme colors' });
-    expect(within(roles).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([
-      'Canvas', 'Glass', 'Chrome', 'Ambient', 'Text', 'Source'
-    ]);
+    expect(document.querySelector('[data-theme-authoring-element="materials"]')).not.toBeNull();
     for (const [name, value] of [
       ['Glass Density', '20'],
       ['Bar Opacity', '60'],
@@ -159,15 +156,7 @@ describe('recording-visible Deep Current Widget anatomy', () => {
     ] as const) {
       expect(screen.getByRole('slider', { name })).toHaveValue(value);
     }
-    expect(screen.getByText('Screen X,Y')).toBeVisible();
-    expect(screen.getByText('POS 68/38')).toBeVisible();
-    expect(screen.getByText(/RAD\s+42/)).toBeVisible();
-    expect(screen.getByText(/PWR\s+64/)).toBeVisible();
-    const radius = screen.getByRole('slider', { name: 'Radius' });
-    const power = screen.getByRole('slider', { name: 'Power' });
-    expect(radius).toHaveValue('42');
-    expect(power).toHaveValue('64');
-    expect(radius.closest('[data-ambient-ring="size"]')).not.toBeNull();
-    expect(power.closest('[data-ambient-ring="intensity"]')).not.toBeNull();
+    expect(screen.queryByRole('slider', { name: 'Radius' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull();
   });
 });

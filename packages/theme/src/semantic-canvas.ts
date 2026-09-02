@@ -1,6 +1,8 @@
 import {
   THEME_COLOR_ROLES,
+  ThemeCanvasDraftSchema,
   ThemeCanvasLayerSchema,
+  type ThemeCanvasDraft,
   type ThemeCanvasLayer,
   type ThemeColorRole
 } from '@pomegranate-ui/contracts';
@@ -11,6 +13,11 @@ const COLOR_ROLES = new Set<string>(THEME_COLOR_ROLES);
 export interface SemanticCanvasColorReference {
   readonly role: ThemeColorRole;
   readonly alpha?: number;
+  /** Keeps a deliberately authored canvas tone while the referenced role is still at its preset value. */
+  readonly baseline?: {
+    readonly roleValue: string;
+    readonly authoredValue: string;
+  };
 }
 
 export interface SemanticCanvasGradientStop {
@@ -31,7 +38,31 @@ export type SemanticCanvasLayer =
     readonly bottomRight: SemanticCanvasColorReference;
   }
   | Extract<ThemeCanvasLayer, { kind: 'image' | 'texture' }>
+  | Extract<ThemeCanvasLayer, { kind: 'grid' }>
   | { readonly kind: 'veil'; readonly mode: 'reading' | 'vignette'; readonly color: SemanticCanvasColorReference; readonly opacity: number };
+
+export type ThemeCanvasAuthoringGroup = 'image' | 'overlay' | 'vignette';
+
+export interface AuthorableSemanticCanvasLayer {
+  readonly layer: SemanticCanvasLayer;
+  readonly authoringGroup?: ThemeCanvasAuthoringGroup;
+}
+
+export interface ThemeCanvasAuthoringProfile {
+  readonly layers: readonly AuthorableSemanticCanvasLayer[];
+  readonly defaults: ThemeCanvasDraft;
+}
+
+export interface ThemeCanvasAvailability {
+  readonly image: boolean;
+  readonly overlay: boolean;
+  readonly gradient: boolean;
+  readonly vignette: boolean;
+}
+
+export type ThemeCanvasAuthoringResolution =
+  | { readonly ok: true; readonly layers: readonly ThemeCanvasLayer[]; readonly availability: ThemeCanvasAvailability; readonly diagnostics: readonly [] }
+  | { readonly ok: false; readonly diagnostics: readonly SemanticCanvasDiagnostic[] };
 
 export type SemanticCanvasDiagnosticCode =
   | 'THEME_CANVAS_COLOR_ROLE_UNKNOWN'
@@ -90,7 +121,22 @@ function resolveColor(
     return null;
   }
 
-  const source = colors[role as ThemeColorRole];
+  const roleSource = colors[role as ThemeColorRole];
+  const baseline = (reference as SemanticCanvasColorReference).baseline;
+  if (baseline && (!EXACT_HEX.test(baseline.roleValue) || !EXACT_HEX.test(baseline.authoredValue))) {
+    diagnostics.push({
+      code: 'THEME_CANVAS_RECIPE_INVALID',
+      path: [...path, 'baseline'],
+      message: `Canvas color baseline for '${role}' must contain exact hex values.`,
+      role
+    });
+    return null;
+  }
+  const source = baseline
+    && typeof roleSource === 'string'
+    && roleSource.slice(0, 7).toLowerCase() === baseline.roleValue.slice(0, 7).toLowerCase()
+      ? baseline.authoredValue
+      : roleSource;
   if (typeof source !== 'string' || !EXACT_HEX.test(source)) {
     diagnostics.push({
       code: 'THEME_CANVAS_COLOR_ROLE_UNRESOLVED',
@@ -179,6 +225,7 @@ function resolveLayer(
     }
     case 'image':
     case 'texture':
+    case 'grid':
       candidate = { ...layer };
       break;
     case 'veil': {
@@ -206,6 +253,102 @@ function resolveLayer(
     });
   }
   return null;
+}
+
+function scaledReference(reference: SemanticCanvasColorReference, factor: number): SemanticCanvasColorReference {
+  return { ...reference, alpha: scaledNumber(reference.alpha ?? 1, factor) };
+}
+
+function scaledNumber(value: number, factor: number): number {
+  return Math.round(value * factor * 1_000_000) / 1_000_000;
+}
+
+function scaleLayer(
+  layer: SemanticCanvasLayer,
+  factor: number,
+  gradientAngle: number | undefined
+): SemanticCanvasLayer {
+  switch (layer.kind) {
+    case 'solid':
+      return { ...layer, color: scaledReference(layer.color, factor) };
+    case 'linear-gradient':
+      return {
+        ...layer,
+        ...(gradientAngle === undefined ? {} : { angle: gradientAngle }),
+        stops: layer.stops.map((stop) => ({ ...stop, color: scaledReference(stop.color, factor) }))
+      };
+    case 'radial-gradient':
+    case 'conic-gradient':
+      return { ...layer, stops: layer.stops.map((stop) => ({ ...stop, color: scaledReference(stop.color, factor) })) };
+    case 'four-corner':
+      return {
+        ...layer,
+        topLeft: scaledReference(layer.topLeft, factor),
+        topRight: scaledReference(layer.topRight, factor),
+        bottomLeft: scaledReference(layer.bottomLeft, factor),
+        bottomRight: scaledReference(layer.bottomRight, factor)
+      };
+    case 'image':
+    case 'texture':
+    case 'grid':
+      return { ...layer, opacity: scaledNumber(layer.opacity, factor) };
+    case 'veil':
+      return { ...layer, opacity: scaledNumber(layer.opacity, factor) };
+  }
+}
+
+function availabilityFor(layers: readonly AuthorableSemanticCanvasLayer[]): ThemeCanvasAvailability {
+  return Object.freeze({
+    image: layers.some(({ authoringGroup }) => authoringGroup === 'image'),
+    overlay: layers.some(({ authoringGroup }) => authoringGroup === 'overlay'),
+    gradient: layers.some(({ authoringGroup, layer }) => authoringGroup === 'overlay' && layer.kind === 'linear-gradient'),
+    vignette: layers.some(({ authoringGroup }) => authoringGroup === 'vignette')
+  });
+}
+
+export function resolveThemeCanvasAuthoringProfile(
+  colors: Readonly<Partial<Record<ThemeColorRole, string>>>,
+  profile: ThemeCanvasAuthoringProfile,
+  treatment: ThemeCanvasDraft
+): ThemeCanvasAuthoringResolution {
+  const parsedTreatment = ThemeCanvasDraftSchema.safeParse(treatment);
+  const parsedDefaults = ThemeCanvasDraftSchema.safeParse(profile?.defaults);
+  if (!parsedTreatment.success || !parsedDefaults.success) {
+    const issues = [
+      ...(parsedTreatment.success ? [] : parsedTreatment.error.issues),
+      ...(parsedDefaults.success ? [] : parsedDefaults.error.issues)
+    ];
+    return deepFreeze({
+      ok: false as const,
+      diagnostics: issues.map((issue) => ({
+        code: 'THEME_CANVAS_RECIPE_INVALID' as const,
+        path: ['canvas', ...issue.path.filter((part): part is string | number => typeof part === 'string' || typeof part === 'number')],
+        message: issue.message
+      }))
+    });
+  }
+
+  const factors = {
+    image: parsedTreatment.data.imageStrength / 100,
+    overlay: parsedTreatment.data.overlayStrength / 100,
+    vignette: parsedTreatment.data.vignetteStrength / 100
+  } as const;
+  const transformed = profile.layers.map(({ layer, authoringGroup }) => authoringGroup
+    ? scaleLayer(
+        layer,
+        factors[authoringGroup],
+        authoringGroup === 'overlay' && layer.kind === 'linear-gradient' ? parsedTreatment.data.gradientAngle : undefined
+      )
+    : layer
+  );
+  const resolution = resolveSemanticCanvasLayers(colors, transformed);
+  if (!resolution.ok) return resolution;
+  return deepFreeze({
+    ok: true as const,
+    layers: resolution.layers,
+    availability: availabilityFor(profile.layers),
+    diagnostics: [] as const
+  });
 }
 
 export function resolveSemanticCanvasLayers(

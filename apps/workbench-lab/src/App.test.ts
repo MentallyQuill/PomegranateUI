@@ -99,6 +99,9 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(accountTab).toHaveAttribute('aria-selected', 'false');
     expect(appearanceTab).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('article', { name: 'Theme Library' })).toBeVisible();
+    for (const name of ['Custom Theme', 'Theme Colors', 'Theme Materials', 'Theme Canvas', 'Ambient Light']) {
+      expect(screen.getByRole('article', { name })).toBeVisible();
+    }
     expect(screen.queryByRole('article', { name: 'Provider Credentials' })).toBeNull();
     await fireEvent.keyDown(window, { key: 'Escape' });
     expect(actions).not.toHaveAttribute('data-fallback-open');
@@ -205,7 +208,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByLabelText('Active story identity')).toHaveTextContent('STORY / 7E-19');
     expect(screen.getByText('FIG. 07 / LIMINAL RESERVOIR')).toBeVisible();
     expect(within(screen.getByRole('tablist', { name: 'Panels' })).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Library', 'Settings']);
-    for (const title of ['Characters (Story)', 'Custom Theme', 'Transcript', 'Composer', 'World State', 'Room Ambience']) {
+    for (const title of ['Characters (Story)', 'Theme Materials', 'Transcript', 'Composer', 'World State', 'Room Ambience']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();
     }
     expect(within(screen.getByRole('article', { name: 'Characters (Story)' })).getByText('4 / 7')).toHaveClass('widget-frame-meta');
@@ -215,7 +218,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(within(characterHeader).getByRole('navigation', { name: 'Characters (Story) actions' })).toBeVisible();
     expect(within(characterHeader).getAllByRole('button')).toHaveLength(1);
     expect(within(characterHeader).getByRole('button', { name: 'Widget actions' })).toHaveAttribute('aria-expanded', 'false');
-    expect(within(screen.getByRole('article', { name: 'Custom Theme' })).getByText('Ready')).toHaveClass('widget-frame-meta');
+    expect(within(screen.getByRole('article', { name: 'Theme Materials' })).getByText('Ready')).toHaveClass('widget-frame-meta');
     expect(within(screen.getByRole('article', { name: 'World State' })).getByText('Frame 3')).toHaveClass('widget-frame-meta');
     expect(within(screen.getByRole('article', { name: 'World State' })).getAllByRole('term').map((term) => term.textContent)).toEqual(['Location', 'Time', 'Weather', 'Frame']);
     expect(container.querySelector('.atmospheric-state-glyph')).toBeNull();
@@ -231,7 +234,7 @@ describe('Svelte Workbench Lab mockup', () => {
     const ambienceGroup = screen.getByRole('group', { name: 'Widget group' });
     expect(ambienceGroup.querySelector('[data-pom-part="widget.surface"]')).toBeNull();
     expect(ambienceGroup.querySelector('[data-surface-type="story.room-ambience"]')).not.toBeNull();
-    expect(container.querySelector('[data-surface-presentation="compact-theme"]')).not.toBeNull();
+    expect(container.querySelector('[data-surface-type="settings.theme-materials"]')).not.toBeNull();
     expect(screen.getByText('Chapter 04 · The Drowned Observatory')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'The Water Remembers' })).toBeVisible();
     expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveValue('');
@@ -271,9 +274,9 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(rightToggle).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('carries the full audited 94-definition Catalog with exact category totals', async () => {
-    expect(createCatalogManifests()).toHaveLength(94);
-    expect(CATALOG_TOTALS).toEqual({ story: 12, library: 19, systems: 21, settings: 39, extensions: 3 });
+  it('carries the full audited 98-definition Catalog with exact category totals', async () => {
+    expect(createCatalogManifests()).toHaveLength(98);
+    expect(CATALOG_TOTALS).toEqual({ story: 12, library: 19, systems: 21, settings: 43, extensions: 3 });
     const user = userEvent.setup();
     render(App);
     const launcher = screen.getByRole('button', { name: 'Open Widget Catalog' });
@@ -289,7 +292,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(catalog).toHaveAttribute('open');
     expect(within(catalog).getByRole('button', { name: 'Close Catalog' }))
       .toHaveAttribute('data-pom-part', 'button.surface');
-    expect(within(catalog).getAllByRole('listitem')).toHaveLength(94);
+    expect(within(catalog).getAllByRole('listitem')).toHaveLength(98);
     await user.click(within(catalog).getByRole('button', { name: 'story' }));
     for (const category of ['extensions', 'library', 'settings', 'story', 'systems']) {
       expect(within(catalog).getByRole('button', { name: category })).toBeVisible();
@@ -466,42 +469,65 @@ describe('Svelte Workbench Lab mockup', () => {
     }
   });
 
-  it('authors one shared Theme Settings draft with synchronized color, material, and ambient controls', async () => {
+  it('renders focused theme elements and synchronizes the identical Theme Materials Widget across Panels', async () => {
     const user = userEvent.setup();
     const { container } = render(App);
+
+    const sceneMaterials = screen.getByRole('article', { name: 'Theme Materials' });
+    expect(sceneMaterials.querySelector('[data-theme-authoring-element="materials"]')).not.toBeNull();
+    expect(within(sceneMaterials).queryByRole('button', { name: 'Reset' })).toBeNull();
+    await fireEvent.input(within(sceneMaterials).getByRole('slider', { name: 'Glass Density' }), { target: { value: '37' } });
+
     await user.click(screen.getByRole('tab', { name: 'Settings' }));
     await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
-    await user.click(within(screen.getByRole('article', { name: 'Theme Library' })).getByRole('button', { name: 'Open Theme Settings' }));
+    await user.click(within(screen.getByRole('article', { name: 'Theme Library' })).getByRole('button', { name: 'Open Custom Theme' }));
     expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
 
-    const settings = screen.getByRole('article', { name: 'Custom Theme' });
+    const overview = screen.getByRole('article', { name: 'Custom Theme' });
+    const colors = screen.getByRole('article', { name: 'Theme Colors' });
+    const materials = screen.getByRole('article', { name: 'Theme Materials' });
+    const canvas = screen.getByRole('article', { name: 'Theme Canvas' });
+    const ambient = screen.getByRole('article', { name: 'Ambient Light' });
+    expect(within(overview).getByRole('button', { name: 'Reset' })).toBeVisible();
+    expect(within(overview).getByRole('button', { name: 'Save draft' })).toBeVisible();
+    expect(within(overview).queryByRole('slider')).toBeNull();
     for (const role of ['Canvas', 'Glass', 'Chrome', 'Ambient', 'Text', 'Source']) {
-      expect(within(settings).getByRole('button', { name: role })).toBeVisible();
+      expect(within(colors).getByRole('button', { name: role })).toBeVisible();
     }
-    for (const control of ['Glass Density', 'Bar Opacity', 'Selected Strength', 'Frost Level', 'Radius', 'Power']) {
-      expect(within(settings).getByRole('slider', { name: control })).toBeVisible();
+    for (const control of ['Glass Density', 'Bar Opacity', 'Selected Strength', 'Frost Level']) {
+      expect(within(materials).getByRole('slider', { name: control })).toBeVisible();
     }
+    for (const control of ['Image Strength', 'Overlay Strength', 'Gradient Direction', 'Vignette Strength']) {
+      expect(within(canvas).getByRole('slider', { name: control })).toBeVisible();
+    }
+    for (const control of ['Radius', 'Power']) {
+      expect(within(ambient).getByRole('slider', { name: control })).toBeVisible();
+    }
+    expect(within(materials).getByRole('slider', { name: 'Glass Density' })).toHaveValue('37');
+    await fireEvent.input(within(materials).getByRole('slider', { name: 'Bar Opacity' }), { target: { value: '44' } });
 
-    const hex = within(settings).getByRole('textbox', { name: 'Hex color' });
-    await user.clear(hex);
-    await user.type(hex, '#101820');
+    const hex = within(colors).getByRole('textbox', { name: 'Hex color' });
+    await fireEvent.input(hex, { target: { value: '#101820' } });
     expect((container.querySelector('main') as HTMLElement).style.getPropertyValue('--pom-color-canvas')).toBe('#101820');
 
-    await user.clear(hex);
-    await user.type(hex, 'unsafe');
+    await fireEvent.input(hex, { target: { value: 'unsafe' } });
     expect(hex).toHaveValue('unsafe');
-    expect(within(settings).getAllByText(/#RRGGBB/).length).toBeGreaterThan(0);
+    expect(within(colors).getAllByText(/#RRGGBB/).length).toBeGreaterThan(0);
     expect((container.querySelector('main') as HTMLElement).style.getPropertyValue('--pom-color-canvas')).toBe('#101820');
 
-    const plane = within(settings).getByRole('application', { name: 'Saturation and value' });
+    const plane = within(colors).getByRole('application', { name: 'Saturation and value' });
     plane.focus();
     await user.keyboard('{ArrowRight}{ArrowUp}');
     expect(plane).toHaveFocus();
-    expect(within(settings).getByText(/Saturation .* Value/)).toBeVisible();
+    expect(within(colors).getByText(/Saturation .* Value/)).toBeVisible();
 
-    await user.click(within(settings).getByRole('button', { name: 'Reset' }));
-    expect(within(settings).getByRole('textbox', { name: 'Hex color' })).not.toHaveValue('unsafe');
-    await user.click(within(settings).getByRole('button', { name: 'Save draft' }));
+    await user.click(screen.getByRole('tab', { name: 'Scene' }));
+    expect(within(screen.getByRole('article', { name: 'Theme Materials' })).getByRole('slider', { name: 'Bar Opacity' })).toHaveValue('44');
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+    await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
+    await user.click(within(screen.getByRole('article', { name: 'Custom Theme' })).getByRole('button', { name: 'Reset' }));
+    expect(within(screen.getByRole('article', { name: 'Theme Colors' })).getByRole('textbox', { name: 'Hex color' })).not.toHaveValue('unsafe');
+    await user.click(within(screen.getByRole('article', { name: 'Custom Theme' })).getByRole('button', { name: 'Save draft' }));
     expect(window.localStorage.getItem('pomegranate-ui.workbench-lab.theme-draft.v1')).not.toBeNull();
-  });
+  }, 10_000);
 });

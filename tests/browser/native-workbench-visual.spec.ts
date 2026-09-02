@@ -363,7 +363,7 @@ async function openAppearanceSettings(page: Page) {
 
 async function setMaterialControls(page: Page, values: readonly [number, number, number, number]) {
   await openAppearanceSettings(page);
-  const themeSettings = page.getByRole('article', { name: 'Custom Theme' });
+  const themeSettings = page.getByRole('article', { name: 'Theme Materials' });
   for (const [label, value] of [
     ['Glass Density', values[0]],
     ['Bar Opacity', values[1]],
@@ -440,11 +440,20 @@ test('Theme Settings freezes the focused wide and compact authoring surfaces', a
   await fresh(page, 1440, 900);
   await openAppearanceSettings(page);
   await shot(page, 'wide-theme-settings.png');
+  for (const theme of [
+    { label: 'PomOS' as const, id: 'pom-neutral' },
+    { label: 'Bunny' as const, id: 'bunny' },
+    { label: 'Ash & Amber' as const, id: 'ash-amber' }
+  ]) {
+    await selectTheme(page, theme.label);
+    await openAppearanceSettings(page);
+    await shot(page, `wide-theme-settings-${theme.id}.png`);
+  }
 
   await fresh(page, 390, 844);
   await openAppearanceSettings(page);
-  await invokeWidgetAction(page.locator('[data-widget-type="settings.custom-theme"]'), 'Focus Widget');
-  await expect(page.getByRole('dialog', { name: 'Focused Custom Theme' })).toBeVisible();
+  await invokeWidgetAction(page.locator('[data-widget-type="settings.theme-colors"]'), 'Focus Widget');
+  await expect(page.getByRole('dialog', { name: 'Focused Theme Colors' })).toBeVisible();
   await shot(page, 'compact-theme-settings.png');
 });
 

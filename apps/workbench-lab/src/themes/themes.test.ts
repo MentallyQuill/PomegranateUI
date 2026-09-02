@@ -4,7 +4,9 @@ import { THEME_COLOR_ROLES, THEME_PART_IDS } from '@pomegranate-ui/contracts';
 import {
   compileThemeBindings,
   contrastRatio,
+  createThemeDraft,
   hexToHsv,
+  projectThemeDraft,
   resolveThemeTarget,
   resolveThemeV2,
   validateThemePalette,
@@ -89,6 +91,29 @@ describe('Workbench Lab theme conformance', () => {
       const resolution = resolveThemeTarget(target, assetRegistry);
       expect(resolution.ok, resolution.ok ? undefined : JSON.stringify(resolution.diagnostics)).toBe(true);
     }
+  });
+
+  it('declares data-only canvas authoring profiles for every Lab preset', () => {
+    expect(LAB_THEME_PRESETS.map(({ id, canvasAuthoring }) => ({
+      id,
+      groups: [...new Set(canvasAuthoring.layers.flatMap(({ authoringGroup }) => authoringGroup ? [authoringGroup] : []))],
+      defaults: canvasAuthoring.defaults
+    }))).toEqual([
+      expect.objectContaining({ id: 'deep-current', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) }),
+      expect.objectContaining({ id: 'pom-neutral', groups: expect.arrayContaining(['overlay', 'vignette']) }),
+      expect.objectContaining({ id: 'bunny', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) }),
+      expect.objectContaining({ id: 'ash-amber', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) })
+    ]);
+  });
+
+  it.each(LAB_THEME_PRESETS)('$id authoring defaults reproduce the authored target canvas exactly', ({ target, canvasAuthoring }) => {
+    const draft = createThemeDraft(target, canvasAuthoring.defaults);
+    expect(draft.colors).toEqual(createThemeDraft(target).colors);
+    const projected = projectThemeDraft(target, draft, target.ambient, canvasAuthoring);
+
+    expect(projected.ok, projected.ok ? undefined : JSON.stringify(projected.diagnostics)).toBe(true);
+    if (!projected.ok) return;
+    expect(projected.target.canvas.layers).toEqual(target.canvas.layers);
   });
 
   it('pins Ash & Amber to the corrected neutral palette, semantic chrome, and restrained amber canvas accents', () => {

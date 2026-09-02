@@ -29,7 +29,7 @@ async function loadManifest() {
 
 async function actualRecipeFiles(recipe) {
   return (await readdir(path.join(recipesRoot, recipe.id), { withFileTypes: true }))
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.svelte'))
+    .filter((entry) => entry.isFile() && (entry.name.endsWith('.svelte') || entry.name.endsWith('.ts')))
     .map((entry) => entry.name)
     .sort();
 }
@@ -42,7 +42,7 @@ async function inspect(manifest) {
   if (new Set(ids).size !== ids.length) findings.push('RECIPE_ID_DUPLICATE');
   const hashes = new Map();
   for (const recipe of manifest.recipes) {
-    if (recipe.revision !== 1) findings.push(`RECIPE_REVISION_INVALID: ${recipe.id}`);
+    if (!Number.isInteger(recipe.revision) || recipe.revision < 1) findings.push(`RECIPE_REVISION_INVALID: ${recipe.id}`);
     if (recipe.compatiblePomegranateRange !== '>=0.1.0-private.0 <0.2.0') {
       findings.push(`RECIPE_RANGE_INVALID: ${recipe.id}`);
     }
