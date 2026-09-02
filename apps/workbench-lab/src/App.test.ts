@@ -10,6 +10,7 @@ import { CATALOG_TOTALS, createCatalogManifests } from './mockup/catalog.js';
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  window.history.replaceState({}, '', '/');
 });
 
 describe('Svelte Workbench Lab mockup', () => {
@@ -122,6 +123,15 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(composerRegion).not.toHaveAttribute('data-pom-part');
     expect(leftRegion).toHaveAttribute('data-pom-part', 'dock.surface');
     expect(container.querySelectorAll('.dock-shelf[data-pom-part]')).toHaveLength(0);
+  });
+
+  it('removes Lab-only developer tools from normal public chrome', () => {
+    window.history.replaceState({}, '', '/?dev=0');
+    const { container } = render(App);
+
+    expect(container.querySelector('main')).toHaveAttribute('data-workbench-developer-tools', 'disabled');
+    expect(container.querySelector('[data-workbench-developer-drawer]')).toBeNull();
+    expect(screen.queryByText('Developer tools')).toBeNull();
   });
 
   it('renders one pointer-transparent theme canvas below the Workbench with the exact image layer', () => {
