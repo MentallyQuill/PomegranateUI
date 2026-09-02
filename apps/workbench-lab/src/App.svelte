@@ -334,7 +334,7 @@
     }
     status = alreadyAnnounced
       ? base
-      : `${base} Right-click or press and hold a tab for options.`;
+      : `${base} On touch, select a tab and use its actions button. Right-click also opens tab options.`;
   }
 
   async function save() {

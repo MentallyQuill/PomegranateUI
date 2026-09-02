@@ -565,7 +565,7 @@ test('Panel tabs pan by pen and never expose a reorder gesture on touch', async 
   await expect(tablist.getByRole('tab')).toHaveText(beforeOrder);
 });
 
-test('phone portrait touch exploration preserves Panel order and document containment', async ({ browser }) => {
+test('phone portrait touch exploration pans tabs and opens actions from the active trigger', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1024, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   try {
@@ -587,6 +587,14 @@ test('phone portrait touch exploration preserves Panel order and document contai
     await expect(tablist.getByRole('tab')).toHaveText(beforeOrder);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
+    const initialTrigger = page.locator('[data-panel-tab-actions-trigger]');
+    await expect(initialTrigger).toHaveCount(1);
+    await expect(initialTrigger).toHaveAccessibleName('Open Notes Panel actions');
+    await expect(initialTrigger).toBeVisible();
+    const initialTriggerBox = await initialTrigger.boundingBox();
+    expect(initialTriggerBox?.width).toBeGreaterThanOrEqual(44);
+    expect(initialTriggerBox?.height).toBeGreaterThanOrEqual(44);
+
     await tablist.evaluate((node) => { node.scrollLeft = 0; });
     const settings = tablist.getByRole('tab', { name: 'Settings' });
     const settingsBox = await settings.boundingBox();
@@ -603,12 +611,19 @@ test('phone portrait touch exploration preserves Panel order and document contai
     await expect(menu).toHaveCount(0);
     await expect(tablist.getByRole('tab', { name: 'Notes' })).toHaveAttribute('aria-selected', 'true');
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect(settings).toHaveAttribute('aria-selected', 'true');
+    await expect(menu).toHaveCount(0);
+
+    const trigger = page.locator('[data-panel-tab-actions-trigger]');
+    await expect(trigger).toHaveCount(1);
+    await expect(trigger).toHaveAccessibleName('Open Settings Panel actions');
+    await trigger.click();
     await expect(menu).toBeVisible();
-    await expect(menu).toHaveAttribute('data-context-source', 'touch');
+    await expect(menu).toHaveAttribute('data-context-source', 'pointer');
     await page.waitForTimeout(100);
     await expect(menu).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(settings).toBeFocused();
+    await expect(trigger).toBeFocused();
   } finally {
     await context.close();
   }

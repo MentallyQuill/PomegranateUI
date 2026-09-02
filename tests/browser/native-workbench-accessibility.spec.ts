@@ -397,7 +397,7 @@ test('native workbench keeps literal relationships and keyboard navigation witho
   const optionsDescriptionId = await scene.getAttribute('aria-describedby');
   expect(optionsDescriptionId).toBeTruthy();
   await expect(page.locator(`#${optionsDescriptionId}`)).toHaveText(
-    'Right-click, press and hold, or press Shift+F10 for tab options.'
+    'Right-click or press Shift+F10 for tab options.'
   );
   const order = await tabs.allTextContents();
   await page.getByRole('tab', { name: 'Library' }).press('Control+Shift+ArrowLeft');
@@ -501,6 +501,10 @@ test('compact Panel rail keeps natural tabs, truthful cues, fixed actions, and d
   await openFresh(page, 390, 844);
   await seedPanelRail(page);
   const rail = page.locator('[data-tab-rail-scroll][aria-label="Panels"]');
+  const finePointerTrigger = page.locator('[data-panel-tab-actions-trigger]');
+  await expect(finePointerTrigger).toHaveCount(1);
+  await expect(finePointerTrigger).toHaveAttribute('aria-label', 'Open Notes Panel actions');
+  await expect(finePointerTrigger).toBeHidden();
   await page.waitForTimeout(100);
   await rail.evaluate((node) => {
     node.scrollLeft = 0;

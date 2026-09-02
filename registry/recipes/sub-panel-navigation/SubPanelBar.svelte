@@ -83,12 +83,17 @@
     }
   }
 
+  function revealItem(element: HTMLElement) {
+    const item = element.closest<HTMLElement>('[data-sub-panel-tab-item]');
+    revealInRail(item && item.getBoundingClientRect().width > 0 ? item : element);
+  }
+
   function reveal(subPanelId: SubPanelId, focus = false) {
     void tick().then(() => {
       const tab = tabElement(subPanelId);
       if (!tab) return;
       if (focus) tab.focus();
-      revealInRail(tab);
+      revealItem(tab);
     });
   }
 
@@ -194,11 +199,23 @@
               aria-keyshortcuts="Shift+F10"
               tabindex={tab.selected ? 0 : -1}
               onclick={(event) => void activate(tab.subPanelId, event.currentTarget)}
-              onfocus={() => reveal(tab.subPanelId)}
+              onfocus={(event) => revealItem(event.currentTarget)}
               onkeydown={(event) => handleKey(event, tab.subPanelId, index)}
               oncontextmenu={(event) => context(event, tab.subPanelId, 'pointer')}
               ondragstart={(event) => event.preventDefault()}
             >{tab.name}</button>
+            {#if tab.selected && oncontextrequest}
+              <button
+                class="sub-panel-tab-actions-trigger"
+                type="button"
+                data-pom-part="button.surface"
+                data-sub-panel-tab-actions-trigger
+                aria-label={`Open ${tab.name} sub-panel actions`}
+                aria-haspopup="dialog"
+                onclick={(event) => context(event, tab.subPanelId, 'pointer')}
+                onfocus={(event) => revealItem(event.currentTarget)}
+              ><span aria-hidden="true">…</span></button>
+            {/if}
           </span>
         {/each}
       </div>
@@ -224,3 +241,21 @@
   </nav>
   <span id="sub-panel-tab-options-description" class="visually-hidden">Right-click or press Shift+F10 for tab options.</span>
 {/if}
+
+<style>
+  .sub-panel-tab-actions-trigger { display: none; }
+  @media (pointer: coarse) {
+    [data-sub-panel-tab-item] { display: flex; align-items: stretch; }
+    .sub-panel-tab-actions-trigger {
+      box-sizing: border-box;
+      display: grid;
+      flex: 0 0 44px;
+      place-items: center;
+      width: 44px;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0;
+      touch-action: manipulation;
+    }
+  }
+</style>

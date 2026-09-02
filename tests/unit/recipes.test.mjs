@@ -122,6 +122,11 @@ test('copy-owned navigation recipes expose semantic rails and host-owned actions
     assert.doesNotMatch(source, /scrollIntoView/, `${name} must reveal only through its rail scroll owner.`);
     assert.match(source, /getBoundingClientRect\(\)/, `${name} is missing rail-local reveal geometry.`);
     assert.match(source, /tablist\.scrollLeft/, `${name} is missing rail-local scroll ownership.`);
+    assert.match(source, /\{#if tab\.selected && oncontextrequest\}[\s\S]*data-(?:panel|sub-panel)-tab-actions-trigger/,
+      `${name} is missing its one active-tab action trigger.`);
+    assert.match(source, /aria-haspopup="dialog"/, `${name} is missing the action trigger popup contract.`);
+    assert.match(source, /@media \(pointer: coarse\)/, `${name} does not limit its action trigger to coarse pointers.`);
+    assert.doesNotMatch(source, /press and hold|long[ -]press/i, `${name} still advertises a touch hold gesture.`);
   }
 
   assert.match(panelTabs, /oncontextrequest\?\.\(\{[\s\S]*panelId: tab\.panelId/);

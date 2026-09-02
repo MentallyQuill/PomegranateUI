@@ -3,7 +3,7 @@ import { railPanDecision, revealTabScrollLeft, tabRailOverflow } from './tab-rai
 export interface TabRailContextRequest {
   readonly id: string;
   readonly anchor: HTMLElement;
-  readonly source: 'pointer' | 'keyboard' | 'touch';
+  readonly source: 'pointer' | 'keyboard';
 }
 
 export interface TabRailController {
@@ -34,11 +34,15 @@ interface Candidate {
   readonly startScrollLeft: number;
   active: boolean;
   captured: boolean;
-  touchHeld: boolean;
-  touchHoldTimer: ReturnType<typeof setTimeout> | null;
 }
 
 interface ContextDuplicate {
+  readonly id: string;
+  readonly anchor: HTMLElement;
+  readonly until: number;
+}
+
+interface TouchContextBlock {
   readonly id: string;
   readonly anchor: HTMLElement;
   readonly until: number;
@@ -65,6 +69,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
   let candidate: Candidate | null = null;
   let suppressedGesture: SuppressedGesture | null = null;
   let contextDuplicate: ContextDuplicate | null = null;
+  let touchContextBlock: TouchContextBlock | null = null;
   let secondaryContext: SecondaryContextCandidate | null = null;
   const handledContexts = new WeakSet<Event>();
   const resizeObserver = typeof ResizeObserver === 'undefined'
@@ -124,7 +129,6 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
     setPanning(false);
     if (!candidate) return;
     const current = candidate;
-    if (current.touchHoldTimer !== null) clearTimeout(current.touchHoldTimer);
     if (current.captured) {
       try { options.rail.releasePointerCapture(current.pointerId); } catch { /* Capture can be lost before cleanup. */ }
     }
@@ -152,13 +156,11 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
   function finishOnWindowPointerUp(event: PointerEvent) {
     if (!candidate || candidate.pointerId !== event.pointerId) return;
     const current = candidate;
-    if (current.active || current.touchHeld) suppressCandidate(current);
+    if (current.active) suppressCandidate(current);
+    if (current.pointerType === 'touch') {
+      touchContextBlock = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
+    }
     cleanup();
-    if (!current.touchHeld) return;
-    contextDuplicate = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
-    queueMicrotask(() => {
-      options.onContextRequest({ id: current.id, anchor: current.anchor, source: 'touch' });
-    });
   }
 
   function cancelOnWindowPointer(event: PointerEvent) {
@@ -188,17 +190,10 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
       startY: event.clientY,
       startScrollLeft: options.rail.scrollLeft,
       active: false,
-      captured: false,
-      touchHeld: false,
-      touchHoldTimer: null
+      captured: false
     };
     if (event.pointerType === 'touch') {
-      current.touchHoldTimer = setTimeout(() => {
-        if (candidate !== current) return;
-        current.touchHeld = true;
-        suppressCandidate(current);
-        contextDuplicate = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
-      }, 500);
+      touchContextBlock = { id: current.id, anchor: current.anchor, until: performance.now() + 1000 };
     }
     return current;
   }
@@ -210,6 +205,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
 
   return Object.freeze({
     pointerDown(event: PointerEvent, id: string) {
+      if (event.pointerType !== 'touch') touchContextBlock = null;
       if (event.button === 2) {
         const anchor = anchorFor(event);
         if (!id || !anchor) return;
@@ -275,6 +271,19 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
 
     contextMenu(event: MouseEvent, id: string) {
       const anchor = anchorFor(event);
+      if (touchContextBlock && performance.now() > touchContextBlock.until && candidate?.pointerType !== 'touch') {
+        touchContextBlock = null;
+      }
+      if (
+        anchor
+        && touchContextBlock
+        && touchContextBlock.id === id
+        && touchContextBlock.anchor === anchor
+        && (performance.now() <= touchContextBlock.until || candidate?.pointerType === 'touch')
+      ) {
+        event.preventDefault();
+        return;
+      }
       if (contextDuplicate && performance.now() > contextDuplicate.until) contextDuplicate = null;
       if (contextDuplicate && contextDuplicate.id === id && contextDuplicate.anchor === anchor) {
         contextDuplicate = null;
@@ -327,6 +336,7 @@ export function createTabRailController(options: TabRailControllerOptions): TabR
       options.rail.removeEventListener('scroll', sync);
       suppressedGesture = null;
       contextDuplicate = null;
+      touchContextBlock = null;
     }
   });
 }

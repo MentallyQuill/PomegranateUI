@@ -258,9 +258,9 @@ test('the Lab announces the tab-options hint once per browser session after cust
   await addSubPanel(page, 'Research');
   const status = page.locator('[data-workbench-developer-drawer]').getByRole('status');
   await page.getByText('Developer tools', { exact: true }).click();
-  await expect(status).toContainText('Right-click or press and hold a tab for options.');
+  await expect(status).toContainText('On touch, select a tab and use its actions button. Right-click also opens tab options.');
   await page.getByRole('button', { name: 'Save layout' }).click();
-  await expect(status).not.toContainText('Right-click or press and hold a tab for options.');
+  await expect(status).not.toContainText('On touch, select a tab and use its actions button. Right-click also opens tab options.');
   await page.reload();
   await page.getByRole('tab', { name: 'Settings' }).click();
   await addSubPanel(page, 'Notes');
@@ -280,7 +280,7 @@ test('the Lab falls back to one in-memory hint when session storage writes fail'
   await addSubPanel(page, 'Research');
   const status = page.locator('[data-workbench-developer-drawer]').getByRole('status');
   await page.getByText('Developer tools', { exact: true }).click();
-  await expect(status).toContainText('Right-click or press and hold a tab for options.');
+  await expect(status).toContainText('On touch, select a tab and use its actions button. Right-click also opens tab options.');
   await page.getByText('Developer tools', { exact: true }).click();
   await addSubPanel(page, 'Notes');
   await page.getByText('Developer tools', { exact: true }).click();
@@ -305,6 +305,10 @@ test('phone portrait keeps an eight-sub-panel rail visible with fixed Add and no
   await expect(tablist.getByRole('tab')).toHaveCount(8);
   await expect(page.locator('[data-sub-panel-selector-trigger]')).toHaveCount(0);
   await expect(page.locator('[data-sub-panel-actions-trigger]')).toHaveCount(0);
+  const finePointerTrigger = page.locator('[data-sub-panel-tab-actions-trigger]');
+  await expect(finePointerTrigger).toHaveCount(1);
+  await expect(finePointerTrigger).toHaveAttribute('aria-label', 'Open Notes sub-panel actions');
+  await expect(finePointerTrigger).toBeHidden();
   const add = page.getByRole('button', { name: 'Add sub-panel' });
   await expect(add).toBeVisible();
   expect(await add.evaluate((node) => node.parentElement?.matches('[data-tab-rail-scroll]'))).toBe(false);
@@ -422,7 +426,7 @@ async function touchDesktopPage(browser: Browser) {
   return { context, page };
 }
 
-test('touch hold targets an inactive sub-panel while movement scrolls without activation', async ({ browser }) => {
+test('touch tabs pan normally and open actions from the active sub-panel trigger', async ({ browser }) => {
   const { context, page } = await touchDesktopPage(browser);
   try {
     await addSubPanel(page, 'Research');
@@ -447,6 +451,11 @@ test('touch hold targets an inactive sub-panel while movement scrolls without ac
     await expect(notes).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('dialog', { name: `${names[0]} sub-panel actions` })).toHaveCount(0);
 
+    const initialTrigger = page.locator('[data-sub-panel-tab-actions-trigger]');
+    await expect(initialTrigger).toHaveCount(1);
+    await expect(initialTrigger).toHaveAccessibleName('Open Notes sub-panel actions');
+    await expect(initialTrigger).toBeVisible();
+
     await tablist.evaluate((node) => { node.scrollLeft = 0; });
     const heldBox = await account.boundingBox();
     if (!heldBox) throw new Error('Expected stationary touch target geometry.');
@@ -459,12 +468,23 @@ test('touch hold targets an inactive sub-panel while movement scrolls without ac
     await expect(menu).toHaveCount(0);
     await expect(notes).toHaveAttribute('aria-selected', 'true');
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect(account).toHaveAttribute('aria-selected', 'true');
+    await expect(menu).toHaveCount(0);
+
+    const trigger = page.locator('[data-sub-panel-tab-actions-trigger]');
+    await expect(trigger).toHaveCount(1);
+    await expect(trigger).toHaveAccessibleName(`Open ${names[0]} sub-panel actions`);
+    await expect(trigger).toBeVisible();
+    const triggerBox = await trigger.boundingBox();
+    expect(triggerBox?.width).toBeGreaterThanOrEqual(44);
+    expect(triggerBox?.height).toBeGreaterThanOrEqual(44);
+    await trigger.click();
     await expect(menu).toBeVisible();
-    await expect(menu).toHaveAttribute('data-context-source', 'touch');
+    await expect(menu).toHaveAttribute('data-context-source', 'pointer');
     await page.waitForTimeout(100);
     await expect(menu).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(account).toBeFocused();
+    await expect(trigger).toBeFocused();
     await assertContained(page);
   } finally {
     await context.close();

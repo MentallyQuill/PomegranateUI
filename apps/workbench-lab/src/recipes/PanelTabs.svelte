@@ -56,12 +56,16 @@
     );
   }
 
+  function revealItem(element: HTMLElement) {
+    controller?.reveal(element.closest<HTMLElement>('[data-pomegranate-panel-tab]') ?? element);
+  }
+
   function reveal(panelId: PanelId, focus = false) {
     void tick().then(() => {
       const tab = tabElement(panelId);
       if (!tab) return;
       if (focus) tab.focus();
-      controller?.reveal(tab);
+      revealItem(tab);
     });
   }
 
@@ -127,19 +131,31 @@
           aria-keyshortcuts="Shift+F10"
           tabindex={tab.selected ? 0 : -1}
           onclick={(event) => { if (!controller?.consumeClick(event)) activate(tab.panelId); }}
-          onfocus={(event) => controller?.reveal(event.currentTarget)}
+          onfocus={(event) => revealItem(event.currentTarget)}
           onkeydown={(event) => handleKey(event, tab.panelId, index)}
           oncontextmenu={(event) => controller?.contextMenu(event, tab.panelId)}
           onpointerdown={(event) => controller?.pointerDown(event, tab.panelId)}
           ondragstart={(event) => event.preventDefault()}
         >{tab.name}</button>
+        {#if tab.selected}
+          <button
+            class="panel-tab-actions-trigger"
+            type="button"
+            data-pom-part="button.surface"
+            data-panel-tab-actions-trigger
+            aria-label={`Open ${tab.name} Panel actions`}
+            aria-haspopup="dialog"
+            onclick={(event) => menu?.open(tab.panelId, event.currentTarget, 'pointer')}
+            onfocus={(event) => revealItem(event.currentTarget)}
+          ><span aria-hidden="true">…</span></button>
+        {/if}
       </div>
     {/each}
   </div>
   <span data-tab-rail-edge="before" aria-hidden="true"></span>
   <span data-tab-rail-edge="after" aria-hidden="true"></span>
 </div>
-<span id="panel-tab-options-description" class="visually-hidden">Right-click, press and hold, or press Shift+F10 for tab options.</span>
+<span id="panel-tab-options-description" class="visually-hidden">Right-click or press Shift+F10 for tab options.</span>
 
 <PanelMenu
   bind:this={menu}
