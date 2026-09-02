@@ -13,7 +13,7 @@ import {
   type LayoutResult
 } from '@pomegranate-ui/layout';
 
-import { upgradeFlatSettingsPanel } from './settings-sub-panels.js';
+import { upgradeFlatSettingsPanel, upgradeThemeAuthoringWidgets } from './settings-sub-panels.js';
 
 export const LAB_PANEL_IDS = Object.freeze({
   scene: asPanelId('scene'),
@@ -40,6 +40,10 @@ export const LAB_WIDGET_TYPES = Object.freeze({
   loreEntries: asWidgetType('library.lore-entries'),
   themeLibrary: asWidgetType('settings.theme'),
   themeSettings: asWidgetType('settings.custom-theme'),
+  themeColors: asWidgetType('settings.theme-colors'),
+  themeMaterials: asWidgetType('settings.theme-materials'),
+  themeCanvas: asWidgetType('settings.theme-canvas'),
+  themeAmbient: asWidgetType('settings.theme-ambient'),
   readingLayout: asWidgetType('settings.reading-layout'),
   soundMotion: asWidgetType('settings.sound-motion'),
   accessibility: asWidgetType('settings.accessibility'),
@@ -81,7 +85,7 @@ export function createLabState(): WorkbenchState {
 
   const fixtures = [
     ['scene-characters', LAB_WIDGET_TYPES.characters, LAB_PANEL_IDS.scene, 'left', 0, { presentation: 'recording' }],
-    ['scene-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.scene, 'left', 1, { presentation: 'compact' }],
+    ['scene-theme-materials', LAB_WIDGET_TYPES.themeMaterials, LAB_PANEL_IDS.scene, 'left', 1, {}],
     ['scene-transcript', LAB_WIDGET_TYPES.transcript, LAB_PANEL_IDS.scene, 'stage', 0, {}],
     ['scene-composer', LAB_WIDGET_TYPES.composer, LAB_PANEL_IDS.scene, 'composer', 0, {}],
     ['scene-world', LAB_WIDGET_TYPES.worldState, LAB_PANEL_IDS.scene, 'right', 0, { presentation: 'atmospheric' }],
@@ -97,6 +101,10 @@ export function createLabState(): WorkbenchState {
     ['settings-memory-search-model', LAB_WIDGET_TYPES.memorySearchModel, LAB_PANEL_IDS.settings, 'column-2', 1, {}],
     ['settings-theme-library', LAB_WIDGET_TYPES.themeLibrary, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
     ['settings-theme-settings', LAB_WIDGET_TYPES.themeSettings, LAB_PANEL_IDS.settings, 'column-1', 1, {}],
+    ['settings-theme-colors', LAB_WIDGET_TYPES.themeColors, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
+    ['settings-theme-materials', LAB_WIDGET_TYPES.themeMaterials, LAB_PANEL_IDS.settings, 'column-2', 1, {}],
+    ['settings-theme-canvas', LAB_WIDGET_TYPES.themeCanvas, LAB_PANEL_IDS.settings, 'column-3', 0, {}],
+    ['settings-theme-ambient', LAB_WIDGET_TYPES.themeAmbient, LAB_PANEL_IDS.settings, 'column-3', 1, {}],
     ['settings-reading-layout', LAB_WIDGET_TYPES.readingLayout, LAB_PANEL_IDS.settings, 'column-2', 0, {}],
     ['settings-sound-motion', LAB_WIDGET_TYPES.soundMotion, LAB_PANEL_IDS.settings, 'column-2', 1, {}],
     ['settings-accessibility', LAB_WIDGET_TYPES.accessibility, LAB_PANEL_IDS.settings, 'column-3', 0, {}],
@@ -126,5 +134,5 @@ export function createLabState(): WorkbenchState {
     'scene-ambience-ledger'
   ));
   state = requireState(activateWidgetGroup(state, ambienceId));
-  return { ...upgradeFlatSettingsPanel(state), revision: 0 };
+  return { ...upgradeThemeAuthoringWidgets(upgradeFlatSettingsPanel(state)), revision: 0 };
 }

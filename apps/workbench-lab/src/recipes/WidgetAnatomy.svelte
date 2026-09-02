@@ -159,7 +159,7 @@
 
         <p class="surface-boundary"><span aria-hidden="true">i</span>{fixture.boundary}</p>
         {#if fixture.actions.length}
-          <footer class="surface-actions">{#each fixture.actions as action (action)}<button type="button" data-pom-part="button.surface" onclick={action === 'Open Theme Settings' ? hostContext.theme.openSettings : undefined}>{action}</button>{/each}</footer>
+          <footer class="surface-actions">{#each fixture.actions as action (action)}<button type="button" data-pom-part="button.surface" onclick={action === 'Open Custom Theme' ? hostContext.theme.openSettings : undefined}>{action}</button>{/each}</footer>
         {/if}
       </div>
     {/if}

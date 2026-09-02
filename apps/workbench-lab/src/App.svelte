@@ -16,7 +16,7 @@
   import { LAB_PANEL_IDS } from './mockup/state.js';
   import { getSurfaceFixture, resolveSurfaceState } from './mockup/surface-fixtures.js';
   import { resolveLabWidgetMeta, resolveLabWidgetTitle } from './mockup/presentation.js';
-  import { upgradeFlatSettingsPanel } from './mockup/settings-sub-panels.js';
+  import { upgradeLabWorkbenchState } from './mockup/settings-sub-panels.js';
   import { createLabRuntime } from './mockup/widgets.js';
   import PanelTabs from './recipes/PanelTabs.svelte';
   import PanelCreateDialog from './recipes/PanelCreateDialog.svelte';
@@ -240,7 +240,7 @@
     });
     void loadLayout(storage, LAB_LAYOUT_KEY, store.getState()).then((loaded) => {
       if (current && loaded.ok) {
-        store.dispatch({ type: 'layout.hydrate', state: upgradeFlatSettingsPanel(loaded.state) });
+        store.dispatch({ type: 'layout.hydrate', state: upgradeLabWorkbenchState(loaded.state) });
         status = 'Restored the saved local layout.';
       }
     });
@@ -344,7 +344,7 @@
 
   async function reload() {
     const result = await loadLayout(storage, LAB_LAYOUT_KEY, store.getState());
-    if (result.ok) store.dispatch({ type: 'layout.hydrate', state: upgradeFlatSettingsPanel(result.state) });
+    if (result.ok) store.dispatch({ type: 'layout.hydrate', state: upgradeLabWorkbenchState(result.state) });
     status = result.ok ? 'Reloaded the saved local layout.' : result.error.message;
   }
 

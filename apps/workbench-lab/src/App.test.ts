@@ -55,6 +55,9 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(accountTab).toHaveAttribute('aria-selected', 'false');
     expect(appearanceTab).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('article', { name: 'Theme Library' })).toBeVisible();
+    for (const name of ['Custom Theme', 'Theme Colors', 'Theme Materials', 'Theme Canvas', 'Ambient Light']) {
+      expect(screen.getByRole('article', { name })).toBeVisible();
+    }
     expect(screen.queryByRole('article', { name: 'Provider Credentials' })).toBeNull();
     await fireEvent.keyDown(window, { key: 'Escape' });
     expect(actions).not.toHaveAttribute('data-fallback-open');
@@ -161,7 +164,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByLabelText('Active story identity')).toHaveTextContent('STORY / 7E-19');
     expect(screen.getByText('FIG. 07 / LIMINAL RESERVOIR')).toBeVisible();
     expect(within(screen.getByRole('tablist', { name: 'Panels' })).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Library', 'Settings']);
-    for (const title of ['Characters (Story)', 'Custom Theme', 'Transcript', 'Composer', 'World State', 'Room Ambience']) {
+    for (const title of ['Characters (Story)', 'Theme Materials', 'Transcript', 'Composer', 'World State', 'Room Ambience']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();
     }
     expect(within(screen.getByRole('article', { name: 'Characters (Story)' })).getByText('4 / 7')).toHaveClass('widget-frame-meta');
@@ -171,7 +174,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(within(characterHeader).getByRole('navigation', { name: 'Characters (Story) actions' })).toBeVisible();
     expect(within(characterHeader).getAllByRole('button')).toHaveLength(1);
     expect(within(characterHeader).getByRole('button', { name: 'Widget actions' })).toHaveAttribute('aria-expanded', 'false');
-    expect(within(screen.getByRole('article', { name: 'Custom Theme' })).getByText('Ready')).toHaveClass('widget-frame-meta');
+    expect(within(screen.getByRole('article', { name: 'Theme Materials' })).getByText('Ready')).toHaveClass('widget-frame-meta');
     expect(within(screen.getByRole('article', { name: 'World State' })).getByText('Frame 3')).toHaveClass('widget-frame-meta');
     expect(within(screen.getByRole('article', { name: 'World State' })).getAllByRole('term').map((term) => term.textContent)).toEqual(['Location', 'Time', 'Weather', 'Frame']);
     expect(container.querySelector('.atmospheric-state-glyph')).toBeNull();
@@ -187,7 +190,7 @@ describe('Svelte Workbench Lab mockup', () => {
     const ambienceGroup = screen.getByRole('group', { name: 'Widget group' });
     expect(ambienceGroup.querySelector('[data-pom-part="widget.surface"]')).toBeNull();
     expect(ambienceGroup.querySelector('[data-surface-type="story.room-ambience"]')).not.toBeNull();
-    expect(container.querySelector('[data-surface-presentation="compact-theme"]')).not.toBeNull();
+    expect(container.querySelector('[data-surface-type="settings.theme-materials"]')).not.toBeNull();
     expect(screen.getByText('Chapter 04 · The Drowned Observatory')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'The Water Remembers' })).toBeVisible();
     expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveValue('');
@@ -227,9 +230,9 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(rightToggle).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('carries the full audited 94-definition Catalog with exact category totals', async () => {
-    expect(createCatalogManifests()).toHaveLength(94);
-    expect(CATALOG_TOTALS).toEqual({ story: 12, library: 19, systems: 21, settings: 39, extensions: 3 });
+  it('carries the full audited 98-definition Catalog with exact category totals', async () => {
+    expect(createCatalogManifests()).toHaveLength(98);
+    expect(CATALOG_TOTALS).toEqual({ story: 12, library: 19, systems: 21, settings: 43, extensions: 3 });
     const user = userEvent.setup();
     render(App);
     const launcher = screen.getByRole('button', { name: 'Open Widget Catalog' });
@@ -245,7 +248,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(catalog).toHaveAttribute('open');
     expect(within(catalog).getByRole('button', { name: 'Close Catalog' }))
       .toHaveAttribute('data-pom-part', 'button.surface');
-    expect(within(catalog).getAllByRole('listitem')).toHaveLength(94);
+    expect(within(catalog).getAllByRole('listitem')).toHaveLength(98);
     await user.click(within(catalog).getByRole('button', { name: 'story' }));
     for (const category of ['extensions', 'library', 'settings', 'story', 'systems']) {
       expect(within(catalog).getByRole('button', { name: category })).toBeVisible();
@@ -427,7 +430,7 @@ describe('Svelte Workbench Lab mockup', () => {
     const { container } = render(App);
     await user.click(screen.getByRole('tab', { name: 'Settings' }));
     await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
-    await user.click(within(screen.getByRole('article', { name: 'Theme Library' })).getByRole('button', { name: 'Open Theme Settings' }));
+    await user.click(within(screen.getByRole('article', { name: 'Theme Library' })).getByRole('button', { name: 'Open Custom Theme' }));
     expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
 
     const settings = screen.getByRole('article', { name: 'Custom Theme' });

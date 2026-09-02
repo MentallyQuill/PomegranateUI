@@ -41,9 +41,13 @@ describe('implemented Deep Current surface boundary', () => {
       'settings-ai-models|1|1|settings.memory-search-model',
       'settings-appearance-accessibility|0|0|settings.theme',
       'settings-appearance-accessibility|0|1|settings.custom-theme',
-      'settings-appearance-accessibility|1|0|settings.reading-layout',
-      'settings-appearance-accessibility|1|1|settings.sound-motion',
-      'settings-appearance-accessibility|2|0|settings.accessibility',
+      'settings-appearance-accessibility|0|2|settings.reading-layout',
+      'settings-appearance-accessibility|1|0|settings.theme-colors',
+      'settings-appearance-accessibility|1|1|settings.theme-materials',
+      'settings-appearance-accessibility|1|2|settings.sound-motion',
+      'settings-appearance-accessibility|2|0|settings.theme-canvas',
+      'settings-appearance-accessibility|2|1|settings.theme-ambient',
+      'settings-appearance-accessibility|2|2|settings.accessibility',
       'settings-data-extensions-maintenance|0|0|settings.add-ons',
       'settings-data-extensions-maintenance|1|0|settings.maintenance',
       'settings-story-content|0|0|settings.content',
@@ -52,10 +56,10 @@ describe('implemented Deep Current surface boundary', () => {
     ].sort());
   });
 
-  it('freezes the exact 52 reviewed Widget identities and family totals', () => {
-    expect(IMPLEMENTED_SURFACES).toHaveLength(52);
-    expect(new Set(IMPLEMENTED_SURFACES.map(({ type }) => type)).size).toBe(52);
-    expect(IMPLEMENTED_SURFACE_TOTALS).toEqual({ settings: 8, story: 12, library: 19, systems: 13 });
+  it('freezes the exact 56 reviewed Widget identities and family totals', () => {
+    expect(IMPLEMENTED_SURFACES).toHaveLength(56);
+    expect(new Set(IMPLEMENTED_SURFACES.map(({ type }) => type)).size).toBe(56);
+    expect(IMPLEMENTED_SURFACE_TOTALS).toEqual({ settings: 12, story: 12, library: 19, systems: 13 });
     expect(Object.isFrozen(IMPLEMENTED_SURFACES)).toBe(true);
     expect(IMPLEMENTED_SURFACES.every(Object.isFrozen)).toBe(true);
   });
@@ -75,7 +79,7 @@ describe('implemented Deep Current surface boundary', () => {
 
   it('gives every reviewed identity one state-aware fixture and specialized renderer', () => {
     const runtime = createLabRuntime();
-    expect(SURFACE_FIXTURES.size).toBe(52);
+    expect(SURFACE_FIXTURES.size).toBe(56);
     for (const surface of IMPLEMENTED_SURFACES) {
       const fixture = SURFACE_FIXTURES.get(surface.type);
       expect(fixture?.states).toContain('ready');
