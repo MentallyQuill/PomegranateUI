@@ -5,6 +5,7 @@ const browserServerPort = resolveBrowserServerPort();
 
 export default defineConfig({
   testDir: './tests/browser',
+  testMatch: '**/*.spec.ts',
   globalSetup: './tests/browser/global-setup.mjs',
   workers: 1,
   timeout: 120_000,
