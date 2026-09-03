@@ -525,6 +525,7 @@
   data-pom-widget-grouping={themeSnapshot.compiled.theme.recipes.widgetGrouping}
   data-pom-chrome-presentation={themeSnapshot.compiled.theme.recipes.chromePresentation}
   data-pom-shell-presentation={themeSnapshot.compiled.theme.recipes.shellPresentation ?? 'standard'}
+  data-pom-toolbar-toggle-presentation={themeSnapshot.compiled.theme.recipes.toolbarTogglePresentation ?? 'edge-labels'}
   data-pom-action-presentation={themeSnapshot.compiled.theme.recipes.actionPresentation}
   data-pom-action-content={themeSnapshot.presentation.actions.content}
   data-pom-density={themeSnapshot.compiled.theme.spacing.density}
@@ -622,6 +623,7 @@
       {leftCollapsed}
       {rightCollapsed}
       showDockResizers={requestedSurface !== null}
+      toolbarTogglePresentation={themeSnapshot.compiled.theme.recipes.toolbarTogglePresentation ?? 'edge-labels'}
       ontoggleleft={() => { leftCollapsed = !leftCollapsed; }}
       ontoggleright={() => { rightCollapsed = !rightCollapsed; }}
       class="workbench-surface"

@@ -219,6 +219,19 @@ describe('ThemeDefinitionSchema', () => {
     });
   });
 
+  it('accepts only the supported toolbar toggle presentations', () => {
+    const bottomChevrons = structuredClone(VALID_THEME_V2) as Record<string, any>;
+    bottomChevrons.recipes.toolbarTogglePresentation = 'bottom-chevrons';
+    const unsupported = structuredClone(VALID_THEME_V2) as Record<string, any>;
+    unsupported.recipes.toolbarTogglePresentation = 'floating-tabs';
+
+    expect(ThemeDefinitionV2Schema.parse(bottomChevrons).recipes.toolbarTogglePresentation)
+      .toBe('bottom-chevrons');
+    expect(ThemeDefinitionV2Schema.safeParse(unsupported).error?.issues).toContainEqual(
+      expect.objectContaining({ path: ['recipes', 'toolbarTogglePresentation'] })
+    );
+  });
+
   it('rejects incomplete or unknown semantic recipe anatomy at literal paths', () => {
     const missingPart = structuredClone(VALID_THEME_V2) as Record<string, any>;
     delete missingPart.recipes.parts['widget.actions'];

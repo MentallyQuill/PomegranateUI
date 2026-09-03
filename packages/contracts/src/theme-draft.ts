@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { AmbientProfileSchema } from './ambient.js';
-import { ThemeIdSchema } from './theme.js';
+import { ThemeIdSchema, ToolbarTogglePresentationSchema } from './theme.js';
 
 export const THEME_DRAFT_SCHEMA_VERSION_V1 = 'pomegranate.ui.theme-draft.v1' as const;
 export const PERSISTED_THEME_DRAFT_SCHEMA_VERSION_V1 = 'pomegranate.ui.persisted-theme-draft.v1' as const;
@@ -42,7 +42,8 @@ export const ThemeCanvasDraftSchema = z.object({
 const themeDraftFields = {
   baseTargetId: ThemeIdSchema,
   colors: z.object(draftColorsShape).strict(),
-  materials: ThemeMaterialControlsSchema
+  materials: ThemeMaterialControlsSchema,
+  toolbarTogglePresentation: ToolbarTogglePresentationSchema.optional()
 } as const;
 
 export const ThemeDraftV1Schema = z.object({

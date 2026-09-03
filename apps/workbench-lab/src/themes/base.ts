@@ -188,6 +188,7 @@ export function themeRecipes(options: {
   readonly widgetGrouping: ThemeDefinitionV2['recipes']['widgetGrouping'];
   readonly chromePresentation: ThemeDefinitionV2['recipes']['chromePresentation'];
   readonly actionPresentation: ThemeDefinitionV2['recipes']['actionPresentation'];
+  readonly toolbarTogglePresentation?: ThemeDefinitionV2['recipes']['toolbarTogglePresentation'];
 }): ThemeDefinitionV2['recipes'] {
   const parts = Object.fromEntries(THEME_PART_IDS.map((part) => [part, {
     material: PART_MATERIALS[part],
@@ -210,5 +211,9 @@ export function themeRecipes(options: {
       disabledOpacity: 0.46
     }
   } satisfies ThemePartRecipeV2])) as Record<ThemePartId, ThemePartRecipeV2>;
-  return { parts, ...options };
+  return {
+    parts,
+    ...options,
+    toolbarTogglePresentation: options.toolbarTogglePresentation ?? 'edge-labels'
+  };
 }

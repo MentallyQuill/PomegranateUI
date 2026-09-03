@@ -19,6 +19,16 @@ function editable(controller: ReturnType<typeof createLabThemeController>): Pers
 }
 
 describe('Lab Theme authoring controller', () => {
+  it('switches toolbar toggle presentation with the active Theme Library target', () => {
+    const controller = createLabThemeController({ initialId: 'deep-current' });
+
+    expect(controller.getSnapshot().compiled.theme.recipes.toolbarTogglePresentation).toBe('edge-labels');
+    expect(controller.activate('pom-neutral').ok).toBe(true);
+    expect(controller.getSnapshot().compiled.theme.recipes.toolbarTogglePresentation).toBe('bottom-chevrons');
+    expect(controller.activate('deep-current').ok).toBe(true);
+    expect(controller.getSnapshot().compiled.theme.recipes.toolbarTogglePresentation).toBe('edge-labels');
+  });
+
   it('resolves target ambient through capability limits and accessibility vetoes before compiling root bindings', () => {
     const controller = createLabThemeController({
       ambientLimits: { enabled: true, maximumPower: 0.12, allowMotion: true, allowTransparency: true },
@@ -115,6 +125,7 @@ describe('Lab Theme authoring controller', () => {
     const controller = createLabThemeController({ initialId: 'ash-amber', draftStorage: storage });
     const ash = editable(controller);
     ash.ambient.power = 0.72;
+    ash.draft.toolbarTogglePresentation = 'bottom-chevrons';
     expect(controller.editDraft(ash).ok).toBe(true);
     expect((await controller.saveDraft()).ok).toBe(true);
     const raw = values.get(LAB_THEME_DRAFT_KEY);
@@ -124,6 +135,8 @@ describe('Lab Theme authoring controller', () => {
     const restored = createLabThemeController({ initialId: 'ash-amber', draftStorage: storage });
     expect((await restored.loadDraft()).ok).toBe(true);
     expect((restored.getAuthoringSnapshot().editable as PersistedThemeDraft).ambient.power).toBe(0.72);
+    expect((restored.getAuthoringSnapshot().editable as PersistedThemeDraft).draft.toolbarTogglePresentation).toBe('bottom-chevrons');
+    expect(restored.getSnapshot().compiled.theme.recipes.toolbarTogglePresentation).toBe('bottom-chevrons');
     expect(restored.getSnapshot().compiled.bindings['--pom-ambient-power']).toBe('0.72');
   });
 

@@ -1,8 +1,18 @@
 <script lang="ts">
-  import type { ThemeAuthoringPort } from './types.js';
+  import type { ToolbarTogglePresentation } from '@pomegranate-ui/contracts';
+
+  import { editableThemeDraft, type ThemeAuthoringPort } from './types.js';
 
   let { theme }: { theme: ThemeAuthoringPort } = $props();
   let status = $state('Theme draft ready.');
+  const draft = $derived(editableThemeDraft(theme));
+
+  function setToolbarTogglePresentation(value: ToolbarTogglePresentation) {
+    const next = editableThemeDraft(theme);
+    next.draft.toolbarTogglePresentation = value;
+    const result = theme.editDraft(next);
+    status = result.ok ? 'Toolbar controls updated.' : result.diagnostics[0]?.message ?? 'Toolbar controls could not be updated.';
+  }
 
   function reset() {
     const result = theme.resetDraft();
@@ -21,6 +31,29 @@
     <div><dt>Preset</dt><dd>{theme.authoring.applied.resolved.theme.label}</dd></div>
     <div><dt>State</dt><dd>{theme.authoring.dirty ? 'Unsaved changes' : 'Ready'}</dd></div>
   </dl>
+  <fieldset class="theme-authoring-toolbar-controls">
+    <legend>Toolbar controls</legend>
+    <label>
+      <input
+        type="radio"
+        name="toolbar-toggle-presentation"
+        value="edge-labels"
+        checked={(draft.draft.toolbarTogglePresentation ?? 'edge-labels') === 'edge-labels'}
+        onclick={() => setToolbarTogglePresentation('edge-labels')}
+      />
+      <span>Edge labels</span>
+    </label>
+    <label>
+      <input
+        type="radio"
+        name="toolbar-toggle-presentation"
+        value="bottom-chevrons"
+        checked={draft.draft.toolbarTogglePresentation === 'bottom-chevrons'}
+        onclick={() => setToolbarTogglePresentation('bottom-chevrons')}
+      />
+      <span>Bottom chevrons</span>
+    </label>
+  </fieldset>
   {#if theme.authoring.diagnostics.length}
     <ul class="theme-authoring-diagnostics" aria-label="Theme diagnostics">
       {#each theme.authoring.diagnostics as diagnostic}<li>{diagnostic.message}</li>{/each}

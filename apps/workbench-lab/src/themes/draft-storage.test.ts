@@ -45,6 +45,17 @@ describe('Theme draft storage', () => {
     expect(decodePersistedThemeDraft(encoded.value)).toEqual({ ok: true, value: fixture() });
   });
 
+  it('round-trips an authored toolbar toggle presentation while accepting older v2 drafts without it', () => {
+    const current = fixture();
+    current.draft.toolbarTogglePresentation = 'bottom-chevrons';
+    const encoded = encodePersistedThemeDraft(current);
+
+    expect(encoded.ok).toBe(true);
+    if (!encoded.ok) return;
+    expect(decodePersistedThemeDraft(encoded.value)).toEqual({ ok: true, value: current });
+    expect(decodePersistedThemeDraft(JSON.stringify(fixture()))).toEqual({ ok: true, value: fixture() });
+  });
+
   it('migrates one valid v1 record with preset-owned canvas defaults', () => {
     const current = fixture();
     const legacy = {

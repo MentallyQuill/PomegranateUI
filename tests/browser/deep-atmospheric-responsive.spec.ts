@@ -133,10 +133,12 @@ function expectResponsiveAtmosphericContract(
 
 async function expectOverlayDock(page: Page, side: 'left' | 'right') {
   const stageBefore = await page.locator('[data-conformance-region="stage"]').boundingBox();
-  const toggle = page.getByRole('button', { name: `Toggle ${side} dock` });
+  const toggle = page.locator(`.toolbar-edge-toggle-${side}`);
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(toggle).toHaveAccessibleName(`Open ${side} toolbar`);
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(toggle).toHaveAccessibleName(`Close ${side} toolbar`);
   const dock = page.locator(`[data-conformance-region="${side}"]`);
   await expect(dock).toBeVisible();
   const [stageAfter, dockBox] = await Promise.all([page.locator('[data-conformance-region="stage"]').boundingBox(), dock.boundingBox()]);
@@ -144,6 +146,7 @@ async function expectOverlayDock(page: Page, side: 'left' | 'right') {
   expect(dockBox?.width, `${side} dock is usable`).toBeGreaterThanOrEqual(280);
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(toggle).toHaveAccessibleName(`Open ${side} toolbar`);
   await expect(dock).toBeHidden();
 }
 

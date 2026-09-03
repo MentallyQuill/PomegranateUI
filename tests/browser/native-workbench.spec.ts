@@ -1129,22 +1129,66 @@ test('Deep Current pointer drag floats and subsequently moves a Widget within th
 });
 
 test('Deep Current edge controls collapse and restore both toolbars without hiding themselves', async ({ page }) => {
-  const left = page.getByRole('button', { name: 'Toggle left dock' });
-  const right = page.getByRole('button', { name: 'Toggle right dock' });
+  const left = page.locator('.toolbar-edge-toggle-left');
+  const right = page.locator('.toolbar-edge-toggle-right');
+
+  await expect(left).toHaveText('CLOSE TOOLBAR LFT');
+  await expect(right).toHaveText('CLOSE TOOLBAR RGT');
 
   await left.focus();
   await left.press('Enter');
   await expect(page.locator('main')).toHaveClass(/left-collapsed/);
   await expect(page.locator('[data-conformance-region="left"]')).toBeHidden();
   await expect(left).toBeVisible();
+  await expect(left).toHaveAccessibleName('Open left toolbar');
+  await expect(left).toHaveText('OPEN TOOLBAR LFT');
   await right.click();
   await expect(page.locator('main')).toHaveClass(/right-collapsed/);
   await expect(page.locator('[data-conformance-region="right"]')).toBeHidden();
   await expect(right).toBeVisible();
+  await expect(right).toHaveAccessibleName('Open right toolbar');
+  await expect(right).toHaveText('OPEN TOOLBAR RGT');
   await left.click();
   await right.click();
   await expect(page.locator('[data-conformance-region="left"]')).toBeVisible();
   await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
+});
+
+test('Theme Library bottom chevrons sit at each toolbar bottom and flip with collapsed state', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  await page.getByRole('article', { name: 'Theme Library' }).getByRole('button', { name: /^PomOS/ }).click();
+  await expect(page.locator('main')).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
+  await page.getByRole('tab', { name: 'Scene' }).click();
+
+  const left = page.locator('.toolbar-edge-toggle-left');
+  const right = page.locator('.toolbar-edge-toggle-right');
+  const leftRegion = page.locator('[data-conformance-region="left"]');
+  const rightRegion = page.locator('[data-conformance-region="right"]');
+  const [leftBox, rightBox, leftRegionBox, rightRegionBox] = await Promise.all([
+    left.boundingBox(), right.boundingBox(), leftRegion.boundingBox(), rightRegion.boundingBox()
+  ]);
+  if (!leftBox || !rightBox || !leftRegionBox || !rightRegionBox) throw new Error('Expected toolbar toggle and dock geometry.');
+
+  expect(leftBox.width).toBe(44);
+  expect(leftBox.height).toBe(44);
+  expect(rightBox.width).toBe(44);
+  expect(rightBox.height).toBe(44);
+  expect(Math.abs(leftBox.x + leftBox.width / 2 - (leftRegionBox.x + leftRegionBox.width / 2))).toBeLessThan(2);
+  expect(Math.abs(rightBox.x + rightBox.width / 2 - (rightRegionBox.x + rightRegionBox.width / 2))).toBeLessThan(2);
+  expect(Math.abs(leftBox.y + leftBox.height - (leftRegionBox.y + leftRegionBox.height))).toBeLessThan(2);
+  expect(Math.abs(rightBox.y + rightBox.height - (rightRegionBox.y + rightRegionBox.height))).toBeLessThan(2);
+  await expect(left).toHaveText('‹');
+  await expect(right).toHaveText('›');
+
+  await left.click();
+  await right.click();
+  await expect(left).toHaveAccessibleName('Open left toolbar');
+  await expect(right).toHaveAccessibleName('Open right toolbar');
+  await expect(left).toHaveText('›');
+  await expect(right).toHaveText('‹');
+  await expect(left).toBeVisible();
+  await expect(right).toBeVisible();
 });
 
 test('Deep Current narrow dock keeps the complete contextual Widget Actions menu', async ({ page }) => {
@@ -1223,7 +1267,7 @@ test('held Widget leaves a vacant origin and a full-size in-layout welcoming slo
 });
 
 test('dragging to a collapsed edge reveals and widens that dock before commit', async ({ page }) => {
-  await page.getByRole('button', { name: 'Toggle left dock' }).click();
+  await page.getByRole('button', { name: 'Close left toolbar' }).click();
   const source = page.getByRole('article', { name: 'Room Ambience' });
   const handleBox = await widgetDragSurface(source).boundingBox();
   if (!handleBox) throw new Error('Expected Room Ambience drag geometry.');

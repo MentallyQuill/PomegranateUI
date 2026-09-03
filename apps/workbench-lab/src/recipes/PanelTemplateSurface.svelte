@@ -6,11 +6,12 @@
   import StoryComposer from './StoryComposer.svelte';
   import StoryStage from './StoryStage.svelte';
 
-  let { surface, store, renderWidget, titleFor }: {
+  let { surface, store, renderWidget, titleFor, toolbarControls }: {
     surface: PanelSurfaceProjection;
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
+    toolbarControls?: Snippet | undefined;
   } = $props();
 </script>
 
@@ -46,4 +47,5 @@
       />
     {/each}
   {/if}
+  {#if toolbarControls}{@render toolbarControls()}{/if}
 </div>
