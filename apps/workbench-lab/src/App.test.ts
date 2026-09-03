@@ -135,7 +135,7 @@ describe('Svelte Workbench Lab mockup', () => {
       expect(swatch).not.toHaveAttribute('data-theme-swatch');
       expect(swatch?.style.backgroundImage).toBe(background);
     }
-    expect(container.querySelectorAll('.surface-themes i')).toHaveLength(4);
+    expect(library.querySelectorAll('.surface-themes i')).toHaveLength(4);
   });
 
   it('uses one Atmospheric composition with integrated story surfaces and a dormant developer drawer', () => {
@@ -290,19 +290,21 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(launcher).toHaveAttribute('aria-expanded', 'true');
     const catalog = screen.getByRole('dialog', { name: 'Widget Catalog' });
     expect(catalog).toHaveAttribute('open');
-    expect(within(catalog).getByRole('button', { name: 'Close Catalog' }))
-      .toHaveAttribute('data-pom-part', 'button.surface');
-    expect(within(catalog).getAllByRole('listitem')).toHaveLength(98);
-    await user.click(within(catalog).getByRole('button', { name: 'story' }));
-    for (const category of ['extensions', 'library', 'settings', 'story', 'systems']) {
+    expect(within(catalog).getByRole('button', { name: 'Close Widget Catalog' }))
+      .toHaveAttribute('data-pom-part', 'button.icon');
+    expect(catalog.querySelectorAll('[data-catalog-result]')).toHaveLength(98);
+    expect(catalog.querySelectorAll('.catalog-widget-preview')).toHaveLength(98);
+    expect(within(catalog).queryByRole('button', { name: /^Add / })).toBeNull();
+    await user.click(within(catalog).getByRole('button', { name: 'Story' }));
+    for (const category of ['Extensions', 'Library', 'Settings', 'Story', 'Systems']) {
       expect(within(catalog).getByRole('button', { name: category })).toBeVisible();
     }
     await user.click(within(catalog).getByRole('button', { name: 'All' }));
-    await user.click(within(catalog).getByRole('button', { name: 'Expanded' }));
     await user.click(within(catalog).getByRole('button', { name: 'Compact' }));
     expect(catalog).toHaveAttribute('data-presentation', 'expanded');
     expect(catalog).toHaveAttribute('data-result-mode', 'compact');
-    await user.click(within(catalog).getByRole('button', { name: 'Close Catalog' }));
+    expect(catalog.querySelectorAll('.catalog-widget-preview')).toHaveLength(0);
+    await user.click(within(catalog).getByRole('button', { name: 'Close Widget Catalog' }));
     expect(launcher).toHaveAttribute('aria-expanded', 'false');
   }, 15_000);
 

@@ -23,7 +23,7 @@
 <div class="theme-authoring-element theme-authoring-ranges" data-theme-authoring-element="canvas">
   {#each controls as control (control[0])}
     {@const available = theme.authoring.canvasAvailability[control[3]]}
-    <label class:theme-control-unavailable={!available}>
+    <label data-theme-control-unavailable={!available ? '' : undefined}>
       <span>{control[1]}</span>
       <output>{draft.draft.canvas[control[0]]}{control[0] === 'gradientAngle' ? '°' : '%'}</output>
       <input
@@ -37,7 +37,7 @@
         style={`--pom-slider-progress:${compileSliderProgress(draft.draft.canvas[control[0]], 0, control[2])}`}
         oninput={(event) => setCanvas(control[0], Number(event.currentTarget.value))}
       />
-      {#if !available}<small>Not used by this preset</small>{/if}
+      <small hidden={available}>{available ? '' : 'Not used by this preset'}</small>
     </label>
   {/each}
   {#if diagnostics.length}

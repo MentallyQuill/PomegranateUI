@@ -37,6 +37,7 @@ function catalogManifest(type: string, title: string): WidgetManifest {
       keywords: [title.toLowerCase()],
       iconKey: 'book',
       shape: 'wide',
+      multiplicity: 'single',
       minColumns: 1,
       geometry: { minHeight: 180, idealHeight: 260, maxHeight: 480 },
       supportedStates: ['default']

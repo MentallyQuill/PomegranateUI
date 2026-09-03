@@ -13,6 +13,7 @@ export const CATALOG_TOTALS = Object.freeze({
 const DEFINITIONS = [
   {
     "type": "story.transcript",
+    "multiplicity": "single",
     "title": "Transcript",
     "category": "story",
     "purpose": "Read the active frame turn stream, select visible history, and open safe turn actions without exposing author diagnostics.",
@@ -43,6 +44,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.composer",
+    "multiplicity": "single",
     "title": "Composer",
     "category": "story",
     "purpose": "Write and send the next Story action through one retained draft and an honest generation lifecycle.",
@@ -77,6 +79,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.context",
+    "multiplicity": "single",
     "title": "Story and Frame Context",
     "category": "story",
     "purpose": "Keep the active Story, Present frame, and visible turn context legible.",
@@ -107,6 +110,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.turn-progress",
+    "multiplicity": "single",
     "title": "Turn Progress",
     "category": "story",
     "purpose": "Show the current pipeline stage without inventing percentage completion.",
@@ -137,6 +141,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.live-technical-detail",
+    "multiplicity": "single",
     "title": "Live Technical Detail",
     "category": "story",
     "purpose": "Inspect bounded live technical events and model activity for the current run.",
@@ -171,6 +176,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.turn-versions",
+    "multiplicity": "single",
     "title": "Turn Versions",
     "category": "story",
     "purpose": "Compare saved versions and stage a deliberate version change.",
@@ -205,6 +211,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.turn-inspector",
+    "multiplicity": "single",
     "title": "Turn Inspector",
     "category": "story",
     "purpose": "Inspect one selected turn, its eligibility, evidence, lenses, and safe actions.",
@@ -239,6 +246,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.player-condition",
+    "multiplicity": "single",
     "title": "Player Condition",
     "category": "story",
     "purpose": "Read the player body state that is currently perceptible and relevant.",
@@ -269,6 +277,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.cast-condition",
+    "multiplicity": "single",
     "title": "Cast Condition",
     "category": "story",
     "purpose": "Read visible cast condition without leaking private character state.",
@@ -299,6 +308,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.room-ambience",
+    "multiplicity": "single",
     "title": "Room Ambience",
     "category": "story",
     "purpose": "Hear and control the active room ambience with explicit playback state.",
@@ -329,6 +339,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.scene-backdrop",
+    "multiplicity": "single",
     "title": "Scene Backdrop",
     "category": "story",
     "purpose": "Present and control the visible-turn backdrop without duplicating its stage owner.",
@@ -359,6 +370,7 @@ const DEFINITIONS = [
   },
   {
     "type": "runtime.background-work",
+    "multiplicity": "single",
     "title": "Background Work",
     "category": "story",
     "purpose": "Report queued and completed background work without blocking the active Story.",
@@ -389,6 +401,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.workspace",
+    "multiplicity": "multiple",
     "title": "Library",
     "category": "library",
     "purpose": "Browse stories, characters, personas, lore, and reusable material from one archive.",
@@ -423,6 +436,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.stories",
+    "multiplicity": "single",
     "title": "Stories",
     "category": "library",
     "purpose": "Browse the story archive and open one Story without changing it implicitly.",
@@ -453,6 +467,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.characters",
+    "multiplicity": "single",
     "title": "Characters (Library)",
     "category": "library",
     "purpose": "Browse reusable Characters and their explicit Story associations.",
@@ -483,6 +498,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.characters",
+    "multiplicity": "single",
     "title": "Characters (Story)",
     "category": "library",
     "purpose": "See Characters associated with the active Story without implying current-frame presence.",
@@ -513,6 +529,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.personas",
+    "multiplicity": "single",
     "title": "Personas (Library)",
     "category": "library",
     "purpose": "Browse reusable Personas, protected primary identity, and explicit Story associations.",
@@ -543,6 +560,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.personas",
+    "multiplicity": "single",
     "title": "Personas (Story)",
     "category": "library",
     "purpose": "See the active Story primary Persona and bounded additional or guest identities.",
@@ -573,6 +591,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.lore",
+    "multiplicity": "single",
     "title": "Lore (Library)",
     "category": "library",
     "purpose": "Browse Lorebooks and their reusable or Story-local ownership.",
@@ -603,6 +622,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.lorebooks",
+    "multiplicity": "single",
     "title": "Lorebooks (Story)",
     "category": "library",
     "purpose": "Author Lorebooks attached to the active Story.",
@@ -637,6 +657,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.new-story",
+    "multiplicity": "single",
     "title": "New Story",
     "category": "library",
     "purpose": "Stage a new Story through explicit Character, Persona, Lore, and opening choices.",
@@ -671,6 +692,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.character-card",
+    "multiplicity": "multiple",
     "title": "Character Card",
     "category": "library",
     "purpose": "Read or edit the selected reusable Character card.",
@@ -705,6 +727,7 @@ const DEFINITIONS = [
   },
   {
     "type": "story.character-card",
+    "multiplicity": "multiple",
     "title": "Story Character Card",
     "category": "library",
     "purpose": "Edit the selected Story Character without mutating its reusable source card.",
@@ -739,6 +762,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.persona-card",
+    "multiplicity": "multiple",
     "title": "Persona Card",
     "category": "library",
     "purpose": "Read or edit the selected reusable Persona card.",
@@ -773,6 +797,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.greetings-quick-start",
+    "multiplicity": "multiple",
     "title": "Greetings and Quick Start",
     "category": "library",
     "purpose": "Review greetings and launch a Story through the authoritative quick-start path.",
@@ -807,6 +832,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.lore-entries",
+    "multiplicity": "multiple",
     "title": "Lore Entry Tree",
     "category": "library",
     "purpose": "Browse the selected Lorebook hierarchy and follow one entry.",
@@ -841,6 +867,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.lore-entry-editor",
+    "multiplicity": "multiple",
     "title": "Lore Entry Editor",
     "category": "library",
     "purpose": "Edit one selected Lore entry with explicit unsaved and conflict states.",
@@ -875,6 +902,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.lorebook-details",
+    "multiplicity": "multiple",
     "title": "Lorebook Details",
     "category": "library",
     "purpose": "Edit Lorebook identity, scope, structure, canon authority, and associations through one revisioned document owner.",
@@ -909,6 +937,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.lore-relationships",
+    "multiplicity": "multiple",
     "title": "Lore Relationships",
     "category": "library",
     "purpose": "Inspect and edit explicit directed Lore links without confusing them with hierarchy, associations, or prose mentions.",
@@ -943,6 +972,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.lore-generator",
+    "multiplicity": "multiple",
     "title": "Lore Generator",
     "category": "library",
     "purpose": "Plan a durable Lore generation job, review every proposed operation, and apply accepted operations through one revision guard.",
@@ -981,6 +1011,7 @@ const DEFINITIONS = [
   },
   {
     "type": "library.lived-location-builder",
+    "multiplicity": "multiple",
     "title": "Lived-in Location Builder",
     "category": "library",
     "purpose": "Review and invoke the one additive engine-owned lived-location operation through its captured New Story, Quick Start, reusable Lore, or active Story host.",
@@ -1019,6 +1050,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.cast",
+    "multiplicity": "single",
     "title": "Cast",
     "category": "systems",
     "purpose": "Manage active Story roster membership, frame-qualified position, active/dormant state, and dialogue color without owning Condition or Attire.",
@@ -1053,6 +1085,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.background-presences",
+    "multiplicity": "single",
     "title": "Background Presences",
     "category": "systems",
     "purpose": "Inspect recurring unregistered bodies and stage evidence-grounded, forward-only Character promotion review.",
@@ -1091,6 +1124,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.world-state",
+    "multiplicity": "single",
     "title": "World State",
     "category": "systems",
     "purpose": "Inspect present-frame structured world records and use bounded section routes without invoking the all-frame raw replacement.",
@@ -1125,6 +1159,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.attire",
+    "multiplicity": "single",
     "title": "Attire",
     "category": "systems",
     "purpose": "Inspect and silently author the present-frame attire ledger by wearer, anatomical region, ordered garment layer, coverage, state, and condition.",
@@ -1161,6 +1196,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.genre-style",
+    "multiplicity": "single",
     "title": "Genre and Style",
     "category": "systems",
     "purpose": "Coordinate independent Story Style Guide, Story language, Player Authority, and Condition Policy owners without implying one atomic setting.",
@@ -1197,6 +1233,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.dialogue-agency",
+    "multiplicity": "single",
     "title": "Dialogue and Agency",
     "category": "systems",
     "purpose": "Configure registered-character dialogue pacing, agency, stop rules, and opening response while showing derived per-beat budgets.",
@@ -1232,6 +1269,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.offscreen-life",
+    "multiplicity": "single",
     "title": "Off-screen Life",
     "category": "systems",
     "purpose": "Configure the engine-authored off-screen simulation ceiling, paid-actor cap, and composed eligibility evidence.",
@@ -1268,6 +1306,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.living-world",
+    "multiplicity": "single",
     "title": "Living World",
     "category": "systems",
     "purpose": "Configure the four engine-owned Living World approaches while preserving requested depth separately from the currently built and permitted effective depth.",
@@ -1304,6 +1343,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.institutions-charter",
+    "multiplicity": "single",
     "title": "Institutions and Charter",
     "category": "systems",
     "purpose": "Inspect and author the explicit frame-qualified Charter registry while keeping simulation, diagnostics, and lived-location generation with their engine owners.",
@@ -1340,6 +1380,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.institution-diagnostics",
+    "multiplicity": "single",
     "title": "Institution Diagnostics",
     "category": "systems",
     "purpose": "Load one authorized host-only, frame-qualified institution/body evidence projection without writing state or delivering diagnostics to cognition.",
@@ -1376,6 +1417,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.background-life",
+    "multiplicity": "single",
     "title": "Background Life / Scene Life",
     "category": "systems",
     "purpose": "Configure bounded unsheeted reactions, managed Scene Life, and the addressed-presence promotion threshold without taking ownership of global acquisition permission.",
@@ -1412,6 +1454,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.character-relationships",
+    "multiplicity": "single",
     "title": "Character Relationships",
     "category": "systems",
     "purpose": "Inspect one authorized Character mind’s directed relationship projection and latest served evidence without inventing a universal score or an edit route.",
@@ -1444,6 +1487,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.memory-browser",
+    "multiplicity": "single",
     "title": "Memory Browser",
     "category": "systems",
     "purpose": "Browse only the selected Character memories visible to the authorized viewer.",
@@ -1478,6 +1522,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.character-private-history",
+    "multiplicity": "single",
     "title": "Character Private History",
     "category": "systems",
     "purpose": "Author private Character history inside an explicit protected scope.",
@@ -1516,6 +1561,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.persona-private-history",
+    "multiplicity": "single",
     "title": "Persona Private History",
     "category": "systems",
     "purpose": "Author the primary Persona private history inside its protected scope.",
@@ -1554,6 +1600,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.dramatic-irony",
+    "multiplicity": "single",
     "title": "Dramatic Irony",
     "category": "systems",
     "purpose": "Compare authorized knowledge boundaries without leaking private payloads.",
@@ -1584,6 +1631,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.promise-ledger",
+    "multiplicity": "single",
     "title": "Promise Ledger",
     "category": "systems",
     "purpose": "Track locally recognized commitments, evidence, and lifecycle.",
@@ -1614,6 +1662,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.multiplayer-invites",
+    "multiplicity": "single",
     "title": "Multiplayer and Guest Invites",
     "category": "systems",
     "purpose": "Review guests and stage explicit invite or revocation actions.",
@@ -1652,6 +1701,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.frames",
+    "multiplicity": "single",
     "title": "Frames",
     "category": "systems",
     "purpose": "Inspect and manage Story frames while keeping the Present frame explicit.",
@@ -1686,6 +1736,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.whos-where",
+    "multiplicity": "single",
     "title": "Who's Where",
     "category": "systems",
     "purpose": "Read a frame-qualified roster and each body location without omniscient shortcuts.",
@@ -1716,6 +1767,7 @@ const DEFINITIONS = [
   },
   {
     "type": "systems.paradox-fixed-points",
+    "multiplicity": "single",
     "title": "Time Paradox and Fixed Points",
     "category": "systems",
     "purpose": "Inspect frame paradoxes and stage explicit fixed-point review.",
@@ -1754,6 +1806,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.group.account-access",
+    "multiplicity": "single",
     "title": "Account and Access",
     "category": "settings",
     "purpose": "Navigate account, connection, and access settings.",
@@ -1784,6 +1837,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.group.ai-models",
+    "multiplicity": "single",
     "title": "AI and Models",
     "category": "settings",
     "purpose": "Navigate model, routing, and response settings.",
@@ -1814,6 +1868,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.group.appearance-accessibility",
+    "multiplicity": "single",
     "title": "Appearance and Accessibility",
     "category": "settings",
     "purpose": "Navigate appearance, reading, sound, motion, and accessibility settings.",
@@ -1844,6 +1899,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.group.story-content",
+    "multiplicity": "single",
     "title": "Story Defaults and Content",
     "category": "settings",
     "purpose": "Navigate Story defaults and content preferences.",
@@ -1874,6 +1930,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.group.data-extensions-maintenance",
+    "multiplicity": "single",
     "title": "Data, Extensions, and Maintenance",
     "category": "settings",
     "purpose": "Navigate data, extension, update, storage, repair, and diagnostic settings.",
@@ -1904,6 +1961,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.group.advanced",
+    "multiplicity": "single",
     "title": "Advanced",
     "category": "settings",
     "purpose": "Navigate advanced prompt and raw-data laboratories.",
@@ -1934,6 +1992,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.provider-credentials",
+    "multiplicity": "single",
     "title": "Provider Credentials",
     "category": "settings",
     "purpose": "Configure provider access without displaying stored credential values.",
@@ -1972,6 +2031,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.model-assignments",
+    "multiplicity": "single",
     "title": "Model Assignments",
     "category": "settings",
     "purpose": "Assign models to host roles with explicit inheritance and cost context.",
@@ -2006,6 +2066,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.theme",
+    "multiplicity": "single",
     "title": "Theme Library",
     "category": "settings",
     "purpose": "Preview and select complete device appearance presets without authoring theme values.",
@@ -2041,6 +2102,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.reading-layout",
+    "multiplicity": "single",
     "title": "Reading and Layout",
     "category": "settings",
     "purpose": "Configure reading density, transcript measure, and layout preferences.",
@@ -2075,6 +2137,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.sound-motion",
+    "multiplicity": "single",
     "title": "Sound and Motion",
     "category": "settings",
     "purpose": "Configure sound, motion, and language-sensitive feedback.",
@@ -2109,6 +2172,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.accessibility",
+    "multiplicity": "single",
     "title": "Accessibility",
     "category": "settings",
     "purpose": "Configure contrast, motion, scale, focus, and reading accessibility.",
@@ -2143,6 +2207,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.content",
+    "multiplicity": "single",
     "title": "Content",
     "category": "settings",
     "purpose": "Configure host content preferences and explicit Story overrides.",
@@ -2177,6 +2242,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.add-ons",
+    "multiplicity": "single",
     "title": "Add-ons",
     "category": "settings",
     "purpose": "Manage installed extensions through one canonical coordinator.",
@@ -2211,6 +2277,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.maintenance",
+    "multiplicity": "single",
     "title": "Maintenance",
     "category": "settings",
     "purpose": "Manage updates, storage, repair, diagnostics, and protected maintenance actions.",
@@ -2249,6 +2316,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.prompt-editor",
+    "multiplicity": "single",
     "title": "Prompt Editor",
     "category": "settings",
     "purpose": "Inspect, compare, edit, validate, save, and activate host prompt presets through one recoverable draft.",
@@ -2283,6 +2351,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.raw-story-data",
+    "multiplicity": "single",
     "title": "Raw Story Data",
     "category": "settings",
     "purpose": "Inspect raw Story data in a guarded advanced laboratory.",
@@ -2321,6 +2390,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.connections",
+    "multiplicity": "single",
     "title": "Connections and Credentials",
     "category": "settings",
     "purpose": "Review provider connection status without showing stored secrets.",
@@ -2359,6 +2429,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.default-model",
+    "multiplicity": "single",
     "title": "Default Model",
     "category": "settings",
     "purpose": "Choose the default model used by otherwise unassigned roles.",
@@ -2393,6 +2464,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.memory-search-model",
+    "multiplicity": "single",
     "title": "Memory-search Model",
     "category": "settings",
     "purpose": "Choose the embeddings model used for memory search.",
@@ -2427,6 +2499,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.response-limit",
+    "multiplicity": "single",
     "title": "Response Limit",
     "category": "settings",
     "purpose": "Set the bounded response limit with cost and truncation context.",
@@ -2461,6 +2534,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.openrouter-routing",
+    "multiplicity": "single",
     "title": "OpenRouter Routing",
     "category": "settings",
     "purpose": "Configure OpenRouter policy without hiding provider capability constraints.",
@@ -2495,6 +2569,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.scene-backdrops",
+    "multiplicity": "single",
     "title": "Scene Backdrops",
     "category": "settings",
     "purpose": "Configure global Scene backdrop behavior and availability.",
@@ -2529,6 +2604,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.room-ambience",
+    "multiplicity": "single",
     "title": "Room Ambience Settings",
     "category": "settings",
     "purpose": "Configure global Room Ambience behavior without duplicating Scene playback.",
@@ -2563,6 +2639,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.custom-theme",
+    "multiplicity": "single",
     "title": "Custom Theme",
     "category": "settings",
     "purpose": "Review, reset, and save the one shared recoverable device theme draft.",
@@ -2598,6 +2675,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.theme-colors",
+    "multiplicity": "single",
     "title": "Theme Colors",
     "category": "settings",
     "purpose": "Author the six semantic color roles in the shared device theme draft.",
@@ -2605,11 +2683,12 @@ const DEFINITIONS = [
     "iconKey": "theme.contrast",
     "shape": "medium",
     "minColumns": 1,
-    "geometry": { "minHeight": 260, "idealHeight": 360, "maxHeight": 520 },
+    "geometry": { "minHeight": 400, "idealHeight": 480, "maxHeight": 520 },
     "supportedStates": ["ready", "loading", "empty", "unavailable", "access-denied", "stale", "offline", "failure", "dirty", "saving", "conflict", "success"]
   },
   {
     "type": "settings.theme-materials",
+    "multiplicity": "single",
     "title": "Theme Materials",
     "category": "settings",
     "purpose": "Author glass density, bar opacity, selection strength, and frost in the shared device theme draft.",
@@ -2622,6 +2701,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.theme-canvas",
+    "multiplicity": "single",
     "title": "Theme Canvas",
     "category": "settings",
     "purpose": "Author image, overlay, gradient, and vignette treatment in the shared device theme draft.",
@@ -2634,6 +2714,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.theme-ambient",
+    "multiplicity": "single",
     "title": "Ambient Light",
     "category": "settings",
     "purpose": "Author ambient position, radius, and power in the shared device theme draft.",
@@ -2646,6 +2727,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.story-reading-layout",
+    "multiplicity": "single",
     "title": "Story Reading and Layout",
     "category": "settings",
     "purpose": "Adjust Story reading and transcript layout preferences.",
@@ -2680,6 +2762,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.story-sound",
+    "multiplicity": "single",
     "title": "Story Sound",
     "category": "settings",
     "purpose": "Adjust Story sound behavior shared with the Scene runtime.",
@@ -2714,6 +2797,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.accessibility-controls",
+    "multiplicity": "single",
     "title": "Accessibility Controls",
     "category": "settings",
     "purpose": "Adjust the live accessibility controls owned by Settings.",
@@ -2748,6 +2832,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.content-preferences",
+    "multiplicity": "single",
     "title": "Content Preferences",
     "category": "settings",
     "purpose": "Stage global content preferences before applying them.",
@@ -2786,6 +2871,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.narrator-voice",
+    "multiplicity": "single",
     "title": "Narrator Voice Examples",
     "category": "settings",
     "purpose": "Edit narrator voice exemplars as an explicit draft.",
@@ -2820,6 +2906,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.living-world-controls",
+    "multiplicity": "single",
     "title": "Living World Controls",
     "category": "settings",
     "purpose": "Adjust the active Story Living World controls through the shared owner.",
@@ -2854,6 +2941,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.installed-extensions",
+    "multiplicity": "single",
     "title": "Installed Extensions",
     "category": "settings",
     "purpose": "Review installed extension identity, status, and available host actions.",
@@ -2888,6 +2976,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.install-extension",
+    "multiplicity": "single",
     "title": "Install Extension",
     "category": "settings",
     "purpose": "Stage one extension install with source identity and capability review.",
@@ -2926,6 +3015,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.host-updates",
+    "multiplicity": "single",
     "title": "Host Updates",
     "category": "settings",
     "purpose": "Check and apply host updates through one maintenance coordinator.",
@@ -2964,6 +3054,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.checkpoint-storage",
+    "multiplicity": "single",
     "title": "Checkpoint Storage",
     "category": "settings",
     "purpose": "Monitor checkpoint storage and its background maintenance task.",
@@ -2994,6 +3085,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.memory-search-repair",
+    "multiplicity": "single",
     "title": "Memory-search Repair",
     "category": "settings",
     "purpose": "Monitor and start bounded memory-search repair work.",
@@ -3032,6 +3124,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.diagnostics",
+    "multiplicity": "single",
     "title": "Diagnostics",
     "category": "settings",
     "purpose": "Capture a bounded diagnostic snapshot without exposing credentials.",
@@ -3062,6 +3155,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.prompt-preset-editor",
+    "multiplicity": "single",
     "title": "Prompt Preset / Editor",
     "category": "settings",
     "purpose": "Place the shared Prompt Editor owner in a large preset workspace.",
@@ -3096,6 +3190,7 @@ const DEFINITIONS = [
   },
   {
     "type": "settings.raw-clothing-data",
+    "multiplicity": "single",
     "title": "Raw Clothing Data",
     "category": "settings",
     "purpose": "Inspect and stage raw attire edits behind guarded production prerequisites.",
@@ -3134,6 +3229,7 @@ const DEFINITIONS = [
   },
   {
     "type": "ext:atlas:campaign-clock",
+    "multiplicity": "single",
     "title": "Campaign Clock",
     "category": "extensions",
     "purpose": "Track an owner-provided campaign clock in a compact host-governed shape.",
@@ -3172,6 +3268,7 @@ const DEFINITIONS = [
   },
   {
     "type": "ext:trail:location-notes",
+    "multiplicity": "single",
     "title": "Location Notes",
     "category": "extensions",
     "purpose": "Edit owner-provided location notes in the canonical Library workspace shape.",
@@ -3210,6 +3307,7 @@ const DEFINITIONS = [
   },
   {
     "type": "ext:mythic:settings",
+    "multiplicity": "single",
     "title": "Mythic Settings",
     "category": "extensions",
     "purpose": "Configure an installed extension through the canonical Settings shape.",
@@ -3272,6 +3370,7 @@ export function createCatalogManifests(): readonly WidgetManifest[] {
       keywords: [...definition.keywords],
       iconKey: definition.iconKey,
       shape: definition.shape,
+      multiplicity: definition.multiplicity,
       minColumns: definition.minColumns,
       geometry: { ...definition.geometry },
       supportedStates: [...definition.supportedStates]

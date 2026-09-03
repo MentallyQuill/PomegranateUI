@@ -1,0 +1,128 @@
+/**
+ * Independently frozen Widget Catalog authority.
+ *
+ * Provenance: the ordered Widget definitions in the authoritative Widget
+ * Overhaul source/mockup. The one deliberate host-neutral runtime mapping
+ * replaces its source-specific updates Widget with
+ * settings.host-updates / "Host Updates".
+ *
+ * This file intentionally imports no Workbench inventory, manifest, fixture, or
+ * renderer builder. Changes require reconciling the authoritative mockup first.
+ */
+
+export type CatalogAuthorityEntry = readonly [
+  widgetType: string,
+  surfaceType: string,
+  title: string,
+  category: 'story' | 'library' | 'systems' | 'settings' | 'extensions',
+  multiplicity: 'single' | 'multiple',
+  shape: 'narrow' | 'medium' | 'wide' | 'stage' | 'strip',
+  iconKey: string
+];
+
+export const CATALOG_AUTHORITY_SHA256 = '56e6be6baeaf1ae8636eaf65237baae07858b7727accc1f5e2e72eb5e9eb5fbe';
+
+const CATALOG_AUTHORITY_ENTRIES = [
+  ["settings.accessibility","settings.accessibility","Accessibility","settings","single","medium","theme.contrast"],
+  ["settings.accessibility-controls","settings.accessibility-controls","Accessibility Controls","settings","single","medium","category.settings"],
+  ["settings.group.account-access","settings.group.account-access","Account and Access","settings","single","medium","category.settings"],
+  ["settings.add-ons","settings.add-ons","Add-ons","settings","single","wide","category.settings"],
+  ["settings.group.advanced","settings.group.advanced","Advanced","settings","single","medium","category.settings"],
+  ["settings.group.ai-models","settings.group.ai-models","AI and Models","settings","single","medium","category.settings"],
+  ["settings.theme-ambient","settings.theme-ambient","Ambient Light","settings","single","medium","theme.contrast"],
+  ["settings.group.appearance-accessibility","settings.group.appearance-accessibility","Appearance and Accessibility","settings","single","medium","category.settings"],
+  ["systems.attire","systems.attire","Attire","systems","single","medium","category.systems"],
+  ["systems.background-life","systems.background-life","Background Life / Scene Life","systems","single","medium","background.queue"],
+  ["systems.background-presences","systems.background-presences","Background Presences","systems","single","medium","background.queue"],
+  ["runtime.background-work","runtime.background-work","Background Work","story","single","medium","background.queue"],
+  ["ext:atlas:campaign-clock","ext:atlas:campaign-clock","Campaign Clock","extensions","single","narrow","category.extensions"],
+  ["systems.cast","systems.cast","Cast","systems","single","medium","category.systems"],
+  ["story.cast-condition","story.cast-condition","Cast Condition","story","single","medium","category.story"],
+  ["library.character-card","library.character-card","Character Card","library","multiple","medium","category.library"],
+  ["systems.character-private-history","systems.character-private-history","Character Private History","systems","single","wide","category.systems"],
+  ["systems.character-relationships","systems.character-relationships","Character Relationships","systems","single","medium","cast.profile"],
+  ["library.characters","library.characters","Characters (Library)","library","single","medium","category.library"],
+  ["story.characters","story.characters","Characters (Story)","library","single","medium","category.library"],
+  ["settings.checkpoint-storage","settings.checkpoint-storage","Checkpoint Storage","settings","single","medium","category.settings"],
+  ["story.composer","story.composer","Composer","story","single","strip","category.story"],
+  ["settings.connections","settings.connections","Connections and Credentials","settings","single","medium","category.settings"],
+  ["settings.content","settings.content","Content","settings","single","wide","category.settings"],
+  ["settings.content-preferences","settings.content-preferences","Content Preferences","settings","single","medium","category.settings"],
+  ["settings.custom-theme","settings.custom-theme","Custom Theme","settings","single","medium","theme.contrast"],
+  ["settings.group.data-extensions-maintenance","settings.group.data-extensions-maintenance","Data, Extensions, and Maintenance","settings","single","medium","category.settings"],
+  ["settings.default-model","settings.default-model","Default Model","settings","single","medium","category.settings"],
+  ["settings.diagnostics","settings.diagnostics","Diagnostics","settings","single","medium","category.settings"],
+  ["systems.dialogue-agency","systems.dialogue-agency","Dialogue and Agency","systems","single","medium","category.story"],
+  ["systems.dramatic-irony","systems.dramatic-irony","Dramatic Irony","systems","single","medium","category.systems"],
+  ["systems.frames","systems.frames","Frames","systems","single","medium","category.systems"],
+  ["systems.genre-style","systems.genre-style","Genre and Style","systems","single","medium","category.systems"],
+  ["library.greetings-quick-start","library.greetings-quick-start","Greetings and Quick Start","library","multiple","medium","category.library"],
+  ["settings.host-updates","settings.host-updates","Host Updates","settings","single","medium","category.settings"],
+  ["settings.install-extension","settings.install-extension","Install Extension","settings","single","medium","category.settings"],
+  ["settings.installed-extensions","settings.installed-extensions","Installed Extensions","settings","single","medium","category.settings"],
+  ["systems.institution-diagnostics","systems.institution-diagnostics","Institution Diagnostics","systems","single","medium","status.info"],
+  ["systems.institutions-charter","systems.institutions-charter","Institutions and Charter","systems","single","medium","category.systems"],
+  ["library.workspace","library.workspace","Library","library","multiple","medium","category.library"],
+  ["story.live-technical-detail","story.live-technical-detail","Live Technical Detail","story","single","medium","category.story"],
+  ["library.lived-location-builder","library.lived-location-builder","Lived-in Location Builder","library","multiple","medium","category.library"],
+  ["systems.living-world","systems.living-world","Living World","systems","single","medium","background.queue"],
+  ["settings.living-world-controls","settings.living-world-controls","Living World Controls","settings","single","medium","category.settings"],
+  ["ext:trail:location-notes","ext:trail:location-notes","Location Notes","extensions","single","wide","category.extensions"],
+  ["library.lore","library.lore","Lore (Library)","library","single","medium","category.library"],
+  ["library.lore-entry-editor","library.lore-entry-editor","Lore Entry Editor","library","multiple","medium","category.library"],
+  ["library.lore-entries","library.lore-entries","Lore Entry Tree","library","multiple","medium","category.library"],
+  ["library.lore-generator","library.lore-generator","Lore Generator","library","multiple","medium","category.library"],
+  ["library.lore-relationships","library.lore-relationships","Lore Relationships","library","multiple","medium","category.library"],
+  ["library.lorebook-details","library.lorebook-details","Lorebook Details","library","multiple","medium","category.library"],
+  ["story.lorebooks","story.lorebooks","Lorebooks (Story)","library","single","wide","category.library"],
+  ["settings.maintenance","settings.maintenance","Maintenance","settings","single","medium","category.settings"],
+  ["systems.memory-browser","systems.memory-browser","Memory Browser","systems","single","wide","category.systems"],
+  ["settings.memory-search-model","settings.memory-search-model","Memory-search Model","settings","single","medium","category.settings"],
+  ["settings.memory-search-repair","settings.memory-search-repair","Memory-search Repair","settings","single","medium","category.settings"],
+  ["settings.model-assignments","settings.model-assignments","Model Assignments","settings","single","medium","model.routing"],
+  ["systems.multiplayer-invites","systems.multiplayer-invites","Multiplayer and Guest Invites","systems","single","medium","category.systems"],
+  ["ext:mythic:settings","ext:mythic:settings","Mythic Settings","extensions","single","medium","category.extensions"],
+  ["settings.narrator-voice","settings.narrator-voice","Narrator Voice Examples","settings","single","medium","category.settings"],
+  ["library.new-story","library.new-story","New Story","library","single","wide","category.library"],
+  ["systems.offscreen-life","systems.offscreen-life","Off-screen Life","systems","single","medium","background.queue"],
+  ["settings.openrouter-routing","settings.openrouter-routing","OpenRouter Routing","settings","single","medium","category.settings"],
+  ["library.persona-card","library.persona-card","Persona Card","library","multiple","medium","category.library"],
+  ["systems.persona-private-history","systems.persona-private-history","Persona Private History","systems","single","wide","category.systems"],
+  ["library.personas","library.personas","Personas (Library)","library","single","medium","category.library"],
+  ["story.personas","story.personas","Personas (Story)","library","single","medium","category.library"],
+  ["story.player-condition","story.player-condition","Player Condition","story","single","medium","category.story"],
+  ["systems.promise-ledger","systems.promise-ledger","Promise Ledger","systems","single","medium","category.systems"],
+  ["settings.prompt-editor","settings.prompt-editor","Prompt Editor","settings","single","medium","category.settings"],
+  ["settings.prompt-preset-editor","settings.prompt-preset-editor","Prompt Preset / Editor","settings","single","wide","category.settings"],
+  ["settings.provider-credentials","settings.provider-credentials","Provider Credentials","settings","single","medium","provider.connection"],
+  ["settings.raw-clothing-data","settings.raw-clothing-data","Raw Clothing Data","settings","single","wide","category.settings"],
+  ["settings.raw-story-data","settings.raw-story-data","Raw Story Data","settings","single","wide","category.settings"],
+  ["settings.reading-layout","settings.reading-layout","Reading and Layout","settings","single","medium","category.settings"],
+  ["settings.response-limit","settings.response-limit","Response Limit","settings","single","medium","category.settings"],
+  ["story.room-ambience","story.room-ambience","Room Ambience","story","single","medium","status.sound"],
+  ["settings.room-ambience","settings.room-ambience","Room Ambience Settings","settings","single","medium","status.sound"],
+  ["story.scene-backdrop","story.scene-backdrop","Scene Backdrop","story","single","medium","backdrop.image"],
+  ["settings.scene-backdrops","settings.scene-backdrops","Scene Backdrops","settings","single","medium","category.settings"],
+  ["settings.sound-motion","settings.sound-motion","Sound and Motion","settings","single","medium","category.settings"],
+  ["library.stories","library.stories","Stories","library","single","medium","category.library"],
+  ["story.context","story.context","Story and Frame Context","story","single","medium","category.story"],
+  ["story.character-card","story.character-card","Story Character Card","library","multiple","medium","category.library"],
+  ["settings.group.story-content","settings.group.story-content","Story Defaults and Content","settings","single","medium","category.settings"],
+  ["settings.story-reading-layout","settings.story-reading-layout","Story Reading and Layout","settings","single","medium","category.settings"],
+  ["settings.story-sound","settings.story-sound","Story Sound","settings","single","medium","status.sound"],
+  ["settings.theme-canvas","settings.theme-canvas","Theme Canvas","settings","single","medium","theme.contrast"],
+  ["settings.theme-colors","settings.theme-colors","Theme Colors","settings","single","medium","theme.contrast"],
+  ["settings.theme","settings.theme","Theme Library","settings","single","medium","theme.contrast"],
+  ["settings.theme-materials","settings.theme-materials","Theme Materials","settings","single","medium","theme.contrast"],
+  ["systems.paradox-fixed-points","systems.paradox-fixed-points","Time Paradox and Fixed Points","systems","single","wide","category.systems"],
+  ["story.transcript","story.transcript","Transcript","story","single","medium","category.story"],
+  ["story.turn-inspector","story.turn-inspector","Turn Inspector","story","single","medium","category.story"],
+  ["story.turn-progress","story.turn-progress","Turn Progress","story","single","strip","category.story"],
+  ["story.turn-versions","story.turn-versions","Turn Versions","story","single","medium","category.story"],
+  ["systems.whos-where","systems.whos-where","Who's Where","systems","single","medium","category.systems"],
+  ["systems.world-state","systems.world-state","World State","systems","single","medium","category.systems"],
+] as const satisfies readonly CatalogAuthorityEntry[];
+
+export const CATALOG_AUTHORITY_MATRIX: readonly CatalogAuthorityEntry[] = Object.freeze(
+  CATALOG_AUTHORITY_ENTRIES.map((entry) => Object.freeze([...entry]) as CatalogAuthorityEntry)
+);

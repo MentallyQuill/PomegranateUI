@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { asWidgetType } from '@pomegranate-ui/contracts';
 
+import { createCatalogManifests } from './catalog.js';
 import { IMPLEMENTED_SURFACE_TOTALS, IMPLEMENTED_SURFACES } from './implemented-surfaces.js';
 import { SURFACE_FIXTURES } from './surface-fixtures.js';
 import { createLabState, LAB_PANEL_IDS } from './state.js';
@@ -56,39 +57,35 @@ describe('implemented Deep Current surface boundary', () => {
     ].sort());
   });
 
-  it('freezes the exact 56 reviewed Widget identities and family totals', () => {
-    expect(IMPLEMENTED_SURFACES).toHaveLength(56);
-    expect(new Set(IMPLEMENTED_SURFACES.map(({ type }) => type)).size).toBe(56);
-    expect(IMPLEMENTED_SURFACE_TOTALS).toEqual({ settings: 12, story: 12, library: 19, systems: 13 });
+  it('freezes all 98 reviewed Widget identities and exact family totals', () => {
+    expect(IMPLEMENTED_SURFACES).toHaveLength(98);
+    expect(new Set(IMPLEMENTED_SURFACES.map(({ type }) => type)).size).toBe(98);
+    expect(IMPLEMENTED_SURFACE_TOTALS).toEqual({ story: 12, library: 19, systems: 21, settings: 43, extensions: 3 });
     expect(Object.isFrozen(IMPLEMENTED_SURFACES)).toBe(true);
     expect(IMPLEMENTED_SURFACES.every(Object.isFrozen)).toBe(true);
   });
 
-  it('keeps exact manifest title parity at both ends of every reviewed family', () => {
-    expect(IMPLEMENTED_SURFACES.map(({ type, title }) => `${type}|${title}`)).toEqual(expect.arrayContaining([
-      'settings.provider-credentials|Provider Credentials',
-      'settings.prompt-editor|Prompt Editor',
-      'story.transcript|Transcript',
-      'runtime.background-work|Background Work',
-      'library.workspace|Library',
-      'library.lived-location-builder|Lived-in Location Builder',
-      'systems.cast|Cast',
-      'systems.character-relationships|Character Relationships'
-    ]));
+  it('keeps exact manifest identity, title, and category parity', () => {
+    expect(IMPLEMENTED_SURFACES).toEqual(createCatalogManifests().map((manifest) => ({
+      type: manifest.type,
+      title: manifest.title,
+      family: manifest.catalog?.category
+    })));
   });
 
-  it('gives every reviewed identity one state-aware fixture and specialized renderer', () => {
+  it('gives every manifest one state-aware fixture and registered renderer', () => {
     const runtime = createLabRuntime();
-    expect(SURFACE_FIXTURES.size).toBe(56);
-    for (const surface of IMPLEMENTED_SURFACES) {
-      const fixture = SURFACE_FIXTURES.get(surface.type);
+    const manifests = createCatalogManifests();
+    expect(SURFACE_FIXTURES.size).toBe(98);
+    for (const manifest of manifests) {
+      const fixture = SURFACE_FIXTURES.get(manifest.type);
       expect(fixture?.states).toContain('ready');
       expect(fixture?.states).toContain('failure');
-      expect(runtime.rendererRegistry.get(surface.type)).toBeDefined();
+      expect(runtime.rendererRegistry.get(manifest.type)).toBeDefined();
     }
   });
 
-  it('keeps an explicit unavailable fallback for a non-implemented Catalog identity', () => {
+  it('does not invent renderer identities outside the authoritative catalog', () => {
     const runtime = createLabRuntime();
     expect(runtime.rendererRegistry.get(asWidgetType('systems.temporal-ledger'))).toBeUndefined();
   });

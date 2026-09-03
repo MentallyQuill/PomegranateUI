@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { compileCanvasLayers, compileThemeBindings, resolveThemeV2 } from '@pomegranate-ui/theme';
+import { readFileSync } from 'node:fs';
 import { EXTERNAL_THEME } from '../fixtures/external-theme.js';
 
 const TARGETS = [
@@ -8,6 +9,27 @@ const TARGETS = [
   { id: 'bunny', label: 'Bunny' }
 ] as const;
 const ASH_TARGET = { id: 'ash-amber', label: 'Ash & Amber' } as const;
+
+function normalizedThemeBranch(value: string): string {
+  return value.toLocaleLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function themeBranchAliases(value: string): readonly string[] {
+  const words = value.replace(/&/g, ' and ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[^a-z0-9]+/gi, ' ')
+    .trim()
+    .toLocaleLowerCase()
+    .split(/\s+/);
+  return Object.freeze([
+    value,
+    words.join('-'),
+    words.join('_'),
+    words.join(' '),
+    `${words[0]}${words.slice(1).map((word) => `${word[0]?.toLocaleUpperCase()}${word.slice(1)}`).join('')}`,
+    words.join('').toLocaleUpperCase()
+  ]);
+}
 
 async function fresh(page: Page, width = 1440, height = 900) {
   await page.setViewportSize({ width, height });
@@ -709,6 +731,146 @@ test('Catalog keeps an opaque neutral modal and no-blur backdrop under reduced t
     };
   });
   expect(backdrop).toEqual({ alpha: 1, backdrop: 'none' });
+});
+
+test('all four themes render one identical Catalog tree with token-only presentation differences', async ({ page }) => {
+  const themeAliasMatrix = [...TARGETS, ASH_TARGET].flatMap(({ id, label }) => [
+    ...themeBranchAliases(id),
+    ...themeBranchAliases(label)
+  ]);
+  const forbiddenThemeNeedles = [...new Set(themeAliasMatrix.map(normalizedThemeBranch))].sort();
+  expect(forbiddenThemeNeedles).toEqual([
+    'ashamber', 'ashandamber', 'bunny', 'deepcurrent', 'pomneutral', 'pomos'
+  ]);
+  const forbiddenThemeAttribute = /\bdata-pom-theme(?:-id)?(?=\s*(?:[~|^$*]?=|\]|\/?>))/i;
+  const catalogSources = [
+    new URL('../../apps/workbench-lab/src/recipes/WidgetCatalog.svelte', import.meta.url),
+    new URL('../../apps/workbench-lab/src/recipes/CatalogWidgetPreview.svelte', import.meta.url),
+    new URL('../../apps/workbench-lab/src/styles.css', import.meta.url)
+  ].map((source) => readFileSync(source, 'utf8')).join('\n');
+  const normalizedCatalogSources = normalizedThemeBranch(catalogSources);
+  expect(forbiddenThemeNeedles.filter((alias) => normalizedCatalogSources.includes(alias))).toEqual([]);
+  expect(catalogSources).not.toMatch(forbiddenThemeAttribute);
+  await fresh(page, 1920, 1080);
+  await selectTheme(page, TARGETS[0], { closeDrawer: false });
+  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  await expect(catalog.locator('[data-catalog-result]')).toHaveCount(98);
+  const search = catalog.getByRole('searchbox', { name: 'Search Widgets' });
+  await search.focus();
+  await catalog.evaluate((dialog) => {
+    const state = window as typeof window & {
+      __catalogThemeIdentity?: { dialog: Element; results: Element[] };
+    };
+    state.__catalogThemeIdentity = {
+      dialog,
+      results: [...dialog.querySelectorAll('[data-catalog-result]')]
+    };
+  });
+  const signatures: string[] = [];
+  const presentations: string[] = [];
+  const tokens: string[] = [];
+  for (const target of [...TARGETS, ASH_TARGET]) {
+    const targetButton = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: target.label, exact: true });
+    await targetButton.evaluate((button: HTMLButtonElement) => button.click());
+    await expect(page.locator('main')).toHaveAttribute('data-pom-theme', target.id);
+    await expect(catalog).toBeVisible();
+    await expect(search).toBeFocused();
+    await expect(catalog.locator('[data-catalog-result]')).toHaveCount(98);
+    const evidence = await catalog.evaluate((dialog) => {
+      const state = window as typeof window & {
+        __catalogThemeIdentity?: { dialog: Element; results: Element[] };
+      };
+      const results = [...dialog.querySelectorAll<HTMLElement>('[data-catalog-result]')];
+      return {
+        identity: state.__catalogThemeIdentity?.dialog === dialog
+          && state.__catalogThemeIdentity.results.length === results.length
+          && state.__catalogThemeIdentity.results.every((result, index) => result === results[index]),
+        signature: JSON.stringify({
+          tree: [...dialog.querySelectorAll<HTMLElement>('*')].map((node) => ({
+        tag: node.tagName,
+        class: node.className,
+        role: node.getAttribute('role'),
+        part: node.dataset.pomPart ?? null,
+        widget: node.dataset.widgetType ?? null,
+        shape: node.dataset.previewShape ?? null
+          })),
+          results: results.map((node) => node.dataset.widgetType),
+          previews: dialog.querySelectorAll('.catalog-widget-preview [data-surface-type]').length
+        }),
+        themeBranches: dialog.querySelectorAll('[data-pom-theme], [data-pom-theme-id]').length
+      };
+    });
+    expect(evidence.identity, `${target.label} retained Catalog nodes`).toBe(true);
+    expect(evidence.themeBranches, `${target.label} theme branches`).toBe(0);
+    signatures.push(evidence.signature);
+    presentations.push(await catalog.evaluate((dialog) => {
+      const style = getComputedStyle(dialog);
+      const card = getComputedStyle(dialog.querySelector<HTMLElement>('[data-catalog-result]')!);
+      return [style.backgroundColor, style.borderRadius, style.boxShadow, card.backgroundColor, card.borderRadius].join('|');
+    }));
+    tokens.push(await page.locator('main').evaluate((root) => {
+      const style = getComputedStyle(root);
+      return ['--pom-color-canvas', '--pom-material-widget', '--pom-radius-small']
+        .map((name) => `${name}:${style.getPropertyValue(name).trim()}`).join('|');
+    }));
+  }
+  expect(new Set(signatures).size).toBe(1);
+  expect(new Set(presentations).size).toBe(4);
+  expect(new Set(tokens).size).toBe(4);
+  const catalogSelectors = await page.evaluate(() => {
+    const selectors: string[] = [];
+    const visit = (rules: CSSRuleList) => {
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule && /catalog/i.test(rule.selectorText)) selectors.push(rule.selectorText);
+        if ('cssRules' in rule) {
+          try { visit((rule as CSSGroupingRule).cssRules); } catch { /* cross-origin sheets are irrelevant here */ }
+        }
+      }
+    };
+    for (const sheet of document.styleSheets) {
+      try { visit(sheet.cssRules); } catch { /* cross-origin sheets are irrelevant here */ }
+    }
+    return selectors;
+  });
+  expect(catalogSelectors.length).toBeGreaterThan(0);
+  const joinedCatalogSelectors = catalogSelectors.join('\n');
+  const normalizedCatalogSelectors = normalizedThemeBranch(joinedCatalogSelectors);
+  expect(forbiddenThemeNeedles.filter((alias) => normalizedCatalogSelectors.includes(alias))).toEqual([]);
+  expect(joinedCatalogSelectors).not.toMatch(forbiddenThemeAttribute);
+
+  const tokenCausality = await catalog.evaluate(async (dialog) => {
+    const card = dialog.querySelector<HTMLElement>('[data-catalog-result]')!;
+    const tokenTarget = card.querySelector<SVGElement>('svg[data-catalog-icon]')!;
+    const identity = { dialog, card };
+    const tokenBefore = getComputedStyle(tokenTarget).getPropertyValue('--pom-color-focus').trim();
+    const previous = {
+      value: tokenTarget.style.getPropertyValue('--pom-color-focus'),
+      priority: tokenTarget.style.getPropertyPriority('--pom-color-focus')
+    };
+    const sample = async (value: string) => {
+      tokenTarget.style.setProperty('--pom-color-focus', value, 'important');
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      return getComputedStyle(tokenTarget).color;
+    };
+    const red = await sample('rgb(240 24 24)');
+    const green = await sample('rgb(24 240 24)');
+    if (previous.value) tokenTarget.style.setProperty('--pom-color-focus', previous.value, previous.priority);
+    else tokenTarget.style.removeProperty('--pom-color-focus');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    return {
+      tokenBefore,
+      red,
+      green,
+      tokenRestored: getComputedStyle(tokenTarget).getPropertyValue('--pom-color-focus').trim(),
+      sameNodes: identity.dialog === dialog && identity.card === dialog.querySelector('[data-catalog-result]'),
+      focused: document.activeElement === dialog.querySelector('input[type="search"]')
+    };
+  });
+  expect(tokenCausality.red).not.toBe(tokenCausality.green);
+  expect(tokenCausality.tokenRestored).toBe(tokenCausality.tokenBefore);
+  expect(tokenCausality.sameNodes).toBe(true);
+  expect(tokenCausality.focused).toBe(true);
 });
 
 test('Ash readability expression leaves shared Theme authoring typography compact', async ({ page }) => {

@@ -396,11 +396,9 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await page.getByRole('tab', { name: 'Scene' }).click();
 
   await invokeCompactChromeAction(page, 'Open Widget Catalog');
-  await shot(page, 'wide-catalog-drawer.png');
   const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
-  await catalog.getByRole('button', { name: 'Expanded' }).click();
   await shot(page, 'wide-catalog-expanded.png');
-  await catalog.getByRole('button', { name: 'Close Catalog' }).click();
+  await catalog.getByRole('button', { name: 'Close Widget Catalog' }).click();
 
   await invokeCompactChromeAction(page, 'Focus reading');
   await page.getByRole('button', { name: 'Focus reading' }).evaluate((button: HTMLButtonElement) => button.blur());
@@ -416,6 +414,17 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await shot(page, 'floating-widget.png');
   await page.getByRole('tab', { name: 'Library' }).click();
   await shot(page, 'renderer-error.png');
+});
+
+test('Deep Current freezes the expanded source-authority Catalog at 1920x1080', async ({ page }) => {
+  await fresh(page, 1920, 1080);
+  await selectTheme(page, 'Deep Current');
+  await invokeCompactChromeAction(page, 'Open Widget Catalog');
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  await expect(catalog).toHaveAttribute('data-presentation', 'expanded');
+  await expect(catalog.locator('[data-catalog-result]')).toHaveCount(98);
+  await expect(catalog.locator('.catalog-widget-preview')).toHaveCount(98);
+  await shot(page, 'deep-current-catalog-expanded-1920x1080.png');
 });
 
 test('Deep Current freezes reviewed phone and mobile desktop-site compositions', async ({ browser }) => {

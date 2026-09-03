@@ -2,7 +2,7 @@
 
 An inspectable Svelte 5 consumer of the public PomegranateUI packages and source-owned recipes. It demonstrates a demanding roleplay workspace without becoming a mandatory application shell or package authority.
 
-The Lab owns its mock story, 94-definition Catalog fixture, Widget renderers, host context, local-storage adapter, composition, and CSS. PomegranateUI packages own versioned state, commands, layout restoration, headless Svelte bindings, and renderer conformance.
+The Lab owns its mock story, 98-definition Catalog fixture, Widget renderers, host context, local-storage adapter, composition, and CSS. PomegranateUI packages own versioned state, commands, layout restoration, headless Svelte bindings, and renderer conformance.
 
 Its Theme Settings Widget applies PomOS (stable preset ID `pom-neutral`), Deep Current, Bunny, or Ash & Amber to the same mounted Workbench state. Each preset is an independent complete v2 definition resolved through `@pomegranate-ui/theme`; public compilation supplies fixed semantic-part rules and layered canvas descriptors, and the Lab persists only the selected preset ID. Switching is immediate rather than animated. Invalid definitions and unavailable required local assets keep the last valid theme active.
 

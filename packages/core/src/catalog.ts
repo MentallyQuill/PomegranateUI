@@ -6,13 +6,22 @@ export interface CatalogState {
   readonly open: boolean;
   readonly presentation: 'drawer' | 'expanded';
   readonly resultMode: 'visual' | 'compact';
+  readonly previewWidth: number;
   readonly query: string;
   readonly category: string | null;
+  readonly utility: CatalogUtility | null;
+  readonly suspended: boolean;
   readonly categories: readonly string[];
   readonly results: readonly WidgetManifest[];
 }
 
 type CatalogValues = Omit<CatalogState, 'categories' | 'results'>;
+
+export type CatalogUtility = 'favorites' | 'recent' | 'on-panel' | 'fits-layout';
+
+export interface CatalogHostAdapter {
+  matchesUtility(manifest: WidgetManifest, utility: CatalogUtility): boolean;
+}
 
 export interface CatalogController {
   getState(): CatalogState;
@@ -20,15 +29,20 @@ export interface CatalogController {
   close(): void;
   setPresentation(value: CatalogState['presentation']): void;
   setResultMode(value: CatalogState['resultMode']): void;
+  setPreviewWidth(value: number): void;
   setQuery(value: string): void;
   setCategory(value: string | null): void;
+  setUtility(value: CatalogUtility | null): void;
+  suspend(): void;
+  resume(): void;
   refresh(): void;
   subscribe(listener: (state: CatalogState) => void): () => void;
 }
 
 function snapshot(
   registry: WidgetRegistry,
-  values: CatalogValues
+  values: CatalogValues,
+  adapter?: CatalogHostAdapter
 ): CatalogState {
   const query = values.query.trim().toLocaleLowerCase();
   const registered = registry.list();
@@ -38,6 +52,14 @@ function snapshot(
     .sort((left, right) => left.localeCompare(right)));
   const results = Object.freeze(registered
     .filter((manifest) => values.category === null || manifest.catalog?.category === values.category)
+    .filter((manifest) => {
+      if (values.utility === null) return true;
+      try {
+        return adapter?.matchesUtility(manifest, values.utility) ?? false;
+      } catch {
+        return false;
+      }
+    })
     .filter((manifest) => {
       if (!query) return true;
       const searchable = [
@@ -60,12 +82,21 @@ const CLOSED_STATE: CatalogValues = Object.freeze({
   open: false,
   presentation: 'drawer',
   resultMode: 'visual',
+  previewWidth: 286,
   query: '',
-  category: null
+  category: null,
+  utility: null,
+  suspended: false
 });
 
-export function createCatalogController(registry: WidgetRegistry): CatalogController {
-  let state = snapshot(registry, CLOSED_STATE);
+export function normalizeCatalogPreviewWidth(value: number): number {
+  if (!Number.isFinite(value)) return 286;
+  return Math.max(200, Math.min(420, Math.round(value)));
+}
+
+export function createCatalogController(registry: WidgetRegistry, adapter?: CatalogHostAdapter): CatalogController {
+  let state = snapshot(registry, CLOSED_STATE, adapter);
+  let suspendedState: CatalogState | null = null;
   const listeners = new Set<(state: CatalogState) => void>();
   const notify = () => {
     for (const listener of [...listeners]) {
@@ -77,13 +108,17 @@ export function createCatalogController(registry: WidgetRegistry): CatalogContro
     }
   };
   const update = (values: Partial<CatalogValues>) => {
+    if (state.suspended) return;
     state = snapshot(registry, {
       open: values.open ?? state.open,
       presentation: values.presentation ?? state.presentation,
       resultMode: values.resultMode ?? state.resultMode,
+      previewWidth: values.previewWidth ?? state.previewWidth,
       query: values.query ?? state.query,
-      category: values.category === undefined ? state.category : values.category
-    });
+      category: values.category === undefined ? state.category : values.category,
+      utility: values.utility === undefined ? state.utility : values.utility,
+      suspended: false
+    }, adapter);
     notify();
   };
   return Object.freeze({
@@ -94,8 +129,7 @@ export function createCatalogController(registry: WidgetRegistry): CatalogContro
       update({ open: true, presentation });
     },
     close(): void {
-      state = snapshot(registry, CLOSED_STATE);
-      notify();
+      update({ open: false, query: '' });
     },
     setPresentation(value: CatalogState['presentation']): void {
       update({ presentation: value });
@@ -103,11 +137,29 @@ export function createCatalogController(registry: WidgetRegistry): CatalogContro
     setResultMode(value: CatalogState['resultMode']): void {
       update({ resultMode: value });
     },
+    setPreviewWidth(value: number): void {
+      update({ previewWidth: normalizeCatalogPreviewWidth(value) });
+    },
     setQuery(value: string): void {
       update({ query: value });
     },
     setCategory(value: string | null): void {
       update({ category: value });
+    },
+    setUtility(value: CatalogUtility | null): void {
+      update({ utility: value });
+    },
+    suspend(): void {
+      if (state.suspended) return;
+      suspendedState = state;
+      state = Object.freeze({ ...state, suspended: true });
+      notify();
+    },
+    resume(): void {
+      if (suspendedState === null) return;
+      state = suspendedState;
+      suspendedState = null;
+      notify();
     },
     refresh(): void {
       update({});
