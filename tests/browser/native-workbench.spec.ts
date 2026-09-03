@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { createCatalogManifests } from '../../apps/workbench-lab/src/mockup/catalog.ts';
+import { createHash } from 'node:crypto';
 import { IMPLEMENTED_SURFACES } from '../../apps/workbench-lab/src/mockup/implemented-surfaces.ts';
 import { SURFACE_FIXTURES, SURFACE_STATE_COPY } from '../../apps/workbench-lab/src/mockup/surface-fixtures.ts';
+import {
+  CATALOG_AUTHORITY_MATRIX,
+  CATALOG_AUTHORITY_SHA256
+} from '../reference/widget-catalog-authority.ts';
 
 async function openDeveloperTools(page: import('@playwright/test').Page) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
@@ -1475,19 +1479,26 @@ test('Catalog renders the source composition, 94 shared previews, and exact expa
   await expect(catalog.locator('[data-renderer-status="unavailable"]')).toHaveCount(0);
   await expect(catalog.getByRole('button', { name: /^Add / })).toHaveCount(0);
   expect(await results.evaluateAll((nodes) => nodes.every((node) => node.getAttribute('role') === 'button' && node.getAttribute('tabindex') === '0'))).toBe(true);
-  const authoritativeMatrix = createCatalogManifests().map((manifest) => {
-    const fixture = SURFACE_FIXTURES.get(manifest.type);
-    if (!fixture || !manifest.catalog) throw new Error(`Missing authoritative Catalog fixture for ${manifest.type}.`);
-    return { title: manifest.title, tuple: [String(manifest.type), String(fixture.type), manifest.catalog.shape] };
-  }).sort((left, right) => left.title.localeCompare(right.title) || left.tuple[0]!.localeCompare(right.tuple[0]!))
-    .map(({ tuple }) => tuple);
+  expect(CATALOG_AUTHORITY_MATRIX).toHaveLength(94);
+  expect(Object.isFrozen(CATALOG_AUTHORITY_MATRIX)).toBe(true);
+  expect(CATALOG_AUTHORITY_MATRIX.every((entry) => Object.isFrozen(entry))).toBe(true);
+  expect(new Set(CATALOG_AUTHORITY_MATRIX.map(([widgetType]) => widgetType)).size).toBe(94);
+  expect(new Set(CATALOG_AUTHORITY_MATRIX.map(([, surfaceType]) => surfaceType)).size).toBe(94);
+  expect(CATALOG_AUTHORITY_MATRIX.map(([, , title]) => title)).toEqual(
+    [...CATALOG_AUTHORITY_MATRIX].map(([, , title]) => title).sort((left, right) => left.localeCompare(right))
+  );
+  expect(createHash('sha256').update(JSON.stringify(CATALOG_AUTHORITY_MATRIX)).digest('hex')).toBe(
+    CATALOG_AUTHORITY_SHA256
+  );
   const renderedMatrix = await results.evaluateAll((nodes) => nodes.map((node) => [
     node.getAttribute('data-widget-type'),
     node.querySelector('[data-surface-type]')?.getAttribute('data-surface-type') ?? null,
     node.getAttribute('data-preview-shape')
   ]));
   expect(new Set(renderedMatrix.map(([widgetType]) => widgetType)).size).toBe(94);
-  expect(renderedMatrix).toEqual(authoritativeMatrix);
+  expect(renderedMatrix).toEqual(
+    CATALOG_AUTHORITY_MATRIX.map(([widgetType, surfaceType, , , , shape]) => [widgetType, surfaceType, shape])
+  );
 
   const geometry = await catalog.evaluate((dialog) => {
     const header = dialog.querySelector<HTMLElement>('.catalog-head')!;
@@ -1668,8 +1679,9 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
   await expect(catalog).toBeHidden();
   const targets = page.locator('[data-catalog-placement-target]');
   await expect(targets).not.toHaveCount(0);
-  const target = targets.first();
-  const targetBox = await target.boundingBox();
+  const leftTarget = page.locator('[data-catalog-placement-target][data-pomegranate-region-surface="left"]').first();
+  await expect(leftTarget).toBeVisible();
+  const targetBox = await leftTarget.boundingBox();
   if (!targetBox) throw new Error('Missing compatible Catalog placement target.');
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 2 });
   const proxyEvidence = await proxy.evaluate((node) => ({
@@ -1683,7 +1695,7 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
     x: targetBox.x + targetBox.width / 2,
     y: targetBox.y + targetBox.height / 2
   });
-  expect(proxyEvidence.target).not.toBe('');
+  expect(proxyEvidence.target).toBe(JSON.stringify(['scene', null, 'left', 0, 'primary']));
   const selectedTarget = page.locator(`[data-catalog-placement-target=${JSON.stringify(proxyEvidence.target)}]`);
   await expect(selectedTarget).toHaveCount(1);
   await expect(selectedTarget).toHaveClass(/is-catalog-target-active/);
@@ -1706,7 +1718,10 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pomegranate-ui.workbench-lab.layout.v1') ?? 'null') as {
     revision: number;
     widgets: Record<string, { type: string }>;
-    placements: Record<string, { panelId: string; regionId: string; shelfId: string }>;
+    placements: Record<string, {
+      kind: 'docked'; panelId: string; subPanelId?: string; lane?: number;
+      regionId: string; shelfId: string; order: number;
+    }>;
   } | null);
   expect(saved).not.toBeNull();
   expect(saved?.revision).toBe(initialRevision + 2);
@@ -1714,15 +1729,32 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
     .filter(([id, instance]) => id.startsWith('catalog-library-workspace-') && instance.type === 'library.workspace')
     .map(([id]) => id);
   expect(persistedLibraryIds).toHaveLength(1);
-  expect(saved?.placements[persistedLibraryIds[0] ?? '']).toMatchObject({
-    panelId: expect.any(String),
-    regionId: expect.any(String),
-    shelfId: 'primary'
-  });
+  const firstLibraryId = persistedLibraryIds[0] ?? '';
+  const firstLibraryPlacement = {
+    kind: 'docked', panelId: 'scene', regionId: 'left', shelfId: 'primary', order: 3
+  } as const;
+  expect(saved?.placements[firstLibraryId]).toEqual(firstLibraryPlacement);
 
   await page.getByRole('button', { name: 'Reload saved layout' }).click();
   await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 3));
-  await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(1);
+  await expect(page.locator(`[data-pomegranate-placement][data-widget-type="library.workspace"][data-pomegranate-region="left"][data-pomegranate-shelf="primary"]`)).toHaveCount(1);
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  const hydrated = await page.evaluate(() => JSON.parse(localStorage.getItem('pomegranate-ui.workbench-lab.layout.v1') ?? 'null') as {
+    revision: number;
+    widgets: Record<string, { type: string }>;
+    placements: Record<string, {
+      kind: 'docked'; panelId: string; subPanelId?: string; lane?: number;
+      regionId: string; shelfId: string; order: number;
+    }>;
+  } | null);
+  expect(hydrated?.revision).toBe(initialRevision + 3);
+  expect(hydrated?.widgets[firstLibraryId]).toEqual({
+    id: firstLibraryId,
+    type: 'library.workspace',
+    manifestVersion: '1.0.0',
+    configuration: {}
+  });
+  expect(hydrated?.placements[firstLibraryId]).toEqual(firstLibraryPlacement);
   const hydratedRevision = Number(await workbench.getAttribute('data-workbench-revision'));
   expect(hydratedRevision).toBe(initialRevision + 3);
   await closeDeveloperTools(page);
@@ -1736,14 +1768,35 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
   await restoredCatalog.getByRole('button', { name: 'Close Widget Catalog' }).click();
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
-  const twiceSavedCount = await page.evaluate(() => {
+  const twiceSaved = await page.evaluate(() => {
     const snapshot = JSON.parse(localStorage.getItem('pomegranate-ui.workbench-lab.layout.v1') ?? 'null') as {
-      widgets: Record<string, { type: string }>;
+      widgets: Record<string, { id: string; type: string; manifestVersion: string; configuration: Record<string, unknown> }>;
+      placements: Record<string, {
+        kind: 'docked'; panelId: string; subPanelId?: string; lane?: number;
+        regionId: string; shelfId: string; order: number;
+      }>;
     } | null;
-    return Object.entries(snapshot?.widgets ?? {})
-      .filter(([id, instance]) => id.startsWith('catalog-library-workspace-') && instance.type === 'library.workspace').length;
+    const ids = Object.entries(snapshot?.widgets ?? {})
+      .filter(([id, instance]) => id.startsWith('catalog-library-workspace-') && instance.type === 'library.workspace')
+      .map(([id]) => id)
+      .sort();
+    return { ids, pairs: ids.map((id) => ({ widget: snapshot!.widgets[id], placement: snapshot!.placements[id] })) };
   });
-  expect(twiceSavedCount).toBe(2);
+  expect(twiceSaved.ids).toHaveLength(2);
+  expect(new Set(twiceSaved.ids).size).toBe(2);
+  expect(twiceSaved.pairs).toEqual([
+    {
+      widget: { id: firstLibraryId, type: 'library.workspace', manifestVersion: '1.0.0', configuration: {} },
+      placement: firstLibraryPlacement
+    },
+    {
+      widget: {
+        id: expect.stringMatching(/^catalog-library-workspace-/),
+        type: 'library.workspace', manifestVersion: '1.0.0', configuration: {}
+      },
+      placement: { ...firstLibraryPlacement, order: 4 }
+    }
+  ]);
 });
 
 test('Catalog pointer placement selects the topmost nested compatible target beneath an overlay', async ({ page }) => {
@@ -1788,11 +1841,39 @@ test('Catalog pointer placement selects the topmost nested compatible target ben
   await page.mouse.move(point.x, point.y, { steps: 2 });
 
   const expectedTarget = await inner.getAttribute('data-catalog-placement-target');
-  expect(expectedTarget).not.toBeNull();
+  expect(expectedTarget).toBe(JSON.stringify(['scene', null, 'right', 0, 'primary']));
   await expect(page.locator('[data-catalog-placement-proxy]')).toHaveAttribute('data-placement-target', expectedTarget!);
   await expect(inner).toHaveClass(/is-catalog-target-active/);
   await page.mouse.up();
   await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(1);
   await page.locator('[data-review-target-overlay]').evaluate((overlay) => overlay.remove());
   await expect(page.locator('[data-review-target-overlay]')).toHaveCount(0);
+  await catalog.getByRole('button', { name: 'Close Widget Catalog' }).click();
+  await openDeveloperTools(page);
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  const committed = await page.evaluate(() => {
+    const snapshot = JSON.parse(localStorage.getItem('pomegranate-ui.workbench-lab.layout.v1') ?? 'null') as {
+      widgets: Record<string, { type: string }>;
+      placements: Record<string, {
+        kind: 'docked'; panelId: string; subPanelId?: string; lane?: number;
+        regionId: string; shelfId: string; order: number;
+      }>;
+    } | null;
+    const id = Object.entries(snapshot?.widgets ?? {})
+      .find(([widgetId, instance]) => widgetId.startsWith('catalog-library-workspace-') && instance.type === 'library.workspace')?.[0];
+    return id ? { id, placement: snapshot!.placements[id] } : null;
+  });
+  expect(committed).not.toBeNull();
+  if (!committed?.placement) throw new Error('Missing committed nested Catalog placement.');
+  expect(committed.placement).toEqual({
+    kind: 'docked', panelId: 'scene', regionId: 'right', shelfId: 'primary', order: 3
+  });
+  expect([
+    committed.placement.panelId,
+    committed.placement.subPanelId ?? null,
+    committed.placement.regionId,
+    committed.placement.lane ?? 0,
+    committed.placement.shelfId
+  ]).toEqual(JSON.parse(expectedTarget!));
+  expect(committed.placement.regionId).not.toBe('stage');
 });

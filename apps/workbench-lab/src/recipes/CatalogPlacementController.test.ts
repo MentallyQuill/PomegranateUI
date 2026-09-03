@@ -681,6 +681,58 @@ describe('CatalogPlacementController', () => {
     controller.destroy();
   });
 
+  it('uses deterministic identity order for disconnected equal-rectangle targets without elementsFromPoint', () => {
+    const { root, origin, target: first } = placementSurface();
+    first.dataset.pomegranateRegionSurface = 'a-region';
+    first.setAttribute('aria-label', 'A region');
+    const second = appendTarget(root, 'z-region', 'stage', 'Z region');
+    for (const target of [first, second]) {
+      Object.defineProperty(target, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => new DOMRect(100, 100, 240, 180)
+      });
+    }
+    const overlay = document.body.appendChild(document.createElement('div'));
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(() => overlay)
+    });
+    Object.defineProperty(document, 'elementsFromPoint', {
+      configurable: true,
+      value: undefined
+    });
+    const onCommit = vi.fn();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit
+    });
+
+    controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+    first.remove();
+    second.remove();
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_DISCONNECTED).not.toBe(0);
+    for (const target of [first, second]) {
+      Object.defineProperty(target, 'compareDocumentPosition', {
+        configurable: true,
+        value: vi.fn(() => Node.DOCUMENT_POSITION_DISCONNECTED | Node.DOCUMENT_POSITION_PRECEDING)
+      });
+    }
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 180, clientY: 150 }));
+    document.dispatchEvent(pointerEvent('pointerup', { clientX: 180, clientY: 150 }));
+
+    expect(onCommit).toHaveBeenCalledOnce();
+    expect(onCommit).toHaveBeenCalledWith(manifest, expect.objectContaining({
+      identity: expect.objectContaining({ regionId: 'a-region' }),
+      element: first
+    }));
+    expect(onCommit).not.toHaveBeenCalledWith(manifest, expect.objectContaining({ element: second }));
+    controller.destroy();
+  });
+
   it('publishes deterministic proxy-state transitions and stops after unsubscribe', () => {
     const { root, origin } = placementSurface();
     const controller = createCatalogPlacementController({

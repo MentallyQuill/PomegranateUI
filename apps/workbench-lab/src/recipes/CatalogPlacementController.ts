@@ -421,6 +421,9 @@ export function createCatalogPlacementController(
           const rightArea = right.target.rect.width * right.target.rect.height;
           if (leftArea !== rightArea) return leftArea - rightArea;
           const position = left.target.element.compareDocumentPosition(right.target.element);
+          if (position & Node.DOCUMENT_POSITION_DISCONNECTED) {
+            return left.target.identity.id.localeCompare(right.target.identity.id);
+          }
           if (position & Node.DOCUMENT_POSITION_FOLLOWING) return 1;
           if (position & Node.DOCUMENT_POSITION_PRECEDING) return -1;
           return left.target.identity.id.localeCompare(right.target.identity.id);

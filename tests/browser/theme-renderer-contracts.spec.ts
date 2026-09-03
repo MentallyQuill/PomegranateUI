@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { compileCanvasLayers, compileThemeBindings, resolveThemeV2 } from '@pomegranate-ui/theme';
+import { readFileSync } from 'node:fs';
 import { EXTERNAL_THEME } from '../fixtures/external-theme.js';
 
 const TARGETS = [
@@ -712,6 +713,13 @@ test('Catalog keeps an opaque neutral modal and no-blur backdrop under reduced t
 });
 
 test('all four themes render one identical Catalog tree with token-only presentation differences', async ({ page }) => {
+  const forbiddenThemeBranch = /deep-current|pom-neutral|pomos|bunny|ash-amber|ash\s*&\s*amber/i;
+  const catalogSources = [
+    new URL('../../apps/workbench-lab/src/recipes/WidgetCatalog.svelte', import.meta.url),
+    new URL('../../apps/workbench-lab/src/recipes/CatalogWidgetPreview.svelte', import.meta.url),
+    new URL('../../apps/workbench-lab/src/styles.css', import.meta.url)
+  ].map((source) => readFileSync(source, 'utf8')).join('\n');
+  expect(catalogSources).not.toMatch(forbiddenThemeBranch);
   await fresh(page, 1920, 1080);
   await selectTheme(page, TARGETS[0], { closeDrawer: false });
   await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
@@ -779,6 +787,57 @@ test('all four themes render one identical Catalog tree with token-only presenta
   expect(new Set(signatures).size).toBe(1);
   expect(new Set(presentations).size).toBe(4);
   expect(new Set(tokens).size).toBe(4);
+  const catalogSelectors = await page.evaluate(() => {
+    const selectors: string[] = [];
+    const visit = (rules: CSSRuleList) => {
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule && /catalog/i.test(rule.selectorText)) selectors.push(rule.selectorText);
+        if ('cssRules' in rule) {
+          try { visit((rule as CSSGroupingRule).cssRules); } catch { /* cross-origin sheets are irrelevant here */ }
+        }
+      }
+    };
+    for (const sheet of document.styleSheets) {
+      try { visit(sheet.cssRules); } catch { /* cross-origin sheets are irrelevant here */ }
+    }
+    return selectors;
+  });
+  expect(catalogSelectors.length).toBeGreaterThan(0);
+  expect(catalogSelectors.join('\n')).not.toMatch(forbiddenThemeBranch);
+  expect(catalogSelectors.join('\n')).not.toMatch(/\[data-pom-theme\s*=\s*["']/i);
+
+  const tokenCausality = await catalog.evaluate(async (dialog) => {
+    const card = dialog.querySelector<HTMLElement>('[data-catalog-result]')!;
+    const tokenTarget = card.querySelector<SVGElement>('svg[data-catalog-icon]')!;
+    const identity = { dialog, card };
+    const tokenBefore = getComputedStyle(tokenTarget).getPropertyValue('--pom-color-focus').trim();
+    const previous = {
+      value: tokenTarget.style.getPropertyValue('--pom-color-focus'),
+      priority: tokenTarget.style.getPropertyPriority('--pom-color-focus')
+    };
+    const sample = async (value: string) => {
+      tokenTarget.style.setProperty('--pom-color-focus', value, 'important');
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      return getComputedStyle(tokenTarget).color;
+    };
+    const red = await sample('rgb(240 24 24)');
+    const green = await sample('rgb(24 240 24)');
+    if (previous.value) tokenTarget.style.setProperty('--pom-color-focus', previous.value, previous.priority);
+    else tokenTarget.style.removeProperty('--pom-color-focus');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    return {
+      tokenBefore,
+      red,
+      green,
+      tokenRestored: getComputedStyle(tokenTarget).getPropertyValue('--pom-color-focus').trim(),
+      sameNodes: identity.dialog === dialog && identity.card === dialog.querySelector('[data-catalog-result]'),
+      focused: document.activeElement === dialog.querySelector('input[type="search"]')
+    };
+  });
+  expect(tokenCausality.red).not.toBe(tokenCausality.green);
+  expect(tokenCausality.tokenRestored).toBe(tokenCausality.tokenBefore);
+  expect(tokenCausality.sameNodes).toBe(true);
+  expect(tokenCausality.focused).toBe(true);
 });
 
 test('Ash readability expression leaves Deep compact technical rail defaults unchanged', async ({ page }) => {
