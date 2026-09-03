@@ -6,6 +6,14 @@ import {
   CATALOG_AUTHORITY_MATRIX,
   CATALOG_AUTHORITY_SHA256
 } from '../reference/widget-catalog-authority.ts';
+import {
+  dragTo,
+  dragToShelfRail,
+  dragToWidgetTab,
+  invokeWidgetAction,
+  tearOffTo,
+  widgetDragSurface
+} from './support/widget-interaction-driver.ts';
 
 async function openDeveloperTools(page: import('@playwright/test').Page) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
@@ -59,44 +67,6 @@ async function openWidgetCatalog(page: import('@playwright/test').Page) {
   await launcher.press('Enter');
 }
 
-async function dragTo(
-  page: import('@playwright/test').Page,
-  handle: import('@playwright/test').Locator,
-  point: { x: number; y: number }
-) {
-  const box = await handle.boundingBox();
-  if (!box) throw new Error('Expected drag handle geometry.');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(point.x, point.y, { steps: 6 });
-  await page.mouse.up();
-}
-
-async function dragToShelfRail(
-  page: import('@playwright/test').Page,
-  handle: import('@playwright/test').Locator,
-  region: string,
-  railKind: 'before' | 'between' | 'after' | 'append' = 'append'
-) {
-  const box = await handle.boundingBox();
-  if (!box) throw new Error('Expected drag handle geometry.');
-  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  if (await handle.getAttribute('data-group-tab')) {
-    await page.mouse.move(start.x, start.y + 18, { steps: 3 });
-  } else {
-    await page.mouse.move(start.x + 12, start.y + 12, { steps: 3 });
-  }
-  const rail = page.locator(`[data-pom-part="widget.drop-rail"][data-drop-region="${region}"][data-drop-rail-kind="${railKind}"]`).last();
-  const railBox = await rail.boundingBox();
-  if (!railBox) throw new Error(`Expected ${region} ${railKind} shelf rail geometry.`);
-  await page.mouse.move(railBox.x + railBox.width / 2, railBox.y + railBox.height / 2, { steps: 6 });
-  await expect(rail).toHaveAttribute('data-active', 'true');
-  await page.mouse.up();
-  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
-}
-
 async function dispatchHeldTouchDrag(
   page: import('@playwright/test').Page,
   start: { x: number; y: number },
@@ -115,54 +85,6 @@ async function dispatchHeldTouchDrag(
     });
   }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-}
-
-async function tearOffTo(
-  page: import('@playwright/test').Page,
-  handle: import('@playwright/test').Locator,
-  point: { x: number; y: number }
-) {
-  const box = await handle.boundingBox();
-  if (!box) throw new Error('Expected grouped Widget tab geometry.');
-  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(start.x, start.y + 18, { steps: 3 });
-  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
-  await page.mouse.move(point.x, point.y, { steps: 8 });
-  await page.mouse.up();
-}
-
-async function dragToWidgetTab(
-  page: import('@playwright/test').Page,
-  handle: import('@playwright/test').Locator,
-  target: import('@playwright/test').Locator
-) {
-  const sourceBox = await handle.boundingBox();
-  if (!sourceBox) throw new Error('Expected Widget grouping geometry.');
-  const start = { x: sourceBox.x + sourceBox.width / 2, y: sourceBox.y + sourceBox.height / 2 };
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(start.x + 12, start.y + 12, { steps: 3 });
-  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
-  const targetBox = await widgetDragSurface(target).boundingBox();
-  if (!targetBox) throw new Error('Expected live Widget grouping target geometry.');
-  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2);
-  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', 'tab');
-  await page.mouse.up();
-  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
-}
-
-function widgetDragSurface(widget: import('@playwright/test').Locator) {
-  return widget
-    .locator(':scope > header[data-widget-drag-surface], :scope > .widget-frame > header[data-widget-drag-surface]')
-    .or(widget.locator('xpath=ancestor::section[@data-widget-group][1]//button[@data-widget-drag-surface][@aria-selected="true"]'))
-    .first();
-}
-
-async function invokeWidgetAction(widget: import('@playwright/test').Locator, name: string) {
-  await widget.getByRole('button', { name: 'Widget actions' }).click();
-  await widget.getByRole('menuitem', { name }).click();
 }
 
 async function horizontalOverflowEvidence(locator: import('@playwright/test').Locator) {
