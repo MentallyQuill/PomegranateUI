@@ -9,7 +9,7 @@ import { resolveBrowserServerPort, startBrowserServer } from '../browser/global-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 test('browser server keeps the canonical port unless an explicit valid override is supplied', () => {
-  assert.equal(resolveBrowserServerPort(undefined), 4174);
+  assert.equal(resolveBrowserServerPort(''), 4174);
   assert.equal(resolveBrowserServerPort('4184'), 4184);
   assert.throws(() => resolveBrowserServerPort('0'), /valid TCP port/);
   assert.throws(() => resolveBrowserServerPort('not-a-port'), /valid TCP port/);
