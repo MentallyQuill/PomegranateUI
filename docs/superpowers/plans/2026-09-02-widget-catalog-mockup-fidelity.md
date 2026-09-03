@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the Workbench Lab marketplace-style Widget Catalog with the exact Sonder Widget Overhaul expanded catalog composition, 94 shared-renderer miniatures, variable masonry geometry, and whole-result placement behavior.
+**Goal:** Replace the Workbench Lab marketplace-style Widget Catalog with the exact authoritative Widget Overhaul source/mockup composition, 94 shared-renderer miniatures, variable masonry geometry, and whole-result placement behavior.
 
 **Architecture:** Extend the framework-neutral catalog controller only for reusable display/filter/suspension state. Keep the 94 roleplay fixtures and renderer registrations in the Lab, render preview instances through the existing renderer registry, and isolate DOM geometry/placement mechanics in focused recipe controllers. One Svelte catalog tree serves expanded, drawer, compact, and all themes.
 

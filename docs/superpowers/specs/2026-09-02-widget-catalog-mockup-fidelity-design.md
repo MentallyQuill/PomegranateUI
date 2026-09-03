@@ -3,8 +3,7 @@
 ## Status and authority
 
 This design implements the active Widget Catalog fidelity goal. The visual and
-interaction authority is the current Sonder Widget Overhaul catalog at
-`F:\git\Sonder_Engine\docs\experiments\sonder-widget-overhaul\sonder-widget-overhaul.html`.
+interaction authority is the current authoritative Widget Overhaul source/mockup.
 At a 1920x1080 viewport, its expanded catalog is a centered 1523x830 surface
 with five 286px tracks. The current Workbench catalog is a 1872x1032 surface
 with five marketplace-card columns, 52 rendered previews, and 42 unavailable
@@ -17,7 +16,7 @@ sample data, host context, and renderer registrations.
 
 ## Required experience
 
-The expanded Visual catalog recreates the Sonder composition:
+The expanded Visual catalog recreates the authoritative Widget Overhaul composition:
 
 - centered surface occupying 80% of the usable viewport at wide sizes;
 - fixed 42px title row with `Widget Catalog`, `Build this Panel`, and an

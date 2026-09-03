@@ -1,11 +1,10 @@
 /**
  * Independently frozen Widget Catalog authority.
  *
- * Provenance: the ordered Widget definitions in
- * F:/git/Sonder_Engine/docs/experiments/sonder-widget-overhaul/sonder-widget-overhaul.html.
- * The one deliberate host-neutral runtime mapping is:
- *   settings.sonder-updates / "Sonder Updates"
- *     -> settings.host-updates / "Host Updates".
+ * Provenance: the ordered Widget definitions in the authoritative Widget
+ * Overhaul source/mockup. The one deliberate host-neutral runtime mapping
+ * replaces its source-specific updates Widget with
+ * settings.host-updates / "Host Updates".
  *
  * This file intentionally imports no Workbench inventory, manifest, fixture, or
  * renderer builder. Changes require reconciling the authoritative mockup first.
