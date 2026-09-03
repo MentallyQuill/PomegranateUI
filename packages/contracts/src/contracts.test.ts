@@ -364,6 +364,49 @@ describe('public contracts', () => {
     }).success).toBe(false);
   });
 
+  it('parses persistent column weights and bounded docked row heights', () => {
+    const parsed = WorkbenchStateSchema.parse({
+      ...state,
+      panels: [{
+        ...state.panels[0],
+        columnWeights: [0.65, 0.35],
+        activeSubPanelId: 'settings-appearance',
+        subPanels: [{
+          id: 'settings-appearance', name: 'Appearance', layoutId: 'three-equal', order: 0, scrollTop: 0,
+          columnWeights: [0.2, 0.5, 0.3]
+        }]
+      }],
+      placements: {
+        [widgetId]: { ...state.placements[widgetId], subPanelId: 'settings-appearance', lane: 0, height: 284 }
+      }
+    });
+
+    expect(parsed.panels[0]).toMatchObject({
+      columnWeights: [0.65, 0.35],
+      subPanels: [{ columnWeights: [0.2, 0.5, 0.3] }]
+    });
+    expect(parsed.placements[widgetId]).toMatchObject({ height: 284 });
+    expect(WorkbenchStateSchema.safeParse({
+      ...state,
+      panels: [{ ...state.panels[0], columnWeights: [1, 0] }]
+    }).success).toBe(false);
+  });
+
+  it('parses column and Widget row resize commands with strict bounds', () => {
+    const commands = [
+      { type: 'panel.resize-columns', panelId, weights: [0.6, 0.4] },
+      { type: 'sub-panel.resize-columns', panelId, subPanelId: 'settings-appearance', weights: [0.2, 0.5, 0.3] },
+      { type: 'widget.resize-row', instanceId: widgetId, height: 260 },
+      { type: 'widget.resize-row', instanceId: widgetId, height: null }
+    ];
+    expect(commands.map((command) => WorkbenchCommandSchema.parse(command).type)).toEqual([
+      'panel.resize-columns', 'sub-panel.resize-columns', 'widget.resize-row', 'widget.resize-row'
+    ]);
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'widget.resize-row', instanceId: widgetId, height: 63
+    }).success).toBe(false);
+  });
+
   it('preserves sub-panel ownership when a Widget floats or is shelved', () => {
     const settingsId = asPanelId('settings');
     const floating = {

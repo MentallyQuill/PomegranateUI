@@ -16,7 +16,7 @@ import {
 } from '@pomegranate-ui/contracts';
 
 import { acceptLayout, rejectLayout, type LayoutFailure, type LayoutResult } from './errors.js';
-import { nextRevision, normalizeDockOrders, normalizePanels, normalizeShelves, normalizeTabGroups } from './state.js';
+import { nextRevision, normalizeColumnWeights, normalizeDockOrders, normalizePanels, normalizeShelves, normalizeTabGroups } from './state.js';
 import type { PanelTemplateRegistry } from './templates.js';
 
 export interface ShelfKey {
@@ -142,9 +142,66 @@ export function resizePanelDock(
   return acceptLayout({ ...state, revision: nextRevision(state), panels });
 }
 
+export function resizePanelColumns(
+  state: WorkbenchState,
+  panelId: PanelId,
+  weights: readonly number[],
+  templates?: PanelTemplateRegistry
+): LayoutResult {
+  const index = state.panels.findIndex((panel) => panel.id === panelId);
+  if (index < 0) {
+    return rejectLayout(state, 'MISSING_PANEL', `Panel '${panelId}' does not exist.`, { panelId });
+  }
+  const normalized = normalizeColumnWeights(weights);
+  if (!normalized || normalized.length < 2) {
+    return rejectLayout(state, 'INVALID_INDEX', 'Panel column weights must contain two to six positive tracks.');
+  }
+  if (templates) {
+    const resolved = templates.resolve(state.panels[index]!);
+    if (!resolved.ok) {
+      return rejectLayout(state, 'UNKNOWN_TEMPLATE', resolved.message, { templateId: state.panels[index]!.templateId });
+    }
+    if (resolved.template.family === 'story-stage' || resolved.template.regions.length !== normalized.length) {
+      return rejectLayout(state, 'INVALID_INDEX', 'Column weights must match a focus-support or columns Panel template.');
+    }
+  }
+  const panels = [...state.panels];
+  panels[index] = { ...panels[index]!, columnWeights: normalized };
+  return acceptLayout({ ...state, revision: nextRevision(state), panels });
+}
+
 function dockedPlacement(state: WorkbenchState, instanceId: WidgetInstanceId): DockedPlacement | null {
   const placement = state.placements[instanceId];
   return placement?.kind === 'docked' ? placement : null;
+}
+
+export function resizeWidgetRow(
+  state: WorkbenchState,
+  instanceId: WidgetInstanceId,
+  height: number | null
+): LayoutResult {
+  const selected = dockedPlacement(state, instanceId);
+  if (!state.widgets[instanceId]) {
+    return rejectLayout(state, 'MISSING_WIDGET', `Widget instance '${instanceId}' does not exist.`, { instanceId });
+  }
+  if (!selected) return rejectLayout(state, 'INVALID_PLACEMENT', 'Only a docked Widget row can be resized.');
+  if (height !== null && (!Number.isFinite(height) || height < 64 || height > 2048)) {
+    return rejectLayout(state, 'INVALID_INDEX', 'Widget row height must be between 64 and 2048 CSS pixels.', { height });
+  }
+  const placements = { ...state.placements };
+  for (const [id, placement] of Object.entries(placements)) {
+    if (placement.kind !== 'docked') continue;
+    const sameRow = id === instanceId || Boolean(
+      selected.group
+      && placement.panelId === selected.panelId
+      && placement.subPanelId === selected.subPanelId
+      && placement.group?.id === selected.group.id
+    );
+    if (!sameRow) continue;
+    const { height: _height, ...rest } = placement;
+    placements[id] = height === null ? rest : { ...rest, height };
+  }
+  return acceptLayout({ ...state, revision: nextRevision(state), placements });
 }
 
 export function mergeWidgetGroup(
@@ -193,8 +250,10 @@ export function mergeWidgetGroup(
   const placements = { ...moved };
   members.forEach(([id, placement], order) => {
     if (placement.kind !== 'docked') return;
+    const { height: _height, ...rest } = placement;
     placements[id] = {
-      ...placement,
+      ...rest,
+      ...(target.height === undefined ? {} : { height: target.height }),
       group: { id: targetGroupId, order, active: id === instanceId }
     };
   });

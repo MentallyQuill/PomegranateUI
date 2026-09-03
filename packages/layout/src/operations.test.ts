@@ -31,8 +31,10 @@ import {
   restoreWidget,
   reorderWidgetGroup,
   reorderPanel,
-  resizePanelDock
-  ,shelveWidget
+  resizePanelColumns,
+  resizePanelDock,
+  resizeWidgetRow,
+  shelveWidget
 } from './index.js';
 
 const sceneId = asPanelId('scene');
@@ -187,6 +189,36 @@ describe('atomic layout operations', () => {
     const rejected = resizePanelDock(resized.state, sceneId, 'right', 421);
     expect(rejected.ok).toBe(false);
     expect(rejected.state).toBe(resized.state);
+  });
+
+  it('persists normalized column weights on a flat Panel', () => {
+    const before: WorkbenchState = {
+      ...populatedState(),
+      panels: [{ id: sceneId, name: 'Columns', templateId: 'columns.v1', order: 0, configuration: { columns: 3 } }],
+      activePanelId: sceneId
+    };
+    const resized = resizePanelColumns(before, sceneId, [2, 1, 1]);
+    expect(resized.ok).toBe(true);
+    expect(resized.state.panels[0]?.columnWeights).toEqual([0.5, 0.25, 0.25]);
+    expect(resizePanelColumns(resized.state, sceneId, [1, 0, 1]).ok).toBe(false);
+  });
+
+  it('resizes one docked Widget row and keeps a tab group synchronized', () => {
+    const single = resizeWidgetRow(populatedState(), summaryId, 284);
+    expect(single.ok).toBe(true);
+    expect(single.state.placements[summaryId]).toMatchObject({ height: 284 });
+
+    const grouped = mergeWidgetGroup(single.state, notesId, summaryId, 'reading-stack');
+    expect(grouped.ok).toBe(true);
+    const resized = resizeWidgetRow(grouped.state, notesId, 320);
+    expect(resized.ok).toBe(true);
+    expect(resized.state.placements[summaryId]).toMatchObject({ height: 320 });
+    expect(resized.state.placements[notesId]).toMatchObject({ height: 320 });
+
+    const reset = resizeWidgetRow(resized.state, summaryId, null);
+    expect(reset.ok).toBe(true);
+    expect(reset.state.placements[summaryId]).not.toHaveProperty('height');
+    expect(reset.state.placements[notesId]).not.toHaveProperty('height');
   });
 
   it('merges, activates, and reorders a same-Panel Widget tab group', () => {

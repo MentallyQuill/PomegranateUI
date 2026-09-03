@@ -76,6 +76,7 @@ export interface PanelState {
   readonly templateId: string;
   readonly order: number;
   readonly configuration?: JsonObject;
+  readonly columnWeights?: readonly number[];
   readonly activeSubPanelId?: SubPanelId;
   readonly subPanels?: readonly SubPanelState[];
 }
@@ -86,6 +87,7 @@ export interface SubPanelState {
   readonly layoutId: SubPanelLayoutId;
   readonly order: number;
   readonly scrollTop: number;
+  readonly columnWeights?: readonly number[];
   readonly shipped?: boolean;
   readonly hidden?: boolean;
 }
@@ -98,6 +100,7 @@ export type DockedPlacement = {
   readonly regionId: string;
   readonly shelfId: string;
   readonly order: number;
+  readonly height?: number;
   readonly group?: {
     readonly id: string;
     readonly order: number;
@@ -170,6 +173,10 @@ const unpaddedString = (label: string) => z.string().refine(
 );
 const nonnegativeInteger = z.number().int().nonnegative();
 const finiteNumber = z.number().finite();
+const NormalizedColumnWeightsSchema = z.array(finiteNumber.min(0.05).max(1)).min(1).max(6).refine(
+  (weights) => Math.abs(weights.reduce((total, weight) => total + weight, 0) - 1) < 1e-6,
+  { message: 'Column weights must be normalized to a total of 1.' }
+);
 
 export const PanelEdgeSchema = z.enum(['left', 'main', 'right']);
 
@@ -237,9 +244,25 @@ export const SubPanelStateSchema = z.object({
   layoutId: SubPanelLayoutIdSchema,
   order: nonnegativeInteger,
   scrollTop: finiteNumber.nonnegative(),
+  columnWeights: NormalizedColumnWeightsSchema.optional(),
   shipped: z.boolean().optional(),
   hidden: z.boolean().optional()
-}).strict();
+}).strict().superRefine((subPanel, context) => {
+  const expected = {
+    single: 1,
+    'two-equal': 2,
+    'three-equal': 3,
+    'wide-left': 2,
+    'wide-right': 2
+  }[subPanel.layoutId];
+  if (subPanel.columnWeights && subPanel.columnWeights.length !== expected) {
+    context.addIssue({
+      code: 'custom',
+      path: ['columnWeights'],
+      message: 'Column weights must match the selected sub-panel layout.'
+    });
+  }
+});
 
 export const PanelStateSchema = z.object({
   id: PanelIdSchema,
@@ -247,6 +270,7 @@ export const PanelStateSchema = z.object({
   templateId: unpaddedString('templateId'),
   order: nonnegativeInteger,
   configuration: JsonObjectSchema.optional(),
+  columnWeights: NormalizedColumnWeightsSchema.min(2).optional(),
   activeSubPanelId: SubPanelIdSchema.optional(),
   subPanels: z.array(SubPanelStateSchema).optional()
 }).strict().superRefine((panel, context) => {
@@ -293,6 +317,7 @@ export const DockedPlacementSchema = z.object({
   regionId: unpaddedString('regionId'),
   shelfId: unpaddedString('shelfId'),
   order: nonnegativeInteger,
+  height: finiteNumber.min(64).max(2048).optional(),
   group: z.object({
     id: unpaddedString('groupId'),
     order: nonnegativeInteger,

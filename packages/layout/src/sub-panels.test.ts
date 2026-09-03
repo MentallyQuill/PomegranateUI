@@ -19,6 +19,7 @@ import {
   normalizeSubPanels,
   renameSubPanel,
   reorderSubPanel,
+  resizeSubPanelColumns,
   setSubPanelScroll
 } from './sub-panels.js';
 import { normalizeDockOrders } from './state.js';
@@ -78,6 +79,25 @@ function flatSettings(): WorkbenchState {
     }
   };
 }
+
+describe('sub-panel column sizing', () => {
+  it('normalizes custom weights and clears them when an authored layout is selected', () => {
+    const created = createSubPanel(flatSettings(), settingsId, {
+      id: notesId, name: 'Notes', layoutId: 'three-equal', order: 1, scrollTop: 0
+    }, {
+      id: overviewId, name: 'Overview', layoutId: 'three-equal', order: 0, scrollTop: 0
+    });
+    expect(created.ok).toBe(true);
+    const resized = resizeSubPanelColumns(created.state, settingsId, notesId, [1, 2, 1]);
+    expect(resized.ok).toBe(true);
+    expect(resized.state.panels[0]?.subPanels?.find(({ id }) => id === notesId)?.columnWeights)
+      .toEqual([0.25, 0.5, 0.25]);
+
+    const reset = changeSubPanelLayout(resized.state, settingsId, notesId, 'three-equal');
+    expect(reset.ok).toBe(true);
+    expect(reset.state.panels[0]?.subPanels?.find(({ id }) => id === notesId)).not.toHaveProperty('columnWeights');
+  });
+});
 
 describe('one-level sub-panel transitions', () => {
   it('converts a flat Panel losslessly into Overview plus the requested sibling', () => {

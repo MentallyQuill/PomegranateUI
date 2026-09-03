@@ -49,6 +49,7 @@ export type WorkbenchCommand =
   | { readonly type: 'panel.activate'; readonly panelId: PanelId }
   | { readonly type: 'panel.reorder'; readonly panelId: PanelId; readonly toIndex: number }
   | { readonly type: 'panel.resize-dock'; readonly panelId: PanelId; readonly edge: 'left' | 'right'; readonly width: number }
+  | { readonly type: 'panel.resize-columns'; readonly panelId: PanelId; readonly weights: readonly number[] }
   | {
       readonly type: 'sub-panel.activate';
       readonly panelId: PanelId;
@@ -64,6 +65,7 @@ export type WorkbenchCommand =
   | { readonly type: 'sub-panel.rename'; readonly panelId: PanelId; readonly subPanelId: SubPanelId; readonly name: string }
   | { readonly type: 'sub-panel.reorder'; readonly panelId: PanelId; readonly subPanelId: SubPanelId; readonly toIndex: number }
   | { readonly type: 'sub-panel.change-layout'; readonly panelId: PanelId; readonly subPanelId: SubPanelId; readonly layoutId: SubPanelLayoutId }
+  | { readonly type: 'sub-panel.resize-columns'; readonly panelId: PanelId; readonly subPanelId: SubPanelId; readonly weights: readonly number[] }
   | { readonly type: 'sub-panel.set-scroll'; readonly panelId: PanelId; readonly subPanelId: SubPanelId; readonly scrollTop: number }
   | {
       readonly type: 'sub-panel.move-widgets';
@@ -99,6 +101,7 @@ export type WorkbenchCommand =
   | { readonly type: 'widget.group.activate'; readonly instanceId: WidgetInstanceId }
   | { readonly type: 'widget.group.reorder'; readonly instanceId: WidgetInstanceId; readonly toIndex: number }
   | { readonly type: 'widget.group.separate'; readonly instanceId: WidgetInstanceId; readonly placement: VisibleWidgetPlacement }
+  | { readonly type: 'widget.resize-row'; readonly instanceId: WidgetInstanceId; readonly height: number | null }
   | { readonly type: 'widget.remove'; readonly instanceId: WidgetInstanceId }
   | { readonly type: 'layout.undo' }
   | { readonly type: 'layout.hydrate'; readonly state: WorkbenchState };
@@ -133,6 +136,11 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     width: z.number().finite().min(200).max(420)
   }).strict(),
   z.object({
+    type: z.literal('panel.resize-columns'),
+    panelId: PanelIdSchema,
+    weights: z.array(z.number().finite().positive()).min(2).max(6)
+  }).strict(),
+  z.object({
     type: z.literal('sub-panel.activate'),
     panelId: PanelIdSchema,
     subPanelId: SubPanelIdSchema,
@@ -161,6 +169,12 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     panelId: PanelIdSchema,
     subPanelId: SubPanelIdSchema,
     layoutId: SubPanelLayoutIdSchema
+  }).strict(),
+  z.object({
+    type: z.literal('sub-panel.resize-columns'),
+    panelId: PanelIdSchema,
+    subPanelId: SubPanelIdSchema,
+    weights: z.array(z.number().finite().positive()).min(2).max(6)
   }).strict(),
   z.object({
     type: z.literal('sub-panel.set-scroll'),
@@ -229,6 +243,11 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     instanceId: WidgetInstanceIdSchema,
     targetInstanceId: WidgetInstanceIdSchema,
     groupId: z.string().min(1).refine((value) => value.trim() === value)
+  }).strict(),
+  z.object({
+    type: z.literal('widget.resize-row'),
+    instanceId: WidgetInstanceIdSchema,
+    height: z.number().finite().min(64).max(2048).nullable()
   }).strict(),
   z.object({
     type: z.literal('widget.group.activate'),

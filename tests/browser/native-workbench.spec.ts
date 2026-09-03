@@ -936,6 +936,103 @@ test('Deep Current dock separators resize with keyboard and persist exact bounde
   await expect.poll(() => page.locator('[data-pomegranate-dock="right"]').evaluate((node) => node.getBoundingClientRect().width)).toBe(420);
 });
 
+test('Settings columns and Theme Canvas row resize by keyboard and pointer and persist', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+
+  const firstBoundary = page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' });
+  await expect(firstBoundary).toHaveAttribute('aria-valuenow', '50');
+  const firstColumn = page.locator('[data-sub-panel-lane="0"]');
+  const initialWidth = await firstColumn.evaluate((node) => node.getBoundingClientRect().width);
+  await firstBoundary.press('ArrowRight');
+  await expect(firstBoundary).toHaveAttribute('aria-valuenow', '55');
+  await expect.poll(() => firstColumn.evaluate((node) => node.getBoundingClientRect().width)).toBeGreaterThan(initialWidth + 20);
+
+  const boundaryBox = await firstBoundary.boundingBox();
+  if (!boundaryBox) throw new Error('Expected the Settings column separator to have geometry.');
+  await page.mouse.move(boundaryBox.x + boundaryBox.width / 2, boundaryBox.y + boundaryBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(boundaryBox.x + boundaryBox.width / 2 + 35, boundaryBox.y + boundaryBox.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await expect(firstBoundary).not.toHaveAttribute('aria-valuenow', '55');
+
+  const canvas = page.locator('[data-widget-type="settings.theme-canvas"]');
+  const row = page.getByRole('separator', { name: 'Resize Theme Canvas row' });
+  await expect(row).toHaveAttribute('aria-valuemin', '220');
+  await expect(row).toHaveAttribute('aria-valuemax', '420');
+  await row.press('Home');
+  await expect(canvas).toHaveAttribute('data-pomegranate-row-height', '220');
+  await expect.poll(() => canvas.evaluate((node) => Math.round(node.getBoundingClientRect().height))).toBe(220);
+
+  const rowBox = await row.boundingBox();
+  if (!rowBox) throw new Error('Expected the Theme Canvas row separator to have geometry.');
+  await page.mouse.move(rowBox.x + rowBox.width / 2, rowBox.y + rowBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(rowBox.x + rowBox.width / 2, rowBox.y + rowBox.height / 2 + 40, { steps: 4 });
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute('data-pomegranate-row-height', '260');
+
+  await openDeveloperTools(page);
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  await page.reload();
+  await expect(page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' })).not.toHaveAttribute('aria-valuenow', '50');
+  await expect(page.locator('[data-widget-type="settings.theme-canvas"]')).toHaveAttribute('data-pomegranate-row-height', '260');
+
+  await page.getByRole('separator', { name: 'Resize Theme Canvas row' }).dblclick();
+  await expect(page.locator('[data-widget-type="settings.theme-canvas"]')).not.toHaveAttribute('data-pomegranate-row-height');
+  await page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' }).dblclick();
+  await expect(page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' })).toHaveAttribute('aria-valuenow', '50');
+});
+
+test('all themes expose the same transparent row and column resize controls', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  await openDeveloperTools(page);
+  const themes = page.getByRole('group', { name: 'Visual target' });
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
+    await themes.getByRole('button', { name: theme, exact: true }).click();
+    await closeDeveloperTools(page);
+    for (const [separator, cursor] of [
+      [page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' }), 'col-resize'],
+      [page.getByRole('separator', { name: 'Resize Theme Canvas row' }), 'row-resize']
+    ] as const) {
+      await expect(separator).toBeVisible();
+      expect(await separator.evaluate((node) => ({
+        cursor: getComputedStyle(node).cursor,
+        background: getComputedStyle(node).backgroundColor
+      }))).toEqual({ cursor, background: 'rgba(0, 0, 0, 0)' });
+    }
+    await openDeveloperTools(page);
+  }
+});
+
+test('responsive Settings collapse hides desktop column separators without losing weights', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  const boundary = page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' });
+  await boundary.press('ArrowRight');
+  await expect(boundary).toHaveAttribute('aria-valuenow', '55');
+
+  await page.setViewportSize({ width: 800, height: 720 });
+  await expect(boundary).toBeHidden();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(boundary).toBeVisible();
+  await expect(boundary).toHaveAttribute('aria-valuenow', '55');
+});
+
+test('multi-shelf separators resize by pointer drag', async ({ page }) => {
+  await dragToShelfRail(page, widgetDragSurface(page.getByRole('article', { name: 'World State' })), 'left', 'after');
+  const shelf = page.getByRole('separator', { name: 'Resize primary shelf in left' });
+  const before = Number(await shelf.getAttribute('aria-valuenow'));
+  const box = await shelf.boundingBox();
+  if (!box) throw new Error('Expected a shelf separator to have geometry.');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 35, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(async () => Number(await shelf.getAttribute('aria-valuenow'))).toBeGreaterThan(before);
+});
+
 test('Deep Current Widgets merge into an accessible persistent tab group and reorder', async ({ page }) => {
   const customTheme = page.getByRole('article', { name: 'Theme Materials' });
   const characters = page.getByRole('article', { name: 'Characters (Story)' });
@@ -1459,9 +1556,9 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   await dragToShelfRail(page, widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' })), 'left');
 
   await page.getByRole('tab', { name: 'Library' }).click();
-  const libraryLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
-  await libraryLeft.focus();
-  await libraryLeft.press('Home');
+  const libraryColumns = page.getByRole('separator', { name: 'Resize Focus and Support columns' });
+  await libraryColumns.focus();
+  await libraryColumns.press('Home');
   const character = page.getByRole('article', { name: 'Character Card' });
   const characterBox = await character.boundingBox();
   if (!characterBox) throw new Error('Expected Character Card geometry.');
@@ -1471,17 +1568,17 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   });
 
   await page.getByRole('tab', { name: 'Settings' }).click();
-  const settingsRight = page.getByRole('separator', { name: 'Resize right toolbar' });
-  await settingsRight.focus();
-  await settingsRight.press('ArrowLeft');
+  const settingsColumns = page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' });
+  await settingsColumns.focus();
+  await settingsColumns.press('ArrowLeft');
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
 
   await expect(page.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('separator', { name: 'Resize right toolbar' })).toHaveAttribute('aria-valuenow', '278');
+  await expect(page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' })).toHaveAttribute('aria-valuenow', '45');
   await page.getByRole('tab', { name: 'Library' }).click();
-  await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '200');
+  await expect(page.getByRole('separator', { name: 'Resize Focus and Support columns' })).toHaveAttribute('aria-valuenow', '10');
   await expect(page.getByRole('group', { name: 'Widget group' }).getByRole('tab')).toHaveText(['Character Card', 'Lore Entry Tree']);
   await page.getByRole('tab', { name: 'Scene' }).click();
   await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '420');

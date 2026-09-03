@@ -56,6 +56,8 @@ export interface PanelSurfaceProjection {
   readonly activeSubPanelId: SubPanelId | null;
   readonly activeSubPanelLayoutId: SubPanelLayoutId | null;
   readonly activeSubPanelScrollTop: number;
+  readonly columnWeights: readonly number[];
+  readonly defaultColumnWeights: readonly number[];
   readonly tabId: string;
   readonly surfaceId: string;
   readonly docks: Readonly<Record<'left' | 'main' | 'right', readonly WidgetFrameProjection[]>>;
@@ -182,7 +184,23 @@ export function selectPanelSurface(
     }));
   const suffix = panelDomSuffix(activePanel.id);
   const template = templates.resolve(activePanel);
-  const laneWeights = activeSubPanel ? SUB_PANEL_LAYOUTS[activeSubPanel.layoutId].columns : null;
+  const authoredWeights = activeSubPanel
+    ? SUB_PANEL_LAYOUTS[activeSubPanel.layoutId].columns
+    : template.ok && template.template.family === 'focus-support'
+      ? [1.7, 0.8]
+      : template.ok && template.template.family === 'columns'
+        ? template.template.regions.map(() => 1)
+        : [];
+  const normalizeWeights = (weights: readonly number[]) => {
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+    return Object.freeze(weights.map((weight) => weight / total));
+  };
+  const defaultColumnWeights = authoredWeights.length > 0 ? normalizeWeights(authoredWeights) : Object.freeze([]);
+  const customWeights = activeSubPanel?.columnWeights ?? activePanel.columnWeights;
+  const columnWeights = customWeights?.length === authoredWeights.length
+    ? Object.freeze([...customWeights])
+    : defaultColumnWeights;
+  const laneWeights = activeSubPanel ? columnWeights : null;
   const projectedRegions = template.ok && laneWeights && template.template.family === 'columns'
     ? template.template.regions.slice(0, laneWeights.length)
     : template.ok
@@ -217,6 +235,8 @@ export function selectPanelSurface(
     activeSubPanelId: activeSubPanel?.id ?? null,
     activeSubPanelLayoutId: activeSubPanel?.layoutId ?? null,
     activeSubPanelScrollTop: activeSubPanel?.scrollTop ?? 0,
+    columnWeights,
+    defaultColumnWeights,
     tabId: `pomegranate-panel-tab-${suffix}`,
     surfaceId: `pomegranate-panel-${suffix}`,
     docks: Object.freeze({ left: docked('left'), main: docked('main'), right: docked('right') }),
@@ -273,7 +293,10 @@ export function createWidgetActions(
           ...(subPanelId === undefined ? {} : { subPanelId, lane }),
           regionId,
           shelfId,
-          order: Number.MAX_SAFE_INTEGER
+          order: Number.MAX_SAFE_INTEGER,
+          ...(currentVisible?.kind === 'docked' && currentVisible.height !== undefined
+            ? { height: currentVisible.height }
+            : {})
         }
       });
     },

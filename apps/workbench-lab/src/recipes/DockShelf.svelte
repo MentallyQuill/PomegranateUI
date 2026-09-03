@@ -2,14 +2,16 @@
   import type { Snippet } from 'svelte';
   import type { PanelShelfProjection, WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core';
   import ShelfResizeHandle from './ShelfResizeHandle.svelte';
+  import WidgetRowResizeHandle from './WidgetRowResizeHandle.svelte';
   import WidgetGroup from './WidgetGroup.svelte';
 
-  let { projection, store, renderWidget, titleFor, resizable = false }: {
+  let { projection, store, renderWidget, titleFor, resizable = false, rowResizable = true }: {
     projection: PanelShelfProjection;
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
     resizable?: boolean;
+    rowResizable?: boolean;
   } = $props();
 
   type ShelfItem =
@@ -32,6 +34,22 @@
     }
     return result;
   });
+
+  function frameFor(item: ShelfItem): WidgetFrameProjection {
+    if (item.kind === 'widget') return item.frame;
+    return item.frames.find((frame) => frame.placement.kind === 'docked' && frame.placement.group?.active)
+      ?? item.frames[0]!;
+  }
+
+  function minimumFor(item: ShelfItem): number {
+    const frames = item.kind === 'widget' ? [item.frame] : item.frames;
+    return Math.max(...frames.map((frame) => frame.manifest?.catalog?.geometry.minHeight ?? 80));
+  }
+
+  function maximumFor(item: ShelfItem): number {
+    const frames = item.kind === 'widget' ? [item.frame] : item.frames;
+    return Math.max(minimumFor(item), Math.min(...frames.map((frame) => frame.manifest?.catalog?.geometry.maxHeight ?? 1200)));
+  }
 </script>
 
 <section
@@ -42,10 +60,21 @@
   style={`--pom-shelf-weight:${projection.shelf.weight}`}
 >
   {#each items as item (item.id)}
+    {@const rowFrame = frameFor(item)}
     {#if item.kind === 'group'}
       <WidgetGroup frames={item.frames} {store} {renderWidget} {titleFor} />
     {:else}
       {@render renderWidget(item.frame)}
+    {/if}
+    {#if rowResizable}
+      <WidgetRowResizeHandle
+        instanceId={rowFrame.instanceId}
+        label={titleFor?.(rowFrame) ?? rowFrame.title}
+        height={rowFrame.placement.kind === 'docked' ? rowFrame.placement.height : undefined}
+        minimum={minimumFor(item)}
+        maximum={maximumFor(item)}
+        {store}
+      />
     {/if}
   {/each}
 </section>

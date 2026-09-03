@@ -37,6 +37,9 @@ import {
   resetPanel,
   resizeShelf,
   resizePanelDock,
+  resizePanelColumns,
+  resizeSubPanelColumns,
+  resizeWidgetRow,
   restoreWidget,
   separateWidgetGroup,
   setSubPanelScroll,
@@ -108,6 +111,8 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'panel.reordered', revision, panelId: command.panelId };
     case 'panel.resize-dock':
       return { type: 'panel.dock-resized', revision, panelId: command.panelId, edge: command.edge };
+    case 'panel.resize-columns':
+      return { type: 'panel.columns-resized', revision, panelId: command.panelId };
     case 'sub-panel.activate':
       return { type: 'sub-panel.activated', revision, panelId: command.panelId, subPanelId: command.subPanelId };
     case 'sub-panel.create':
@@ -120,6 +125,8 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'sub-panel.reordered', revision, panelId: command.panelId, subPanelId: command.subPanelId };
     case 'sub-panel.change-layout':
       return { type: 'sub-panel.layout-changed', revision, panelId: command.panelId, subPanelId: command.subPanelId };
+    case 'sub-panel.resize-columns':
+      return { type: 'sub-panel.columns-resized', revision, panelId: command.panelId, subPanelId: command.subPanelId };
     case 'sub-panel.set-scroll':
       return { type: 'sub-panel.scroll-retained', revision, panelId: command.panelId, subPanelId: command.subPanelId };
     case 'sub-panel.move-widgets':
@@ -156,6 +163,8 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'widget.group-reordered', revision, instanceId: command.instanceId };
     case 'widget.group.separate':
       return { type: 'widget.group-separated', revision, instanceId: command.instanceId };
+    case 'widget.resize-row':
+      return { type: 'widget.row-resized', revision, instanceId: command.instanceId };
     case 'widget.shelve':
       return { type: 'widget.shelved', revision, instanceId: command.instanceId };
     case 'widget.restore':
@@ -328,6 +337,9 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
           case 'panel.resize-dock':
             transition = resizePanelDock(before, command.panelId, command.edge, command.width);
             break;
+          case 'panel.resize-columns':
+            transition = resizePanelColumns(before, command.panelId, command.weights, templates);
+            break;
           case 'sub-panel.activate':
             transition = activateSubPanel(
               before,
@@ -356,6 +368,9 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
             break;
           case 'sub-panel.change-layout':
             transition = changeSubPanelLayout(before, command.panelId, command.subPanelId, command.layoutId);
+            break;
+          case 'sub-panel.resize-columns':
+            transition = resizeSubPanelColumns(before, command.panelId, command.subPanelId, command.weights);
             break;
           case 'sub-panel.set-scroll':
             transition = setSubPanelScroll(before, command.panelId, command.subPanelId, command.scrollTop);
@@ -412,6 +427,9 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
             break;
           case 'widget.group.separate':
             transition = separateWidgetGroup(before, command.instanceId, command.placement, placementContext);
+            break;
+          case 'widget.resize-row':
+            transition = resizeWidgetRow(before, command.instanceId, command.height);
             break;
           case 'widget.remove':
             transition = removeWidget(before, command.instanceId);

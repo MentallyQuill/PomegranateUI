@@ -36,7 +36,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
     'workbench-surface'
   ]);
   for (const entry of manifest.recipes) {
-    assert.equal(entry.revision, entry.id === 'theme-settings' ? 2 : 1);
+    assert.equal(entry.revision, ['theme-settings', 'workbench-surface'].includes(entry.id) ? 2 : 1);
     assert.equal(entry.compatiblePomegranateRange, '>=0.1.0-private.0 <0.2.0');
     assert.ok(entry.dependencies.includes('svelte'));
     assert.ok(entry.rendererContractIds.length > 0);
@@ -55,7 +55,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
 test('recipe check mode validates actual source hashes', () => {
   const result = run(['--check']);
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /Recipe registry verified: 8 recipes, 25 files\./);
+  assert.match(result.stdout, /Recipe registry verified: 8 recipes, 27 files\./);
 });
 
 test('theme authoring recipe exposes five focused elements through one shared port', async () => {
@@ -112,6 +112,12 @@ test('copy-owned Workbench recipes carry optional host title and metadata presen
   }
   const group = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'WidgetGroup.svelte'), 'utf8');
   assert.match(group, /titleFor\?\.\(frame\) \?\? frame\.title/);
+  const columnResize = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'ColumnResizeHandle.svelte'), 'utf8');
+  const rowResize = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'WidgetRowResizeHandle.svelte'), 'utf8');
+  assert.match(columnResize, /sub-panel\.resize-columns/);
+  assert.match(columnResize, /onpointercancel=\{pointerFinish\}/);
+  assert.match(rowResize, /widget\.resize-row/);
+  assert.match(rowResize, /ondblclick=\{\(\) => commit\(null\)\}/);
 });
 
 test('copy-owned navigation recipes expose semantic rails and host-owned actions', async () => {

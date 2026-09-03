@@ -165,9 +165,10 @@
     },
     {
       "id": "workbench-surface",
-      "revision": 1,
+      "revision": 2,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
       "files": [
+        "ColumnResizeHandle.svelte",
         "DockRegion.svelte",
         "DockShelf.svelte",
         "PanelTemplateSurface.svelte",
@@ -176,6 +177,7 @@
         "StoryStage.svelte",
         "UnavailableTemplate.svelte",
         "WidgetGroup.svelte",
+        "WidgetRowResizeHandle.svelte",
         "WorkbenchSurface.svelte"
       ],
       "dependencies": [
@@ -189,14 +191,16 @@
         "POM-RENDER-A4B0DF2967"
       ],
       "sha256": {
-        "DockRegion.svelte": "4DF1263EB7677B7EA2CEA3BFDAC83386DFFB9F6A284235D966CE923B3618BD4A",
-        "DockShelf.svelte": "FCE1C3AAA0B71F951477820A1C178A93274BFA4144BE45C7A173D5EF77EF4043",
-        "PanelTemplateSurface.svelte": "44B37D7D1E94D6D6AB3B9315ED637FF60890CA46795321C7B7E9C9FC6E24071C",
-        "ShelfResizeHandle.svelte": "05992E3C29C2F833B11A3FCA96EF69A6F5E29E07F14311814670ABB776E5A997",
+        "ColumnResizeHandle.svelte": "15607CC423FDC662EAFE96126F421CC41BF78083F61EE309F367EB7273ABF997",
+        "DockRegion.svelte": "BB59D17C455AD5B84B067DBA6C01330BB4A0C2B7EE3CF02BD9ED7248F63548E1",
+        "DockShelf.svelte": "D7ED27910969509D1CCA2BEE31AB161E2E3353BBABD379FAF6D9ECD63434B2DF",
+        "PanelTemplateSurface.svelte": "E2DA896B7799D60DCC3FA6140D47744FC8BFEB032B7EB1B16F3517DBE0BA3706",
+        "ShelfResizeHandle.svelte": "F42C3F1254CE0435E29D9CF09C388A479B68A99A61B4CFE0AAC554BA7465262B",
         "StoryComposer.svelte": "BACB8A8113A1BEA855621AA36863E98F7DFF0ECA79342B86EA23B10E39FC4A84",
         "StoryStage.svelte": "4DA0799EB7223BB6E5DBC5E70549EE087E5C2850A1374C7148B4C1618EF5D5FD",
         "UnavailableTemplate.svelte": "D37B9C22B03942229BFBAF7469E5C3631E5775ABB809D9AFB2171AF3D581875B",
-        "WidgetGroup.svelte": "3E833CE7A4D6DF2FE7E68FEE51B5497F80EFB30B7E5AFE69D42B308C086B5AE8",
+        "WidgetGroup.svelte": "6DB2D1221DB82277F5615963962DAA4E9F93E0D71FFA9246B11FB7502DB01F85",
+        "WidgetRowResizeHandle.svelte": "C306328DF3E3A0C67772E4248D3219E51C05B0683F6453CC215D441940989720",
         "WorkbenchSurface.svelte": "9C8C5E036AF8D1ADC332638A48A6A5C4438349E07456019E0D06462233F06D97"
       }
     }

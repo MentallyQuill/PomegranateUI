@@ -349,9 +349,13 @@
     syncCompactDockDefaults();
   });
 
-  function floatingStyle(frame: { placement: { kind: string; x?: number; y?: number; width?: number; height?: number; z?: number } }) {
-    if (frame.placement.kind !== 'floating') return '';
-    return `left:${frame.placement.x}px;top:${frame.placement.y}px;width:${frame.placement.width}px;min-height:${frame.placement.height}px;z-index:${frame.placement.z}`;
+  function placementStyle(frame: { placement: { kind: string; x?: number; y?: number; width?: number; height?: number; z?: number } }) {
+    if (frame.placement.kind === 'floating') {
+      return `left:${frame.placement.x}px;top:${frame.placement.y}px;width:${frame.placement.width}px;min-height:${frame.placement.height}px;z-index:${frame.placement.z}`;
+    }
+    return typeof frame.placement.height === 'number'
+      ? `height:${frame.placement.height}px;min-height:${frame.placement.height}px`
+      : '';
   }
 
   function placeFromCatalog(manifest: WidgetManifest, selectedTarget?: CatalogPlacementTarget | HTMLElement) {
@@ -617,6 +621,7 @@
       titleFor={frameTitle}
       {leftCollapsed}
       {rightCollapsed}
+      showDockResizers={requestedSurface !== null}
       ontoggleleft={() => { leftCollapsed = !leftCollapsed; }}
       ontoggleright={() => { rightCollapsed = !rightCollapsed; }}
       class="workbench-surface"
@@ -631,7 +636,8 @@
           data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
           data-pomegranate-shelf={frame.placement.kind === 'docked' ? frame.placement.shelfId : undefined}
           data-pomegranate-order={frame.placement.kind === 'docked' ? frame.placement.order : undefined}
-          style={floatingStyle(frame)}
+          data-pomegranate-row-height={frame.placement.kind === 'docked' && !frame.placement.group ? frame.placement.height : undefined}
+          style={frame.placement.kind === 'docked' && frame.placement.group ? '' : placementStyle(frame)}
         >
           {#if focusedFrame?.instanceId === frame.instanceId}
             <div

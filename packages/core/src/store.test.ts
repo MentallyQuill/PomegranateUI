@@ -172,6 +172,27 @@ describe('Workbench store', () => {
     expect(store.getState()).toEqual({ ...beforeDelete, revision: beforeDelete.revision + 2 });
   });
 
+  it('routes persistent column and Widget row sizing through events and undo', () => {
+    const store = subPanelStore();
+    const columns = store.dispatch({
+      type: 'sub-panel.resize-columns',
+      panelId: sceneId,
+      subPanelId: notesId,
+      weights: [0.7, 0.3]
+    });
+    expect(columns).toMatchObject({
+      ok: true,
+      events: [{ type: 'sub-panel.columns-resized', panelId: sceneId, subPanelId: notesId }]
+    });
+    expect(columns.state.panels[0]?.subPanels?.find(({ id }) => id === notesId)?.columnWeights).toEqual([0.7, 0.3]);
+
+    const row = store.dispatch({ type: 'widget.resize-row', instanceId: summaryId, height: 284 });
+    expect(row).toMatchObject({ ok: true, events: [{ type: 'widget.row-resized', instanceId: summaryId }] });
+    expect(row.state.placements[summaryId]).toMatchObject({ height: 284 });
+    expect(store.dispatch({ type: 'layout.undo' }).ok).toBe(true);
+    expect(store.getState().placements[summaryId]).not.toHaveProperty('height');
+  });
+
   it('publishes one frozen event after an accepted command', () => {
     const store = fixtureStore();
     const seen: number[] = [];

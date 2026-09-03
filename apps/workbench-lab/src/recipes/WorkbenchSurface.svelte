@@ -17,6 +17,7 @@
     titleFor,
     leftCollapsed = false,
     rightCollapsed = false,
+    showDockResizers = false,
     ontoggleleft,
     ontoggleright,
     class: className = ''
@@ -26,6 +27,7 @@
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
     leftCollapsed?: boolean;
     rightCollapsed?: boolean;
+    showDockResizers?: boolean;
     ontoggleleft?: (() => void) | undefined;
     ontoggleright?: (() => void) | undefined;
     class?: string;
@@ -78,8 +80,10 @@
       {:else}
         <PanelTemplateSurface {surface} {store} {renderWidget} {titleFor} />
       {/if}
-      <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
-      <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />
+      {#if surface.templateFamily === 'story-stage' || showDockResizers}
+        <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
+        <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />
+      {/if}
       {#if surface.templateFamily === 'story-stage'}
         <button
           type="button"
