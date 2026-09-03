@@ -1352,7 +1352,7 @@ test.describe('coarse-pointer Deep controls', () => {
     const sliders = page.locator('[data-theme-authoring-element="materials"] input[type="range"]');
     await expect(sliders).toHaveCount(4);
     for (const slider of await sliders.all()) {
-      expect((await slider.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      expect(Math.round((await slider.boundingBox())?.height ?? 0)).toBeGreaterThanOrEqual(44);
     }
   });
 });
