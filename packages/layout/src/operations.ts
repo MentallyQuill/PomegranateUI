@@ -260,6 +260,21 @@ export function mergeWidgetGroup(
   return acceptLayout({ ...state, revision: nextRevision(state), placements: normalizeTabGroups(placements) });
 }
 
+export function createAndGroupWidget(
+  state: WorkbenchState,
+  instance: WidgetInstance,
+  placement: DockedPlacement,
+  targetInstanceId: WidgetInstanceId,
+  groupId: string,
+  context: PlacementContext
+): LayoutResult {
+  const created = createWidget(state, instance, placement, context);
+  if (!created.ok) return created;
+  const grouped = mergeWidgetGroup(created.state, instance.id, targetInstanceId, groupId);
+  if (!grouped.ok) return { ok: false, state, error: grouped.error };
+  return acceptLayout({ ...grouped.state, revision: nextRevision(state) });
+}
+
 export function activateWidgetGroup(state: WorkbenchState, instanceId: WidgetInstanceId): LayoutResult {
   const selected = dockedPlacement(state, instanceId);
   if (!state.widgets[instanceId]) return rejectLayout(state, 'MISSING_WIDGET', `Widget instance '${instanceId}' does not exist.`);
@@ -629,16 +644,22 @@ export function createShelfWithWidget(
   shelf: ShelfState,
   instanceId: WidgetInstanceId,
   placement: DockedPlacement,
-  context: PlacementContext
+  context: PlacementContext,
+  instance?: WidgetInstance
 ): LayoutResult {
   if (shelf.panelId !== placement.panelId
     || shelf.regionId !== placement.regionId
     || shelf.id !== placement.shelfId) {
     return rejectLayout(state, 'INVALID_PLACEMENT', 'Widget placement must target the Shelf being created.');
   }
+  if (instance && instance.id !== instanceId) {
+    return rejectLayout(state, 'INVALID_PLACEMENT', 'Created Widget identity must match the placed instance.');
+  }
   const created = createShelf(state, shelf, context.templates);
   if (!created.ok) return created;
-  const placed = placeWidget(created.state, instanceId, placement, context);
+  const placed = instance
+    ? createWidget(created.state, instance, placement, context)
+    : placeWidget(created.state, instanceId, placement, context);
   if (!placed.ok) return { ok: false, state, error: placed.error };
   return acceptLayout({ ...placed.state, revision: nextRevision(state) });
 }

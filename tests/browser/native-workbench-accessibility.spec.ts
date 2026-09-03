@@ -1128,12 +1128,12 @@ test('Catalog touch commits after 300ms while pointer cancellation and window bl
   const successStart = { x: successBox.x + 12, y: successBox.y + 12 };
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [successStart] });
   await page.waitForTimeout(315);
-  const target = page.locator('[data-catalog-placement-target]').first();
+  const target = page.locator('[data-pom-part="widget.drop-rail"]').first();
   const targetBox = await target.boundingBox();
   if (!targetBox) throw new Error('Missing successful touch placement target.');
   const destination = { x: targetBox.x + targetBox.width / 2, y: targetBox.y + targetBox.height / 2 };
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [destination] });
-  await expect(page.locator('[data-catalog-placement-target].is-catalog-target-active')).toHaveCount(1);
+  await expect(page.locator('[data-pom-part="widget.drop-rail"][data-active="true"]')).toHaveCount(1);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(1);
   await expect(catalog).toBeVisible();

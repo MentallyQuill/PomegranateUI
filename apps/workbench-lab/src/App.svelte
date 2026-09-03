@@ -29,6 +29,7 @@
   import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
   import type { CatalogPlacementTarget } from './recipes/CatalogPlacementController.js';
+  import type { DockIntent } from './recipes/widget-docking.js';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
   import WorkbenchSurface from './recipes/WorkbenchSurface.svelte';
   import WorkbenchDeveloperDrawer from './recipes/WorkbenchDeveloperDrawer.svelte';
@@ -358,13 +359,92 @@
       : '';
   }
 
-  function placeFromCatalog(manifest: WidgetManifest, selectedTarget?: CatalogPlacementTarget | HTMLElement) {
+  function placeFromCatalog(manifest: WidgetManifest, selectedTarget?: CatalogPlacementTarget | DockIntent | HTMLElement) {
     const target = selectedTarget && 'identity' in selectedTarget ? selectedTarget : undefined;
-    const panelId = target ? asPanelId(target.identity.panelId) : workbench.activePanelId;
+    const intent = selectedTarget && 'kind' in selectedTarget ? selectedTarget as DockIntent : undefined;
+    const panelId = intent ? asPanelId(intent.panelId) : target ? asPanelId(target.identity.panelId) : workbench.activePanelId;
     if (!panelId) return;
     const panel = workbench.panels.find((candidate) => candidate.id === panelId);
     if (!panel) return;
     const id = asWidgetInstanceId(`catalog-${manifest.type.replace(/[^a-z0-9]+/gi, '-')}-${workbench.revision + 1}`);
+    const instance = { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} };
+
+    if (intent) {
+      const owner = {
+        panelId,
+        ...(intent.subPanelId === undefined ? {} : { subPanelId: asSubPanelId(intent.subPanelId), lane: intent.lane ?? 0 }),
+        regionId: intent.regionId
+      };
+      if (intent.kind === 'tab' && intent.targetInstanceId) {
+        const targetId = asWidgetInstanceId(intent.targetInstanceId);
+        const targetPlacement = workbench.placements[targetId];
+        if (targetPlacement?.kind !== 'docked') return;
+        const result = store.dispatch({
+          type: 'widget.create-and-group',
+          instance,
+          placement: {
+            kind: 'docked',
+            panelId: targetPlacement.panelId,
+            ...(targetPlacement.subPanelId === undefined || targetPlacement.lane === undefined
+              ? {}
+              : { subPanelId: targetPlacement.subPanelId, lane: targetPlacement.lane }),
+            regionId: targetPlacement.regionId,
+            shelfId: targetPlacement.shelfId,
+            order: targetPlacement.order + 1
+          },
+          targetInstanceId: targetId,
+          groupId: targetPlacement.group?.id ?? intent.groupId ?? `group-${targetId}`
+        });
+        status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
+        return;
+      }
+
+      if (intent.kind === 'shelf' || intent.kind === 'insert-before' || intent.kind === 'insert-after') {
+        const targetShelf = intent.shelfId
+          ? workbench.shelves.find((shelf) => shelf.panelId === panelId
+            && shelf.regionId === intent.regionId
+            && shelf.id === intent.shelfId)
+          : undefined;
+        const shelfOrder = intent.kind === 'shelf'
+          ? intent.insertOrder ?? 0
+          : targetShelf ? targetShelf.order + (intent.kind === 'insert-after' ? 1 : 0) : null;
+        if (shelfOrder === null) return;
+        const shelfId = `${intent.regionId}-shelf-${workbench.revision + 1}`;
+        const result = store.dispatch({
+          type: 'shelf.create-and-place',
+          shelf: { id: shelfId, panelId, regionId: intent.regionId, order: shelfOrder, weight: 1 },
+          instanceId: id,
+          instance,
+          placement: { kind: 'docked', ...owner, shelfId, order: 0 }
+        });
+        status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
+        return;
+      }
+
+      const shelf = workbench.shelves
+        .filter((candidate) => candidate.panelId === panelId && candidate.regionId === intent.regionId)
+        .sort((left, right) => left.order - right.order)[0];
+      if (!shelf) {
+        const shelfId = 'primary';
+        const result = store.dispatch({
+          type: 'shelf.create-and-place',
+          shelf: { id: shelfId, panelId, regionId: intent.regionId, order: 0, weight: 1 },
+          instanceId: id,
+          instance,
+          placement: { kind: 'docked', ...owner, shelfId, order: 0 }
+        });
+        status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
+        return;
+      }
+      const result = store.dispatch({
+        type: 'widget.create',
+        instance,
+        placement: { kind: 'docked', ...owner, shelfId: shelf.id, order: Number.MAX_SAFE_INTEGER }
+      });
+      status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
+      return;
+    }
+
     const activeSubPanel = panel.subPanels?.find((candidate) => candidate.id === panel.activeSubPanelId);
     const role = manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.regionRole : 'stage';
     const template = store.templates.resolve(panel);
@@ -390,7 +470,7 @@
       ?? (manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.shelfId : 'primary');
     const result = store.dispatch({
       type: 'widget.create',
-      instance: { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} },
+      instance,
       placement: {
         kind: 'docked',
         panelId,
@@ -403,7 +483,7 @@
     status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
   }
 
-  function isCatalogPlacementTargetCompatible(manifest: WidgetManifest, target: HTMLElement): boolean {
+  function isPotentialCatalogDockTarget(manifest: WidgetManifest, target: HTMLElement): boolean {
     const panel = activePanel;
     const shape = manifest.catalog?.shape;
     if (!panel || !shape) return false;
@@ -414,6 +494,11 @@
     if (resolution.template.family === 'columns' && manifest.catalog!.minColumns > resolution.template.regions.length) return false;
     const region = resolution.template.regions.find((candidate) => candidate.id === regionId);
     if (!region?.acceptedShapes.includes(shape)) return false;
+    return true;
+  }
+
+  function isCatalogPlacementTargetCompatible(manifest: WidgetManifest, target: HTMLElement): boolean {
+    if (!isPotentialCatalogDockTarget(manifest, target)) return false;
     const style = getComputedStyle(target);
     if (style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none') return false;
     const rect = target.getBoundingClientRect();
@@ -672,8 +757,10 @@
     instanceCounts={catalogInstanceCounts}
     oncreate={placeFromCatalog}
     ontargetplace={placeFromCatalog}
+    ondockplace={placeFromCatalog}
     getPlacementTargetRoot={() => workbenchElement ?? null}
     isPlacementTargetCompatible={isCatalogPlacementTargetCompatible}
+    isPotentialDockTarget={isPotentialCatalogDockTarget}
     class="widget-catalog"
   />
 

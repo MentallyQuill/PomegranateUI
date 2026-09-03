@@ -269,6 +269,89 @@ describe('Workbench store', () => {
     expect(store.getState()).toEqual({ ...before, revision: before.revision + 2 });
   });
 
+  it('creates a Catalog Widget with its Shelf in one event, notification, and undo step', () => {
+    const store = fixtureStore();
+    const before = store.getState();
+    const seen: number[] = [];
+    store.subscribe((snapshot) => seen.push(snapshot.revision));
+
+    const result = store.dispatch({
+      type: 'shelf.create-and-place',
+      shelf: { id: 'catalog-shelf', panelId: sceneId, regionId: 'left', order: 1, weight: 0.5 },
+      instanceId: summaryId,
+      instance: instance(),
+      placement: { kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'catalog-shelf', order: 0 }
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(result).toMatchObject({
+      ok: true,
+      events: [{ type: 'shelf.created-with-widget', panelId: sceneId, shelfId: 'catalog-shelf', instanceId: summaryId }]
+    });
+    expect(result.state.revision).toBe(before.revision + 1);
+    expect(result.state.widgets[summaryId]).toEqual(instance());
+    expect(result.state.placements[summaryId]).toMatchObject({ shelfId: 'catalog-shelf' });
+    expect(seen).toEqual([before.revision + 1]);
+
+    expect(store.dispatch({ type: 'layout.undo' }).ok).toBe(true);
+    expect(store.getState()).toEqual({ ...before, revision: before.revision + 2 });
+  });
+
+  it('rejects an unregistered Catalog Widget without creating its Shelf', () => {
+    const store = fixtureStore();
+    const before = store.getState();
+    let notifications = 0;
+    store.subscribe(() => { notifications += 1; });
+    const unknown = instance('extension.unknown');
+
+    const result = store.dispatch({
+      type: 'shelf.create-and-place',
+      shelf: { id: 'catalog-shelf', panelId: sceneId, regionId: 'left', order: 1, weight: 0.5 },
+      instanceId: unknown.id,
+      instance: unknown,
+      placement: { kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'catalog-shelf', order: 0 }
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'UNKNOWN_WIDGET_TYPE' } });
+    expect(store.getState()).toBe(before);
+    expect(notifications).toBe(0);
+  });
+
+  it('creates and groups a Catalog Widget in one event, notification, and undo step', () => {
+    const store = fixtureStore();
+    expect(store.dispatch({
+      type: 'widget.create',
+      instance: instance(),
+      placement: { kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'primary', order: 0 }
+    }).ok).toBe(true);
+    const before = store.getState();
+    const seen: number[] = [];
+    store.subscribe((snapshot) => seen.push(snapshot.revision));
+    const catalogInstance = { ...instance(), id: summaryCopyId };
+
+    const result = store.dispatch({
+      type: 'widget.create-and-group',
+      instance: catalogInstance,
+      placement: { kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'primary', order: 1 },
+      targetInstanceId: summaryId,
+      groupId: 'catalog-group'
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(result).toMatchObject({
+      ok: true,
+      events: [{ type: 'widget.grouped', instanceId: summaryCopyId }]
+    });
+    expect(result.state.revision).toBe(before.revision + 1);
+    expect(result.state.widgets[summaryCopyId]).toEqual(catalogInstance);
+    expect(result.state.placements[summaryId]).toMatchObject({ group: { id: 'catalog-group', active: false } });
+    expect(result.state.placements[summaryCopyId]).toMatchObject({ group: { id: 'catalog-group', active: true } });
+    expect(seen).toEqual([before.revision + 1]);
+
+    expect(store.dispatch({ type: 'layout.undo' }).ok).toBe(true);
+    expect(store.getState()).toEqual({ ...before, revision: before.revision + 2 });
+  });
+
   it('rejects an unknown Widget type without mutation or notification', () => {
     const store = fixtureStore();
     const before = store.getState();

@@ -16,6 +16,7 @@
     type CatalogPlacementState,
     type CatalogPlacementTarget
   } from './CatalogPlacementController.js';
+  import type { DockIntent } from './widget-docking.js';
   import CatalogWidgetPreview from './CatalogWidgetPreview.svelte';
 
   let {
@@ -26,8 +27,10 @@
     oncreate,
     onplace,
     ontargetplace,
+    ondockplace,
     getPlacementTargetRoot,
     isPlacementTargetCompatible,
+    isPotentialDockTarget,
     onCatalogInvariantError,
     class: className = ''
   }: {
@@ -38,8 +41,10 @@
     oncreate: (manifest: WidgetManifest) => void;
     onplace?: (manifest: WidgetManifest, result: HTMLElement) => void;
     ontargetplace?: (manifest: WidgetManifest, target: CatalogPlacementTarget) => void;
+    ondockplace?: (manifest: WidgetManifest, intent: DockIntent) => void;
     getPlacementTargetRoot?: () => ParentNode | null;
     isPlacementTargetCompatible?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
+    isPotentialDockTarget?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
     onCatalogInvariantError?: (error: Error) => void;
     class?: string;
   } = $props();
@@ -292,10 +297,17 @@
         getTargetRoot: getPlacementTargetRoot,
         getInstanceCount: (manifest) => instanceCounts[String(manifest.type)] ?? 0,
         isCompatibleTarget: isPlacementTargetCompatible,
+        ...(isPotentialDockTarget ? { isPotentialDockTarget } : {}),
         onCommit: (manifest, target) => {
           placementAnnouncement = `${manifest.title} placement committed.`;
           ontargetplace(manifest, target);
         },
+        ...(ondockplace ? {
+          onDockCommit: (manifest: WidgetManifest, intent: DockIntent) => {
+            placementAnnouncement = `${manifest.title} placement committed.`;
+            ondockplace(manifest, intent);
+          }
+        } : {}),
         onAnnounce: (message) => { placementAnnouncement = message; },
         captureScrollAnchor: () => Object.freeze({
           anchor: gridController?.captureAnchor() ?? null,
