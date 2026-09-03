@@ -638,6 +638,49 @@ describe('CatalogPlacementController', () => {
     overlay.remove();
   });
 
+  it('prefers the deepest compatible target when an overlay obscures nested overlapping rectangles', () => {
+    const { root, origin, target: outer } = placementSurface();
+    const inner = outer.appendChild(document.createElement('section'));
+    inner.dataset.pomegranateRegionSurface = 'stage';
+    inner.dataset.pomegranateRegionRole = 'stage';
+    inner.dataset.subPanelLane = '2';
+    inner.setAttribute('aria-label', 'Nested stage lane');
+    Object.defineProperty(inner, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(180, 140, 180, 120)
+    });
+    const overlay = document.body.appendChild(document.createElement('div'));
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(() => overlay)
+    });
+    Object.defineProperty(document, 'elementsFromPoint', {
+      configurable: true,
+      value: vi.fn(() => [overlay])
+    });
+    const onCommit = vi.fn();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit
+    });
+
+    controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 220, clientY: 180 }));
+    document.dispatchEvent(pointerEvent('pointerup', { clientX: 220, clientY: 180 }));
+
+    expect(onCommit).toHaveBeenCalledOnce();
+    expect(onCommit).toHaveBeenCalledWith(manifest, expect.objectContaining({
+      identity: expect.objectContaining({ regionId: 'stage', lane: 2 }),
+      element: inner
+    }));
+    expect(onCommit).not.toHaveBeenCalledWith(manifest, expect.objectContaining({ element: outer }));
+    controller.destroy();
+  });
+
   it('publishes deterministic proxy-state transitions and stops after unsubscribe', () => {
     const { root, origin } = placementSurface();
     const controller = createCatalogPlacementController({

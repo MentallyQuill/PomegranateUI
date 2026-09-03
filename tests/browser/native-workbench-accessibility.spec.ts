@@ -1093,12 +1093,12 @@ test('native workbench Catalog contains focus and restores exact keyboard-placem
   await expect(launcher).toBeFocused();
 });
 
-test('Catalog touch hold lifts at 300ms and pointer cancellation restores the modal without placement', async ({ page, context }) => {
+test('Catalog touch commits after 300ms while pointer cancellation and window blur restore exact state', async ({ page, context }) => {
   await openFresh(page, 1024, 768);
   const launcher = page.getByRole('button', { name: 'Open Widget Catalog', includeHidden: true });
   await launcher.press('Enter');
   const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
-  const result = catalog.locator('[data-catalog-result][data-widget-type="library.character-card"]');
+  const result = catalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
   await result.scrollIntoViewIfNeeded();
   const box = await result.boundingBox();
   if (!box) throw new Error('Missing touch Catalog result geometry.');
@@ -1113,7 +1113,44 @@ test('Catalog touch hold lifts at 300ms and pointer cancellation restores the mo
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
   await expect(catalog).toBeVisible();
   await expect(page.locator('[data-catalog-placement-proxy]')).toHaveCount(0);
-  await expect(page.locator('[data-widget-type="library.character-card"]:not([data-catalog-result])')).toHaveCount(0);
+  await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(0);
+
+  const successBox = await result.boundingBox();
+  if (!successBox) throw new Error('Missing successful touch Catalog geometry.');
+  const successStart = { x: successBox.x + 12, y: successBox.y + 12 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [successStart] });
+  await page.waitForTimeout(315);
+  const target = page.locator('[data-catalog-placement-target]').first();
+  const targetBox = await target.boundingBox();
+  if (!targetBox) throw new Error('Missing successful touch placement target.');
+  const destination = { x: targetBox.x + targetBox.width / 2, y: targetBox.y + targetBox.height / 2 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [destination] });
+  await expect(page.locator('[data-catalog-placement-target].is-catalog-target-active')).toHaveCount(1);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(1);
+  await expect(catalog).toBeVisible();
+
+  const search = catalog.getByRole('searchbox', { name: 'Search Widgets' });
+  await search.fill('library');
+  await catalog.getByRole('button', { name: 'Library', exact: true }).click();
+  await catalog.getByRole('button', { name: 'Compact', exact: true }).click();
+  await result.scrollIntoViewIfNeeded();
+  const restoredScrollTop = await catalog.locator('.catalog-results').evaluate((list) => list.scrollTop);
+  const blurBox = await result.boundingBox();
+  if (!blurBox) throw new Error('Missing blur-cancellation Catalog geometry.');
+  const blurStart = { x: blurBox.x + 12, y: blurBox.y + 12 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [blurStart] });
+  await page.waitForTimeout(315);
+  await expect(catalog).toBeHidden();
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await expect(catalog).toBeVisible();
+  await expect(page.locator('[data-catalog-placement-proxy]')).toHaveCount(0);
+  await expect(search).toHaveValue('library');
+  await expect(catalog.getByRole('button', { name: 'Library', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(catalog).toHaveAttribute('data-result-mode', 'compact');
+  await expect.poll(() => catalog.locator('.catalog-results').evaluate((list) => list.scrollTop)).toBe(restoredScrollTop);
+  await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(1);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
 });
 
 test('Ash Catalog stays modal, contained, and singly scrollable at every authority viewport', async ({ page }) => {

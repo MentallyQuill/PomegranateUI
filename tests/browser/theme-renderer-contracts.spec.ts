@@ -713,35 +713,72 @@ test('Catalog keeps an opaque neutral modal and no-blur backdrop under reduced t
 
 test('all four themes render one identical Catalog tree with token-only presentation differences', async ({ page }) => {
   await fresh(page, 1920, 1080);
+  await selectTheme(page, TARGETS[0], { closeDrawer: false });
+  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  await expect(catalog.locator('[data-catalog-result]')).toHaveCount(94);
+  const search = catalog.getByRole('searchbox', { name: 'Search Widgets' });
+  await search.focus();
+  await catalog.evaluate((dialog) => {
+    const state = window as typeof window & {
+      __catalogThemeIdentity?: { dialog: Element; results: Element[] };
+    };
+    state.__catalogThemeIdentity = {
+      dialog,
+      results: [...dialog.querySelectorAll('[data-catalog-result]')]
+    };
+  });
   const signatures: string[] = [];
   const presentations: string[] = [];
+  const tokens: string[] = [];
   for (const target of [...TARGETS, ASH_TARGET]) {
-    await selectTheme(page, target);
-    await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
-    const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+    const targetButton = page.getByRole('group', { name: 'Visual target' }).getByRole('button', { name: target.label, exact: true });
+    await targetButton.evaluate((button: HTMLButtonElement) => button.click());
+    await expect(page.locator('main')).toHaveAttribute('data-pom-theme', target.id);
+    await expect(catalog).toBeVisible();
+    await expect(search).toBeFocused();
     await expect(catalog.locator('[data-catalog-result]')).toHaveCount(94);
-    signatures.push(await catalog.evaluate((dialog) => JSON.stringify({
-      tree: [...dialog.querySelectorAll<HTMLElement>('*')].map((node) => ({
+    const evidence = await catalog.evaluate((dialog) => {
+      const state = window as typeof window & {
+        __catalogThemeIdentity?: { dialog: Element; results: Element[] };
+      };
+      const results = [...dialog.querySelectorAll<HTMLElement>('[data-catalog-result]')];
+      return {
+        identity: state.__catalogThemeIdentity?.dialog === dialog
+          && state.__catalogThemeIdentity.results.length === results.length
+          && state.__catalogThemeIdentity.results.every((result, index) => result === results[index]),
+        signature: JSON.stringify({
+          tree: [...dialog.querySelectorAll<HTMLElement>('*')].map((node) => ({
         tag: node.tagName,
         class: node.className,
         role: node.getAttribute('role'),
         part: node.dataset.pomPart ?? null,
         widget: node.dataset.widgetType ?? null,
         shape: node.dataset.previewShape ?? null
-      })),
-      results: [...dialog.querySelectorAll<HTMLElement>('[data-catalog-result]')].map((node) => node.dataset.widgetType),
-      previews: dialog.querySelectorAll('.catalog-widget-preview [data-surface-type]').length,
-      themeBranches: dialog.querySelectorAll('[data-pom-theme], [data-pom-theme-id]').length
-    })));
+          })),
+          results: results.map((node) => node.dataset.widgetType),
+          previews: dialog.querySelectorAll('.catalog-widget-preview [data-surface-type]').length
+        }),
+        themeBranches: dialog.querySelectorAll('[data-pom-theme], [data-pom-theme-id]').length
+      };
+    });
+    expect(evidence.identity, `${target.label} retained Catalog nodes`).toBe(true);
+    expect(evidence.themeBranches, `${target.label} theme branches`).toBe(0);
+    signatures.push(evidence.signature);
     presentations.push(await catalog.evaluate((dialog) => {
       const style = getComputedStyle(dialog);
       const card = getComputedStyle(dialog.querySelector<HTMLElement>('[data-catalog-result]')!);
       return [style.backgroundColor, style.borderRadius, style.boxShadow, card.backgroundColor, card.borderRadius].join('|');
     }));
-    await catalog.getByRole('button', { name: 'Close Widget Catalog' }).click();
+    tokens.push(await page.locator('main').evaluate((root) => {
+      const style = getComputedStyle(root);
+      return ['--pom-color-canvas', '--pom-material-widget', '--pom-radius-small']
+        .map((name) => `${name}:${style.getPropertyValue(name).trim()}`).join('|');
+    }));
   }
   expect(new Set(signatures).size).toBe(1);
   expect(new Set(presentations).size).toBe(4);
+  expect(new Set(tokens).size).toBe(4);
 });
 
 test('Ash readability expression leaves Deep compact technical rail defaults unchanged', async ({ page }) => {

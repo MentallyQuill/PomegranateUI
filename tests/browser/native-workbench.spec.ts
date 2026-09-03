@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { createCatalogManifests } from '../../apps/workbench-lab/src/mockup/catalog.ts';
 import { IMPLEMENTED_SURFACES } from '../../apps/workbench-lab/src/mockup/implemented-surfaces.ts';
 import { SURFACE_FIXTURES, SURFACE_STATE_COPY } from '../../apps/workbench-lab/src/mockup/surface-fixtures.ts';
 
@@ -1474,6 +1475,19 @@ test('Catalog renders the source composition, 94 shared previews, and exact expa
   await expect(catalog.locator('[data-renderer-status="unavailable"]')).toHaveCount(0);
   await expect(catalog.getByRole('button', { name: /^Add / })).toHaveCount(0);
   expect(await results.evaluateAll((nodes) => nodes.every((node) => node.getAttribute('role') === 'button' && node.getAttribute('tabindex') === '0'))).toBe(true);
+  const authoritativeMatrix = createCatalogManifests().map((manifest) => {
+    const fixture = SURFACE_FIXTURES.get(manifest.type);
+    if (!fixture || !manifest.catalog) throw new Error(`Missing authoritative Catalog fixture for ${manifest.type}.`);
+    return { title: manifest.title, tuple: [String(manifest.type), String(fixture.type), manifest.catalog.shape] };
+  }).sort((left, right) => left.title.localeCompare(right.title) || left.tuple[0]!.localeCompare(right.tuple[0]!))
+    .map(({ tuple }) => tuple);
+  const renderedMatrix = await results.evaluateAll((nodes) => nodes.map((node) => [
+    node.getAttribute('data-widget-type'),
+    node.querySelector('[data-surface-type]')?.getAttribute('data-surface-type') ?? null,
+    node.getAttribute('data-preview-shape')
+  ]));
+  expect(new Set(renderedMatrix.map(([widgetType]) => widgetType)).size).toBe(94);
+  expect(renderedMatrix).toEqual(authoritativeMatrix);
 
   const geometry = await catalog.evaluate((dialog) => {
     const header = dialog.querySelector<HTMLElement>('.catalog-head')!;
@@ -1521,49 +1535,49 @@ test('Catalog renders the source composition, 94 shared previews, and exact expa
   await expect(results.first()).toContainText('Character Relationships');
   await search.fill('');
 
-  await catalog.locator('.catalog-results').evaluate((region) => { region.scrollTop = 400; });
-  await expect.poll(() => catalog.locator('.catalog-results').evaluate((region) => region.scrollTop)).toBeGreaterThan(0);
-  const anchorKey = await catalog.locator('.catalog-results').evaluate((region) => {
+  const widthAnchorSeed = catalog.locator('[data-catalog-result][data-widget-type="systems.living-world"]');
+  await widthAnchorSeed.scrollIntoViewIfNeeded();
+  await catalog.locator('.catalog-results').evaluate((region) => {
+    const anchor = region.querySelector<HTMLElement>('[data-widget-type="systems.living-world"]');
+    if (!anchor) throw new Error('Missing width-restack anchor.');
+    region.scrollTop += anchor.getBoundingClientRect().top - region.getBoundingClientRect().top - 32;
+  });
+  const anchor = await catalog.locator('.catalog-results').evaluate((region) => {
     const regionBox = region.getBoundingClientRect();
-    const results = [...region.querySelectorAll<HTMLElement>(':scope > [data-catalog-result]')];
-    const visible = results.find((result) => {
+    const candidates = [...region.querySelectorAll<HTMLElement>(':scope > [data-catalog-result]')];
+    const visible = candidates.find((result) => {
       const box = result.getBoundingClientRect();
       return box.top >= regionBox.top && box.top < regionBox.bottom;
-    }) ?? results.find((result) => {
+    }) ?? candidates.find((result) => {
       const box = result.getBoundingClientRect();
       return box.bottom > regionBox.top && box.top < regionBox.bottom;
     });
-    return visible?.dataset.widgetType ?? null;
+    return visible ? {
+      widgetType: visible.dataset.widgetType ?? '',
+      category: visible.dataset.widgetCategory ?? '',
+      offset: visible.getBoundingClientRect().top - regionBox.top
+    } : null;
   });
-  if (!anchorKey) throw new Error('Missing first visible Catalog anchor.');
-  const anchored = catalog.locator(`[data-catalog-result][data-widget-type="${anchorKey}"]`);
-  const anchorTop = await anchored.evaluate((node) => node.getBoundingClientRect().top);
+  if (!anchor) throw new Error('Missing first visible Catalog anchor.');
+  expect(anchor.widgetType).not.toBe('');
+  const anchored = catalog.locator(`[data-catalog-result][data-widget-type="${anchor.widgetType}"]`);
   await previewSize.fill('420');
   await expect(previewSize).toHaveValue('420');
-  await expect.poll(() => anchored.evaluate((node) => node.getBoundingClientRect().top)).toBeCloseTo(anchorTop, 0);
+  await expect.poll(() => anchored.evaluate((node) => {
+    const region = node.closest<HTMLElement>('.catalog-results')!;
+    return node.getBoundingClientRect().top - region.getBoundingClientRect().top;
+  })).toBeCloseTo(anchor.offset, 0);
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(anchored).toBeVisible();
-  expect(await anchored.evaluate((node) => node.getBoundingClientRect().top)).toBeCloseTo(anchorTop, 0);
-  const nextAnchorKey = await catalog.locator('.catalog-results').evaluate((region) => {
-    const regionBox = region.getBoundingClientRect();
-    const results = [...region.querySelectorAll<HTMLElement>(':scope > [data-catalog-result]')];
-    const visible = results.find((result) => {
-      const box = result.getBoundingClientRect();
-      return box.top >= regionBox.top && box.top < regionBox.bottom;
-    }) ?? results.find((result) => {
-      const box = result.getBoundingClientRect();
-      return box.bottom > regionBox.top && box.top < regionBox.bottom;
-    });
-    return visible?.dataset.widgetType ?? null;
-  });
-  if (!nextAnchorKey) throw new Error('Missing Large Catalog anchor.');
-  const nextAnchored = catalog.locator(`[data-catalog-result][data-widget-type="${nextAnchorKey}"]`);
-  const nextAnchorTop = await nextAnchored.evaluate((node) => node.getBoundingClientRect().top);
+  expect(await anchored.evaluate((node) => node.dataset.widgetType)).toBe(anchor.widgetType);
   await previewSize.fill('286');
   await expect(previewSize).toHaveValue('286');
-  await expect.poll(() => nextAnchored.evaluate((node) => node.getBoundingClientRect().top)).toBeCloseTo(nextAnchorTop, 0);
+  await expect.poll(() => anchored.evaluate((node) => {
+    const region = node.closest<HTMLElement>('.catalog-results')!;
+    return node.getBoundingClientRect().top - region.getBoundingClientRect().top;
+  })).toBeCloseTo(anchor.offset, 0);
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  expect(await nextAnchored.evaluate((node) => node.getBoundingClientRect().top)).toBeCloseTo(nextAnchorTop, 0);
+  expect(await anchored.evaluate((node) => node.dataset.widgetType)).toBe(anchor.widgetType);
 
   await catalog.getByRole('button', { name: 'Compact', exact: true }).click();
   await expect(catalog.locator('.catalog-widget-preview')).toHaveCount(0);
@@ -1572,11 +1586,56 @@ test('Catalog renders the source composition, 94 shared previews, and exact expa
   const compactWidths = await results.evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().width)));
   expect(new Set(compactWidths).size).toBe(1);
   expect(compactWidths[0]).toBeGreaterThan(1400);
+  await expect.poll(() => anchored.evaluate((node) => {
+    const region = node.closest<HTMLElement>('.catalog-results')!;
+    return node.getBoundingClientRect().top - region.getBoundingClientRect().top;
+  })).toBeCloseTo(anchor.offset, 0);
+  const filterSeed = catalog.locator('[data-catalog-result][data-widget-type="settings.narrator-voice"]');
+  await filterSeed.scrollIntoViewIfNeeded();
+  await catalog.locator('.catalog-results').evaluate((region) => {
+    const target = region.querySelector<HTMLElement>('[data-widget-type="settings.narrator-voice"]');
+    if (!target) throw new Error('Missing compact filter anchor.');
+    region.scrollTop += target.getBoundingClientRect().top - region.getBoundingClientRect().top - 32;
+  });
+  const filterAnchor = await catalog.locator('.catalog-results').evaluate((region) => {
+    const regionBox = region.getBoundingClientRect();
+    const visible = [...region.querySelectorAll<HTMLElement>(':scope > [data-catalog-result]')]
+      .find((result) => {
+        const box = result.getBoundingClientRect();
+        return box.top >= regionBox.top && box.top < regionBox.bottom;
+      });
+    return visible ? {
+      widgetType: visible.dataset.widgetType ?? '',
+      category: visible.dataset.widgetCategory ?? '',
+      offset: visible.getBoundingClientRect().top - regionBox.top
+    } : null;
+  });
+  if (!filterAnchor) throw new Error('Missing compact filter anchor evidence.');
+  expect(filterAnchor.category).toBe('settings');
+  const filterAnchored = catalog.locator(`[data-catalog-result][data-widget-type="${filterAnchor.widgetType}"]`);
+  await catalog.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(results).toHaveCount(39);
+  await expect.poll(() => filterAnchored.evaluate((node) => {
+    const region = node.closest<HTMLElement>('.catalog-results')!;
+    return node.getBoundingClientRect().top - region.getBoundingClientRect().top;
+  })).toBeCloseTo(filterAnchor.offset, 0);
+  await catalog.getByRole('button', { name: 'All', exact: true }).click();
+  await expect(results).toHaveCount(94);
+  await expect.poll(() => filterAnchored.evaluate((node) => {
+    const region = node.closest<HTMLElement>('.catalog-results')!;
+    return node.getBoundingClientRect().top - region.getBoundingClientRect().top;
+  })).toBeCloseTo(filterAnchor.offset, 0);
   await catalog.getByRole('button', { name: 'Visual', exact: true }).click();
   await expect(catalog.locator('.catalog-widget-preview')).toHaveCount(94);
+  await expect.poll(() => filterAnchored.evaluate((node) => {
+    const region = node.closest<HTMLElement>('.catalog-results')!;
+    return node.getBoundingClientRect().top - region.getBoundingClientRect().top;
+  })).toBeCloseTo(filterAnchor.offset, 0);
 });
 
 test('Catalog whole-result automatic and pointer placement each dispatch exactly one canonical Widget', async ({ page }) => {
+  const workbench = page.locator('main[data-workbench-revision]');
+  const initialRevision = Number(await workbench.getAttribute('data-workbench-revision'));
   await openWidgetCatalog(page);
   const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
   const automatic = catalog.locator('[data-catalog-result][data-widget-type="settings.accessibility"]');
@@ -1584,8 +1643,17 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
   await automatic.press('Enter');
   await expect(page.locator('[data-widget-type="settings.accessibility"]:not([data-catalog-result])')).toHaveCount(1);
   await expect(automatic).toHaveAttribute('aria-disabled', 'true');
+  await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 1));
 
-  const pointerResult = catalog.locator('[data-catalog-result][data-widget-type="ext:trail:location-notes"]');
+  const pointerResult = catalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
+  await expect(pointerResult).toHaveAttribute('aria-disabled', 'false');
+  await pointerResult.evaluate((node) => {
+    (window as typeof window & { __catalogFollowupClicks?: number }).__catalogFollowupClicks = 0;
+    node.addEventListener('click', () => {
+      const state = window as typeof window & { __catalogFollowupClicks?: number };
+      state.__catalogFollowupClicks = (state.__catalogFollowupClicks ?? 0) + 1;
+    });
+  });
   await pointerResult.scrollIntoViewIfNeeded();
   const originBox = await pointerResult.boundingBox();
   if (!originBox) throw new Error('Missing Catalog pointer-result geometry.');
@@ -1626,6 +1694,105 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
   expect(proxyEvidence.y).toBeGreaterThanOrEqual(selectedBox.y);
   expect(proxyEvidence.y).toBeLessThanOrEqual(selectedBox.y + selectedBox.height);
   await page.mouse.up();
-  await expect(page.locator('[data-widget-type="ext:trail:location-notes"]:not([data-catalog-result])')).toHaveCount(1);
+  await expect.poll(() => page.evaluate(() => (window as typeof window & { __catalogFollowupClicks?: number }).__catalogFollowupClicks ?? 0)).toBe(1);
+  await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(1);
+  await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 2));
   await expect(proxy).toHaveCount(0);
+  await expect(pointerResult).toHaveAttribute('aria-disabled', 'false');
+
+  await catalog.getByRole('button', { name: 'Close Widget Catalog' }).click();
+  await openDeveloperTools(page);
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pomegranate-ui.workbench-lab.layout.v1') ?? 'null') as {
+    revision: number;
+    widgets: Record<string, { type: string }>;
+    placements: Record<string, { panelId: string; regionId: string; shelfId: string }>;
+  } | null);
+  expect(saved).not.toBeNull();
+  expect(saved?.revision).toBe(initialRevision + 2);
+  const persistedLibraryIds = Object.entries(saved?.widgets ?? {})
+    .filter(([id, instance]) => id.startsWith('catalog-library-workspace-') && instance.type === 'library.workspace')
+    .map(([id]) => id);
+  expect(persistedLibraryIds).toHaveLength(1);
+  expect(saved?.placements[persistedLibraryIds[0] ?? '']).toMatchObject({
+    panelId: expect.any(String),
+    regionId: expect.any(String),
+    shelfId: 'primary'
+  });
+
+  await page.getByRole('button', { name: 'Reload saved layout' }).click();
+  await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 3));
+  await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(1);
+  const hydratedRevision = Number(await workbench.getAttribute('data-workbench-revision'));
+  expect(hydratedRevision).toBe(initialRevision + 3);
+  await closeDeveloperTools(page);
+  await openWidgetCatalog(page);
+  const restoredCatalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const restoredMultiple = restoredCatalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
+  await expect(restoredMultiple).toHaveAttribute('aria-disabled', 'false');
+  await restoredMultiple.press('Enter');
+  await expect(workbench).toHaveAttribute('data-workbench-revision', String(hydratedRevision + 1));
+  await expect(restoredMultiple).toHaveAttribute('aria-disabled', 'false');
+  await restoredCatalog.getByRole('button', { name: 'Close Widget Catalog' }).click();
+  await openDeveloperTools(page);
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  const twiceSavedCount = await page.evaluate(() => {
+    const snapshot = JSON.parse(localStorage.getItem('pomegranate-ui.workbench-lab.layout.v1') ?? 'null') as {
+      widgets: Record<string, { type: string }>;
+    } | null;
+    return Object.entries(snapshot?.widgets ?? {})
+      .filter(([id, instance]) => id.startsWith('catalog-library-workspace-') && instance.type === 'library.workspace').length;
+  });
+  expect(twiceSavedCount).toBe(2);
+});
+
+test('Catalog pointer placement selects the topmost nested compatible target beneath an overlay', async ({ page }) => {
+  await openWidgetCatalog(page);
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const result = catalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
+  await result.scrollIntoViewIfNeeded();
+  const originBox = await result.boundingBox();
+  if (!originBox) throw new Error('Missing nested-target Catalog result geometry.');
+  await page.evaluate(() => {
+    const outer = document.querySelector<HTMLElement>('[data-pomegranate-region-surface="stage"]');
+    if (!outer) throw new Error('Missing outer stage target.');
+    outer.style.position = 'relative';
+    const inner = document.createElement('section');
+    inner.dataset.reviewNestedTarget = 'true';
+    inner.dataset.pomegranateRegionSurface = 'right';
+    inner.dataset.pomegranateRegionRole = 'right-instruments';
+    inner.dataset.subPanelLane = '0';
+    inner.setAttribute('aria-label', 'Nested right instruments region');
+    Object.assign(inner.style, {
+      position: 'absolute', left: '24%', top: '24%', width: '52%', height: '52%', zIndex: '20', pointerEvents: 'auto'
+    });
+    outer.append(inner);
+  });
+
+  await page.mouse.move(originBox.x + 8, originBox.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(originBox.x + 14, originBox.y + 8);
+  await expect(catalog).toBeHidden();
+  const inner = page.locator('[data-review-nested-target]');
+  const innerBox = await inner.boundingBox();
+  if (!innerBox) throw new Error('Missing nested compatible target geometry.');
+  const point = { x: innerBox.x + innerBox.width / 2, y: innerBox.y + innerBox.height / 2 };
+  await page.evaluate(({ x, y, width, height }) => {
+    const overlay = document.createElement('div');
+    overlay.dataset.reviewTargetOverlay = 'true';
+    Object.assign(overlay.style, {
+      position: 'fixed', left: `${x}px`, top: `${y}px`, width: `${width}px`, height: `${height}px`, zIndex: '2147483647', pointerEvents: 'auto'
+    });
+    document.body.append(overlay);
+  }, { x: innerBox.x, y: innerBox.y, width: innerBox.width, height: innerBox.height });
+  await page.mouse.move(point.x, point.y, { steps: 2 });
+
+  const expectedTarget = await inner.getAttribute('data-catalog-placement-target');
+  expect(expectedTarget).not.toBeNull();
+  await expect(page.locator('[data-catalog-placement-proxy]')).toHaveAttribute('data-placement-target', expectedTarget!);
+  await expect(inner).toHaveClass(/is-catalog-target-active/);
+  await page.mouse.up();
+  await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(1);
+  await page.locator('[data-review-target-overlay]').evaluate((overlay) => overlay.remove());
+  await expect(page.locator('[data-review-target-overlay]')).toHaveCount(0);
 });

@@ -394,17 +394,39 @@ export function createCatalogPlacementController(
   const selectPointerTarget = (element: Element | null, nextState: CatalogPlacementState = state) => {
     if (nextState.phase !== 'lifted') return;
     const hit = element?.closest<HTMLElement>(TARGET_SELECTOR) ?? null;
-    let index = nextState.targets.findIndex(({ element: target }) => (
-      target === hit || (element !== null && target.contains(element))
-    ));
+    let index = nextState.targets.findIndex(({ element: target }) => target === hit);
     if (index < 0 && nextState.proxy) {
-      index = nextState.targets.findIndex(({ element: target }) => {
-        const rect = target.getBoundingClientRect();
-        return nextState.proxy!.x >= rect.x
-          && nextState.proxy!.x <= rect.x + rect.width
-          && nextState.proxy!.y >= rect.y
-          && nextState.proxy!.y <= rect.y + rect.height;
-      });
+      const containing = nextState.targets.map((target, targetIndex) => ({ target, targetIndex }))
+        .filter(({ target }) => {
+          const rect = target.element.getBoundingClientRect();
+          return nextState.proxy!.x >= rect.x
+            && nextState.proxy!.x <= rect.x + rect.width
+            && nextState.proxy!.y >= rect.y
+            && nextState.proxy!.y <= rect.y + rect.height;
+        });
+      const stack = candidate?.document.elementsFromPoint?.(nextState.proxy.x, nextState.proxy.y) ?? [];
+      for (const stackedElement of stack) {
+        const stackedTarget = stackedElement.closest<HTMLElement>(TARGET_SELECTOR);
+        const stackedIndex = containing.find(({ target }) => target.element === stackedTarget)?.targetIndex ?? -1;
+        if (stackedIndex >= 0) {
+          index = stackedIndex;
+          break;
+        }
+      }
+      if (index < 0) {
+        const ranked = containing.sort((left, right) => {
+          if (left.target.element.contains(right.target.element)) return 1;
+          if (right.target.element.contains(left.target.element)) return -1;
+          const leftArea = left.target.rect.width * left.target.rect.height;
+          const rightArea = right.target.rect.width * right.target.rect.height;
+          if (leftArea !== rightArea) return leftArea - rightArea;
+          const position = left.target.element.compareDocumentPosition(right.target.element);
+          if (position & Node.DOCUMENT_POSITION_FOLLOWING) return 1;
+          if (position & Node.DOCUMENT_POSITION_PRECEDING) return -1;
+          return left.target.identity.id.localeCompare(right.target.identity.id);
+        });
+        index = ranked[0]?.targetIndex ?? -1;
+      }
     }
     if (index >= 0) {
       const selected = nextState.targets[index]!;
