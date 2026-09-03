@@ -101,9 +101,11 @@ test('AUDIT-P1-SINGLE-PRESENTATION lifted Widget has one compact payload and one
 });
 
 test('AUDIT-P1-GROUP-ACTIONS grouped Widget tabs do not cover the active Widget actions', async ({ page }, testInfo) => {
-  test.fail(true, 'AUDIT-P1-GROUP-ACTIONS: the group tablist intercepts the active Widget action button.');
-  const action = page.getByRole('article', { name: 'Room Ambience' })
-    .getByRole('button', { name: 'Widget actions' });
+  const article = page.getByRole('article', { name: 'Room Ambience' });
+  const group = article.locator('xpath=ancestor::*[@data-widget-group][1]');
+  await group.hover({ position: { x: 8, y: 50 } });
+  const action = article.getByRole('button', { name: 'Widget actions' });
+  await expect(action).toHaveCSS('pointer-events', 'auto');
   const hit = await action.evaluate((node) => {
     const box = node.getBoundingClientRect();
     const target = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
