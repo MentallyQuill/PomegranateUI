@@ -176,6 +176,28 @@ describe('CatalogGridController', () => {
     controller.destroy();
   });
 
+  it('anchors the first result beginning in the viewport instead of an earlier tall overlap', () => {
+    const scroll = document.body.appendChild(document.createElement('div'));
+    cleanup.push(scroll);
+    Object.defineProperty(scroll, 'getBoundingClientRect', { configurable: true, value: () => rect(100, 500, 600) });
+    const overlap = document.createElement('article');
+    const leading = document.createElement('article');
+    Object.defineProperty(overlap, 'getBoundingClientRect', { configurable: true, value: () => rect(-100, 300) });
+    Object.defineProperty(leading, 'getBoundingClientRect', { configurable: true, value: () => rect(124, 80) });
+    const controller = createCatalogGridController({
+      getScrollElement: () => scroll,
+      getResults: () => [overlap, leading],
+      getPreviewWidth: () => 286,
+      getResultKey: (result) => result === overlap ? 'overlap' : 'leading',
+      getResultShape: () => 'medium',
+      getResultMeasureElement: (result) => result,
+      createResizeObserver: () => null
+    });
+
+    expect(controller.captureAnchor()).toEqual({ key: 'leading', offset: 24 });
+    controller.destroy();
+  });
+
   it('captures a visible result when the scroll owner is at its top', () => {
     const scroll = document.body.appendChild(document.createElement('div'));
     cleanup.push(scroll);

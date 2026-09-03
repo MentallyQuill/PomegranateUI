@@ -577,10 +577,12 @@ describe('CatalogPlacementController', () => {
   it('moves the pointer proxy, highlights the hit target, and commits it on pointerup', () => {
     const { root, origin, target: first } = placementSurface();
     const second = appendTarget(root, 'right', 'right-instruments', 'Right instruments region');
+    const nestedHit = document.createElement('span');
+    second.append(nestedHit);
     const onCommit = vi.fn();
     Object.defineProperty(document, 'elementFromPoint', {
       configurable: true,
-      value: vi.fn((x: number) => x >= 500 ? second : first)
+      value: vi.fn((x: number) => x >= 500 ? nestedHit : first)
     });
     const controller = createCatalogPlacementController({
       catalog: { suspend: vi.fn(), resume: vi.fn() },
@@ -605,6 +607,35 @@ describe('CatalogPlacementController', () => {
     expect(controller.getState().phase).toBe('idle');
     expect(controller.consumeClick()).toBe(true);
     controller.destroy();
+  });
+
+  it('selects a target by its captured rectangle when a visual overlay owns the hit point', () => {
+    const { root, origin, target: first } = placementSurface();
+    const second = appendTarget(root, 'right', 'right-instruments', 'Right instruments region');
+    const overlay = document.createElement('div');
+    document.body.append(overlay);
+    const onCommit = vi.fn();
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(() => overlay)
+    });
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit
+    });
+
+    controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 550, clientY: 150 }));
+
+    expect(controller.getState().selectedTargetId).toBe(targetId('right', 1));
+    expect(first).not.toHaveClass('is-catalog-target-active');
+    expect(second).toHaveClass('is-catalog-target-active');
+    controller.destroy();
+    overlay.remove();
   });
 
   it('publishes deterministic proxy-state transitions and stops after unsubscribe', () => {

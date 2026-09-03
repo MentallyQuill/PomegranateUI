@@ -1022,7 +1022,7 @@ test('reduced motion removes themed Widget action-rail transitions', async ({ pa
   }
 });
 
-test('native workbench Catalog supports keyboard placement and stable attributes', async ({ page }) => {
+test('native workbench Catalog contains focus and restores exact keyboard-placement state', async ({ page }) => {
   await openFresh(page, 1024, 768);
   const launcher = page.getByRole('button', { name: 'Open Widget Catalog', includeHidden: true });
   await launcher.focus();
@@ -1052,30 +1052,84 @@ test('native workbench Catalog supports keyboard placement and stable attributes
   expect(await catalog.evaluate((element) => element.matches(':modal'))).toBe(true);
   expect(await catalog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   expect(await catalog.evaluate((element) => document.elementFromPoint(2, innerHeight / 2) === element)).toBe(true);
-  await expect(catalog.getByRole('listitem')).toHaveCount(94);
-  await expect(catalog.getByText('Scroll results · 94 widgets')).toBeVisible();
-  expect(await catalog.getByRole('list').evaluate((list) => list.scrollHeight > list.clientHeight)).toBe(true);
+  const results = catalog.locator('[data-catalog-result]');
+  await expect(results).toHaveCount(94);
+  await expect(catalog.locator('.catalog-foot')).toContainText('94 widgets');
+  expect(await catalog.locator('.catalog-results').evaluate((list) => list.scrollHeight > list.clientHeight)).toBe(true);
+  const search = catalog.getByRole('searchbox', { name: 'Search Widgets' });
+  await search.fill('character');
+  await catalog.getByRole('button', { name: 'Library', exact: true }).click();
   await catalog.getByRole('button', { name: 'Compact' }).click();
   await expect(catalog).toHaveAttribute('data-result-mode', 'compact');
-  const add = catalog.getByRole('button', { name: 'Add Accessibility', exact: true });
-  await add.focus();
-  await add.press('Enter');
-  await expect(page.getByRole('article', { name: 'Accessibility' })).toHaveAttribute('data-pomegranate-placement', 'docked');
-  await expect(page.locator('[data-surface-type="settings.accessibility"]')).toHaveAttribute('data-surface-state', 'ready');
+  const origin = catalog.locator('[data-catalog-result][data-widget-type="library.character-card"]');
+  await origin.scrollIntoViewIfNeeded();
+  const scrollTop = await catalog.locator('.catalog-results').evaluate((list) => list.scrollTop);
+  await origin.focus();
+  await origin.press('Space');
+  await expect(catalog).toBeHidden();
+  const proxy = page.locator('[data-catalog-placement-proxy]');
+  await expect(proxy).toHaveAttribute('data-placement-input', 'keyboard');
+  const targets = page.locator('[data-catalog-placement-target]');
+  expect(await targets.count()).toBeGreaterThan(0);
+  await expect(targets.filter({ has: page.locator('.is-catalog-target-active') })).toHaveCount(0);
+  await expect(page.locator('[data-catalog-placement-target].is-catalog-target-active')).toHaveCount(1);
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('[data-catalog-placement-target].is-catalog-target-active')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(catalog).toBeVisible();
+  await expect(catalog).toHaveAttribute('data-result-mode', 'compact');
+  await expect(search).toHaveValue('character');
+  await expect(catalog.getByRole('button', { name: 'Library', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(origin).toBeFocused();
+  await expect.poll(() => catalog.locator('.catalog-results').evaluate((list) => list.scrollTop)).toBe(scrollTop);
+  await origin.press('Space');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-widget-type="library.character-card"]:not([data-catalog-result])')).toHaveCount(1);
+  await expect(catalog).toBeVisible();
+  await expect(origin).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(catalog).toBeHidden();
   await expect(launcher).toBeFocused();
 });
 
+test('Catalog touch hold lifts at 300ms and pointer cancellation restores the modal without placement', async ({ page, context }) => {
+  await openFresh(page, 1024, 768);
+  const launcher = page.getByRole('button', { name: 'Open Widget Catalog', includeHidden: true });
+  await launcher.press('Enter');
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const result = catalog.locator('[data-catalog-result][data-widget-type="library.character-card"]');
+  await result.scrollIntoViewIfNeeded();
+  const box = await result.boundingBox();
+  if (!box) throw new Error('Missing touch Catalog result geometry.');
+  const point = { x: box.x + 12, y: box.y + 12 };
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+  await page.waitForTimeout(280);
+  await expect(page.locator('[data-catalog-placement-proxy]')).toHaveCount(0);
+  await page.waitForTimeout(35);
+  await expect(page.locator('[data-catalog-placement-proxy]')).toHaveAttribute('data-placement-input', 'pointer');
+  await expect(catalog).toBeHidden();
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+  await expect(catalog).toBeVisible();
+  await expect(page.locator('[data-catalog-placement-proxy]')).toHaveCount(0);
+  await expect(page.locator('[data-widget-type="library.character-card"]:not([data-catalog-result])')).toHaveCount(0);
+});
+
 test('Ash Catalog stays modal, contained, and singly scrollable at every authority viewport', async ({ page }) => {
   for (const viewport of [
-    { name: 'reference wide', width: 1920, height: 1280 },
+    { name: 'reference wide', width: 1920, height: 1080, zoom: 1 },
     { name: 'wide', width: 1440, height: 900 },
     { name: 'phone', width: 390, height: 844 },
-    { name: 'short landscape', width: 844, height: 390 }
+    { name: 'short landscape', width: 844, height: 390 },
+    { name: '200 percent zoom equivalent', width: 960, height: 540, zoom: 2 }
   ]) {
     await openFresh(page, viewport.width, viewport.height);
     await selectTheme(page, 'Ash & Amber');
+    if (viewport.zoom) {
+      const session = await page.context().newCDPSession(page);
+      await session.send('Emulation.setPageScaleFactor', { pageScaleFactor: viewport.zoom });
+    }
     const launcher = page.getByRole('button', { name: 'Open Widget Catalog' });
     await launcher.focus();
     await launcher.press('Enter');
@@ -1083,8 +1137,8 @@ test('Ash Catalog stays modal, contained, and singly scrollable at every authori
     await expect(catalog).toBeVisible();
 
     const evidence = await catalog.evaluate((dialog) => {
-      const list = dialog.querySelector('ul');
-      const status = dialog.querySelector('.catalog-scroll-status');
+      const list = dialog.querySelector('.catalog-results');
+      const status = dialog.querySelector('.catalog-foot');
       if (!(list instanceof HTMLElement) || !(status instanceof HTMLElement)) {
         throw new Error('Missing Catalog scroll evidence.');
       }
@@ -1097,11 +1151,31 @@ test('Ash Catalog stays modal, contained, and singly scrollable at every authori
         viewport: { width: innerWidth, height: innerHeight },
         listScrollable: list.scrollHeight > list.clientHeight,
         scrollOwners: descendants.filter((node) => {
+          if (['INPUT', 'TEXTAREA', 'SELECT'].includes(node.tagName)) return false;
           const overflow = getComputedStyle(node).overflowY;
           return ['auto', 'scroll'].includes(overflow) && node.scrollHeight > node.clientHeight + 1;
         }).length,
         statusTop: statusBox.top,
-        statusBottom: statusBox.bottom
+        statusBottom: statusBox.bottom,
+        fieldContainment: [...dialog.querySelectorAll<HTMLElement>('.catalog-widget-preview input, .catalog-widget-preview textarea')]
+          .filter((field) => {
+            const box = field.getBoundingClientRect();
+            const style = getComputedStyle(field);
+            return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) > 0
+              && box.width > 0 && box.height > 0;
+          }).map((field) => {
+          const card = field.closest<HTMLElement>('[data-catalog-result]');
+          if (!card) throw new Error('Catalog preview field has no result owner.');
+          const fieldBox = field.getBoundingClientRect();
+          const cardBox = card.getBoundingClientRect();
+          return {
+            label: `${card.dataset.widgetType}:${field.tagName.toLowerCase()}.${field.className || '-'}`,
+            left: fieldBox.left - cardBox.left,
+            right: cardBox.right - fieldBox.right,
+            top: fieldBox.top - cardBox.top,
+            bottom: cardBox.bottom - fieldBox.bottom
+          };
+        })
       };
     });
     expect(evidence.modal, `${viewport.name} Catalog modality`).toBe(true);
@@ -1113,6 +1187,13 @@ test('Ash Catalog stays modal, contained, and singly scrollable at every authori
     expect(evidence.scrollOwners, `${viewport.name} Catalog scroll ownership`).toBe(1);
     expect(evidence.statusTop, `${viewport.name} Catalog scroll cue`).toBeGreaterThanOrEqual(evidence.box.top);
     expect(evidence.statusBottom, `${viewport.name} Catalog scroll cue`).toBeLessThanOrEqual(evidence.box.bottom + 1);
+    expect(evidence.fieldContainment.length, `${viewport.name} actual preview descendants`).toBeGreaterThan(0);
+    for (const field of evidence.fieldContainment) {
+      expect(field.left, `${viewport.name} ${field.label} left`).toBeGreaterThanOrEqual(-1);
+      expect(field.right, `${viewport.name} ${field.label} right`).toBeGreaterThanOrEqual(-1);
+      expect(field.top, `${viewport.name} ${field.label} top`).toBeGreaterThanOrEqual(-1);
+      expect(field.bottom, `${viewport.name} ${field.label} bottom`).toBeGreaterThanOrEqual(-1);
+    }
     await page.keyboard.press('Escape');
     await expect(catalog).toBeHidden();
     await expect(launcher).toBeFocused();

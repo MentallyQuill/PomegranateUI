@@ -760,7 +760,8 @@ describe('WidgetCatalog', () => {
     const firstResult = results.querySelector<HTMLElement>('[data-catalog-result]')!;
     const firstContent = firstResult.querySelector<HTMLElement>('[data-catalog-result-content]')!;
     vi.spyOn(firstResult, 'getBoundingClientRect').mockImplementation(() => ({
-      x: 0, y: resultTop, top: resultTop, right: 286, bottom: resultTop + 100, left: 0, width: 286, height: 100, toJSON: () => ({})
+      x: 0, y: resultTop - results.scrollTop, top: resultTop - results.scrollTop, right: 286,
+      bottom: resultTop - results.scrollTop + 100, left: 0, width: 286, height: 100, toJSON: () => ({})
     }));
     vi.spyOn(firstContent, 'getBoundingClientRect').mockReturnValue({
       x: 0, y: 0, top: 0, right: 286, bottom: 160, left: 0, width: 286, height: 160, toJSON: () => ({})
@@ -800,6 +801,7 @@ describe('WidgetCatalog', () => {
     executeFrame(secondFrame);
     expect(results.scrollTop).toBe(0);
     executeFrame(newestFrame);
+    executeFrame([...pendingFrames][0]!);
     expect(results.scrollTop).toBe(30);
     expect(pendingFrames.size).toBe(0);
 
@@ -812,6 +814,7 @@ describe('WidgetCatalog', () => {
     await tick();
 
     expect(pendingFrames.size).toBe(1);
+    executeFrame([...pendingFrames][0]!);
     executeFrame([...pendingFrames][0]!);
     expect(pendingFrames.size).toBe(0);
     expect(results.style.getPropertyValue('--pom-catalog-preview-width')).toBe('340px');

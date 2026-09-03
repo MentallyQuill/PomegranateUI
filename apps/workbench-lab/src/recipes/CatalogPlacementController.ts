@@ -382,8 +382,8 @@ export function createCatalogPlacementController(
     if (state.phase !== 'lifted' || state.targets.length === 0) return;
     const normalized = (index + state.targets.length) % state.targets.length;
     const selected = state.targets[normalized]!;
-    for (const [targetIndex, target] of state.targets.entries()) {
-      const active = targetIndex === normalized;
+    for (const target of state.targets) {
+      const active = target.identity.id === selected.identity.id;
       target.element.classList.toggle('is-catalog-target-active', active);
       target.element.tabIndex = active ? 0 : -1;
     }
@@ -394,11 +394,22 @@ export function createCatalogPlacementController(
   const selectPointerTarget = (element: Element | null, nextState: CatalogPlacementState = state) => {
     if (nextState.phase !== 'lifted') return;
     const hit = element?.closest<HTMLElement>(TARGET_SELECTOR) ?? null;
-    const index = nextState.targets.findIndex(({ element: target }) => target === hit);
+    let index = nextState.targets.findIndex(({ element: target }) => (
+      target === hit || (element !== null && target.contains(element))
+    ));
+    if (index < 0 && nextState.proxy) {
+      index = nextState.targets.findIndex(({ element: target }) => {
+        const rect = target.getBoundingClientRect();
+        return nextState.proxy!.x >= rect.x
+          && nextState.proxy!.x <= rect.x + rect.width
+          && nextState.proxy!.y >= rect.y
+          && nextState.proxy!.y <= rect.y + rect.height;
+      });
+    }
     if (index >= 0) {
       const selected = nextState.targets[index]!;
-      for (const [targetIndex, target] of nextState.targets.entries()) {
-        const active = targetIndex === index;
+      for (const target of nextState.targets) {
+        const active = target.identity.id === selected.identity.id;
         target.element.classList.toggle('is-catalog-target-active', active);
         target.element.tabIndex = active ? 0 : -1;
       }

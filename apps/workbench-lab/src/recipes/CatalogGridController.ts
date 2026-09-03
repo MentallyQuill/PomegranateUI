@@ -147,15 +147,17 @@ export function createCatalogGridController(options: CatalogGridControllerOption
     const scrollElement = options.getScrollElement();
     if (!scrollElement) return null;
     const regionRect = scrollElement.getBoundingClientRect();
-    for (const result of options.getResults()) {
+    const visibleResults = options.getResults().filter((result) => {
       const resultRect = result.getBoundingClientRect();
-      if (resultRect.bottom <= regionRect.top || resultRect.top >= regionRect.bottom) continue;
-      return Object.freeze({
-        key: options.getResultKey(result),
-        offset: resultRect.top - regionRect.top
-      });
-    }
-    return null;
+      return resultRect.bottom > regionRect.top && resultRect.top < regionRect.bottom;
+    });
+    const result = visibleResults.find((candidate) => candidate.getBoundingClientRect().top >= regionRect.top)
+      ?? visibleResults[0];
+    if (!result) return null;
+    return Object.freeze({
+      key: options.getResultKey(result),
+      offset: result.getBoundingClientRect().top - regionRect.top
+    });
   }
 
   function restoreAnchor(anchor: CatalogScrollAnchor | null): void {

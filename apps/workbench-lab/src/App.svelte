@@ -50,6 +50,7 @@
   const requestedSurfaceState = locationParameters.get('surfaceState');
   const requestedType = requestedSurface ? asWidgetType(requestedSurface) : null;
   const requestedDefinition = requestedType ? IMPLEMENTED_SURFACES.find(({ type }) => type === requestedType) : undefined;
+  const requestedManifest = requestedType ? catalog.getState().results.find(({ type }) => type === requestedType) : undefined;
   const requestedFixture = requestedType && IMPLEMENTED_SURFACE_TYPES.has(requestedType) ? getSurfaceFixture(requestedType) : undefined;
   const initialSurfaceState = requestedFixture ? resolveSurfaceState(requestedSurfaceState, requestedFixture) : 'ready';
   if (requestedSurface) {
@@ -66,7 +67,10 @@
         placement: {
           kind: 'docked',
           panelId,
-          regionId: requestedDefinition?.family === 'systems' ? 'support' : 'focus',
+          regionId: requestedDefinition?.family === 'systems'
+            && ['narrow', 'medium', 'strip'].includes(requestedManifest?.catalog?.shape ?? '')
+            ? 'support'
+            : 'focus',
           shelfId: 'primary',
           order: 0
         }
@@ -480,7 +484,7 @@
       <small aria-label="Active story identity">{hostContext.storyId} · {hostContext.frameLabel}</small>
     </div>
     <div class="shelf-actions">
-      <IconAction label="Open Widget Catalog" visualLabel="Widgets" action="open-catalog" expanded={$catalogState.open} onclick={() => catalog.open('drawer')} />
+      <IconAction label="Open Widget Catalog" visualLabel="Widgets" action="open-catalog" expanded={$catalogState.open} onclick={() => catalog.open('expanded')} />
       <WidgetShelf {store} />
       <LayoutUndo {store} />
       <IconAction label="Focus reading" action="focus-reading" pressed={focusMode} onclick={() => { focusMode = !focusMode; }} />

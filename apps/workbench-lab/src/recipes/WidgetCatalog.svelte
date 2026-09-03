@@ -213,7 +213,6 @@
   let placementReturnOrigin: HTMLElement | undefined;
   let returnFocus: HTMLElement | null = null;
   let restackRevision = 0;
-  let pendingAnchor: CatalogScrollAnchor | null = null;
   let pendingRestoreFrame: number | null = null;
   let destroyed = false;
 
@@ -260,14 +259,11 @@
     catalogSnapshot.resultMode;
     catalogSnapshot.previewWidth;
     const revision = restackRevision;
-    const anchor = pendingAnchor;
-    pendingAnchor = null;
     void tick().then(() => {
       if (destroyed || revision !== restackRevision) return;
       gridController?.sync();
-      if (pendingRestoreFrame !== null) cancelAnimationFrame(pendingRestoreFrame);
+      if (pendingRestoreFrame !== null) return;
       const frame = requestAnimationFrame(() => {
-        if (!destroyed && revision === restackRevision) gridController?.restoreAnchor(anchor);
         if (pendingRestoreFrame === frame) pendingRestoreFrame = null;
       });
       pendingRestoreFrame = frame;
@@ -280,7 +276,9 @@
       getResults,
       getPreviewWidth: () => catalogSnapshot?.resultMode === 'compact' ? 420 : catalogSnapshot?.previewWidth ?? 286,
       getResultKey: (result) => result.dataset.widgetType ?? '',
-      getResultShape: (result) => (result.dataset.previewShape ?? 'medium') as WidgetShape,
+      getResultShape: (result) => catalogSnapshot?.resultMode === 'compact'
+        ? 'medium'
+        : (result.dataset.previewShape ?? 'medium') as WidgetShape,
       getResultMeasureElement: (result) => result.querySelector('[data-catalog-result-content]') ?? result
     });
     if (ontargetplace && getPlacementTargetRoot && isPlacementTargetCompatible) {
@@ -328,7 +326,6 @@
   onDestroy(() => {
     destroyed = true;
     restackRevision += 1;
-    pendingAnchor = null;
     if (pendingRestoreFrame !== null) cancelAnimationFrame(pendingRestoreFrame);
     pendingRestoreFrame = null;
     unsubscribePlacement?.();
@@ -339,13 +336,35 @@
   });
 
   function restack(update: () => void) {
-    pendingAnchor = gridController?.captureAnchor() ?? null;
-    restackRevision += 1;
+    const anchor = gridController?.captureAnchor() ?? null;
+    const revision = restackRevision + 1;
+    restackRevision = revision;
     if (pendingRestoreFrame !== null) {
       cancelAnimationFrame(pendingRestoreFrame);
       pendingRestoreFrame = null;
     }
     update();
+    void tick().then(() => {
+      if (destroyed || revision !== restackRevision) return;
+      gridController?.sync();
+      const frame = requestAnimationFrame(() => {
+        if (destroyed || revision !== restackRevision) {
+          if (pendingRestoreFrame === frame) pendingRestoreFrame = null;
+          return;
+        }
+        gridController?.sync();
+        gridController?.restoreAnchor(anchor);
+        const settleFrame = requestAnimationFrame(() => {
+          if (!destroyed && revision === restackRevision) {
+            gridController?.sync();
+            gridController?.restoreAnchor(anchor);
+          }
+          if (pendingRestoreFrame === settleFrame) pendingRestoreFrame = null;
+        });
+        pendingRestoreFrame = settleFrame;
+      });
+      pendingRestoreFrame = frame;
+    });
   }
 
   function catalogContextLabel(manifest: WidgetManifest): string {
@@ -591,6 +610,7 @@
     data-placement-input={placementSnapshot.proxy.input}
     data-placement-x={placementSnapshot.proxy.x}
     data-placement-y={placementSnapshot.proxy.y}
+    data-placement-target={placementSnapshot.selectedTargetId ?? ''}
     aria-hidden="true"
     style={`--pom-placement-x:${placementSnapshot.proxy.x - placementSnapshot.proxy.offsetX}px;--pom-placement-y:${placementSnapshot.proxy.y - placementSnapshot.proxy.offsetY}px;--pom-placement-width:${placementSnapshot.proxy.width}px;--pom-placement-height:${placementSnapshot.proxy.height}px`}
   >

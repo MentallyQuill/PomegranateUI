@@ -1360,7 +1360,7 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
   }
 });
 
-test('all 52 reviewed Widget surfaces expose exact ready, state, focus, and responsive contracts', async ({ page }) => {
+test('all 94 reviewed Widget surfaces expose exact ready, state, focus, and responsive contracts', async ({ page }) => {
   test.setTimeout(120_000);
   const presentationTitleOverrides = new Map<string, string>([
     ['settings.connections', 'AI Connections'],
@@ -1415,7 +1415,8 @@ test('all 52 reviewed Widget surfaces expose exact ready, state, focus, and resp
     await expect(implemented.locator('.surface-state')).toHaveCount(0);
     await closeDeveloperTools(page);
 
-    if (surface.family !== 'story') {
+    const previewRegionRole = await article.evaluate((root) => root.closest<HTMLElement>('[data-pomegranate-region-role]')?.dataset.pomegranateRegionRole ?? '');
+    if (surface.family !== 'story' && previewRegionRole === 'support') {
       const side = surface.family === 'systems' ? 'right' : 'left';
       const separator = page.getByRole('separator', { name: `Resize ${side} toolbar` });
       await separator.press('Home');
@@ -1436,8 +1437,9 @@ test('all 52 reviewed Widget surfaces expose exact ready, state, focus, and resp
   }
 });
 
-test('Catalog preserves all 94 identities, honest previews, search, and placement', async ({ page }) => {
+test('Catalog renders the source composition, 94 shared previews, and exact expanded geometry', async ({ page }) => {
   test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Create Panel' }).click();
   const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
@@ -1448,13 +1450,67 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
   await closeDeveloperTools(page);
   await openWidgetCatalog(page);
   const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
-  const results = catalog.getByRole('listitem');
+  const results = catalog.locator('[data-catalog-result]');
+  await expect(catalog.locator('.catalog-title h2')).toHaveText('Widget Catalog');
+  await expect(catalog.locator('.catalog-title span')).toHaveText('Build this Panel');
+  await expect(catalog.getByRole('button', { name: 'Close Widget Catalog' })).toBeVisible();
+  await expect(catalog.getByRole('searchbox', { name: 'Search Widgets' })).toHaveAttribute('placeholder', 'Search widgets…');
+  const previewSize = catalog.getByRole('slider', { name: 'Preview size' });
+  await expect(previewSize).toHaveValue('286');
+  await expect(previewSize).toHaveAttribute('min', '200');
+  await expect(previewSize).toHaveAttribute('max', '420');
+  await expect(catalog.getByRole('group', { name: 'Catalog view' }).getByRole('button')).toHaveText(['Visual', 'Compact']);
+  await expect(catalog.getByRole('navigation', { name: 'Widget categories' }).getByRole('button')).toHaveText([
+    'All', 'Story', 'Library', 'Systems', 'Settings', 'Extensions'
+  ]);
+  await expect(catalog.getByRole('group', { name: 'Catalog filters' }).getByRole('button')).toHaveText([
+    'Favorites', 'Recent', 'On this Panel', 'Fits this layout'
+  ]);
+  await expect(catalog.locator('.catalog-foot')).toHaveText(['94 widgetsStrictly active story']);
   await expect(results).toHaveCount(94);
-  await expect(catalog.locator('.catalog-miniature')).toHaveCount(94);
-  await expect(catalog.locator('[data-renderer-status="implemented"]')).toHaveCount(52);
-  await expect(catalog.locator('[data-renderer-status="unavailable"]')).toHaveCount(42);
+  await expect(results.locator('[data-catalog-result-content]')).toHaveCount(94);
+  await expect(catalog.locator('.catalog-widget-preview')).toHaveCount(94);
+  await expect(catalog.locator('.catalog-widget-preview [data-surface-type]')).toHaveCount(94);
+  await expect(catalog.locator('[data-renderer-status="unavailable"]')).toHaveCount(0);
+  await expect(catalog.getByRole('button', { name: /^Add / })).toHaveCount(0);
+  expect(await results.evaluateAll((nodes) => nodes.every((node) => node.getAttribute('role') === 'button' && node.getAttribute('tabindex') === '0'))).toBe(true);
 
-  for (const [category, total] of [['story', 12], ['library', 19], ['systems', 21], ['settings', 39], ['extensions', 3]] as const) {
+  const geometry = await catalog.evaluate((dialog) => {
+    const header = dialog.querySelector<HTMLElement>('.catalog-head')!;
+    const results = dialog.querySelector<HTMLElement>('.catalog-results')!;
+    const cards = [...dialog.querySelectorAll<HTMLElement>('[data-catalog-result]')];
+    const box = dialog.getBoundingClientRect();
+    const cardWidths = cards.map((card) => Math.round(card.getBoundingClientRect().width));
+    const cardHeights = cards.map((card) => Math.round(card.getBoundingClientRect().height));
+    const scrollOwners = [dialog, ...dialog.querySelectorAll<HTMLElement>('*')].filter((node) => {
+      const overflow = getComputedStyle(node).overflowY;
+      return ['auto', 'scroll'].includes(overflow) && node.scrollHeight > node.clientHeight + 1;
+    });
+    return {
+      box: { x: box.x, y: box.y, width: box.width, height: box.height },
+      headerHeight: header.getBoundingClientRect().height,
+      columns: getComputedStyle(results).gridTemplateColumns.split(' ').map(Number.parseFloat),
+      rowGap: getComputedStyle(results).rowGap,
+      narrowWidths: cards.filter((card) => ['narrow', 'medium'].includes(card.dataset.previewShape ?? '')).map((card) => Math.round(card.getBoundingClientRect().width)),
+      wideWidths: cards.filter((card) => ['wide', 'stage', 'strip'].includes(card.dataset.previewShape ?? '')).map((card) => Math.round(card.getBoundingClientRect().width)),
+      rowEnds: new Set(cards.map((card) => getComputedStyle(card).gridRowEnd)).size,
+      heights: new Set(cardHeights).size,
+      widths: new Set(cardWidths).size,
+      scrollOwnerClass: scrollOwners.map((node) => node.className)
+    };
+  });
+  expect(geometry.box).toEqual({ x: 192, y: 108, width: 1536, height: 864 });
+  expect(geometry.headerHeight).toBe(42);
+  expect(geometry.columns).toEqual([286, 286, 286, 286, 286]);
+  expect(geometry.rowGap).toBe('8px');
+  expect(new Set(geometry.narrowWidths)).toEqual(new Set([286]));
+  expect(new Set(geometry.wideWidths)).toEqual(new Set([580]));
+  expect(geometry.rowEnds).toBeGreaterThan(1);
+  expect(geometry.heights).toBeGreaterThan(1);
+  expect(geometry.widths).toBe(2);
+  expect(geometry.scrollOwnerClass).toEqual(['catalog-results']);
+
+  for (const [category, total] of [['Story', 12], ['Library', 19], ['Systems', 21], ['Settings', 39], ['Extensions', 3]] as const) {
     await catalog.getByRole('button', { name: category, exact: true }).click();
     await expect(results, `${category} Catalog total`).toHaveCount(total);
   }
@@ -1465,46 +1521,111 @@ test('Catalog preserves all 94 identities, honest previews, search, and placemen
   await expect(results.first()).toContainText('Character Relationships');
   await search.fill('');
 
-  await catalog.getByRole('button', { name: 'Compact', exact: true }).click();
-  await expect(catalog.locator('.catalog-miniature')).toHaveCount(0);
-  await expect(results).toHaveCount(94);
-  await catalog.getByRole('button', { name: 'Visual', exact: true }).click();
-  await expect(catalog.locator('.catalog-miniature')).toHaveCount(94);
+  await catalog.locator('.catalog-results').evaluate((region) => { region.scrollTop = 400; });
+  await expect.poll(() => catalog.locator('.catalog-results').evaluate((region) => region.scrollTop)).toBeGreaterThan(0);
+  const anchorKey = await catalog.locator('.catalog-results').evaluate((region) => {
+    const regionBox = region.getBoundingClientRect();
+    const results = [...region.querySelectorAll<HTMLElement>(':scope > [data-catalog-result]')];
+    const visible = results.find((result) => {
+      const box = result.getBoundingClientRect();
+      return box.top >= regionBox.top && box.top < regionBox.bottom;
+    }) ?? results.find((result) => {
+      const box = result.getBoundingClientRect();
+      return box.bottom > regionBox.top && box.top < regionBox.bottom;
+    });
+    return visible?.dataset.widgetType ?? null;
+  });
+  if (!anchorKey) throw new Error('Missing first visible Catalog anchor.');
+  const anchored = catalog.locator(`[data-catalog-result][data-widget-type="${anchorKey}"]`);
+  const anchorTop = await anchored.evaluate((node) => node.getBoundingClientRect().top);
+  await previewSize.fill('420');
+  await expect(previewSize).toHaveValue('420');
+  await expect.poll(() => anchored.evaluate((node) => node.getBoundingClientRect().top)).toBeCloseTo(anchorTop, 0);
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect(anchored).toBeVisible();
+  expect(await anchored.evaluate((node) => node.getBoundingClientRect().top)).toBeCloseTo(anchorTop, 0);
+  const nextAnchorKey = await catalog.locator('.catalog-results').evaluate((region) => {
+    const regionBox = region.getBoundingClientRect();
+    const results = [...region.querySelectorAll<HTMLElement>(':scope > [data-catalog-result]')];
+    const visible = results.find((result) => {
+      const box = result.getBoundingClientRect();
+      return box.top >= regionBox.top && box.top < regionBox.bottom;
+    }) ?? results.find((result) => {
+      const box = result.getBoundingClientRect();
+      return box.bottom > regionBox.top && box.top < regionBox.bottom;
+    });
+    return visible?.dataset.widgetType ?? null;
+  });
+  if (!nextAnchorKey) throw new Error('Missing Large Catalog anchor.');
+  const nextAnchored = catalog.locator(`[data-catalog-result][data-widget-type="${nextAnchorKey}"]`);
+  const nextAnchorTop = await nextAnchored.evaluate((node) => node.getBoundingClientRect().top);
+  await previewSize.fill('286');
+  await expect(previewSize).toHaveValue('286');
+  await expect.poll(() => nextAnchored.evaluate((node) => node.getBoundingClientRect().top)).toBeCloseTo(nextAnchorTop, 0);
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  expect(await nextAnchored.evaluate((node) => node.getBoundingClientRect().top)).toBeCloseTo(nextAnchorTop, 0);
 
-  await catalog.getByRole('button', { name: /^Add / }).evaluateAll((buttons) => {
-    for (const button of buttons) (button as HTMLButtonElement).click();
+  await catalog.getByRole('button', { name: 'Compact', exact: true }).click();
+  await expect(catalog.locator('.catalog-widget-preview')).toHaveCount(0);
+  await expect(catalog.getByRole('slider', { name: 'Preview size' })).toHaveCount(0);
+  await expect(results).toHaveCount(94);
+  const compactWidths = await results.evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().width)));
+  expect(new Set(compactWidths).size).toBe(1);
+  expect(compactWidths[0]).toBeGreaterThan(1400);
+  await catalog.getByRole('button', { name: 'Visual', exact: true }).click();
+  await expect(catalog.locator('.catalog-widget-preview')).toHaveCount(94);
+});
+
+test('Catalog whole-result automatic and pointer placement each dispatch exactly one canonical Widget', async ({ page }) => {
+  await openWidgetCatalog(page);
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const automatic = catalog.locator('[data-catalog-result][data-widget-type="settings.accessibility"]');
+  await automatic.focus();
+  await automatic.press('Enter');
+  await expect(page.locator('[data-widget-type="settings.accessibility"]:not([data-catalog-result])')).toHaveCount(1);
+  await expect(automatic).toHaveAttribute('aria-disabled', 'true');
+
+  const pointerResult = catalog.locator('[data-catalog-result][data-widget-type="ext:trail:location-notes"]');
+  await pointerResult.scrollIntoViewIfNeeded();
+  const originBox = await pointerResult.boundingBox();
+  if (!originBox) throw new Error('Missing Catalog pointer-result geometry.');
+  await page.mouse.move(originBox.x + 8, originBox.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(originBox.x + 13, originBox.y + 8);
+  await expect(catalog).toBeVisible();
+  await expect(page.locator('[data-catalog-placement-proxy]')).toHaveCount(0);
+  await page.mouse.move(originBox.x + 14, originBox.y + 8);
+  const proxy = page.locator('[data-catalog-placement-proxy]');
+  await expect(proxy).toBeVisible();
+  await expect(catalog).toBeHidden();
+  const targets = page.locator('[data-catalog-placement-target]');
+  await expect(targets).not.toHaveCount(0);
+  const target = targets.first();
+  const targetBox = await target.boundingBox();
+  if (!targetBox) throw new Error('Missing compatible Catalog placement target.');
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 2 });
+  const proxyEvidence = await proxy.evaluate((node) => ({
+    input: node.getAttribute('data-placement-input'),
+    x: Number(node.getAttribute('data-placement-x')),
+    y: Number(node.getAttribute('data-placement-y')),
+    target: node.getAttribute('data-placement-target')
+  }));
+  expect(proxyEvidence).toMatchObject({
+    input: 'pointer',
+    x: targetBox.x + targetBox.width / 2,
+    y: targetBox.y + targetBox.height / 2
   });
-  await catalog.getByRole('button', { name: 'Close Catalog' }).click();
-  const activePanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
-  await expect(activePanel.getByRole('article')).toHaveCount(94);
-  await expect(activePanel.locator('.implemented-widget')).toHaveCount(52);
-  await expect(activePanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(42);
-  const identities = await activePanel.locator('[data-widget-type]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-widget-type')));
-  expect(new Set(identities).size).toBe(94);
-  await openDeveloperTools(page);
-  await page.getByRole('button', { name: 'Save layout' }).click();
-  await page.reload();
-  const restoredPanel = page.getByRole('tabpanel', { name: 'Catalog Proof' });
-  await expect(restoredPanel.locator('[data-widget-type]')).toHaveCount(94);
-  await expect(restoredPanel.locator('.implemented-widget')).toHaveCount(52);
-  await expect(restoredPanel.locator('[aria-label$="renderer unavailable"]')).toHaveCount(42);
-  await expect(restoredPanel.getByRole('button', { name: 'Widget actions' })).toHaveCount(94);
-  await expect(restoredPanel.getByRole('menuitem', { name: 'Move to Widget Shelf' })).toHaveCount(0);
-  await restoredPanel.evaluate(async (root) => {
-    for (let remaining = 94; remaining > 0; remaining -= 1) {
-      const trigger = root.querySelector<HTMLButtonElement>('button.action-menu');
-      if (!trigger) throw new Error(`Missing Widget actions trigger with ${remaining} Widgets remaining.`);
-      trigger.click();
-      await Promise.resolve();
-      const remove = root.querySelector<HTMLButtonElement>('button.action-remove');
-      if (!remove) throw new Error(`Missing shelf action with ${remaining} Widgets remaining.`);
-      remove.click();
-      await Promise.resolve();
-    }
-  });
-  await expect(restoredPanel.locator('[data-widget-type]')).toHaveCount(0);
-  await openDeveloperTools(page);
-  await page.getByRole('button', { name: 'Save layout' }).click();
-  await page.reload();
-  await expect(page.getByRole('tabpanel', { name: 'Catalog Proof' }).locator('[data-widget-type]')).toHaveCount(0);
+  expect(proxyEvidence.target).not.toBe('');
+  const selectedTarget = page.locator(`[data-catalog-placement-target=${JSON.stringify(proxyEvidence.target)}]`);
+  await expect(selectedTarget).toHaveCount(1);
+  await expect(selectedTarget).toHaveClass(/is-catalog-target-active/);
+  const selectedBox = await selectedTarget.boundingBox();
+  if (!selectedBox) throw new Error('Missing selected Catalog placement target geometry.');
+  expect(proxyEvidence.x).toBeGreaterThanOrEqual(selectedBox.x);
+  expect(proxyEvidence.x).toBeLessThanOrEqual(selectedBox.x + selectedBox.width);
+  expect(proxyEvidence.y).toBeGreaterThanOrEqual(selectedBox.y);
+  expect(proxyEvidence.y).toBeLessThanOrEqual(selectedBox.y + selectedBox.height);
+  await page.mouse.up();
+  await expect(page.locator('[data-widget-type="ext:trail:location-notes"]:not([data-catalog-result])')).toHaveCount(1);
+  await expect(proxy).toHaveCount(0);
 });
