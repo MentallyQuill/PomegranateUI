@@ -54,7 +54,42 @@ export async function finishPointerDrag(page: Page): Promise<void> {
 export async function cancelPointerDrag(page: Page): Promise<void> {
   await page.keyboard.press('Escape');
   await page.mouse.up();
-  await expect(page.locator('[data-pom-part="widget.drag-preview"], [data-pom-part="widget.drop-overlay"]')).toHaveCount(0);
+  await expectNoWidgetDragResidue(page);
+}
+
+export async function dispatchPointerCancel(
+  page: Page,
+  handle: Locator,
+  point: Point,
+  pointerType: 'mouse' | 'pen' | 'touch' = 'mouse',
+  pointerId = 1
+): Promise<void> {
+  const element = await handle.elementHandle();
+  if (!element) throw new Error('Expected a connected Widget drag handle.');
+  await element.dispatchEvent('pointercancel', {
+    pointerId,
+    pointerType,
+    isPrimary: true,
+    button: 0,
+    clientX: point.x,
+    clientY: point.y
+  });
+  await page.mouse.up();
+  await expectNoWidgetDragResidue(page);
+}
+
+export async function expectNoWidgetDragResidue(page: Page): Promise<void> {
+  await expect(page.locator([
+    '[data-pom-part="widget.drag-preview"]',
+    '[data-pom-part="widget.drop-overlay"]',
+    '[data-pom-part="widget.dock-slot"]',
+    '[data-pom-part="widget.tab-insertion"]',
+    '[data-pom-part="tab.drag-preview"]',
+    '[data-pom-part="tab.insertion"]'
+  ].join(', '))).toHaveCount(0);
+  await expect(page.locator('body')).not.toHaveClass(/pom-(widget-drag|tab-reorder)-active/);
+  await expect(page.locator('main')).not.toHaveAttribute('data-drag-reveal-left');
+  await expect(page.locator('main')).not.toHaveAttribute('data-drag-reveal-right');
 }
 
 export async function dragTo(page: Page, handle: Locator, point: Point): Promise<void> {
@@ -129,14 +164,20 @@ export function widgetDragSurface(widget: Locator): Locator {
 }
 
 export async function captureInteractionEvidence(page: Page, origin: Locator): Promise<InteractionEvidence> {
-  const originIdentity = await origin.getAttribute('data-pomegranate-widget');
+  const originIdentity = await origin.evaluate((node) => {
+    const root = node.matches('[data-pomegranate-widget]')
+      ? node
+      : node.closest('[data-pomegranate-widget]') ?? node.querySelector('[data-pomegranate-widget]');
+    return root?.getAttribute('data-pomegranate-widget') ?? null;
+  });
   if (!originIdentity) throw new Error('Expected an origin Widget identity.');
   return page.evaluate((instanceId) => {
     const originNode = [...document.querySelectorAll<HTMLElement>('[data-pomegranate-widget]')]
       .find((node) => node.getAttribute('data-pomegranate-widget') === instanceId);
+    const visualRoot = originNode?.closest<HTMLElement>('[data-widget-type]') ?? originNode;
     const proxy = document.querySelector<HTMLElement>('[data-pom-part="widget.drag-preview"]');
     const overlay = document.querySelector<HTMLElement>('[data-pom-part="widget.drop-overlay"]');
-    const box = originNode?.getBoundingClientRect();
+    const box = visualRoot?.getBoundingClientRect();
     return {
       proxyCount: document.querySelectorAll('[data-pom-part="widget.drag-preview"]').length,
       proxyText: proxy?.textContent?.trim() ?? '',
@@ -144,7 +185,7 @@ export async function captureInteractionEvidence(page: Page, origin: Locator): P
       proxyInteractiveCount: proxy?.querySelectorAll('button,input,select,textarea,a[href],[tabindex]:not([tabindex="-1"])').length ?? 0,
       overlayText: overlay?.textContent?.trim() ?? '',
       activeReservationCount: document.querySelectorAll('[data-pom-part="widget.dock-slot"], [data-pom-part="widget.tab-insertion"]').length,
-      originVacant: originNode?.hasAttribute('data-widget-drag-placeholder') ?? false,
+      originVacant: visualRoot?.hasAttribute('data-widget-drag-placeholder') ?? false,
       originRect: box ? { x: box.x, y: box.y, width: box.width, height: box.height } : null,
       revision: document.querySelector('main')?.getAttribute('data-workbench-revision') ?? null
     };
@@ -153,9 +194,18 @@ export async function captureInteractionEvidence(page: Page, origin: Locator): P
 
 export async function capturePlacementSnapshot(widget: Locator): Promise<PlacementSnapshot> {
   return widget.evaluate((node) => {
-    const root = node.closest<HTMLElement>('[data-pomegranate-widget]') ?? node as HTMLElement;
+    const widgetIdentity = node.matches('[data-pomegranate-widget]')
+      ? node as HTMLElement
+      : node.closest<HTMLElement>('[data-pomegranate-widget]')
+        ?? node.querySelector<HTMLElement>('[data-pomegranate-widget]')
+        ?? node as HTMLElement;
+    const root = node.matches('[data-widget-type]')
+      ? node as HTMLElement
+      : node.closest<HTMLElement>('[data-widget-type]')
+        ?? widgetIdentity.closest<HTMLElement>('[data-widget-type]')
+        ?? node as HTMLElement;
     return {
-      instanceId: root.getAttribute('data-pomegranate-widget') ?? '',
+      instanceId: widgetIdentity.getAttribute('data-pomegranate-widget') ?? '',
       placement: root.getAttribute('data-pomegranate-placement'),
       region: root.getAttribute('data-pomegranate-region'),
       shelf: root.getAttribute('data-pomegranate-shelf'),
