@@ -649,6 +649,162 @@ test('Widget drag teardown clears global held state when its Panel unmounts', as
   await page.mouse.up();
 });
 
+test('held Widget dwells over a Panel tab and docks on the activated Panel', async ({ page }) => {
+  const source = page.getByRole('article', { name: 'Characters (Story)' });
+  const handleBox = await widgetDragSurface(source).boundingBox();
+  const libraryTab = page.getByRole('tab', { name: 'Library' });
+  const libraryTabBox = await libraryTab.boundingBox();
+  if (!handleBox || !libraryTabBox) throw new Error('Expected cross-Panel drag geometry.');
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + 18, handleBox.y + handleBox.height / 2 + 18, { steps: 3 });
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+
+  await page.mouse.move(
+    libraryTabBox.x + libraryTabBox.width / 2,
+    libraryTabBox.y + libraryTabBox.height / 2,
+    { steps: 8 }
+  );
+  await expect.poll(() => libraryTab.evaluate((tab) => ({
+    style: getComputedStyle(tab).outlineStyle,
+    width: getComputedStyle(tab).outlineWidth
+  }))).toEqual({ style: 'solid', width: '2px' });
+  await page.waitForTimeout(200);
+  await expect(libraryTab).toHaveAttribute('aria-selected', 'false');
+  await page.waitForTimeout(200);
+
+  await expect(libraryTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+  const support = page.locator('[data-pomegranate-region-surface="support"]');
+  const supportBox = await support.boundingBox();
+  if (!supportBox) throw new Error('Expected activated Library dock geometry.');
+  await page.mouse.move(supportBox.x + supportBox.width / 2, supportBox.y + supportBox.height - 8, { steps: 8 });
+  const rail = page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="support"][data-drop-rail-kind="append"]');
+  const railBox = await rail.boundingBox();
+  if (!railBox) throw new Error('Expected a Library support dock rail.');
+  await page.mouse.move(railBox.x + railBox.width / 2, railBox.y + railBox.height / 2, { steps: 4 });
+  await expect(rail).toHaveAttribute('data-active', 'true');
+  await page.mouse.up();
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
+
+  const moved = page.locator('[data-widget-type="story.characters"]');
+  await expect(moved).toHaveAttribute('data-pomegranate-region', 'support');
+  await expect(moved.locator('xpath=ancestor::*[@data-pomegranate-panel][1]')).toHaveAttribute('data-pomegranate-panel', 'library');
+  await page.getByRole('tab', { name: 'Scene' }).click();
+  await expect(page.locator('[data-widget-type="story.characters"]')).toHaveCount(0);
+});
+
+test('held Widget can float on the free canvas of an activated Panel', async ({ page }) => {
+  const source = page.getByRole('article', { name: 'Characters (Story)' });
+  const handleBox = await widgetDragSurface(source).boundingBox();
+  const sourceBox = await source.locator('xpath=ancestor::*[@data-widget-type][1]').boundingBox();
+  const libraryTab = page.getByRole('tab', { name: 'Library' });
+  const libraryTabBox = await libraryTab.boundingBox();
+  if (!handleBox || !sourceBox || !libraryTabBox) throw new Error('Expected cross-Panel float geometry.');
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + 18, handleBox.y + handleBox.height / 2 + 18, { steps: 3 });
+  await page.mouse.move(libraryTabBox.x + libraryTabBox.width / 2, libraryTabBox.y + libraryTabBox.height / 2, { steps: 8 });
+  await expect(libraryTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+
+  const freePoint = await page.locator('[data-pomegranate-panel="library"]').evaluate((surface) => {
+    const box = surface.getBoundingClientRect();
+    const blockers = [...surface.querySelectorAll<HTMLElement>('[data-widget-type]'),
+      ...document.querySelectorAll<HTMLElement>('[data-pom-part="widget.drop-rail"]')]
+      .map((element) => element.getBoundingClientRect());
+    for (let y = box.y + 24; y < box.bottom - 24; y += 24) {
+      for (let x = box.x + 24; x < box.right - 24; x += 24) {
+        if (blockers.every((blocker) => x < blocker.left || x > blocker.right || y < blocker.top || y > blocker.bottom)) {
+          return { x, y };
+        }
+      }
+    }
+    throw new Error('Expected free Library canvas geometry.');
+  });
+  await page.mouse.move(freePoint.x, freePoint.y, { steps: 8 });
+  const held = page.locator('[data-pom-part="widget.drag-preview"]');
+  await expect(held).toHaveAttribute('data-float-ready', '');
+  await page.mouse.up();
+  await expect(held).toHaveCount(0);
+
+  const moved = page.locator('[data-widget-type="story.characters"]');
+  await expect(moved).toHaveAttribute('data-pomegranate-placement', 'floating');
+  await expect(moved.locator('xpath=ancestor::*[@data-pomegranate-panel][1]')).toHaveAttribute('data-pomegranate-panel', 'library');
+  const floatingSize = await moved.evaluate((node) => ({
+    width: Number.parseFloat(node.style.width),
+    height: Number.parseFloat(node.style.minHeight)
+  }));
+  expect(floatingSize.width).toBeCloseTo(Math.min(420, Math.max(320, sourceBox.width)), 1);
+  expect(floatingSize.height).toBeCloseTo(Math.min(520, Math.max(240, sourceBox.height)), 1);
+});
+
+test('Escape after a drag-activated Panel restores the exact Widget origin', async ({ page }) => {
+  const source = page.locator('[data-pomegranate-panel="scene"] [data-widget-type="story.characters"]');
+  const handleBox = await widgetDragSurface(source).boundingBox();
+  const libraryTab = page.getByRole('tab', { name: 'Library' });
+  const libraryTabBox = await libraryTab.boundingBox();
+  const sceneTab = page.getByRole('tab', { name: 'Scene' });
+  const sceneTabBox = await sceneTab.boundingBox();
+  if (!handleBox || !libraryTabBox || !sceneTabBox) throw new Error('Expected cross-Panel cancellation geometry.');
+  await expect(source).toHaveAttribute('data-pomegranate-region', 'left');
+  await expect(source).toHaveAttribute('data-pomegranate-shelf', 'primary');
+  await expect(source).toHaveAttribute('data-pomegranate-order', '0');
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + 18, handleBox.y + handleBox.height / 2 + 18, { steps: 3 });
+  await page.mouse.move(libraryTabBox.x + libraryTabBox.width / 2, libraryTabBox.y + libraryTabBox.height / 2, { steps: 8 });
+  await expect(libraryTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+
+  await page.mouse.move(sceneTabBox.x + sceneTabBox.width / 2, sceneTabBox.y + sceneTabBox.height / 2, { steps: 8 });
+  await expect(sceneTab).toHaveAttribute('aria-selected', 'true');
+  await expect(source).toHaveAttribute('data-widget-drag-placeholder', 'true');
+
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(page.locator('[data-pom-part="widget.drag-preview"], [data-pom-part="widget.drop-overlay"]')).toHaveCount(0);
+  await expect(page.locator('body')).not.toHaveClass(/pom-widget-drag-active/);
+  const restored = page.locator('[data-pomegranate-panel="scene"] [data-widget-type="story.characters"]');
+  await expect(restored).toHaveAttribute('data-pomegranate-region', 'left');
+  await expect(restored).toHaveAttribute('data-pomegranate-shelf', 'primary');
+  await expect(restored).toHaveAttribute('data-pomegranate-order', '0');
+});
+
+test('a grouped Widget tears off and docks through a Panel tab', async ({ page }) => {
+  const group = page.locator('[data-widget-group]').filter({ has: page.getByRole('tab', { name: 'Room Ambience' }) });
+  const sourceTab = group.getByRole('tab', { name: 'Room Ambience' });
+  const sourceBox = await sourceTab.boundingBox();
+  const libraryTab = page.getByRole('tab', { name: 'Library' });
+  const libraryBox = await libraryTab.boundingBox();
+  if (!sourceBox || !libraryBox) throw new Error('Expected grouped cross-Panel drag geometry.');
+
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 + 18, { steps: 3 });
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+  await page.mouse.move(libraryBox.x + libraryBox.width / 2, libraryBox.y + libraryBox.height / 2, { steps: 8 });
+  await expect(libraryTab).toHaveAttribute('aria-selected', 'true');
+
+  const support = page.locator('[data-pomegranate-region-surface="support"]');
+  const supportBox = await support.boundingBox();
+  if (!supportBox) throw new Error('Expected Library support geometry.');
+  await page.mouse.move(supportBox.x + supportBox.width / 2, supportBox.y + supportBox.height - 8, { steps: 8 });
+  const rail = page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="support"][data-drop-rail-kind="append"]');
+  const railBox = await rail.boundingBox();
+  if (!railBox) throw new Error('Expected grouped Widget destination rail.');
+  await page.mouse.move(railBox.x + railBox.width / 2, railBox.y + railBox.height / 2, { steps: 4 });
+  await expect(rail).toHaveAttribute('data-active', 'true');
+  await page.mouse.up();
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
+
+  const moved = page.locator('[data-pomegranate-panel="library"] [data-widget-type="story.room-ambience"]');
+  await expect(moved).toHaveAttribute('data-pomegranate-region', 'support');
+});
+
 test('Panel tabs pan by pen and never expose a reorder gesture on touch', async ({ page }) => {
   await seedPanelRail(page);
   await page.setViewportSize({ width: 390, height: 844 });

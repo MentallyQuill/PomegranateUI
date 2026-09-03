@@ -34,6 +34,12 @@ main {
 [data-tab-touch-reorder-grip] { touch-action: none; }
 .panel-tabs [role="tab"][aria-selected="true"] { position: relative; border-color: var(--line-strong); color: var(--ink); background: color-mix(in srgb, var(--ember) 12%, transparent); box-shadow: var(--pom-material-button-inset, none); }
 .panel-tabs [role="tab"][aria-selected="true"]::after { position: absolute; right: 0; bottom: 0; left: 0; height: 2px; border-radius: 0 0 var(--pom-radius-small, .5rem) var(--pom-radius-small, .5rem); background: var(--pom-color-focus); content: ""; pointer-events: none; }
+body.pom-widget-drag-active main[data-pom-theme-root] .panel-tabs [role="tab"][data-widget-drag-hover="true"] {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--pom-color-focus) 18%, transparent);
+  outline: 2px solid var(--pom-color-focus);
+  outline-offset: -2px;
+}
 .panel-create-action { display: none; }
 main[data-pom-shell-presentation="instrumented"] .panel-create-action:not([hidden]) { display: block; }
 .panel-chrome-flow, .panel-navigation { display: contents; }
