@@ -15,6 +15,8 @@ import {
   widgetDragSurface
 } from './support/widget-interaction-driver.ts';
 
+const labOrigin = `http://127.0.0.1:${process.env.POM_PLAYWRIGHT_PORT ?? '4174'}`;
+
 async function openDeveloperTools(page: import('@playwright/test').Page) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
   if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
@@ -107,7 +109,7 @@ async function horizontalOverflowEvidence(locator: import('@playwright/test').Lo
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('http://127.0.0.1:4174');
+  await page.goto(labOrigin);
   await page.evaluate(() => window.localStorage.clear());
   await page.reload();
   await page.evaluate(() => document.fonts.ready);
@@ -600,7 +602,7 @@ test('phone portrait touch exploration pans tabs and opens actions from the acti
   const context = await browser.newContext({ viewport: { width: 1024, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4174');
+    await page.goto(labOrigin);
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     await seedPanelRail(page);
@@ -1114,7 +1116,7 @@ test('pre-hold touch movement cancels the Widget drag candidate permanently', as
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4174');
+    await page.goto(labOrigin);
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     const handle = widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' }));
@@ -1142,7 +1144,7 @@ test('Deep Current accepts the same shelf placement path from a deliberate coars
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4174');
+    await page.goto(labOrigin);
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     const handle = widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' }));
@@ -1174,7 +1176,7 @@ test('phone touch panning outside the dedicated Widget grip scrolls and never be
   const context = await browser.newContext({ viewport: { width: 390, height: 500 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4174');
+    await page.goto(labOrigin);
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     await page.getByRole('tab', { name: 'Settings' }).click();
@@ -1384,7 +1386,7 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4174');
+    await page.goto(labOrigin);
     await page.evaluate(() => document.fonts.ready);
     expect(await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches)).toBe(true);
     await openDeveloperTools(page);
@@ -1425,7 +1427,7 @@ test('all 98 reviewed Widget surfaces expose exact ready, state, focus, and resp
   for (const surface of IMPLEMENTED_SURFACES) {
     const fixture = SURFACE_FIXTURES.get(surface.type);
     if (!fixture) throw new Error(`Missing fixture for ${surface.type}.`);
-    await page.goto(`http://127.0.0.1:4174/?surface=${encodeURIComponent(surface.type)}`);
+    await page.goto(`${labOrigin}/?surface=${encodeURIComponent(surface.type)}`);
     await page.evaluate(() => document.fonts.ready);
     const article = page.locator(`[data-widget-type="${surface.type}"] > article`);
     await expect(article).toHaveCount(1);
