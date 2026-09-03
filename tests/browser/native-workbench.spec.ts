@@ -1627,6 +1627,15 @@ test('Catalog renders the source composition, 98 shared previews, and exact expa
   const compactWidths = await results.evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().width)));
   expect(new Set(compactWidths).size).toBe(1);
   expect(compactWidths[0]).toBeGreaterThan(1400);
+  const oversizedCompactRows = await results.evaluateAll((nodes) => nodes.flatMap((node) => {
+    const height = Math.round(node.getBoundingClientRect().height);
+    return height <= 44 ? [] : [{
+      widgetType: node.getAttribute('data-widget-type'),
+      shape: node.getAttribute('data-preview-shape'),
+      height
+    }];
+  }));
+  expect(oversizedCompactRows).toEqual([]);
   await expect.poll(() => anchored.evaluate((node) => {
     const region = node.closest<HTMLElement>('.catalog-results')!;
     return node.getBoundingClientRect().top - region.getBoundingClientRect().top;
