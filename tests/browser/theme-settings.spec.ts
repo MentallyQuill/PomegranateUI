@@ -178,6 +178,28 @@ test('Materials and Ambient elements control their semantic bindings', async ({ 
   await expect.poll(() => binding(page, '--pom-ambient-power')).toBe('0.41');
 });
 
+test('Theme Materials slider hover keeps the enlarged hit target visually transparent', async ({ page }) => {
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
+    await fresh(page);
+    await selectTheme(page, theme);
+
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 980, height: 720 }]) {
+      await page.setViewportSize(viewport);
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const materials = widget(page, 'settings.theme-materials');
+      if (!await materials.isVisible()) await page.getByRole('button', { name: 'Toggle left dock' }).click();
+      await expect(materials).toBeVisible();
+
+      for (const name of ['Glass Density', 'Bar Opacity', 'Selected Strength', 'Frost Level']) {
+        const slider = materials.getByRole('slider', { name });
+        await slider.hover();
+        await expect(slider, `${theme} at ${viewport.width}px: ${name} hover must not paint its 44px hit target`)
+          .toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      }
+    }
+  }
+});
+
 test('every Theme Materials control changes a rendered surface in every theme and presentation', async ({ page }) => {
   test.setTimeout(180_000);
   const cases = [

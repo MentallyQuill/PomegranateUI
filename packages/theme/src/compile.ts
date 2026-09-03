@@ -280,6 +280,11 @@ export const POM_SEMANTIC_PART_STYLE_SHEET = `${THEME_PART_IDS.map(partRule).joi
   border: 0;
   box-shadow: none;
 }
+[data-pom-theme-root] [data-pom-part="slider.input"]:hover,
+[data-pom-theme-root] [data-pom-part="slider.input"]:active,
+[data-pom-theme-root] [data-pom-part="slider.input"]:focus-visible {
+  background-color: transparent;
+}
 [data-pom-theme-root] [data-pom-part="slider.input"]::-webkit-slider-runnable-track {
   height: var(--pom-control-slider-track-size);
   background: transparent;
