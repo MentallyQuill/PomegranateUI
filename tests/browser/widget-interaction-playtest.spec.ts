@@ -47,7 +47,6 @@ async function workbenchRevision(page: Page): Promise<number> {
 }
 
 test('AUDIT-P1-GROUP-DIRECT-FLOAT grouped tab reaches open Scene space after horizontal departure', async ({ page }, testInfo) => {
-  test.fail(true, 'AUDIT-P1-GROUP-DIRECT-FLOAT: horizontal reorder ownership prevents direct tear-off.');
   const group = await createReferenceGroup(page);
   const tab = group.getByRole('tab', { name: 'Theme Materials' });
   const stage = page.locator('[data-pomegranate-region-surface="stage"]');
@@ -244,7 +243,6 @@ interactionTest('grouped-active-to-existing-group-blur', async ({ page }) => {
 });
 
 interactionTest('grouped-inactive-direct-float', async ({ page }) => {
-  test.fail(true, 'AUDIT-P1-GROUP-DIRECT-FLOAT: inactive grouped tab is also locked into reorder ownership.');
   const group = await createReferenceGroup(page);
   await group.getByRole('tab', { name: 'Characters (Story)' }).click();
   const sourceTab = group.getByRole('tab', { name: 'Theme Materials' });

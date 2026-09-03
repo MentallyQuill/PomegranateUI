@@ -4,7 +4,10 @@
   import { onDestroy, tick } from 'svelte';
   import { createTabReorderController } from './TabReorderController.js';
   import { createWidgetDragController } from './WidgetDragController.js';
-  import { tabDragDecision } from './tab-reorder.js';
+  import {
+    nextWidgetGroupGestureOwner,
+    type WidgetGroupGestureOwner
+  } from './widget-group-gesture.js';
 
   let {
     frames,
@@ -38,7 +41,7 @@
     startX: number;
     startY: number;
     startedAt: number;
-    owner: 'pending' | 'reorder' | 'tear-off';
+    owner: WidgetGroupGestureOwner;
   } | null = null;
   const drag = createWidgetDragController({
     getFrame: () => dragFrame ?? active!,
@@ -46,8 +49,7 @@
     setDragging: (next) => {
       dragging = next;
       if (!next) previewFrameId = null;
-    },
-    activation: 'vertical-tearoff'
+    }
   });
   onDestroy(drag.destroy);
 
@@ -80,44 +82,53 @@
 
   function dragPointerMove(event: PointerEvent) {
     if (!groupGesture || groupGesture.pointerId !== event.pointerId) return;
-    if (groupGesture.owner === 'pending') {
-      const decision = tabDragDecision({
-        dx: event.clientX - groupGesture.startX,
-        dy: event.clientY - groupGesture.startY,
-        pointerType: groupGesture.pointerType,
-        elapsedMs: event.timeStamp - groupGesture.startedAt,
-        allowTearOff: true
-      });
-      if (decision === 'cancelled') {
-        groupGesture = null;
-        reorderDrag.pointerCancel(event);
-        drag.pointerCancel(event);
-        return;
-      }
-      if (decision === 'pending') return;
-      groupGesture.owner = decision === 'tear-off' ? 'tear-off' : 'reorder';
-      if (groupGesture.owner === 'reorder') {
-        drag.pointerCancel(event);
-        reorderDrag.pointerMove(event);
-        return;
-      }
+    if (groupGesture.owner === 'tear-off') {
+      drag.pointerMove(event);
+      return;
+    }
+
+    const corridor = tablist?.getBoundingClientRect();
+    if (!corridor) return;
+    const owner = nextWidgetGroupGestureOwner({
+      owner: groupGesture.owner,
+      dx: event.clientX - groupGesture.startX,
+      dy: event.clientY - groupGesture.startY,
+      y: event.clientY,
+      corridor: { top: corridor.top, bottom: corridor.bottom },
+      pointerType: groupGesture.pointerType,
+      elapsedMs: event.timeStamp - groupGesture.startedAt
+    });
+    if (owner === 'cancelled') {
+      groupGesture = null;
+      reorderDrag.pointerCancel(event);
+      drag.pointerCancel(event);
+      return;
+    }
+    if (owner === 'pending') return;
+    groupGesture.owner = owner;
+    if (owner === 'reorder') {
+      reorderDrag.pointerMove(event);
+      return;
+    }
+
+    if (owner === 'tear-off') {
       reorderDrag.preventNextClick();
       reorderDrag.pointerCancel(event);
       previewFrameId = dragFrame?.instanceId ?? null;
       void tick().then(() => {
         if (groupGesture?.pointerId === event.pointerId && groupGesture.owner === 'tear-off') drag.pointerMove(event);
       });
-      return;
     }
-    if (groupGesture.owner === 'reorder') reorderDrag.pointerMove(event);
-    else drag.pointerMove(event);
   }
 
   function dragPointerUp(event: PointerEvent) {
     if (!groupGesture || groupGesture.pointerId !== event.pointerId) return;
     const owner = groupGesture.owner;
     groupGesture = null;
-    if (owner === 'reorder') reorderDrag.pointerUp(event);
+    if (owner === 'reorder') {
+      drag.pointerCancel(event);
+      reorderDrag.pointerUp(event);
+    }
     else if (owner === 'tear-off') drag.pointerUp(event);
     else {
       reorderDrag.pointerUp(event);
