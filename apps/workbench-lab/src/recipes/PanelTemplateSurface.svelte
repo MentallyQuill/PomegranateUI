@@ -5,11 +5,12 @@
   import StoryComposer from './StoryComposer.svelte';
   import StoryStage from './StoryStage.svelte';
 
-  let { surface, store, renderWidget, titleFor }: {
+  let { surface, store, renderWidget, titleFor, onexpanddock }: {
     surface: PanelSurfaceProjection;
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
+    onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
   } = $props();
 </script>
 
@@ -24,11 +25,11 @@
   {/if}
   {#each surface.regions as region (region.region.id)}
     {#if surface.templateFamily === 'story-stage' && region.region.role === 'stage'}
-      <StoryStage><DockRegion projection={region} {store} {renderWidget} {titleFor} surfacePart={null} /></StoryStage>
+      <StoryStage><DockRegion projection={region} {store} {renderWidget} {titleFor} {onexpanddock} surfacePart={null} /></StoryStage>
     {:else if surface.templateFamily === 'story-stage' && region.region.role === 'composer'}
-      <StoryComposer><DockRegion projection={region} {store} {renderWidget} {titleFor} surfacePart={null} /></StoryComposer>
+      <StoryComposer><DockRegion projection={region} {store} {renderWidget} {titleFor} {onexpanddock} surfacePart={null} /></StoryComposer>
     {:else}
-      <DockRegion projection={region} {store} {renderWidget} {titleFor} />
+      <DockRegion projection={region} {store} {renderWidget} {titleFor} {onexpanddock} />
     {/if}
   {/each}
 </div>

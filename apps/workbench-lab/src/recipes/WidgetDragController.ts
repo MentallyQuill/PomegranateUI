@@ -33,6 +33,7 @@ interface DragCandidate {
   slot: HTMLElement | null;
   slotIntentKey: string | null;
   intent: DockIntent | null;
+  revealedDock: 'left' | 'right' | null;
   canFloat: boolean;
   committing: boolean;
 }
@@ -49,6 +50,7 @@ interface WidgetDragControllerOptions {
   readonly getFrame: () => WidgetFrameProjection;
   readonly getStore: () => WorkbenchStore;
   readonly setDragging: (dragging: boolean) => void;
+  readonly onExpandDock?: ((edge: 'left' | 'right') => void) | undefined;
   readonly activation?: 'any' | 'vertical-tearoff';
 }
 
@@ -277,6 +279,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     const side = dockRevealSide(point, rectOf(current.surface.getBoundingClientRect()), 34);
     const revealLeft = side === 'left' && root.classList.contains('left-collapsed');
     const revealRight = side === 'right' && root.classList.contains('right-collapsed');
+    current.revealedDock = revealLeft ? 'left' : revealRight ? 'right' : null;
     const changed = root.hasAttribute('data-drag-reveal-left') !== revealLeft
       || root.hasAttribute('data-drag-reveal-right') !== revealRight;
     if (revealLeft) root.dataset.dragRevealLeft = 'true';
@@ -389,6 +392,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       cleanup();
       return;
     }
+    if (current.revealedDock === current.intent.regionId) options.onExpandDock?.(current.revealedDock);
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!held || reduceMotion) {
       cleanup();
@@ -614,6 +618,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         slot: null,
         slotIntentKey: null,
         intent: null,
+        revealedDock: null,
         canFloat: false,
         committing: false
       };

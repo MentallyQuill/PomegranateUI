@@ -15,6 +15,7 @@
     store,
     renderWidget,
     titleFor,
+    onexpanddock,
     leftCollapsed = false,
     rightCollapsed = false,
     ontoggleleft,
@@ -24,6 +25,7 @@
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
+    onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
     leftCollapsed?: boolean;
     rightCollapsed?: boolean;
     ontoggleleft?: (() => void) | undefined;
@@ -76,7 +78,7 @@
       {#if surface.unavailableTemplateId}
         <UnavailableTemplate templateId={surface.unavailableTemplateId} />
       {:else}
-        <PanelTemplateSurface {surface} {store} {renderWidget} {titleFor} />
+        <PanelTemplateSurface {surface} {store} {renderWidget} {titleFor} {onexpanddock} />
       {/if}
       <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
       <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />

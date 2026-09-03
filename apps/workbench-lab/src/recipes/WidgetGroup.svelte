@@ -13,12 +13,14 @@
     frames,
     store,
     renderWidget,
-    titleFor
+    titleFor,
+    onexpanddock
   }: {
     frames: readonly WidgetFrameProjection[];
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
+    onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
   } = $props();
 
   const ordered = $derived([...frames].sort((left, right) => {
@@ -49,7 +51,8 @@
     setDragging: (next) => {
       dragging = next;
       if (!next) previewFrameId = null;
-    }
+    },
+    onExpandDock: (edge) => onexpanddock?.(edge)
   });
   onDestroy(drag.destroy);
 

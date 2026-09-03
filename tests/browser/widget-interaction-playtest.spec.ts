@@ -138,11 +138,23 @@ test.afterAll(() => {
 });
 
 interactionTest('collapsed-dock-reveal-commit', async ({ page }) => {
-  test.fail(true, 'AUDIT-P1-COLLAPSED-DOCK-COMMIT: a committed drop returns the destination dock to hidden.');
-  await page.getByRole('button', { name: 'Toggle left dock' }).click();
+  const toggle = page.getByRole('button', { name: 'Toggle left dock' });
+  await toggle.click();
   const source = page.getByRole('article', { name: 'Room Ambience' });
   const beforeRevision = await workbenchRevision(page);
-  const start = await beginPointerDrag(page, widgetDragSurface(source));
+  let start = await beginPointerDrag(page, widgetDragSurface(source));
+  await movePointerPath(page, [
+    { x: start.x, y: start.y + 28 },
+    { x: 18, y: 320 }
+  ]);
+  await expect(page.locator('main')).toHaveAttribute('data-drag-reveal-left', 'true');
+  await expect(page.locator('[data-pom-part="widget.dock-slot"]')).toBeVisible();
+  await cancelPointerDrag(page);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-conformance-region="left"]')).toBeHidden();
+  await expectNoWidgetDragResidue(page);
+
+  start = await beginPointerDrag(page, widgetDragSurface(source));
   await movePointerPath(page, [
     { x: start.x, y: start.y + 28 },
     { x: 18, y: 320 }
@@ -154,7 +166,33 @@ interactionTest('collapsed-dock-reveal-commit', async ({ page }) => {
   const placed = page.locator('[data-widget-type="story.room-ambience"]');
   await expect(placed).toHaveAttribute('data-pomegranate-edge', 'left');
   expect(await workbenchRevision(page)).toBeGreaterThan(beforeRevision);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('[data-conformance-region="left"]')).toBeVisible();
+  await expectNoWidgetDragResidue(page);
+});
+
+test('AUDIT-P2-COLLAPSED-DOCK-SYMMETRY accepted right-dock drop expands its destination', async ({ page }) => {
+  const toggle = page.getByRole('button', { name: 'Toggle right dock' });
+  await toggle.click();
+  const source = page.getByRole('article', { name: 'Theme Materials' });
+  const beforeRevision = await workbenchRevision(page);
+  const start = await beginPointerDrag(page, widgetDragSurface(source));
+  const targetX = await page.evaluate(() => window.innerWidth - 18);
+  await movePointerPath(page, [
+    { x: start.x, y: start.y + 28 },
+    { x: targetX, y: 120 }
+  ]);
+  await expect(page.locator('main')).toHaveAttribute('data-drag-reveal-right', 'true');
+  const targetBox = await page.getByRole('article', { name: 'World State' }).boundingBox();
+  if (!targetBox) throw new Error('Expected revealed right-dock Widget geometry.');
+  await movePointerPath(page, [{ x: targetX, y: targetBox.y + targetBox.height * 0.12 }]);
+  await expect(page.locator('[data-pom-part="widget.dock-slot"]')).toBeVisible();
+  await finishPointerDrag(page);
+
+  await expect(page.locator('[data-widget-type="settings.theme-materials"]')).toHaveAttribute('data-pomegranate-edge', 'right');
+  expect(await workbenchRevision(page)).toBeGreaterThan(beforeRevision);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
   await expectNoWidgetDragResidue(page);
 });
 

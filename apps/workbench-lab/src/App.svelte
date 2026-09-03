@@ -484,6 +484,11 @@
     focusedFrame = frame;
   }
 
+  function expandDock(edge: 'left' | 'right') {
+    if (edge === 'left') leftCollapsed = false;
+    else rightCollapsed = false;
+  }
+
   async function returnFromFocusedWidget() {
     const returnId = focusReturnId;
     focusedFrame = null;
@@ -615,6 +620,7 @@
     <WorkbenchSurface
       {store}
       titleFor={frameTitle}
+      onexpanddock={expandDock}
       {leftCollapsed}
       {rightCollapsed}
       ontoggleleft={() => { leftCollapsed = !leftCollapsed; }}
@@ -646,6 +652,7 @@
               {rendererRegistry}
               {hostContext}
               onfocuswidget={focusWidget}
+              onexpanddock={expandDock}
               surfacePart={frameSurfacePart(frame)}
               title={frameTitle(frame)}
               meta={frameMeta(frame)}
