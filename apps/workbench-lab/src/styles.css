@@ -807,18 +807,28 @@ main {
   z-index: 2147483001;
   top: 0;
   left: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
   overflow: hidden;
+  padding: 0 12px;
   border: 1px solid color-mix(in srgb, var(--pom-color-focus) 86%, white 8%);
   color: var(--ink);
-  background: var(--pom-material-floating, rgb(7 13 14 / 92%));
+  background: color-mix(in srgb, var(--pom-material-opaque, var(--pom-color-canvas, #071011)) 94%, var(--pom-color-focus) 6%);
   box-shadow: 0 24px 70px rgb(0 0 0 / 68%), 0 0 0 1px color-mix(in srgb, var(--pom-color-focus) 24%, transparent);
   opacity: .9;
   pointer-events: none;
   transform-origin: 0 0;
   will-change: transform;
 }
-.widget-drag-preview > div { width: 100%; height: 100%; }
-.widget-drag-preview article { min-height: 100%; margin: 0; }
+.widget-drag-preview-identity {
+  overflow: hidden;
+  font: 600 10px/1 var(--pom-font-technical, monospace);
+  letter-spacing: .04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 .widget-drag-preview[data-float-ready] { border-style: dashed; opacity: .78; }
 .widget-drag-preview[data-drop-committing] { pointer-events: none; }
 .widget-dock-preview-slot {
@@ -849,8 +859,7 @@ main {
 .widget-drop-overlay { position: fixed; z-index: 2147483000; inset: 0; pointer-events: none; }
 .widget-drop-rail,
 .widget-snap-preview,
-.widget-tab-insertion,
-.widget-drop-intent-label { position: fixed; box-sizing: border-box; }
+.widget-tab-insertion { position: fixed; box-sizing: border-box; }
 .widget-drop-rail {
   display: flex;
   align-items: center;
@@ -858,15 +867,6 @@ main {
   border: 1px solid color-mix(in srgb, var(--pom-color-focus) 36%, transparent);
   background: color-mix(in srgb, var(--pom-color-focus) 5%, transparent);
   opacity: .46;
-}
-.widget-drop-rail span {
-  margin-right: 7px;
-  padding: 2px 5px;
-  color: color-mix(in srgb, var(--pom-color-focus) 76%, var(--ink));
-  background: color-mix(in srgb, var(--pom-material-menu, #081011) 88%, transparent);
-  font: 8px var(--pom-font-technical, monospace);
-  letter-spacing: .07em;
-  text-transform: uppercase;
 }
 .widget-drop-rail[data-active="true"] {
   border-color: var(--pom-color-focus);
@@ -880,16 +880,6 @@ main {
   box-shadow: inset 0 0 24px color-mix(in srgb, var(--pom-color-focus) 9%, transparent), 0 0 20px color-mix(in srgb, var(--pom-color-focus) 25%, transparent);
 }
 .widget-tab-insertion { background: var(--pom-color-focus); box-shadow: 0 0 10px var(--pom-color-focus); }
-.widget-drop-intent-label {
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  border: 1px solid color-mix(in srgb, var(--pom-color-focus) 64%, transparent);
-  color: var(--ink);
-  background: color-mix(in srgb, var(--pom-material-menu, #081011) 90%, transparent);
-  font: 9px var(--pom-font-technical, monospace);
-  letter-spacing: .04em;
-}
 @media (prefers-reduced-motion: no-preference) {
   .widget-drag-preview { transition: opacity 110ms ease, border-color 110ms ease; }
   .widget-drop-rail, .widget-snap-preview, .widget-tab-insertion { transition: opacity 90ms ease, background-color 90ms ease, box-shadow 90ms ease; }

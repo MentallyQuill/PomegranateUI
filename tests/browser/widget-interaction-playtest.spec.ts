@@ -74,7 +74,6 @@ test('AUDIT-P1-GROUP-DIRECT-FLOAT grouped tab reaches open Scene space after hor
 });
 
 test('AUDIT-P1-SINGLE-PRESENTATION lifted Widget has one compact payload and one text-free destination', async ({ page }, testInfo) => {
-  test.fail(true, 'AUDIT-P1-SINGLE-PRESENTATION: drag layer clones the complete Widget and renders labels.');
   const source = page.locator('[data-widget-type="story.characters"]').first();
   const target = page.getByRole('article', { name: 'World State' });
   const targetBox = await target.boundingBox();

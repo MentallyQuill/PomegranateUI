@@ -837,7 +837,7 @@ test('Deep Current narrow dock keeps the complete contextual Widget Actions menu
   ]);
 });
 
-test('Deep Current held Widget exposes the Atmospheric card, rails, and tab preview', async ({ page }) => {
+test('Deep Current held Widget exposes one compact identity, rails, and tab preview', async ({ page }) => {
   const characters = page.locator('[data-widget-type="story.characters"]').first();
   const worldState = page.getByRole('article', { name: 'World State' });
   const handle = widgetDragSurface(characters);
@@ -852,7 +852,10 @@ test('Deep Current held Widget exposes the Atmospheric card, rails, and tab prev
   const held = page.locator('[data-pom-part="widget.drag-preview"]');
   await expect(held).toBeVisible();
   await expect(held).toContainText('Characters');
-  await expect(held.locator('article')).toHaveCount(1);
+  await expect(held).toHaveAttribute('data-widget-drag-type', 'story.characters');
+  await expect(held.locator('article')).toHaveCount(0);
+  await expect(held.locator('button, input, select, textarea, a[href]')).toHaveCount(0);
+  await expect(page.locator('[data-pom-part="widget.drop-overlay"]')).toHaveText('');
   await expect(page.locator('[data-pom-part="widget.drop-rail"]')).not.toHaveCount(0);
   await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toBeVisible();
   await expect(page.locator('[data-pom-part="widget.tab-insertion"]')).toBeVisible();
@@ -915,7 +918,7 @@ test('dragging to a collapsed edge reveals and widens that dock before commit', 
   await expect(page.locator('main')).not.toHaveAttribute('data-drag-reveal-left');
 });
 
-test('grouped Widget tabs reorder horizontally without accidental detachment', async ({ page }) => {
+test('grouped Widget tabs reorder when released inside the tab corridor', async ({ page }) => {
   const customTheme = page.getByRole('article', { name: 'Theme Materials' });
   const characters = page.getByRole('article', { name: 'Characters (Story)' });
   await dragToWidgetTab(page, widgetDragSurface(customTheme), characters);
@@ -931,7 +934,6 @@ test('grouped Widget tabs reorder horizontally without accidental detachment', a
   await page.mouse.down();
   await page.mouse.move(secondBox.x + secondBox.width - 2, secondBox.y + secondBox.height / 2, { steps: 8 });
   await expect(page.locator('[data-pom-part="tab.insertion"]')).toBeVisible();
-  await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height + 160, { steps: 4 });
   await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
   await page.mouse.up();
   await expect(group.getByRole('tab')).toHaveText(['Theme Materials', 'Characters (Story)']);
@@ -943,7 +945,7 @@ test('grouped Widget tabs reorder horizontally without accidental detachment', a
   await expect(renderedCharacters).toHaveAttribute('data-pomegranate-placement', 'docked');
 });
 
-test('all themes preserve the same held-card docking composition', async ({ page }, testInfo) => {
+test('all themes preserve the same compact held-identity docking composition', async ({ page }, testInfo) => {
   await openDeveloperTools(page);
   const themes = page.getByRole('group', { name: 'Visual target' });
 
@@ -961,7 +963,10 @@ test('all themes preserve the same held-card docking composition', async ({ page
 
     const held = page.locator('[data-pom-part="widget.drag-preview"]');
     await expect(held.locator('xpath=ancestor::main[@data-pom-theme-root]')).toHaveCount(1);
-    await expect(held.locator('[data-widget-type="story.characters"]')).toHaveCount(1);
+    await expect(held).toHaveAttribute('data-widget-drag-type', 'story.characters');
+    await expect(held).toContainText('Characters');
+    await expect(held.locator('article, button, input, select, textarea, a[href]')).toHaveCount(0);
+    await expect(page.locator('[data-pom-part="widget.drop-overlay"]')).toHaveText('');
     const [heldBox, snapBox, railCount, colors, viewport] = await Promise.all([
       held.boundingBox(),
       page.locator('[data-pom-part="widget.snap-preview"]').boundingBox(),
@@ -969,8 +974,9 @@ test('all themes preserve the same held-card docking composition', async ({ page
       held.evaluate((node) => ({ border: getComputedStyle(node).borderColor, background: getComputedStyle(node).backgroundColor })),
       page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }))
     ]);
-    expect(heldBox?.width).toBeGreaterThanOrEqual(230);
-    expect(heldBox?.height).toBeGreaterThanOrEqual(120);
+    expect(heldBox?.width).toBeGreaterThanOrEqual(180);
+    expect(heldBox?.width).toBeLessThanOrEqual(280);
+    expect(heldBox?.height).toBeCloseTo(42, 1);
     expect(heldBox?.x).toBeGreaterThanOrEqual(0);
     expect(heldBox?.y).toBeGreaterThanOrEqual(0);
     expect((heldBox?.x ?? viewport.width) + (heldBox?.width ?? 0)).toBeLessThanOrEqual(viewport.width);

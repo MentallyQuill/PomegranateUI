@@ -70,27 +70,6 @@ function positionFixed(element: HTMLElement, rect: DockRect) {
   element.style.height = `${rect.height}px`;
 }
 
-function makeVisualClone(source: HTMLElement): HTMLElement {
-  const clone = source.cloneNode(true) as HTMLElement;
-  clone.removeAttribute('style');
-  for (const element of [clone, ...clone.querySelectorAll<HTMLElement>('*')]) {
-    element.removeAttribute('id');
-    element.removeAttribute('name');
-    element.removeAttribute('for');
-    element.removeAttribute('aria-controls');
-    element.removeAttribute('aria-labelledby');
-    element.removeAttribute('data-pomegranate-widget');
-    element.removeAttribute('data-widget-drag-root');
-    element.removeAttribute('data-widget-drag-surface');
-    element.setAttribute('tabindex', '-1');
-    if (element instanceof HTMLButtonElement || element instanceof HTMLInputElement
-      || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
-      element.disabled = true;
-    }
-  }
-  return clone;
-}
-
 function visiblePlacement(frame: WidgetFrameProjection) {
   return frame.placement.kind === 'shelved' ? frame.placement.lastVisible : frame.placement;
 }
@@ -102,14 +81,20 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     const box = current.visualRoot.getBoundingClientRect();
     const themeRoot = current.surface.closest<HTMLElement>('main[data-pom-theme-root]');
     const overlayOwner = themeRoot ?? document.body;
-    const width = Math.min(Math.max(230, box.width), 360, Math.max(180, window.innerWidth - 16));
-    const height = Math.min(Math.max(120, box.height), 340, Math.max(120, window.innerHeight - 16));
+    const width = Math.min(Math.max(180, box.width), 280, Math.max(160, window.innerWidth - 16));
+    const height = Math.min(42, Math.max(32, window.innerHeight - 16));
     const held = document.createElement('div');
     held.className = 'widget-drag-preview';
     held.dataset.pomPart = 'widget.drag-preview';
+    held.dataset.widgetDragType = options.getFrame().instance.type;
     held.setAttribute('aria-hidden', 'true');
     held.inert = true;
-    held.append(makeVisualClone(current.visualRoot));
+    const identity = document.createElement('span');
+    identity.className = 'widget-drag-preview-identity';
+    identity.textContent = current.visualRoot
+      .querySelector<HTMLElement>('[data-pomegranate-widget]')
+      ?.getAttribute('aria-label') ?? options.getFrame().title;
+    held.append(identity);
     held.style.width = `${width}px`;
     held.style.height = `${height}px`;
     overlayOwner.append(held);
@@ -318,9 +303,6 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       rail.dataset.dropInsertOrder = String(target.insertOrder ?? 0);
       rail.dataset.active = String(intent?.targetId === target.id);
       positionFixed(rail, target.rect);
-      const label = document.createElement('span');
-      label.textContent = target.label ?? 'New shelf';
-      rail.append(label);
       overlay.append(rail);
     }
     if (!intent) return;
@@ -343,16 +325,6 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       });
       overlay.append(marker);
     }
-    const label = document.createElement('div');
-    label.className = 'widget-drop-intent-label';
-    label.textContent = intent.label;
-    positionFixed(label, {
-      x: intent.previewRect.x + 12,
-      y: intent.previewRect.y + 8,
-      width: Math.max(120, Math.min(240, intent.previewRect.width - 24)),
-      height: 26
-    });
-    overlay.append(label);
   }
 
   function updateDropState(current: DragCandidate, event: PointerEvent) {
