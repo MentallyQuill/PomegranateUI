@@ -34,7 +34,7 @@
   import WorkbenchDeveloperDrawer from './recipes/WorkbenchDeveloperDrawer.svelte';
   import { createLocalLayoutStorage, LAB_LAYOUT_KEY } from './storage.js';
   import { createLabThemeController } from './themes/controller.js';
-  import type { LabMaterialControlId } from './themes/material-controls.js';
+  import { materialControlPresentationStyle, type LabMaterialControlId } from './themes/material-controls.js';
   import { LAB_THEME_PRESETS } from './themes/presets.js';
   import { createLocalThemePreference } from './themes/theme-storage.js';
   import { createLocalThemeDraftStorage } from './themes/draft-storage.js';
@@ -235,6 +235,7 @@
     : null;
   let leftCollapsed = $state(false);
   let rightCollapsed = $state(false);
+  let compactDockDefaultsKey = '';
   let panelDialog: { showModal(): void; close(): void };
   let subPanelDialog: {
     open(request: { mode: 'create' | 'rename' | 'layout' | 'move' | 'delete'; panelId: PanelId; subPanelId?: SubPanelId; invokingTab?: HTMLElement }): void;
@@ -332,21 +333,20 @@
   });
 
   function syncCompactDockDefaults(isCompact = compactWorkbenchMedia?.matches ?? false) {
+    const shellPresentation = themeSnapshot.compiled.theme.recipes.shellPresentation;
+    const templateId = activePanel?.templateId;
+    const key = `${isCompact}:${shellPresentation ?? 'standard'}:${templateId ?? 'none'}`;
+    if (key === compactDockDefaultsKey) return;
+    compactDockDefaultsKey = key;
     const shouldCollapse = isCompact
-      && themeSnapshot.compiled.theme.recipes.shellPresentation === 'instrumented'
-      && activePanel?.templateId === 'story-stage.v1';
+      && shellPresentation === 'instrumented'
+      && templateId === 'story-stage.v1';
     leftCollapsed = shouldCollapse;
     rightCollapsed = shouldCollapse;
   }
 
   $effect(() => {
-    const shellPresentation = themeSnapshot.compiled.theme.recipes.shellPresentation;
-    const templateId = activePanel?.templateId;
-    if (compactWorkbenchMedia?.matches) {
-      const shouldCollapse = shellPresentation === 'instrumented' && templateId === 'story-stage.v1';
-      leftCollapsed = shouldCollapse;
-      rightCollapsed = shouldCollapse;
-    }
+    syncCompactDockDefaults();
   });
 
   function floatingStyle(frame: { placement: { kind: string; x?: number; y?: number; width?: number; height?: number; z?: number } }) {
@@ -529,7 +529,7 @@
   data-active-panel={workbench.activePanelId}
   data-workbench-revision={workbench.revision}
   data-workbench-developer-tools={developerToolsEnabled ? 'enabled' : 'disabled'}
-  style={themeSnapshot.cssText}
+  style={`${themeSnapshot.cssText};${materialControlPresentationStyle(themeSnapshot.materialControls, themeSnapshot.compiled.theme.colors.selection)}`}
 >
   <ThemeCanvas layers={themeSnapshot.compiled.canvas} />
   <header class="top-shelf" data-pom-part="chrome.shelf" data-conformance-region="shelf">

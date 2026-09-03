@@ -178,6 +178,100 @@ test('Materials and Ambient elements control their semantic bindings', async ({ 
   await expect.poll(() => binding(page, '--pom-ambient-power')).toBe('0.41');
 });
 
+test('every Theme Materials control changes a rendered surface in every theme and presentation', async ({ page }) => {
+  test.setTimeout(180_000);
+  const cases = [
+    { name: 'Glass Density', surface: 'glass', property: 'backgroundColor' },
+    { name: 'Bar Opacity', selector: '.top-shelf', property: 'backgroundColor' },
+    { name: 'Selected Strength', selector: '.panel-tabs [role="tab"][aria-selected="true"]', property: 'backgroundColor' },
+    { name: 'Frost Level', surface: 'glass', property: 'backdropFilter' },
+    { name: 'Frost Level', selector: '.top-shelf', property: 'backdropFilter' }
+  ] as const;
+
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
+    await fresh(page);
+    await selectTheme(page, theme);
+
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 980, height: 720 }]) {
+      await page.setViewportSize(viewport);
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const materials = widget(page, 'settings.theme-materials');
+      if (!await materials.isVisible()) await page.getByRole('button', { name: 'Toggle left dock' }).click();
+      await expect(materials).toBeVisible();
+      if (theme === 'Deep Current' && !await page.locator('[data-conformance-region="right"]').isVisible()) {
+        await page.getByRole('button', { name: 'Toggle right dock' }).click();
+      }
+
+      for (const control of cases) {
+        const selector = 'surface' in control
+          ? theme === 'Deep Current'
+            ? '[data-conformance-region="right"]'
+            : '[data-widget-type="story.characters"] .widget-frame'
+          : control.selector;
+        const slider = materials.getByRole('slider', { name: control.name });
+        const surface = page.locator(selector);
+        await expect(surface).toBeVisible();
+        if (control.name === 'Frost Level') {
+          await materials.getByRole('slider', { name: 'surface' in control ? 'Glass Density' : 'Bar Opacity' }).fill('50');
+        }
+        await slider.fill('0');
+        const zero = await surface.evaluate((element, property) => getComputedStyle(element)[property], control.property);
+        const zeroPixels = control.property === 'backdropFilter'
+          ? await surface.screenshot({ animations: 'disabled', caret: 'hide' })
+          : null;
+        await slider.fill('100');
+        await expect.poll(() => surface.evaluate((element, property) => getComputedStyle(element)[property], control.property), {
+          message: `${theme} at ${viewport.width}px: ${control.name} should change ${selector} ${control.property}`
+        }).not.toBe(zero);
+        if (zeroPixels) {
+          const fullPixels = await surface.screenshot({ animations: 'disabled', caret: 'hide' });
+          expect(fullPixels.equals(zeroPixels), `${theme} at ${viewport.width}px: ${control.name} should visibly repaint ${selector}`).toBe(false);
+        }
+      }
+    }
+  }
+});
+
+test('Deep Current material calibration stays monotonic through its authored defaults', async ({ page }) => {
+  const cases = [
+    { name: 'Glass Density', value: 20, selector: '[data-conformance-region="right"]', property: 'backgroundColor', metric: 'alpha' },
+    { name: 'Bar Opacity', value: 60, selector: '.top-shelf', property: 'backgroundColor', metric: 'alpha' },
+    { name: 'Selected Strength', value: 6, selector: '.panel-tabs [role="tab"][aria-selected="true"]', property: 'backgroundColor', metric: 'selected' },
+    { name: 'Frost Level', value: 50, selector: '[data-conformance-region="right"]', property: 'backdropFilter', metric: 'blur' }
+  ] as const;
+
+  await fresh(page);
+  await selectTheme(page, 'Deep Current');
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 980, height: 720 }]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const materials = widget(page, 'settings.theme-materials');
+    if (!await materials.isVisible()) await page.getByRole('button', { name: 'Toggle left dock' }).click();
+    if (!await page.locator('[data-conformance-region="right"]').isVisible()) {
+      await page.getByRole('button', { name: 'Toggle right dock' }).click();
+    }
+
+    for (const control of cases) {
+      const slider = materials.getByRole('slider', { name: control.name });
+      const surface = page.locator(control.selector);
+      await expect(surface).toBeVisible();
+      const samples: number[] = [];
+      for (const value of [control.value - 1, control.value, control.value + 1]) {
+        await slider.fill(String(value));
+        const computed = await surface.evaluate((element, property) => getComputedStyle(element)[property], control.property);
+        const numbers = computed.match(/[\d.]+/g)?.map(Number) ?? [];
+        if (control.metric === 'blur') samples.push(numbers[0] ?? Number.NaN);
+        else {
+          const alpha = numbers.length >= 4 ? (numbers[3] ?? 1) : 1;
+          samples.push(control.metric === 'selected' ? alpha * 1000 + (numbers[1] ?? 0) : alpha);
+        }
+      }
+      expect(samples[1]!, `${control.name} should increase into its default at ${viewport.width}px`).toBeGreaterThan(samples[0]!);
+      expect(samples[2]!, `${control.name} should increase out of its default at ${viewport.width}px`).toBeGreaterThan(samples[1]!);
+    }
+  }
+});
+
 for (const target of [
   { label: 'Deep Current', id: 'deep-current', image: true, canvas: '#101820', rgb: 'rgb(16, 24, 32)' },
   { label: 'PomOS', id: 'pom-neutral', image: false, canvas: '#f8fbff', rgb: 'rgb(248, 251, 255)' },

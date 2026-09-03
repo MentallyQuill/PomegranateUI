@@ -16,7 +16,7 @@ import { ASH_AMBER_THEME } from './ash-amber.js';
 import { BUNNY_THEME } from './bunny.js';
 import { createLabThemeController } from './controller.js';
 import { DEEP_CURRENT_THEME } from './deep-current.js';
-import { defaultMaterialControls } from './material-controls.js';
+import { defaultMaterialControls, materialControlPresentationStyle } from './material-controls.js';
 import { LAB_THEME_IDS, LAB_THEME_PRESETS, LAB_THEME_TARGETS } from './presets.js';
 import { POM_NEUTRAL_THEME } from './pom-neutral.js';
 import { createLocalThemePreference, LAB_THEME_KEY } from './theme-storage.js';
@@ -104,6 +104,19 @@ describe('Workbench Lab theme conformance', () => {
       expect.objectContaining({ id: 'bunny', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) }),
       expect.objectContaining({ id: 'ash-amber', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) })
     ]);
+  });
+
+  it('calibrates instrumented presentation materials continuously through their authored defaults', () => {
+    const defaults = defaultMaterialControls('deep-current');
+    const style = materialControlPresentationStyle(defaults, '#244c4a');
+
+    expect(style).toContain('--pom-presentation-instrumented-glass-fill:rgb(4 7 8 / 0.2)');
+    expect(style).toContain('--pom-presentation-instrumented-mobile-glass-fill:rgb(4 7 8 / 0.88)');
+    expect(style).toContain('--pom-presentation-instrumented-bar-fill:rgb(11 18 19 / 0.6)');
+    expect(style).toContain('--pom-presentation-instrumented-selected-fill:rgb(17 28 27 / 1)');
+    expect(style).toContain('--pom-presentation-instrumented-mobile-selected-fill:rgb(17 28 27 / 0.82)');
+    expect(style).toContain('--pom-presentation-instrumented-frost-backdrop:blur(12px) saturate(.82)');
+    expect(style).toContain('--pom-presentation-instrumented-mobile-frost-backdrop:blur(18px) saturate(.82)');
   });
 
   it.each(LAB_THEME_PRESETS)('$id authoring defaults reproduce the authored target canvas exactly', ({ target, canvasAuthoring }) => {

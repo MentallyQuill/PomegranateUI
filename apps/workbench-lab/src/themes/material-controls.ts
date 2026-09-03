@@ -51,3 +51,50 @@ export function materialControlPolicy(controls: LabMaterialControls): ThemePolic
     }
   };
 }
+
+function calibratedValue(value: number, authoredInput: number, authoredOutput: number, maximumOutput: number): number {
+  const normalized = normalizeMaterialControl(value);
+  if (normalized <= authoredInput) return authoredInput === 0 ? authoredOutput : authoredOutput * normalized / authoredInput;
+  return authoredOutput + (maximumOutput - authoredOutput) * (normalized - authoredInput) / (100 - authoredInput);
+}
+
+function concise(value: number): string {
+  return String(Number(value.toFixed(4)));
+}
+
+function parseHexColor(value: string): readonly [number, number, number] {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(value);
+  if (!match) return [36, 76, 74];
+  const [, red = '24', green = '4c', blue = '4a'] = match;
+  return [Number.parseInt(red, 16), Number.parseInt(green, 16), Number.parseInt(blue, 16)];
+}
+
+function selectedFill(strength: number, selectionColor: string, authoredAlpha: number): string {
+  const normalized = normalizeMaterialControl(strength);
+  const authoredStrength = DEFAULTS['deep-current'].selectedStrength;
+  const base = [17, 28, 27] as const;
+  if (normalized <= authoredStrength) {
+    return `rgb(${base.join(' ')} / ${concise(authoredAlpha * normalized / authoredStrength)})`;
+  }
+  const target = parseHexColor(selectionColor);
+  const progress = (normalized - authoredStrength) / (100 - authoredStrength);
+  const channels = base.map((channel, index) => concise(channel + ((target[index] ?? channel) - channel) * progress));
+  const alpha = authoredAlpha + (1 - authoredAlpha) * progress;
+  return `rgb(${channels.join(' ')} / ${concise(alpha)})`;
+}
+
+export function materialControlPresentationStyle(controls: LabMaterialControls, selectionColor: string): string {
+  const defaults = DEFAULTS['deep-current'];
+  const wideFrost = calibratedValue(controls.frostLevel, defaults.frostLevel, 12, 40);
+  const mobileFrost = calibratedValue(controls.frostLevel, defaults.frostLevel, 18, 40);
+  const mobileGlass = calibratedValue(controls.glassDensity, defaults.glassDensity, 0.88, 1);
+  return [
+    `--pom-presentation-instrumented-glass-fill:rgb(4 7 8 / ${concise(normalizeMaterialControl(controls.glassDensity) / 100)})`,
+    `--pom-presentation-instrumented-mobile-glass-fill:rgb(4 7 8 / ${concise(mobileGlass)})`,
+    `--pom-presentation-instrumented-bar-fill:rgb(11 18 19 / ${concise(normalizeMaterialControl(controls.barOpacity) / 100)})`,
+    `--pom-presentation-instrumented-selected-fill:${selectedFill(controls.selectedStrength, selectionColor, 1)}`,
+    `--pom-presentation-instrumented-mobile-selected-fill:${selectedFill(controls.selectedStrength, selectionColor, 0.82)}`,
+    `--pom-presentation-instrumented-frost-backdrop:blur(${concise(wideFrost)}px) saturate(.82)`,
+    `--pom-presentation-instrumented-mobile-frost-backdrop:blur(${concise(mobileFrost)}px) saturate(.82)`
+  ].join(';');
+}
