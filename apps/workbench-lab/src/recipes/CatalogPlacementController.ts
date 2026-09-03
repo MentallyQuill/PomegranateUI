@@ -414,16 +414,19 @@ export function createCatalogPlacementController(
         }
       }
       if (index < 0) {
-        const ranked = containing.sort((left, right) => {
-          if (left.target.element.contains(right.target.element)) return 1;
-          if (right.target.element.contains(left.target.element)) return -1;
-          const leftArea = left.target.rect.width * left.target.rect.height;
-          const rightArea = right.target.rect.width * right.target.rect.height;
-          if (leftArea !== rightArea) return leftArea - rightArea;
+        const mostSpecific = containing.filter((candidate) => !containing.some((other) => (
+          candidate !== other && candidate.target.element.contains(other.target.element)
+        )));
+        const minimumArea = Math.min(...mostSpecific.map(({ target }) => target.rect.width * target.rect.height));
+        const equalArea = mostSpecific.filter(({ target }) => target.rect.width * target.rect.height === minimumArea);
+        const mutuallyConnected = equalArea.every((left) => equalArea.every((right) => (
+          left === right
+          || (left.target.element.ownerDocument === right.target.element.ownerDocument
+            && !(left.target.element.compareDocumentPosition(right.target.element) & Node.DOCUMENT_POSITION_DISCONNECTED))
+        )));
+        const ranked = equalArea.sort((left, right) => {
+          if (!mutuallyConnected) return left.target.identity.id.localeCompare(right.target.identity.id);
           const position = left.target.element.compareDocumentPosition(right.target.element);
-          if (position & Node.DOCUMENT_POSITION_DISCONNECTED) {
-            return left.target.identity.id.localeCompare(right.target.identity.id);
-          }
           if (position & Node.DOCUMENT_POSITION_FOLLOWING) return 1;
           if (position & Node.DOCUMENT_POSITION_PRECEDING) return -1;
           return left.target.identity.id.localeCompare(right.target.identity.id);

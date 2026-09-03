@@ -56,6 +56,58 @@ function targetId(regionId: string, lane: number, subPanelId: string | null = nu
   return JSON.stringify(['panel-story', subPanelId, regionId, lane, 'primary']);
 }
 
+function equalAreaRankingResult(
+  order: readonly string[],
+  disconnected: ReadonlySet<string>
+): string | undefined {
+  document.body.replaceChildren();
+  const root = document.body.appendChild(document.createElement('main'));
+  root.dataset.pomegranatePanel = 'panel-story';
+  const targets = new Map<string, HTMLElement>();
+  for (const regionId of order) {
+    const target = root.appendChild(document.createElement('section'));
+    target.dataset.pomegranateRegionSurface = regionId;
+    target.dataset.pomegranateRegionRole = 'stage';
+    target.dataset.subPanelLane = '0';
+    target.setAttribute('aria-label', `${regionId} region`);
+    Object.defineProperty(target, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(100, 100, 240, 180)
+    });
+    targets.set(regionId, target);
+  }
+  const origin = document.body.appendChild(document.createElement('article'));
+  Object.defineProperty(origin, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => new DOMRect(10, 10, 286, 360)
+  });
+  const overlay = document.body.appendChild(document.createElement('div'));
+  Object.defineProperty(document, 'elementFromPoint', {
+    configurable: true,
+    value: vi.fn(() => overlay)
+  });
+  Object.defineProperty(document, 'elementsFromPoint', {
+    configurable: true,
+    value: undefined
+  });
+  let committedRegion: string | undefined;
+  const controller = createCatalogPlacementController({
+    catalog: { suspend: vi.fn(), resume: vi.fn() },
+    getTargetRoot: () => root,
+    getInstanceCount: () => 0,
+    isCompatibleTarget: () => true,
+    onCommit: (_manifest, target) => { committedRegion = target.identity.regionId; }
+  });
+
+  controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+  document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+  for (const regionId of disconnected) targets.get(regionId)?.remove();
+  document.dispatchEvent(pointerEvent('pointermove', { clientX: 180, clientY: 150 }));
+  document.dispatchEvent(pointerEvent('pointerup', { clientX: 180, clientY: 150 }));
+  controller.destroy();
+  return committedRegion;
+}
+
 describe('CatalogPlacementController', () => {
   afterEach(() => {
     document.body.replaceChildren();
@@ -731,6 +783,32 @@ describe('CatalogPlacementController', () => {
     }));
     expect(onCommit).not.toHaveBeenCalledWith(manifest, expect.objectContaining({ element: second }));
     controller.destroy();
+  });
+
+  it('uses one canonical-ID total order for mixed connected and disconnected equal-area targets', () => {
+    const permutations = [
+      ['a-region', 'b-region', 'c-region'],
+      ['a-region', 'c-region', 'b-region'],
+      ['b-region', 'a-region', 'c-region'],
+      ['b-region', 'c-region', 'a-region'],
+      ['c-region', 'a-region', 'b-region'],
+      ['c-region', 'b-region', 'a-region']
+    ] as const;
+
+    expect(permutations.map((order) => equalAreaRankingResult(order, new Set(['b-region'])))).toEqual([
+      'a-region', 'a-region', 'a-region', 'a-region', 'a-region', 'a-region'
+    ]);
+  });
+
+  it('uses later DOM paint order when every equal-area target is mutually connected', () => {
+    expect(equalAreaRankingResult(['b-region', 'a-region', 'c-region'], new Set())).toBe('c-region');
+  });
+
+  it('uses canonical ID order when every equal-area target is disconnected', () => {
+    expect(equalAreaRankingResult(
+      ['c-region', 'b-region', 'a-region'],
+      new Set(['a-region', 'b-region', 'c-region'])
+    )).toBe('a-region');
   });
 
   it('publishes deterministic proxy-state transitions and stops after unsubscribe', () => {

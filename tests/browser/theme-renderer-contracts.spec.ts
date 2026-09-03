@@ -10,6 +10,27 @@ const TARGETS = [
 ] as const;
 const ASH_TARGET = { id: 'ash-amber', label: 'Ash & Amber' } as const;
 
+function normalizedThemeBranch(value: string): string {
+  return value.toLocaleLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function themeBranchAliases(value: string): readonly string[] {
+  const words = value.replace(/&/g, ' and ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[^a-z0-9]+/gi, ' ')
+    .trim()
+    .toLocaleLowerCase()
+    .split(/\s+/);
+  return Object.freeze([
+    value,
+    words.join('-'),
+    words.join('_'),
+    words.join(' '),
+    `${words[0]}${words.slice(1).map((word) => `${word[0]?.toLocaleUpperCase()}${word.slice(1)}`).join('')}`,
+    words.join('').toLocaleUpperCase()
+  ]);
+}
+
 async function fresh(page: Page, width = 1440, height = 900) {
   await page.setViewportSize({ width, height });
   await page.goto('http://127.0.0.1:4174');
@@ -713,13 +734,23 @@ test('Catalog keeps an opaque neutral modal and no-blur backdrop under reduced t
 });
 
 test('all four themes render one identical Catalog tree with token-only presentation differences', async ({ page }) => {
-  const forbiddenThemeBranch = /deep-current|pom-neutral|pomos|bunny|ash-amber|ash\s*&\s*amber/i;
+  const themeAliasMatrix = [...TARGETS, ASH_TARGET].flatMap(({ id, label }) => [
+    ...themeBranchAliases(id),
+    ...themeBranchAliases(label)
+  ]);
+  const forbiddenThemeNeedles = [...new Set(themeAliasMatrix.map(normalizedThemeBranch))].sort();
+  expect(forbiddenThemeNeedles).toEqual([
+    'ashamber', 'ashandamber', 'bunny', 'deepcurrent', 'pomneutral', 'pomos'
+  ]);
+  const forbiddenThemeAttribute = /\bdata-pom-theme(?:-id)?(?=\s*(?:[~|^$*]?=|\]|\/?>))/i;
   const catalogSources = [
     new URL('../../apps/workbench-lab/src/recipes/WidgetCatalog.svelte', import.meta.url),
     new URL('../../apps/workbench-lab/src/recipes/CatalogWidgetPreview.svelte', import.meta.url),
     new URL('../../apps/workbench-lab/src/styles.css', import.meta.url)
   ].map((source) => readFileSync(source, 'utf8')).join('\n');
-  expect(catalogSources).not.toMatch(forbiddenThemeBranch);
+  const normalizedCatalogSources = normalizedThemeBranch(catalogSources);
+  expect(forbiddenThemeNeedles.filter((alias) => normalizedCatalogSources.includes(alias))).toEqual([]);
+  expect(catalogSources).not.toMatch(forbiddenThemeAttribute);
   await fresh(page, 1920, 1080);
   await selectTheme(page, TARGETS[0], { closeDrawer: false });
   await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
@@ -803,8 +834,10 @@ test('all four themes render one identical Catalog tree with token-only presenta
     return selectors;
   });
   expect(catalogSelectors.length).toBeGreaterThan(0);
-  expect(catalogSelectors.join('\n')).not.toMatch(forbiddenThemeBranch);
-  expect(catalogSelectors.join('\n')).not.toMatch(/\[data-pom-theme\s*=\s*["']/i);
+  const joinedCatalogSelectors = catalogSelectors.join('\n');
+  const normalizedCatalogSelectors = normalizedThemeBranch(joinedCatalogSelectors);
+  expect(forbiddenThemeNeedles.filter((alias) => normalizedCatalogSelectors.includes(alias))).toEqual([]);
+  expect(joinedCatalogSelectors).not.toMatch(forbiddenThemeAttribute);
 
   const tokenCausality = await catalog.evaluate(async (dialog) => {
     const card = dialog.querySelector<HTMLElement>('[data-catalog-result]')!;
