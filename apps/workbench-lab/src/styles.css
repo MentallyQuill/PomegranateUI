@@ -1977,13 +1977,39 @@ main[data-pom-action-content="icon"] .widget-shelf > summary {
   list-style: none;
 }
 .recording-characters li {
-  display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) auto;
-  align-items: center;
-  min-height: 61px;
-  padding: 2px 8px 2px 3px;
+  display: block;
+  min-height: 0;
+  padding: 0;
   border-width: 0 0 1px;
   border-radius: 0;
+}
+.recording-character-toggle {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  min-height: 61px;
+  padding: 2px 8px 2px 3px;
+  border: 0;
+  border-radius: inherit;
+  color: inherit;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+  cursor: pointer;
+}
+.recording-character-toggle:focus-visible {
+  outline: 2px solid var(--pom-color-accent);
+  outline-offset: -2px;
+}
+.recording-characters ul[data-portrait-scale="1"] .recording-character-toggle {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 34px;
+  padding: 0 9px;
+}
+.recording-characters ul[data-portrait-scale="3"] .recording-character-toggle {
+  grid-template-columns: 76px minmax(0, 1fr);
+  min-height: 76px;
 }
 .recording-character-portrait {
   position: relative;
@@ -1999,6 +2025,10 @@ main[data-pom-action-content="icon"] .widget-shelf > summary {
     linear-gradient(145deg, color-mix(in srgb, var(--pom-color-accent) 15%, transparent), var(--pom-color-canvas));
   font: 8px var(--pom-font-technical, monospace);
   overflow: hidden;
+}
+.recording-characters ul[data-portrait-scale="3"] .recording-character-portrait {
+  width: 68px;
+  height: 68px;
 }
 .recording-character-portrait > img {
   position: absolute;
@@ -2018,9 +2048,16 @@ main[data-pom-action-content="icon"] .widget-shelf > summary {
 .recording-character-fallback { display: grid; place-items: center; width: 100%; height: 100%; }
 .recording-character-copy { display: grid; gap: 2px; min-width: 0; }
 .recording-character-copy strong { color: var(--ink); font-size: 12px; line-height: 1.1; }
-.recording-character-copy small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.recording-characters [data-testid="character-presence"] { color: var(--faint); font: var(--pom-expression-row-surface-font-size, 8px) var(--pom-font-technical, monospace); }
-main[data-pom-action-content="icon"] .recording-characters [data-testid="character-presence"] { font-size: 9px; }
+.recording-character-synopsis {
+  padding: 7px 9px 9px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+}
+.recording-character-synopsis p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
 
 main[data-pom-theme-root] .scene-effects {
   display: grid;
@@ -3086,13 +3123,28 @@ main[data-pom-shell-presentation="instrumented"] .panel-chrome-flow[data-story-o
   }
   main[data-pom-shell-presentation="instrumented"] .recording-characters li {
     box-sizing: border-box;
-    grid-template-columns: 53px minmax(0, 1fr) auto;
-    height: 52px;
-    min-height: 52px;
-    padding: 2px 9px 2px 3px;
+    height: auto;
+    min-height: 0;
+    padding: 0;
     border: 0;
     border-bottom: 1px solid rgb(229 245 239 / 8.5%);
     background: transparent;
+  }
+  main[data-pom-shell-presentation="instrumented"] .recording-character-toggle {
+    grid-template-columns: 53px minmax(0, 1fr);
+    min-height: 52px;
+    padding: 2px 9px 2px 3px;
+  }
+  main[data-pom-shell-presentation="instrumented"]
+  .recording-characters ul[data-portrait-scale="1"] .recording-character-toggle {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 34px;
+    padding: 0 9px;
+  }
+  main[data-pom-shell-presentation="instrumented"]
+  .recording-characters ul[data-portrait-scale="3"] .recording-character-toggle {
+    grid-template-columns: 73px minmax(0, 1fr);
+    min-height: 72px;
   }
   main[data-pom-shell-presentation="instrumented"] .recording-characters li.is-current {
     background: linear-gradient(90deg, rgb(128 211 191 / 10%), transparent 84%);
@@ -3105,6 +3157,11 @@ main[data-pom-shell-presentation="instrumented"] .panel-chrome-flow[data-story-o
     border-radius: 0;
     background: rgb(2 5 6 / 58%);
     box-shadow: inset 0 0 0 1px rgb(0 0 0 / 42%);
+  }
+  main[data-pom-shell-presentation="instrumented"]
+  .recording-characters ul[data-portrait-scale="3"] .recording-character-portrait {
+    width: 67px;
+    height: 67px;
   }
   main[data-pom-shell-presentation="instrumented"] .recording-characters li.is-current .recording-character-portrait {
     border-color: rgb(148 217 208 / 58%);
@@ -3122,14 +3179,14 @@ main[data-pom-shell-presentation="instrumented"] .panel-chrome-flow[data-story-o
     font-weight: 400;
     line-height: 16px;
   }
-  main[data-pom-shell-presentation="instrumented"] .recording-character-copy small {
-    display: block;
-    font-size: 10px;
-    line-height: 13px;
+  main[data-pom-shell-presentation="instrumented"] .recording-character-synopsis {
+    padding: 7px 9px 9px;
+    border-top-color: rgb(229 245 239 / 8.5%);
   }
-  main[data-pom-shell-presentation="instrumented"] .recording-characters [data-testid="character-presence"] {
-    font-size: 9px;
-    text-transform: uppercase;
+  main[data-pom-shell-presentation="instrumented"] .recording-character-synopsis p {
+    color: rgb(239 244 241 / 58%);
+    font-size: 10px;
+    line-height: 14px;
   }
 
   main[data-pom-shell-presentation="instrumented"] .widget-group-tabs {
@@ -3946,4 +4003,11 @@ main[data-pom-theme-root].left-collapsed[data-drag-reveal-left="true"] [data-con
 main[data-pom-theme-root].right-collapsed[data-drag-reveal-right="true"] [data-conformance-region="right"] {
   display: flex !important;
   visibility: visible !important;
+}
+
+@media (pointer: coarse) {
+  main[data-pom-theme-root]
+  .recording-characters ul[data-portrait-scale="1"] .recording-character-toggle {
+    min-height: 44px;
+  }
 }

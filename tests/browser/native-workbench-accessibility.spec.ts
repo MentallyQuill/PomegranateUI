@@ -307,7 +307,7 @@ test('PomOS metadata remains legible and the compact composer retains its comple
       storyMeta: fontSize('.story-lockup small'),
       transcriptKicker: fontSize('.transcript .widget-kicker'),
       themeControls: fontSize('[data-theme-authoring-element="materials"]'),
-      presence: fontSize('[data-testid="character-presence"]'),
+      characterName: fontSize('.recording-character-copy strong'),
       composerStatus: fontSize('.composer-field > .composer-meta')
     };
   });

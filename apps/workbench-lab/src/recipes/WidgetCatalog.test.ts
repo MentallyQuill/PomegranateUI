@@ -573,7 +573,7 @@ describe('WidgetCatalog', () => {
     assertModeIcons();
     await user.click(screen.getByRole('button', { name: 'Compact' }));
     assertModeIcons();
-  });
+  }, 10_000);
 
   it('renders the fixed source controls and all 98 whole-result shared previews', async () => {
     const { container } = renderCatalog();

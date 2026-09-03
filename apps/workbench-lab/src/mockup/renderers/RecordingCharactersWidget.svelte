@@ -6,16 +6,37 @@
     portraits?: readonly [string, string, string, string] | undefined;
   } = $props();
   let portraitScale = $state(2);
+  let expandedCharacter = $state<string | null>(null);
 
   const characters = [
-    { initials: 'AR', name: 'Aven Rook', note: 'near the western rail', presence: 'SEEN' },
-    { initials: 'MV', name: 'Mara Venn', note: 'voice behind the glass', presence: 'NEAR' },
-    { initials: 'IL', name: 'Ilex', note: 'signal room, lower deck', presence: 'AWAY' },
-    { initials: 'QD', name: 'The Quiet Diver', note: 'identity unresolved', presence: '?' }
+    {
+      initials: 'AR',
+      name: 'Aven Rook',
+      synopsis: 'Aven is a measured traveler attuned to patterns beneath the waterline. He is following the warning that drew the cast toward the reservoir.'
+    },
+    {
+      initials: 'MV',
+      name: 'Mara Venn',
+      synopsis: 'Mara is a cartographer whose voice reached Aven through the glass. Her warning about the reservoir bell still guides his search.'
+    },
+    {
+      initials: 'IL',
+      name: 'Ilex',
+      synopsis: 'Ilex is a signal operator Aven has encountered. Their interrupted transmission remains unexplained.'
+    },
+    {
+      initials: 'QD',
+      name: 'The Quiet Diver',
+      synopsis: 'The Quiet Diver is a masked figure encountered during the descent. Their identity and intentions remain unknown.'
+    }
   ] as const;
 
   function changePortraitScale(delta: number) {
     portraitScale = Math.max(1, Math.min(3, portraitScale + delta));
+  }
+
+  function toggleCharacter(name: string) {
+    expandedCharacter = expandedCharacter === name ? null : name;
   }
 </script>
 
@@ -42,27 +63,45 @@
 
   <ul aria-label="Characters roster" data-portrait-scale={portraitScale}>
     {#each characters as character, index (character.name)}
-      <li class:is-current={index === 0} data-pom-part="row.surface">
-        <span class="recording-character-portrait" data-character-portrait>
-          {#if portraits?.[index]}
-            <img class="is-direct" src={portraits[index]} alt={`Portrait of ${character.name}`} />
-          {:else if portraitAtlas}
-            <img
-              src={portraitAtlas.source}
-              alt={`Portrait of ${character.name}`}
-              style={`--portrait-column:${index % portraitAtlas.columns};--portrait-row:${Math.floor(index / portraitAtlas.columns)}`}
-            />
-          {:else}
-            <span class="recording-character-fallback" role="img" aria-label={`Portrait of ${character.name}`}>
-              {character.initials}
+      <li
+        class:is-current={index === 0}
+        class:is-expanded={expandedCharacter === character.name}
+        data-pom-part="row.surface"
+      >
+        <button
+          type="button"
+          class="recording-character-toggle"
+          aria-label={character.name}
+          aria-expanded={expandedCharacter === character.name}
+          aria-controls={expandedCharacter === character.name ? `character-details-${index}` : undefined}
+          onclick={() => toggleCharacter(character.name)}
+        >
+          {#if portraitScale > 1}
+            <span class="recording-character-portrait" data-character-portrait>
+              {#if portraits?.[index]}
+                <img class="is-direct" src={portraits[index]} alt={`Portrait of ${character.name}`} />
+              {:else if portraitAtlas}
+                <img
+                  src={portraitAtlas.source}
+                  alt={`Portrait of ${character.name}`}
+                  style={`--portrait-column:${index % portraitAtlas.columns};--portrait-row:${Math.floor(index / portraitAtlas.columns)}`}
+                />
+              {:else}
+                <span class="recording-character-fallback" role="img" aria-label={`Portrait of ${character.name}`}>
+                  {character.initials}
+                </span>
+              {/if}
             </span>
           {/if}
-        </span>
-        <span class="recording-character-copy">
-          <strong>{character.name}</strong>
-          <small>{character.note}</small>
-        </span>
-        <span data-testid="character-presence">{character.presence}</span>
+          <span class="recording-character-copy">
+            <strong>{character.name}</strong>
+          </span>
+        </button>
+        {#if expandedCharacter === character.name}
+          <div class="recording-character-synopsis" id={`character-details-${index}`}>
+            <p>{character.synopsis}</p>
+          </div>
+        {/if}
       </li>
     {/each}
   </ul>

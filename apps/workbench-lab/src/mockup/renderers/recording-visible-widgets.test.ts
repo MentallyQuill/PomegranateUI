@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import { asWidgetInstanceId, asWidgetType, type JsonObject, type WidgetType } from '@pomegranate-ui/contracts';
 import type { WidgetRendererProps } from '@pomegranate-ui/svelte';
@@ -66,24 +66,82 @@ function renderSurface(
 }
 
 describe('recording-visible Deep Current Widget anatomy', () => {
-  it('renders the literal four-person Characters roster with named portrait semantics and quiet scale actions', () => {
+  it('renders the four-person Characters roster without omniscient location or presence metadata', () => {
     renderSurface('story.characters');
 
     const roster = screen.getByRole('list', { name: 'Characters roster' });
     expect(within(roster).getAllByRole('listitem')).toHaveLength(4);
+    expect(within(roster).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Aven Rook',
+      'Mara Venn',
+      'Ilex',
+      'The Quiet Diver'
+    ]);
     expect(within(roster).getAllByRole('img').map((portrait) => portrait.getAttribute('alt') ?? portrait.getAttribute('aria-label'))).toEqual([
       'Portrait of Aven Rook',
       'Portrait of Mara Venn',
       'Portrait of Ilex',
       'Portrait of The Quiet Diver'
     ]);
-    expect(within(roster).getByText('near the western rail')).toBeVisible();
-    expect(within(roster).getByText('voice behind the glass')).toBeVisible();
-    expect(within(roster).getByText('signal room, lower deck')).toBeVisible();
-    expect(within(roster).getByText('identity unresolved')).toBeVisible();
-    expect(within(roster).getAllByTestId('character-presence').map((state) => state.textContent)).toEqual(['SEEN', 'NEAR', 'AWAY', '?']);
+    expect(within(roster).queryByText('near the western rail')).not.toBeInTheDocument();
+    expect(within(roster).queryByText('voice behind the glass')).not.toBeInTheDocument();
+    expect(within(roster).queryByText('signal room, lower deck')).not.toBeInTheDocument();
+    expect(within(roster).queryByTestId('character-presence')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Decrease character portrait size' })).toHaveTextContent('−');
     expect(screen.getByRole('button', { name: 'Increase character portrait size' })).toHaveTextContent('+');
+  });
+
+  it('cycles from name-only rows through small and large portrait modes', async () => {
+    renderSurface('story.characters');
+
+    const roster = screen.getByRole('list', { name: 'Characters roster' });
+    const decrease = screen.getByRole('button', { name: 'Decrease character portrait size' });
+    const increase = screen.getByRole('button', { name: 'Increase character portrait size' });
+    expect(roster).toHaveAttribute('data-portrait-scale', '2');
+    expect(within(roster).getAllByRole('img')).toHaveLength(4);
+
+    await fireEvent.click(decrease);
+    expect(roster).toHaveAttribute('data-portrait-scale', '1');
+    expect(within(roster).queryByRole('img')).not.toBeInTheDocument();
+    expect(decrease).toBeDisabled();
+    expect(within(roster).getAllByRole('listitem').map((row) => row.textContent?.trim())).toEqual([
+      'Aven Rook',
+      'Mara Venn',
+      'Ilex',
+      'The Quiet Diver'
+    ]);
+
+    await fireEvent.click(increase);
+    expect(roster).toHaveAttribute('data-portrait-scale', '2');
+    expect(within(roster).getAllByRole('img')).toHaveLength(4);
+    await fireEvent.click(increase);
+    expect(roster).toHaveAttribute('data-portrait-scale', '3');
+    expect(increase).toBeDisabled();
+  });
+
+  it('opens one concise viewpoint-safe character synopsis at a time', async () => {
+    renderSurface('story.characters');
+
+    const aven = screen.getByRole('button', { name: 'Aven Rook' });
+    const mara = screen.getByRole('button', { name: 'Mara Venn' });
+    expect(aven).toHaveAttribute('aria-expanded', 'false');
+    expect(aven).not.toHaveAttribute('aria-controls');
+
+    await fireEvent.click(screen.getByRole('img', { name: 'Portrait of Aven Rook' }));
+    expect(aven).toHaveAttribute('aria-expanded', 'true');
+    expect(aven).toHaveAttribute('aria-controls', 'character-details-0');
+    expect(screen.getByText(/Aven is a measured traveler/)).toBeVisible();
+
+    await fireEvent.click(mara);
+    expect(aven).toHaveAttribute('aria-expanded', 'false');
+    expect(aven).not.toHaveAttribute('aria-controls');
+    expect(mara).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.queryByText(/Aven is a measured traveler/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Mara is a cartographer/)).toBeVisible();
+
+    await fireEvent.click(mara);
+    expect(mara).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText(/Mara is a cartographer/)).not.toBeInTheDocument();
   });
 
   it.each([
