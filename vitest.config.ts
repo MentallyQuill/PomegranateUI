@@ -12,6 +12,7 @@ export default defineConfig({
       'packages/**/*.test.ts',
       'apps/**/*.test.ts',
       'examples/**/*.test.ts',
+      'tests/browser/support/**/*.test.ts',
     ],
     setupFiles: ['./tests/native/setup.ts']
   }
