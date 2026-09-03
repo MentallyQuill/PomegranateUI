@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 test.skip(process.platform !== 'win32', 'Visual baselines are reviewed on Windows; functional browser coverage remains cross-platform.');
 
-const labOrigin = process.env.POM_LAB_ORIGIN ?? 'http://127.0.0.1:4174';
+const labOrigin = process.env.POM_LAB_ORIGIN ?? `http://127.0.0.1:${process.env.POM_PLAYWRIGHT_PORT ?? '4174'}`;
 
 async function fresh(page: Page, width: number, height: number) {
   await page.emulateMedia({ reducedMotion: 'reduce' });

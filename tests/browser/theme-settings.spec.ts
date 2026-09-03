@@ -4,7 +4,7 @@ const draftKey = 'pomegranate-ui.workbench-lab.theme-draft.v1';
 
 async function fresh(page: Page, width = 1440, height = 900) {
   await page.setViewportSize({ width, height });
-  await page.goto('http://127.0.0.1:4174');
+  await page.goto('/');
   await page.evaluate(() => window.localStorage.clear());
   await page.reload();
   await page.evaluate(async () => {
