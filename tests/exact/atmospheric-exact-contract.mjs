@@ -19,6 +19,11 @@ export const ATMOSPHERIC_EXACT_GEOMETRY = Object.freeze({
   composer: Object.freeze({ x: 620, y: 1206, width: 680, height: 56 })
 });
 
+const ATMOSPHERIC_APPROVED_LAYOUT_BOUNDS = Object.freeze({
+  'header-panel-control-adjacent': Object.freeze({ x: 372, y: 0, width: 33, height: 40 }),
+  'header-panel-control-previous': Object.freeze({ x: 532, y: 0, width: 33, height: 40 })
+});
+
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -63,8 +68,18 @@ export function validateAtmosphericContract(contract, options = {}) {
   if (!/^[a-f0-9]{64}$/i.test(contract.referenceImageSha256 ?? '')) {
     throw new Error('Atmospheric reference image hash is malformed.');
   }
-  if (!Array.isArray(contract.textMaskBounds) || !Array.isArray(contract.masks)) {
-    throw new Error('Atmospheric text bounds and masks must be arrays.');
+  if (!Array.isArray(contract.textMaskBounds) || !Array.isArray(contract.approvedLayoutBounds) || !Array.isArray(contract.masks)) {
+    throw new Error('Atmospheric text bounds, approved layout bounds, and masks must be arrays.');
+  }
+  const approvedLayoutEntries = Object.entries(ATMOSPHERIC_APPROVED_LAYOUT_BOUNDS);
+  if (contract.approvedLayoutBounds.length !== approvedLayoutEntries.length) {
+    throw new Error('Atmospheric approved layout bounds must contain exactly the reviewed exceptions.');
+  }
+  for (const [id, expected] of approvedLayoutEntries) {
+    const actual = contract.approvedLayoutBounds.find((bound) => bound?.id === id);
+    if (!actual || Object.entries(expected).some(([key, value]) => actual[key] !== value)) {
+      throw new Error(`Atmospheric approved layout bound ${id} drifted from the reviewed exception.`);
+    }
   }
   const bounds = new Map();
   for (const [index, bound] of contract.textMaskBounds.entries()) {
@@ -74,17 +89,33 @@ export function validateAtmosphericContract(contract, options = {}) {
     }
     bounds.set(bound.id, bound);
   }
+  const layoutBounds = new Map();
+  for (const [index, bound] of contract.approvedLayoutBounds.entries()) {
+    assertRectangle(bound, `approvedLayoutBounds[${index}]`);
+    if (typeof bound.id !== 'string' || !bound.id || layoutBounds.has(bound.id)) {
+      throw new Error('Atmospheric approved layout bounds require unique IDs.');
+    }
+    layoutBounds.set(bound.id, bound);
+  }
   const maskIds = new Set();
   for (const [index, mask] of contract.masks.entries()) {
     assertRectangle(mask, `masks[${index}]`);
-    if (mask.kind !== 'glyph-only') throw new Error('Atmospheric authority permits glyph-only masks only.');
     if (typeof mask.id !== 'string' || !mask.id || maskIds.has(mask.id)) {
       throw new Error('Atmospheric masks require unique IDs.');
     }
     maskIds.add(mask.id);
-    const bound = bounds.get(mask.textBoundId);
-    if (!bound || !contains(bound, mask)) {
-      throw new Error(`Atmospheric mask ${mask.id} extends outside reviewed text pixels.`);
+    if (mask.kind === 'glyph-only') {
+      const bound = bounds.get(mask.textBoundId);
+      if (!bound || !contains(bound, mask)) {
+        throw new Error(`Atmospheric mask ${mask.id} extends outside reviewed text pixels.`);
+      }
+    } else if (mask.kind === 'approved-layout') {
+      const bound = layoutBounds.get(mask.layoutBoundId);
+      if (!bound || !contains(bound, mask)) {
+        throw new Error(`Atmospheric mask ${mask.id} extends outside approved layout pixels.`);
+      }
+    } else {
+      throw new Error('Atmospheric authority permits glyph-only and approved-layout masks only.');
     }
   }
   if (!options.skipReferenceImageHash) {

@@ -39,11 +39,17 @@
     { "id": "stage-copy", "x": 286, "y": 40, "width": 1348, "height": 1240 },
     { "id": "right-copy", "x": 1634, "y": 40, "width": 286, "height": 760 }
   ],
+  "approvedLayoutBounds": [
+    { "id": "header-panel-control-adjacent", "x": 372, "y": 0, "width": 33, "height": 40 },
+    { "id": "header-panel-control-previous", "x": 532, "y": 0, "width": 33, "height": 40 }
+  ],
   "masks": [
     { "id": "header-wordmark", "textBoundId": "header-copy", "x": 9, "y": 4, "width": 157, "height": 31, "kind": "glyph-only" },
     { "id": "header-scene", "textBoundId": "header-copy", "x": 216, "y": 7, "width": 50, "height": 25, "kind": "glyph-only" },
     { "id": "header-library", "textBoundId": "header-copy", "x": 317, "y": 7, "width": 52, "height": 25, "kind": "glyph-only" },
     { "id": "header-settings", "textBoundId": "header-copy", "x": 418, "y": 7, "width": 57, "height": 25, "kind": "glyph-only" },
+    { "id": "header-panel-control-adjacent-surface", "layoutBoundId": "header-panel-control-adjacent", "x": 372, "y": 0, "width": 33, "height": 40, "kind": "approved-layout" },
+    { "id": "header-panel-control-previous-surface", "layoutBoundId": "header-panel-control-previous", "x": 532, "y": 0, "width": 33, "height": 40, "kind": "approved-layout" },
     { "id": "header-panel-controls", "textBoundId": "header-copy", "x": 502, "y": 7, "width": 59, "height": 26, "kind": "glyph-only" },
     { "id": "header-story-id", "textBoundId": "header-copy", "x": 584, "y": 9, "width": 78, "height": 22, "kind": "glyph-only" },
     { "id": "header-story-title", "textBoundId": "header-copy", "x": 662, "y": 8, "width": 160, "height": 23, "kind": "glyph-only" },

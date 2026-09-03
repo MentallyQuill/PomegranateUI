@@ -157,11 +157,11 @@
   ontoggle={handleToggle}
 >
   {#if target}
-    <button type="button" onclick={() => request('rename')}>Rename</button>
-    <button type="button" onclick={duplicate}>Duplicate</button>
-    <button type="button" onclick={() => request('layout')}>Change layout</button>
-    <button type="button" onclick={() => request('move')}>Move Widgets</button>
-    <button type="button" onclick={() => request('delete')}>Delete</button>
-    <button type="button" onclick={reorder}>Reorder sub-panels…</button>
+    <button type="button" data-pom-part="button.surface" onclick={() => request('rename')}>Rename</button>
+    <button type="button" data-pom-part="button.surface" onclick={duplicate}>Duplicate</button>
+    <button type="button" data-pom-part="button.surface" onclick={() => request('layout')}>Change layout</button>
+    <button type="button" data-pom-part="button.surface" onclick={() => request('move')}>Move Widgets</button>
+    <button type="button" data-pom-part="button.surface" onclick={() => request('delete')}>Delete</button>
+    <button type="button" data-pom-part="button.surface" onclick={reorder}>Reorder sub-panels…</button>
   {/if}
 </div>

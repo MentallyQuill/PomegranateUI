@@ -246,6 +246,52 @@
   let eventLog: string[] = $state([]);
   let sequence = 0;
 
+  function trackPanelStoryCollision(node: HTMLElement) {
+    let animationFrame = 0;
+    const update = () => {
+      animationFrame = 0;
+      const story = node.querySelector<HTMLElement>('.story-lockup');
+      const createPanel = node.querySelector<HTMLElement>('.panel-create-action:not([hidden])');
+      const lastTab = [...node.querySelectorAll<HTMLElement>('[data-pomegranate-panel-tab]')].at(-1);
+      const storyVisible = story && getComputedStyle(story).display !== 'none';
+      const obscured = Boolean(
+        storyVisible
+        && createPanel
+        && lastTab
+        && createPanel.getBoundingClientRect().right > story.getBoundingClientRect().left
+      );
+      node.dataset.storyObscured = String(obscured);
+    };
+    const schedule = () => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(update);
+    };
+    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
+    const observeGeometry = () => {
+      resizeObserver?.disconnect();
+      resizeObserver?.observe(node);
+      for (const element of node.querySelectorAll<HTMLElement>('[data-pomegranate-panel-tab], .panel-create-action, .story-lockup')) {
+        resizeObserver?.observe(element);
+      }
+    };
+    const mutationObserver = new MutationObserver(() => {
+      observeGeometry();
+      schedule();
+    });
+    mutationObserver.observe(node, { childList: true, subtree: true });
+    window.addEventListener('resize', schedule);
+    observeGeometry();
+    schedule();
+    return {
+      destroy() {
+        cancelAnimationFrame(animationFrame);
+        resizeObserver?.disconnect();
+        mutationObserver.disconnect();
+        window.removeEventListener('resize', schedule);
+      }
+    };
+  }
+
   const unsubscribe = store.subscribe((next) => {
     workbench = next;
     sequence += 1;
@@ -488,18 +534,22 @@
   <ThemeCanvas layers={themeSnapshot.compiled.canvas} />
   <header class="top-shelf" data-pom-part="chrome.shelf" data-conformance-region="shelf">
     <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
-    <PanelTabs
-      {store}
-      class="panel-tabs"
-      onaddsubpanel={(panelId) => openSubPanelDialog({ mode: 'create', panelId })}
-    />
-    <div class="panel-create-action" hidden={themeSnapshot.compiled.theme.recipes.shellPresentation !== 'instrumented'}>
-      <IconAction label="Create Panel" visualLabel="+" action="create-panel" onclick={openPanelDialog} />
-    </div>
-    <div class="story-lockup">
-      <span>{hostContext.storyId}</span>
-      <strong>{hostContext.storyTitle}</strong>
-      <small aria-label="Active story identity">{hostContext.storyId} · {hostContext.frameLabel}</small>
+    <div class="panel-chrome-flow" use:trackPanelStoryCollision>
+      <div class="panel-navigation">
+        <PanelTabs
+          {store}
+          class="panel-tabs"
+          onaddsubpanel={(panelId) => openSubPanelDialog({ mode: 'create', panelId })}
+        />
+        <div class="panel-create-action" hidden={themeSnapshot.compiled.theme.recipes.shellPresentation !== 'instrumented'}>
+          <IconAction label="Create Panel" visualLabel="+" action="create-panel" onclick={openPanelDialog} />
+        </div>
+      </div>
+      <div class="story-lockup">
+        <span>{hostContext.storyId}</span>
+        <strong>{hostContext.storyTitle}</strong>
+        <small aria-label="Active story identity">{hostContext.storyId} · {hostContext.frameLabel}</small>
+      </div>
     </div>
     <div class="shelf-actions">
       <IconAction label="Open Widget Catalog" visualLabel="Widgets" action="open-catalog" expanded={$catalogState.open} onclick={() => catalog.open('expanded')} />

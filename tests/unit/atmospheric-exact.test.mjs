@@ -9,6 +9,10 @@ import {
 } from '../exact/atmospheric-exact-contract.mjs';
 
 const SOURCE_FRAGMENT_SHA256 = '38878d2cf8a86f5e879faba4b41a214e4293f22ed755975023e02c962d61b913';
+const APPROVED_LAYOUT_BOUNDS = [
+  { id: 'header-panel-control-adjacent', x: 372, y: 0, width: 33, height: 40 },
+  { id: 'header-panel-control-previous', x: 532, y: 0, width: 33, height: 40 }
+];
 
 function png(width, height, pixels) {
   const image = new PNG({ width, height });
@@ -40,6 +44,7 @@ function contract(overrides = {}) {
     },
     masks: [],
     textMaskBounds: [],
+    approvedLayoutBounds: APPROVED_LAYOUT_BOUNDS,
     ...overrides
   };
 }
@@ -87,6 +92,49 @@ test('Atmospheric exact contract permits only reviewed glyph masks contained by 
     textMaskBounds,
     masks: [{ id: 'material-cover', textBoundId: 'wordmark', x: 24, y: 8, width: 100, height: 18, kind: 'region' }]
   }), { skipReferenceImageHash: true }), /glyph-only/i);
+});
+
+test('Atmospheric exact contract permits approved layout masks only inside named review bounds', () => {
+  assert.doesNotThrow(() => validateAtmosphericContract(contract({
+    masks: [{
+      id: 'panel-control-new-position',
+      layoutBoundId: 'header-panel-control-adjacent',
+      x: 372,
+      y: 0,
+      width: 33,
+      height: 40,
+      kind: 'approved-layout'
+    }]
+  }), { skipReferenceImageHash: true }));
+  assert.throws(() => validateAtmosphericContract(contract({
+    approvedLayoutBounds: [
+      { ...APPROVED_LAYOUT_BOUNDS[0], width: 34 },
+      APPROVED_LAYOUT_BOUNDS[1]
+    ]
+  }), { skipReferenceImageHash: true }), /layout bound.*drifted/i);
+  assert.throws(() => validateAtmosphericContract(contract({
+    approvedLayoutBounds: [
+      { ...APPROVED_LAYOUT_BOUNDS[0], x: 371 },
+      APPROVED_LAYOUT_BOUNDS[1]
+    ]
+  }), { skipReferenceImageHash: true }), /layout bound.*drifted/i);
+  assert.throws(() => validateAtmosphericContract(contract({
+    approvedLayoutBounds: [
+      ...APPROVED_LAYOUT_BOUNDS,
+      { id: 'extra-layout-change', x: 700, y: 0, width: 20, height: 40 }
+    ]
+  }), { skipReferenceImageHash: true }), /layout bounds.*exactly/i);
+  assert.throws(() => validateAtmosphericContract(contract({
+    masks: [{
+      id: 'unreviewed-layout-change',
+      layoutBoundId: 'missing',
+      x: 372,
+      y: 0,
+      width: 33,
+      height: 40,
+      kind: 'approved-layout'
+    }]
+  }), { skipReferenceImageHash: true }), /outside approved layout pixels/i);
 });
 
 test('Atmospheric pixel comparison reports literal mismatch and honors only valid masks', () => {

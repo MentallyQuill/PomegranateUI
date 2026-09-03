@@ -441,6 +441,110 @@ test('Panel action material follows every theme and becomes opaque for accessibi
   await expect(page.getByRole('dialog', { name: 'Scene Panel actions' })).toHaveCSS('backdrop-filter', 'none');
 });
 
+test('Panel action controls use themed field and button surfaces', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Scene' }).click({ button: 'right' });
+  const menu = page.getByRole('dialog', { name: 'Scene Panel actions' });
+  const field = menu.getByRole('textbox', { name: 'Panel name' });
+  const buttons = menu.getByRole('button');
+
+  await expect(field).toHaveAttribute('data-pom-part', 'field.surface');
+  await expect(buttons).toHaveCount(7);
+  expect(await buttons.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-pom-part'))))
+    .toEqual(Array(7).fill('button.surface'));
+  expect(await field.evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe('rgb(255, 255, 255)');
+  expect(await buttons.first().evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe('rgb(239, 239, 239)');
+});
+
+test('sub-panel action controls use themed button surfaces', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  const target = page.getByRole('tablist', { name: 'Settings sub-panels' }).getByRole('tab').first();
+  const targetName = await target.textContent();
+  if (!targetName) throw new Error('Expected a Settings sub-panel action target.');
+  await target.click({ button: 'right' });
+  const buttons = page.getByRole('dialog', { name: `${targetName} sub-panel actions` }).getByRole('button');
+
+  await expect(buttons).toHaveCount(6);
+  expect(await buttons.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-pom-part'))))
+    .toEqual(Array(6).fill('button.surface'));
+  expect(await buttons.first().evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe('rgb(239, 239, 239)');
+});
+
+test('Create Panel follows the last Panel tab while the rail has room', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1280 });
+  const lastTab = page.getByRole('tablist', { name: 'Panels' }).getByRole('tab').last();
+  const addPanel = page.getByRole('button', { name: 'Create Panel' });
+  const widgets = page.getByRole('button', { name: 'Open Widget Catalog' });
+  const storyId = page.locator('.story-lockup > span');
+  const geometry = await Promise.all([lastTab.boundingBox(), addPanel.boundingBox(), widgets.boundingBox(), storyId.boundingBox()]);
+  if (geometry.some((box) => !box)) throw new Error('Expected visible Panel chrome geometry.');
+  const [tabBox, addBox, widgetBox, storyIdBox] = geometry as [
+    NonNullable<typeof geometry[0]>,
+    NonNullable<typeof geometry[1]>,
+    NonNullable<typeof geometry[2]>,
+    NonNullable<typeof geometry[3]>
+  ];
+
+  expect(Math.abs(addBox.x - (tabBox.x + tabBox.width))).toBeLessThanOrEqual(1);
+  expect(widgetBox.x - (addBox.x + addBox.width)).toBeGreaterThan(40);
+  expect(storyIdBox.x).toBe(589);
+});
+
+test('four short Panel tabs keep the story lockup while Create Panel follows the rail', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1280 });
+  await openDeveloperTools(page);
+  await page.getByRole('button', { name: 'Create Panel' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
+  await dialog.getByRole('textbox', { name: 'Panel name' }).fill('Log');
+  await dialog.getByRole('button', { name: 'Create Panel' }).click();
+  await closeDeveloperTools(page);
+
+  const lastTab = page.getByRole('tablist', { name: 'Panels' }).getByRole('tab').last();
+  const addPanel = page.getByRole('button', { name: 'Create Panel' });
+  const geometry = await Promise.all([lastTab.boundingBox(), addPanel.boundingBox()]);
+  if (geometry.some((box) => !box)) throw new Error('Expected four-Panel chrome geometry.');
+  const [tabBox, addBox] = geometry as [NonNullable<typeof geometry[0]>, NonNullable<typeof geometry[1]>];
+
+  expect(Math.abs(addBox.x - (tabBox.x + tabBox.width))).toBeLessThanOrEqual(1);
+  await expect(page.locator('.panel-chrome-flow')).toHaveAttribute('data-story-obscured', 'false');
+  await expect(page.locator('.story-lockup')).toBeVisible();
+});
+
+test('Create Panel pins immediately before Widgets when the wide Panel rail overflows', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDeveloperTools(page);
+  for (const name of [
+    'Archive Ledger and Canon Continuity',
+    'Lore Compendium and World Reference',
+    'Character Roster and Relationship Matrix',
+    'Master Timeline and Session Chronology',
+    'Session Notes and Narrative Threads',
+    'Locations Factions and Political History',
+    'Rules Systems and Campaign Procedures',
+    'Mysteries Clues and Unresolved Questions'
+  ]) {
+    await page.getByRole('button', { name: 'Create Panel' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
+    await dialog.getByRole('textbox', { name: 'Panel name' }).fill(name);
+    await dialog.getByRole('button', { name: 'Create Panel' }).click();
+  }
+  await closeDeveloperTools(page);
+
+  const rail = page.getByRole('tablist', { name: 'Panels' });
+  const addPanel = page.getByRole('button', { name: 'Create Panel' });
+  const widgets = page.getByRole('button', { name: 'Open Widget Catalog' });
+  const railSize = await rail.evaluate((node) => ({ clientWidth: node.clientWidth, scrollWidth: node.scrollWidth }));
+  const geometry = await Promise.all([rail.boundingBox(), addPanel.boundingBox(), widgets.boundingBox()]);
+  if (geometry.some((box) => !box)) throw new Error('Expected overflowing Panel chrome geometry.');
+  const [railBox, addBox, widgetBox] = geometry as [NonNullable<typeof geometry[0]>, NonNullable<typeof geometry[1]>, NonNullable<typeof geometry[2]>];
+
+  expect(railSize.scrollWidth).toBeGreaterThan(railSize.clientWidth);
+  expect(Math.abs(addBox.x - (railBox.x + railBox.width))).toBeLessThanOrEqual(1);
+  expect(Math.abs(widgetBox.x - (addBox.x + addBox.width))).toBeLessThanOrEqual(1);
+  const storyIdentity = page.getByLabel('Active story identity');
+  await expect(storyIdentity).toHaveAccessibleName('Active story identity');
+  expect(await storyIdentity.ariaSnapshot()).toContain('STORY / 7E-19');
+});
+
 test('Panel tab drag pans an overflowing rail without activation or reorder', async ({ page }) => {
   await seedPanelRail(page);
   await page.setViewportSize({ width: 390, height: 844 });

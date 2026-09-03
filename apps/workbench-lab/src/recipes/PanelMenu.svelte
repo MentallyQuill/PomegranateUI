@@ -181,15 +181,15 @@
   ontoggle={handleToggle}
 >
   {#if target}
-    <label>Panel name<input bind:this={nameInput} bind:value={name} /></label>
-    <button type="button" onclick={() => run((panel) => store.dispatch({ type: 'panel.rename', panelId: panel.id, name: name.trim() || panel.name }))}>Rename</button>
-    <button type="button" onclick={() => run(duplicate)}>Duplicate</button>
+    <label>Panel name<input bind:this={nameInput} bind:value={name} data-pom-part="field.surface" /></label>
+    <button type="button" data-pom-part="button.surface" onclick={() => run((panel) => store.dispatch({ type: 'panel.rename', panelId: panel.id, name: name.trim() || panel.name }))}>Rename</button>
+    <button type="button" data-pom-part="button.surface" onclick={() => run(duplicate)}>Duplicate</button>
     {#if mayCreateFirstSubPanel}
-      <button type="button" onclick={() => run((panel) => onaddsubpanel?.(panel.id))}>Create first sub-panel</button>
+      <button type="button" data-pom-part="button.surface" onclick={() => run((panel) => onaddsubpanel?.(panel.id))}>Create first sub-panel</button>
     {/if}
-    <button type="button" onclick={() => run((panel) => store.dispatch({ type: 'panel.reset', panelId: panel.id }))}>Reset</button>
-    <button type="button" onclick={() => run((panel) => destructive('panel.clear', panel))}>Clear</button>
-    <button type="button" onclick={() => run((panel) => destructive('panel.delete', panel))}>Delete</button>
-    <button type="button" onclick={reorder}>Reorder Panels…</button>
+    <button type="button" data-pom-part="button.surface" onclick={() => run((panel) => store.dispatch({ type: 'panel.reset', panelId: panel.id }))}>Reset</button>
+    <button type="button" data-pom-part="button.surface" onclick={() => run((panel) => destructive('panel.clear', panel))}>Clear</button>
+    <button type="button" data-pom-part="button.surface" onclick={() => run((panel) => destructive('panel.delete', panel))}>Delete</button>
+    <button type="button" data-pom-part="button.surface" onclick={reorder}>Reorder Panels…</button>
   {/if}
 </div>

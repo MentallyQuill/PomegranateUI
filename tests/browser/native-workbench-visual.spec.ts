@@ -416,6 +416,13 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await shot(page, 'renderer-error.png');
 });
 
+test('Deep Current freezes the polished wide Panel action surface', async ({ page }) => {
+  await fresh(page, 1440, 900);
+  await page.getByRole('tab', { name: 'Scene' }).click({ button: 'right' });
+  await expect(page.getByRole('dialog', { name: 'Scene Panel actions' })).toBeVisible();
+  await shot(page, 'wide-panel-actions-deep-current.png');
+});
+
 test('Deep Current freezes the expanded source-authority Catalog at 1920x1080', async ({ page }) => {
   await fresh(page, 1920, 1080);
   await selectTheme(page, 'Deep Current');

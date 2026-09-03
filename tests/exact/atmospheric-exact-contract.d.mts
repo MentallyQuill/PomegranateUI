@@ -1,4 +1,4 @@
-export interface AtmosphericMask {
+export interface AtmosphericGlyphMask {
   readonly id: string;
   readonly textBoundId: string;
   readonly x: number;
@@ -7,6 +7,18 @@ export interface AtmosphericMask {
   readonly height: number;
   readonly kind: 'glyph-only';
 }
+
+export interface AtmosphericLayoutMask {
+  readonly id: string;
+  readonly layoutBoundId: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly kind: 'approved-layout';
+}
+
+export type AtmosphericMask = AtmosphericGlyphMask | AtmosphericLayoutMask;
 
 export interface AtmosphericPixelReportCompatible {
   readonly compatible: true;

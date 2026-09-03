@@ -81,7 +81,11 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
       };
     };
     const visibleShelfChildren = [...document.querySelectorAll('.top-shelf > *')]
-      .filter((element): element is HTMLElement => element instanceof HTMLElement && getComputedStyle(element).display !== 'none')
+      .filter((element): element is HTMLElement => {
+        if (!(element instanceof HTMLElement)) return false;
+        const display = getComputedStyle(element).display;
+        return display !== 'none' && display !== 'contents';
+      })
       .map((element, index) => rect(element, `shelf child ${index}`));
     const visibleShelfInternals = [...document.querySelectorAll('.top-shelf :is([role="tab"], .story-lockup > *, .shelf-actions > *)')]
       .filter((element): element is HTMLElement => {
