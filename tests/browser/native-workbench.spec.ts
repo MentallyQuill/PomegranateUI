@@ -1337,6 +1337,45 @@ test('collapsed Story Stage toolbars never create a horizontal Workbench scroll 
   await assertHorizontallyFixed('left toolbar collapsed');
 });
 
+test('compact collapsed Story Stage toolbars stay horizontally fixed without taking vertical scroll ownership', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 720 });
+
+  const main = page.locator('main[data-pom-theme-root]');
+  const surface = page.locator('.workbench-surface');
+  const storyTemplate = page.locator('.panel-template-surface[data-panel-template-family="story-stage"]');
+  await expect(main).toHaveClass(/left-collapsed/);
+  await expect(main).toHaveClass(/right-collapsed/);
+
+  const assertHorizontallyFixed = async (state: string) => {
+    const extent = await surface.evaluate((node) => ({
+      clientWidth: node.clientWidth,
+      scrollWidth: node.scrollWidth
+    }));
+    expect(extent.scrollWidth, `${state}: ${JSON.stringify(extent)}`).toBe(extent.clientWidth);
+
+    await surface.evaluate((node) => { node.scrollLeft = node.scrollWidth; });
+    expect(await surface.evaluate((node) => node.scrollLeft), state).toBe(0);
+  };
+
+  await assertHorizontallyFixed('compact toolbars collapsed');
+
+  for (const side of ['right', 'left'] as const) {
+    await page.getByRole('button', { name: `Open ${side} toolbar` }).click();
+    await expect(page.locator(`[data-conformance-region="${side}"]`)).toBeVisible();
+    await assertHorizontallyFixed(`compact ${side} toolbar open`);
+
+    await page.getByRole('button', { name: `Close ${side} toolbar` }).click();
+    await expect(page.locator(`[data-conformance-region="${side}"]`)).toBeHidden();
+    await assertHorizontallyFixed(`compact ${side} toolbar collapsed`);
+  }
+
+  const verticalOwners = await Promise.all([
+    surface.evaluate((node) => getComputedStyle(node).overflowY),
+    storyTemplate.evaluate((node) => getComputedStyle(node).overflowY)
+  ]);
+  expect(verticalOwners).toEqual(['auto', 'visible']);
+});
+
 test('Story Stage side toolbars ease through intermediate widths and reverse without snapping', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
