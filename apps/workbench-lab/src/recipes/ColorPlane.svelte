@@ -14,6 +14,7 @@
 
   const clamp = (next: number) => Math.min(1, Math.max(0, next));
   const round = (next: number) => Math.round(clamp(next) * 100) / 100;
+  let activePointer: number | null = null;
 
   function updateFromPointer(event: PointerEvent) {
     const bounds = event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect() : null;
@@ -22,6 +23,30 @@
       saturation: round((event.clientX - bounds.left) / bounds.width),
       value: round(1 - ((event.clientY - bounds.top) / bounds.height))
     });
+  }
+
+  function pointerDown(event: PointerEvent) {
+    if (event.button !== 0 || activePointer !== null || !(event.currentTarget instanceof HTMLElement)) return;
+    activePointer = event.pointerId;
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers can still update in place. */ }
+    updateFromPointer(event);
+  }
+
+  function pointerMove(event: PointerEvent) {
+    if (activePointer === event.pointerId) updateFromPointer(event);
+  }
+
+  function finishPointer(event: PointerEvent, commitRelease: boolean) {
+    if (activePointer !== event.pointerId) return;
+    if (commitRelease) updateFromPointer(event);
+    activePointer = null;
+    if (event.currentTarget instanceof HTMLElement && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  function lostPointerCapture(event: PointerEvent) {
+    if (activePointer === event.pointerId) activePointer = null;
   }
 
   function keydown(event: KeyboardEvent) {
@@ -48,7 +73,11 @@
   aria-label="Saturation and value"
   aria-describedby={`${controlId}-instructions`}
   style={`--theme-hue:${hue};--theme-saturation:${saturation * 100}%;--theme-value:${(1 - value) * 100}%`}
-  onpointerdown={updateFromPointer}
+  onpointerdown={pointerDown}
+  onpointermove={pointerMove}
+  onpointerup={(event) => finishPointer(event, true)}
+  onpointercancel={(event) => finishPointer(event, false)}
+  onlostpointercapture={lostPointerCapture}
   onkeydown={keydown}
 >
   <span aria-hidden="true"></span>

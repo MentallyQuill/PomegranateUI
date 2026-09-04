@@ -182,6 +182,40 @@ test('Theme Colors propagates all semantic roles and preserves the last valid ta
   await expect(root).toHaveAttribute('data-workbench-revision', revision!);
 });
 
+test('Theme Colors tracks saturation and value throughout a pointer drag', async ({ page }) => {
+  await fresh(page);
+  const settings = await openAppearance(page);
+  await expect(settings.colors.locator('.widget-frame')).toHaveCSS('transform', 'none');
+  const plane = settings.colors.getByRole('application', { name: 'Saturation and value' });
+  const box = await plane.boundingBox();
+  expect(box).not.toBeNull();
+  const position = async () => {
+    const text = await settings.colors.locator('.theme-color-plane-value').textContent();
+    const match = text?.match(/Saturation (\d+)% · Value (\d+)%/);
+    expect(match).not.toBeNull();
+    return { saturation: Number(match![1]), value: Number(match![2]) };
+  };
+  const isNear = async (saturation: number, value: number) => {
+    const current = await position();
+    return Math.abs(current.saturation - saturation) <= 3 && Math.abs(current.value - value) <= 3;
+  };
+
+  await page.mouse.move(box!.x + box!.width * 0.2, box!.y + box!.height * 0.2);
+  await page.mouse.down();
+  await expect.poll(() => isNear(20, 80)).toBe(true);
+
+  await page.mouse.move(box!.x + box!.width * 0.8, box!.y + box!.height * 0.7, { steps: 6 });
+  await expect.poll(() => isNear(80, 30)).toBe(true);
+
+  await page.mouse.move(box!.x + box!.width * 0.9, box!.y + box!.height * 0.9);
+  await page.mouse.up();
+  await expect.poll(() => isNear(90, 10)).toBe(true);
+  const released = await position();
+
+  await page.mouse.move(box!.x + box!.width * 0.1, box!.y + box!.height * 0.1);
+  expect(await position()).toEqual(released);
+});
+
 test('Materials and Ambient elements control their semantic bindings', async ({ page }) => {
   await fresh(page);
   const settings = await openAppearance(page);
