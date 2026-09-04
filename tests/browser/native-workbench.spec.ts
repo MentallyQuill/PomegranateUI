@@ -140,6 +140,49 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => document.fonts.ready);
 });
 
+test('semantic control groups expose explicit segment topology and content tiles', async ({ page }) => {
+  const segments = (locator: import('@playwright/test').Locator) => locator.evaluateAll(
+    (controls) => controls.map((control) => control.getAttribute('data-pom-control-segment'))
+  );
+
+  expect(await segments(page.getByRole('tablist', { name: 'Panels' }).getByRole('tab')))
+    .toEqual(['start', 'middle', 'end']);
+  expect(await segments(page.getByRole('group', { name: 'Character portrait size' }).getByRole('button')))
+    .toEqual(['start', 'end']);
+
+  const widgetTabs = page.getByRole('tablist', { name: 'Grouped Widgets' }).first().getByRole('tab');
+  const widgetTabCount = await widgetTabs.count();
+  expect(widgetTabCount).toBeGreaterThan(1);
+  expect(await segments(widgetTabs)).toEqual([
+    'start',
+    ...Array(Math.max(0, widgetTabCount - 2)).fill('middle'),
+    'end'
+  ]);
+
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  expect(await segments(page.getByRole('tablist', { name: 'Settings sub-panels' }).getByRole('tab')))
+    .toEqual(['start', 'middle', 'middle', 'middle', 'middle', 'middle']);
+  await expect(page.getByRole('button', { name: 'Add sub-panel' }))
+    .toHaveAttribute('data-pom-control-segment', 'end');
+
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  const themeCards = page.getByRole('article', { name: 'Theme Library' }).locator('.surface-themes button');
+  await expect(themeCards).toHaveCount(4);
+  expect(await themeCards.evaluateAll((buttons) => buttons.map((button) => button.getAttribute('data-pom-control-shape'))))
+    .toEqual(Array(4).fill('content-tile'));
+
+  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  expect(await segments(page.getByRole('group', { name: 'Catalog view' }).getByRole('button')))
+    .toEqual(['start', 'end']);
+  const categoryButtons = page.getByRole('navigation', { name: 'Widget categories' }).getByRole('button');
+  const categoryCount = await categoryButtons.count();
+  expect(await segments(categoryButtons)).toEqual([
+    'start',
+    ...Array(Math.max(0, categoryCount - 2)).fill('middle'),
+    'end'
+  ]);
+});
+
 test('native workbench POM-PANEL-07856BFE9A POM-PANEL-DF4EC7C581 keeps story context inside the Scene stage', async ({ page }) => {
   const shelf = page.locator('.top-shelf');
   const storyStage = page.getByRole('region', { name: 'Story reading stage' });

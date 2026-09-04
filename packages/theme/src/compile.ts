@@ -267,6 +267,9 @@ ${selector}:disabled, ${selector}[aria-disabled="true"] { opacity: var(${prefix}
 
 export const POM_SEMANTIC_PART_STYLE_SHEET = `${THEME_PART_IDS.map(partRule).join('\n\n')}
 
+[data-pom-theme-root] [data-pom-control-group="joined"] {
+  gap: 0;
+}
 [data-pom-theme-root] [data-pom-control-segment] {
   position: relative;
 }

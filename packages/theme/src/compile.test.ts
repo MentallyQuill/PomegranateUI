@@ -114,6 +114,7 @@ describe('theme compiler', () => {
   it('compiles joined control topology and content-tile geometry without theme selectors', () => {
     const css = compileThemeStyleSheet(RESOLVED_THEME);
 
+    expect(css).toMatch(/data-pom-control-group="joined"[^}]*gap:\s*0/s);
     expect(css).toContain('[data-pom-control-segment="middle"]');
     expect(css).toMatch(/data-pom-control-segment="start"[^}]*border-start-end-radius:\s*0/s);
     expect(css).toMatch(/data-pom-control-segment="end"[^}]*border-inline-start-width:\s*0/s);

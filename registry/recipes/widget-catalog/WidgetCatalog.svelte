@@ -56,16 +56,16 @@
         oninput={(event) => catalog.setQuery(event.currentTarget.value)}
       />
     </label>
-    <nav aria-label="Catalog display">
-      <button type="button" data-pom-part="button.surface" aria-pressed={state.presentation === 'drawer'} onclick={() => catalog.setPresentation('drawer')}>Drawer</button>
-      <button type="button" data-pom-part="button.surface" aria-pressed={state.presentation === 'expanded'} onclick={() => catalog.setPresentation('expanded')}>Expanded</button>
-      <button type="button" data-pom-part="button.surface" aria-pressed={state.resultMode === 'visual'} onclick={() => catalog.setResultMode('visual')}>Visual</button>
-      <button type="button" data-pom-part="button.surface" aria-pressed={state.resultMode === 'compact'} onclick={() => catalog.setResultMode('compact')}>Compact</button>
+    <nav data-pom-control-group="joined" aria-label="Catalog display">
+      <button type="button" data-pom-part="button.surface" data-pom-control-segment="start" aria-pressed={state.presentation === 'drawer'} onclick={() => catalog.setPresentation('drawer')}>Drawer</button>
+      <button type="button" data-pom-part="button.surface" data-pom-control-segment="middle" aria-pressed={state.presentation === 'expanded'} onclick={() => catalog.setPresentation('expanded')}>Expanded</button>
+      <button type="button" data-pom-part="button.surface" data-pom-control-segment="middle" aria-pressed={state.resultMode === 'visual'} onclick={() => catalog.setResultMode('visual')}>Visual</button>
+      <button type="button" data-pom-part="button.surface" data-pom-control-segment="end" aria-pressed={state.resultMode === 'compact'} onclick={() => catalog.setResultMode('compact')}>Compact</button>
     </nav>
-    <nav aria-label="Catalog categories">
-      <button type="button" data-pom-part="button.surface" aria-pressed={state.category === null} onclick={() => catalog.setCategory(null)}>All</button>
-      {#each state.categories as category}
-        <button type="button" data-pom-part="button.surface" aria-pressed={state.category === category} onclick={() => catalog.setCategory(category)}>{category}</button>
+    <nav data-pom-control-group="joined" aria-label="Catalog categories">
+      <button type="button" data-pom-part="button.surface" data-pom-control-segment={state.categories.length === 0 ? 'only' : 'start'} aria-pressed={state.category === null} onclick={() => catalog.setCategory(null)}>All</button>
+      {#each state.categories as category, index}
+        <button type="button" data-pom-part="button.surface" data-pom-control-segment={index === state.categories.length - 1 ? 'end' : 'middle'} aria-pressed={state.category === category} onclick={() => catalog.setCategory(category)}>{category}</button>
       {/each}
     </nav>
     <ul aria-live="polite">

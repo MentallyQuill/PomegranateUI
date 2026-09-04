@@ -109,6 +109,7 @@
   <div
     bind:this={tablist}
     class={className}
+    data-pom-control-group="joined"
     data-tab-rail-scroll
     role="tablist"
     aria-label="Panels"
@@ -123,6 +124,7 @@
         <button
           type="button"
           data-pom-part="button.surface"
+          data-pom-control-segment={tabs.length === 1 ? 'only' : index === 0 ? 'start' : index === tabs.length - 1 ? 'end' : 'middle'}
           role="tab"
           id={tab.tabId}
           aria-controls={tab.surfaceId}

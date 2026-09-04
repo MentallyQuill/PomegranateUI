@@ -239,13 +239,14 @@
   style={rowHeight === undefined ? undefined : `height:${rowHeight}px;min-height:${rowHeight}px`}
 >
   <div class="widget-group-header" data-widget-group-header data-pom-part="widget.header">
-    <div bind:this={tablist} class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets">
-      {#each ordered as frame (frame.instanceId)}
+    <div bind:this={tablist} class="widget-group-tabs" data-pom-control-group="joined" role="tablist" aria-label="Grouped Widgets">
+      {#each ordered as frame, index (frame.instanceId)}
         {@const title = titleFor?.(frame) ?? frame.title}
         <span data-tab-reorder-item>
           <button
             type="button"
             data-pom-part="button.surface"
+            data-pom-control-segment={ordered.length === 1 ? 'only' : index === 0 ? 'start' : index === ordered.length - 1 ? 'end' : 'middle'}
             role="tab"
             data-group-tab={frame.instanceId}
             data-group-widget-type={frame.instance.type}

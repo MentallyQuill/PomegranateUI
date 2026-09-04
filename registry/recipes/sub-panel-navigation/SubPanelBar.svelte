@@ -172,6 +172,7 @@
   <nav
     class={`sub-panel-bar ${className}`}
     data-pom-part="sub-panel.bar"
+    data-pom-control-group="joined"
     data-sub-panel-layout={active?.layoutId}
     aria-label={`${panel.name} sub-panel navigation`}
   >
@@ -190,6 +191,7 @@
             <button
               type="button"
               data-pom-part="button.surface"
+              data-pom-control-segment={index === 0 ? 'start' : 'middle'}
               data-sub-panel-tab={tab.subPanelIdAttribute}
               role="tab"
               id={tab.tabId}
@@ -226,6 +228,7 @@
       class="sub-panel-add"
       type="button"
       data-pom-part="button.surface"
+      data-pom-control-segment="end"
       aria-label="Add sub-panel"
       onclick={(event) => onrequest({ mode: 'create', panelId: panel.id, invokingTab: event.currentTarget })}
     >+</button>

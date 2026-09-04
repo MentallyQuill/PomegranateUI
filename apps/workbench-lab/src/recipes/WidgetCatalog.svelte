@@ -550,22 +550,22 @@
           </datalist>
         </label>
       {/if}
-      <div class="catalog-view" role="group" aria-label="Catalog view">
-        <button type="button" data-pom-part="button.surface" aria-pressed={catalogSnapshot.resultMode === 'visual'} onclick={() => void restack(() => catalog.setResultMode('visual'))}>Visual</button>
-        <button type="button" data-pom-part="button.surface" aria-pressed={catalogSnapshot.resultMode === 'compact'} onclick={() => void restack(() => catalog.setResultMode('compact'))}>Compact</button>
+      <div class="catalog-view" data-pom-control-group="joined" role="group" aria-label="Catalog view">
+        <button type="button" data-pom-part="button.surface" data-pom-control-segment="start" aria-pressed={catalogSnapshot.resultMode === 'visual'} onclick={() => void restack(() => catalog.setResultMode('visual'))}>Visual</button>
+        <button type="button" data-pom-part="button.surface" data-pom-control-segment="end" aria-pressed={catalogSnapshot.resultMode === 'compact'} onclick={() => void restack(() => catalog.setResultMode('compact'))}>Compact</button>
       </div>
     </div>
 
     <div class="catalog-filter-strip">
-      <nav class="catalog-filters" aria-label="Widget categories">
-        <button type="button" data-pom-part="button.surface" aria-pressed={catalogSnapshot.category === null} onclick={() => void restack(() => catalog.setCategory(null))}>All</button>
-        {#each categories as category (category[0])}
-          <button type="button" data-pom-part="button.surface" aria-pressed={catalogSnapshot.category === category[0]} onclick={() => void restack(() => catalog.setCategory(category[0]))}>{category[1]}</button>
+      <nav class="catalog-filters" data-pom-control-group="joined" aria-label="Widget categories">
+        <button type="button" data-pom-part="button.surface" data-pom-control-segment={categories.length === 0 ? 'only' : 'start'} aria-pressed={catalogSnapshot.category === null} onclick={() => void restack(() => catalog.setCategory(null))}>All</button>
+        {#each categories as category, index (category[0])}
+          <button type="button" data-pom-part="button.surface" data-pom-control-segment={index === categories.length - 1 ? 'end' : 'middle'} aria-pressed={catalogSnapshot.category === category[0]} onclick={() => void restack(() => catalog.setCategory(category[0]))}>{category[1]}</button>
         {/each}
       </nav>
-      <div class="catalog-utilities" role="group" aria-label="Catalog filters">
-        {#each utilities as utility (utility[0])}
-          <button type="button" data-pom-part="button.surface" aria-pressed={catalogSnapshot.utility === utility[0]} onclick={() => toggleUtility(utility[0])}>{utility[1]}</button>
+      <div class="catalog-utilities" data-pom-control-group="joined" role="group" aria-label="Catalog filters">
+        {#each utilities as utility, index (utility[0])}
+          <button type="button" data-pom-part="button.surface" data-pom-control-segment={utilities.length === 1 ? 'only' : index === 0 ? 'start' : index === utilities.length - 1 ? 'end' : 'middle'} aria-pressed={catalogSnapshot.utility === utility[0]} onclick={() => toggleUtility(utility[0])}>{utility[1]}</button>
         {/each}
       </div>
     </div>

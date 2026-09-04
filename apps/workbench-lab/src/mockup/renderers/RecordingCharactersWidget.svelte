@@ -43,10 +43,11 @@
 <section class="recording-characters" aria-label="Characters">
   <header>
     <span>Story cast</span>
-    <div role="group" aria-label="Character portrait size">
+    <div data-pom-control-group="joined" role="group" aria-label="Character portrait size">
       <button
         type="button"
         data-pom-part="button.icon"
+        data-pom-control-segment="start"
         aria-label="Decrease character portrait size"
         disabled={portraitScale === 1}
         onclick={() => changePortraitScale(-1)}
@@ -54,6 +55,7 @@
       <button
         type="button"
         data-pom-part="button.icon"
+        data-pom-control-segment="end"
         aria-label="Increase character portrait size"
         disabled={portraitScale === 3}
         onclick={() => changePortraitScale(1)}
