@@ -10,6 +10,7 @@
   import ashAmberStage from './assets/ash-amber-stage.webp';
   import bunnyGardenCanvas from './assets/bunny-garden-canvas.webp';
   import atmosphericReservoirStage from './assets/atmospheric-reservoir-stage.jpg';
+  import pomosTahoeCanvas from './assets/pomos-tahoe-canvas.webp';
   import { createLabHostContext, type LabThemeInspector } from './mockup/host-context.js';
   import { resolveLabShowcaseMediaProfile } from './mockup/showcase-media.js';
   import { IMPLEMENTED_SURFACES, IMPLEMENTED_SURFACE_TYPES } from './mockup/implemented-surfaces.js';
@@ -87,6 +88,7 @@
   const themeAssetRegistry: ThemeAssetRegistry = Object.freeze({
     'icons.minimal': { kind: 'icon-pack', source: 'icons.minimal' },
     'image.atmospheric-reservoir': { kind: 'image', source: atmosphericReservoirStage },
+    'image.pomos-tahoe': { kind: 'image', source: pomosTahoeCanvas },
     'image.bunny-garden': { kind: 'image', source: bunnyGardenCanvas },
     'image.ash-amber-stage': { kind: 'image', source: ashAmberStage }
   });

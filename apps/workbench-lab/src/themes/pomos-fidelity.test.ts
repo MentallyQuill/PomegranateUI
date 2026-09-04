@@ -4,28 +4,21 @@ import { POM_NEUTRAL_THEME } from './pom-neutral.js';
 import { POMOS_PRESENTATION_PROFILE } from './pomos-presentation.js';
 
 describe('PomOS fidelity data', () => {
-  it('uses a crisp curved blue canvas instead of four-corner fog or hard polygon seams', () => {
+  it('uses a crisp local Tahoe-inspired image without procedural fog or canvas blur', () => {
     expect(POM_NEUTRAL_THEME.canvas.map((layer) => layer.kind)).not.toContain('four-corner');
+    expect(POM_NEUTRAL_THEME.canvas.map((layer) => layer.kind)).not.toContain('radial-gradient');
+    expect(POM_NEUTRAL_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({
+      assetId: 'image.pomos-tahoe',
+      fit: 'cover',
+      opacity: 1,
+      blurPx: 0
+    });
     const gradients = POM_NEUTRAL_THEME.canvas.filter((layer) => 'stops' in layer);
-    const curvedFields = POM_NEUTRAL_THEME.canvas.filter((layer) => layer.kind === 'radial-gradient');
-    const alpha = (color: string) => color.length === 9 ? Number.parseInt(color.slice(7), 16) / 255 : 1;
-    const luminousRings = curvedFields.filter((layer) => {
-      const alphas = layer.stops.map((stop) => alpha(stop.color));
-      return alphas[0]! <= 0.08 && alphas.at(-1)! <= 0.08 && Math.max(...alphas.slice(1, -1)) >= 0.6;
-    });
-    const luminousEdgeWidths = luminousRings.map((layer) => {
-      const alphas = layer.stops.map((stop) => alpha(stop.color));
-      const peakIndex = alphas.indexOf(Math.max(...alphas));
-      return layer.stops[peakIndex]!.position - layer.stops[peakIndex - 1]!.position;
-    });
     const hardTransitions = gradients.flatMap((layer) => layer.stops.slice(1).map((stop, index) => (
       stop.position - layer.stops[index]!.position
     ))).filter((distance) => distance <= 0.02);
 
-    expect(gradients.length).toBeGreaterThanOrEqual(4);
-    expect(curvedFields.length).toBeGreaterThanOrEqual(3);
-    expect(luminousRings.length).toBeGreaterThanOrEqual(3);
-    expect(luminousEdgeWidths.every((width) => width <= 0.08)).toBe(true);
+    expect(gradients).toHaveLength(1);
     expect(hardTransitions).toHaveLength(0);
     expect(POMOS_PRESENTATION_PROFILE.canvas.blurPolicy).toBe('forbid');
   });

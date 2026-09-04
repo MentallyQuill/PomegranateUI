@@ -61,18 +61,18 @@ export const POM_NEUTRAL_THEME: ThemeDefinitionV2 = {
   recipes: POM_NEUTRAL_RECIPES,
   controls: { slider: { trackPx: 4, thumbPx: 11, hitTargetPx: 44 } },
   iconPackId: 'icons.minimal',
-  assets: [{ id: 'icons.minimal', kind: 'icon-pack', required: true }],
+  assets: [
+    { id: 'icons.minimal', kind: 'icon-pack', required: true },
+    { id: 'image.pomos-tahoe', kind: 'image', required: true }
+  ],
   canvas: [
     { kind: 'solid', color: '#075bb8' },
-    { kind: 'radial-gradient', shape: 'ellipse', x: 0.8, y: 0.08, stops: [{ color: '#e9feff00', position: 0 }, { color: '#d9fcff20', position: 0.14 }, { color: '#c7fbffb8', position: 0.2 }, { color: '#59d8edb0', position: 0.32 }, { color: '#168bdc70', position: 0.45 }, { color: '#0759b800', position: 0.6 }] },
-    { kind: 'radial-gradient', shape: 'ellipse', x: 0.02, y: 0.78, stops: [{ color: '#dffcff00', position: 0 }, { color: '#c9fcff16', position: 0.18 }, { color: '#c9fcffad', position: 0.24 }, { color: '#5bdfef9c', position: 0.34 }, { color: '#118ccd4f', position: 0.46 }, { color: '#0759b800', position: 0.64 }] },
-    { kind: 'radial-gradient', shape: 'ellipse', x: 0.52, y: 0.98, stops: [{ color: '#d8ffff00', position: 0 }, { color: '#d8ffff18', position: 0.16 }, { color: '#d8ffffa8', position: 0.22 }, { color: '#62ddec94', position: 0.33 }, { color: '#0968bd50', position: 0.45 }, { color: '#043a9000', position: 0.64 }] },
-    { kind: 'linear-gradient', angle: 132, stops: [{ color: '#033f9200', position: 0 }, { color: '#61dff03f', position: 0.22 }, { color: '#d8ffff26', position: 0.46 }, { color: '#0a6fba2e', position: 0.7 }, { color: '#022f7900', position: 1 }] },
-    { kind: 'radial-gradient', shape: 'ellipse', x: 0.95, y: 0.8, stops: [{ color: '#e7feff00', position: 0 }, { color: '#e7feff18', position: 0.17 }, { color: '#e7feffb0', position: 0.23 }, { color: '#4dd7eca2', position: 0.34 }, { color: '#0b7bc34f', position: 0.46 }, { color: '#043a9000', position: 0.64 }] },
-    { kind: 'veil', mode: 'vignette', color: '#042f78', opacity: 0.25 }
+    { kind: 'image', assetId: 'image.pomos-tahoe', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 0.98, contrast: 1.04, brightness: 0.96, blend: 'normal' },
+    { kind: 'linear-gradient', angle: 132, stops: [{ color: '#02265c38', position: 0 }, { color: '#8ff4ff12', position: 0.42 }, { color: '#e9feff0a', position: 0.58 }, { color: '#033b7d20', position: 1 }] },
+    { kind: 'veil', mode: 'vignette', color: '#031d52', opacity: 0.2 }
   ],
   accessibility: { minimumContrast: 4.5, largeTextContrast: 3, coarsePointerMinimum: 44, reducedTransparencySurface: 'surface' },
-  capabilities: { translucency: true, textures: false, localImages: false }
+  capabilities: { translucency: true, textures: false, localImages: true }
 };
 
 export const POM_NEUTRAL_TARGET = themeTarget(POM_NEUTRAL_THEME, {

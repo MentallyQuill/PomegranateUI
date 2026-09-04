@@ -24,6 +24,7 @@ import { createLocalThemePreference, LAB_THEME_KEY } from './theme-storage.js';
 const assetRegistry = {
   'icons.minimal': { kind: 'icon-pack' as const, source: 'icons.minimal' },
   'image.atmospheric-reservoir': { kind: 'image' as const, source: '/assets/atmospheric-reservoir-stage.jpg' },
+  'image.pomos-tahoe': { kind: 'image' as const, source: '/assets/pomos-tahoe-canvas.webp' },
   'image.bunny-garden': { kind: 'image' as const, source: '/assets/bunny-garden.webp' },
   'image.ash-amber-stage': { kind: 'image' as const, source: '/assets/ash-amber-stage.webp' }
 };
@@ -100,10 +101,21 @@ describe('Workbench Lab theme conformance', () => {
       defaults: canvasAuthoring.defaults
     }))).toEqual([
       expect.objectContaining({ id: 'deep-current', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) }),
-      expect.objectContaining({ id: 'pom-neutral', groups: expect.arrayContaining(['overlay', 'vignette']) }),
+      expect.objectContaining({ id: 'pom-neutral', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) }),
       expect.objectContaining({ id: 'bunny', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) }),
       expect.objectContaining({ id: 'ash-amber', groups: expect.arrayContaining(['image', 'overlay', 'vignette']) })
     ]);
+  });
+
+  it('pins Ash Theme Canvas defaults to the approved composition', () => {
+    const ash = LAB_THEME_PRESETS.find(({ id }) => id === 'ash-amber');
+
+    expect(ash?.canvasAuthoring.defaults).toEqual({
+      imageStrength: 100,
+      overlayStrength: 90,
+      gradientAngle: 90,
+      vignetteStrength: 40
+    });
   });
 
   it('calibrates instrumented presentation materials continuously through their authored defaults', () => {
@@ -172,9 +184,9 @@ describe('Workbench Lab theme conformance', () => {
         kind: 'linear-gradient',
         angle: 90,
         stops: [
-          { color: '#191918EB', position: 0 },
-          { color: '#302E2A8F', position: 0.5 },
-          { color: '#242321E0', position: 1 }
+          { color: '#191918D3', position: 0 },
+          { color: '#302E2A81', position: 0.5 },
+          { color: '#242321CA', position: 1 }
         ]
       },
       {
@@ -183,12 +195,12 @@ describe('Workbench Lab theme conformance', () => {
         x: 0.57,
         y: 0.97,
         stops: [
-          { color: '#D2B57A42', position: 0 },
-          { color: '#625B521F', position: 0.34 },
+          { color: '#D2B57A3C', position: 0 },
+          { color: '#625B521C', position: 0.34 },
           { color: '#24232100', position: 0.68 }
         ]
       },
-      { kind: 'veil', mode: 'reading', color: '#302E2A', opacity: 0.28 }
+      { kind: 'veil', mode: 'reading', color: '#302E2A', opacity: 0.112 }
     ]);
   });
 
@@ -318,7 +330,14 @@ describe('Workbench Lab theme conformance', () => {
     expect(POM_NEUTRAL_THEME.recipes.parts['group.surface']).toMatchObject({ material: 'pane', overflow: 'clip' });
     expect(POM_NEUTRAL_THEME.materials.header?.backdrop.blurPx).toBe(0);
     expect(POM_NEUTRAL_THEME.materials.content?.backdrop.blurPx).toBe(0);
-    expect(POM_NEUTRAL_THEME.canvas.every((layer) => layer.kind !== 'image')).toBe(true);
+    expect(POM_NEUTRAL_THEME.assets).toContainEqual({ id: 'image.pomos-tahoe', kind: 'image', required: true });
+    expect(POM_NEUTRAL_THEME.capabilities.localImages).toBe(true);
+    expect(POM_NEUTRAL_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({
+      assetId: 'image.pomos-tahoe',
+      fit: 'cover',
+      opacity: 1,
+      blurPx: 0
+    });
   });
 
   it('pins Bunny to the expressive stationery target with its local garden canvas', () => {
@@ -357,6 +376,11 @@ describe('Workbench Lab theme conformance', () => {
         'widget.content': { typeScale: 'lg', textTransform: 'none' }
       }
     });
+    expect(preset?.surfaceExpression?.materials).not.toHaveProperty('shelf');
+    expect(preset?.surfaceExpression?.materials).not.toHaveProperty('pane');
+    expect(preset?.surfaceExpression?.materials).not.toHaveProperty('menu');
+    expect(preset?.surfaceExpression?.materials).not.toHaveProperty('dialog');
+    expect(preset?.surfaceExpression?.materials).not.toHaveProperty('floating');
   });
 
   it.each(LAB_THEME_IDS)('keeps opaque semantic text pairings readable in %s', (id) => {
@@ -413,7 +437,8 @@ describe('Workbench Lab theme conformance', () => {
     expect(controller.getSnapshot().cssText).toContain('--pom-expression-panel-surface-radius:12px 12px 26px 26px');
     expect(controller.getSnapshot().cssText).toContain('--pom-expression-widget-content-radius:18px 18px 18px 18px');
     expect(controller.getSnapshot().cssText).toContain('--pom-expression-widget-content-font-size:17px');
-    expect(controller.getSnapshot().cssText).toContain('--pom-expression-widget-surface-background-image:linear-gradient(150deg');
+    expect(controller.getSnapshot().cssText).toContain('--pom-expression-panel-surface-background-image:linear-gradient(150deg');
+    expect(controller.getSnapshot().cssText).not.toContain('--pom-expression-widget-surface-background-image');
 
     expect(controller.activate('deep-current').ok).toBe(true);
     expect(controller.getSnapshot().cssText).not.toContain('--pom-expression-');

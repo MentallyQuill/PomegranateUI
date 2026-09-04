@@ -179,7 +179,7 @@ test('the Lab loads theme-appropriate character art and independent ambient imag
     .toContain('atmospheric-reservoir-stage');
 
   for (const target of [
-    { ...TARGETS[1], portraitAsset: 'pomos-character-atlas', canvasAsset: null },
+    { ...TARGETS[1], portraitAsset: 'pomos-character-atlas', canvasAsset: 'pomos-tahoe-canvas' },
     { ...TARGETS[2], portraitAsset: 'bunny-character-atlas', canvasAsset: 'bunny-garden-canvas' },
     { ...ASH_TARGET, portraitAsset: 'ash-amber-character-atlas', canvasAsset: 'ash-amber-stage' }
   ]) {
@@ -233,7 +233,7 @@ test('Ash and Amber renders neutral graphite chrome, restrained amber ambience, 
       { kind: 'image', filter: 'blur(0px) saturate(0.82) contrast(1) brightness(1)', opacity: '0.72' },
       { kind: 'linear-gradient' },
       { kind: 'radial-gradient' },
-      { kind: 'veil', background: 'rgb(48, 46, 42)', opacity: '0.28' }
+      { kind: 'veil', background: 'rgb(48, 46, 42)', opacity: '0.112' }
     ]
   });
 
@@ -276,7 +276,16 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
   await fresh(page);
   await selectTheme(page, TARGETS[1]);
 
-  await expect(page.locator('[data-pom-canvas-layer]')).toHaveCount(7);
+  await expect(page.locator('[data-pom-canvas-layer]')).toHaveCount(4);
+  expect(await page.locator('[data-pom-canvas-layer]').evaluateAll((layers) => layers.map((layer) => ({
+    kind: layer.getAttribute('data-pom-canvas-layer'),
+    filter: getComputedStyle(layer).filter
+  })))).toEqual([
+    { kind: 'solid', filter: 'none' },
+    { kind: 'image', filter: 'blur(0px) saturate(0.98) contrast(1.04) brightness(0.96)' },
+    { kind: 'linear-gradient', filter: 'none' },
+    { kind: 'veil', filter: 'none' }
+  ]);
   const root = page.locator('main');
   await expect(root).toHaveAttribute('data-pom-widget-grouping', 'individual');
   await expect(root).toHaveAttribute('data-pom-chrome-presentation', 'overlay');
@@ -359,7 +368,7 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
   }
 });
 
-test('Bunny matches the stationery reference through reusable expression bindings', async ({ page }) => {
+test('Bunny matches the stationery reference while material controls retain fill ownership', async ({ page }) => {
   await fresh(page);
   await selectTheme(page, TARGETS[2]);
 
@@ -424,7 +433,7 @@ test('Bunny matches the stationery reference through reusable expression binding
 
   expect(evidence.colors).toEqual({ canvas: '#faeef6', accent: '#ed75aa', text: '#45364d' });
   expect(evidence.shelf).toMatchObject({ radius: '24px 24px 12px 12px', height: 52, fontSize: '12px', textTransform: 'none' });
-  expect(evidence.shelf.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.shelf.backgroundImage).toBe('none');
   expect(evidence.shell.radius).toBe('12px 12px 26px 26px');
   expect(evidence.dock.radius).toBe('20px');
   expect(evidence.widget).toMatchObject({
@@ -432,7 +441,7 @@ test('Bunny matches the stationery reference through reusable expression binding
     backdrop: 'blur(9.6px) saturate(1.08) brightness(1.03)',
     fontSize: '12px'
   });
-  expect(evidence.widget.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.widget.backgroundImage).toBe('none');
   expect(evidence.header).toMatchObject({ radius: '17px 17px 0px 0px', fontSize: '12px', textTransform: 'none' });
   expect(evidence.icon).toMatchObject({ fontSize: '0px', textTransform: 'none' });
   expect(evidence.icon.backgroundImage).not.toBe('none');

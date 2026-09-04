@@ -178,7 +178,7 @@ describe('Lab Theme authoring controller', () => {
 
   it('derives canvas control availability from preset profile data', () => {
     const controller = createLabThemeController({ initialId: 'pom-neutral' });
-    expect(controller.getAuthoringSnapshot().canvasAvailability).toEqual({ image: false, overlay: true, gradient: true, vignette: true });
+    expect(controller.getAuthoringSnapshot().canvasAvailability).toEqual({ image: true, overlay: true, gradient: true, vignette: true });
     expect(createLabThemeController({ initialId: 'bunny' }).getAuthoringSnapshot().canvasAvailability.gradient).toBe(false);
   });
 

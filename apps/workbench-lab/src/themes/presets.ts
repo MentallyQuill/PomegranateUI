@@ -104,26 +104,14 @@ const POM_CANVAS_AUTHORING = {
   layers: [
     { layer: { kind: 'solid', color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#075bb8') } },
     {
-      authoringGroup: 'overlay',
-      layer: { kind: 'radial-gradient', shape: 'ellipse', x: 0.8, y: 0.08, stops: [{ color: authored('text', POM_NEUTRAL_TARGET.theme.colors.text, '#e9feff00'), position: 0 }, { color: authored('text', POM_NEUTRAL_TARGET.theme.colors.text, '#d9fcff20'), position: 0.14 }, { color: authored('focus', POM_NEUTRAL_TARGET.theme.colors.focus, '#c7fbffb8'), position: 0.2 }, { color: authored('focus', POM_NEUTRAL_TARGET.theme.colors.focus, '#59d8edb0'), position: 0.32 }, { color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#168bdc70'), position: 0.45 }, { color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#0759b800'), position: 0.6 }] }
+      authoringGroup: 'image',
+      layer: { kind: 'image', assetId: 'image.pomos-tahoe', fit: 'cover', x: 0.5, y: 0.5, opacity: 1, blurPx: 0, saturation: 0.98, contrast: 1.04, brightness: 0.96, blend: 'normal' }
     },
     {
       authoringGroup: 'overlay',
-      layer: { kind: 'radial-gradient', shape: 'ellipse', x: 0.02, y: 0.78, stops: [{ color: authored('text', POM_NEUTRAL_TARGET.theme.colors.text, '#dffcff00'), position: 0 }, { color: authored('text', POM_NEUTRAL_TARGET.theme.colors.text, '#c9fcff16'), position: 0.18 }, { color: authored('focus', POM_NEUTRAL_TARGET.theme.colors.focus, '#c9fcffad'), position: 0.24 }, { color: authored('focus', POM_NEUTRAL_TARGET.theme.colors.focus, '#5bdfef9c'), position: 0.34 }, { color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#118ccd4f'), position: 0.46 }, { color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#0759b800'), position: 0.64 }] }
+      layer: { kind: 'linear-gradient', angle: 132, stops: [{ color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#02265c38'), position: 0 }, { color: authored('focus', POM_NEUTRAL_TARGET.theme.colors.focus, '#8ff4ff12'), position: 0.42 }, { color: authored('text', POM_NEUTRAL_TARGET.theme.colors.text, '#e9feff0a'), position: 0.58 }, { color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#033b7d20'), position: 1 }] }
     },
-    {
-      authoringGroup: 'overlay',
-      layer: { kind: 'radial-gradient', shape: 'ellipse', x: 0.52, y: 0.98, stops: [{ color: authored('text', POM_NEUTRAL_TARGET.theme.colors.text, '#d8ffff00'), position: 0 }, { color: authored('text', POM_NEUTRAL_TARGET.theme.colors.text, '#d8ffff18'), position: 0.16 }, { color: authored('focus', POM_NEUTRAL_TARGET.theme.colors.focus, '#d8ffffa8'), position: 0.22 }, { color: authored('focus', POM_NEUTRAL_TARGET.theme.colors.focus, '#62ddec94'), position: 0.33 }, { color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#0968bd50'), position: 0.45 }, { color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#043a9000'), position: 0.64 }] }
-    },
-    {
-      authoringGroup: 'overlay',
-      layer: { kind: 'linear-gradient', angle: 132, stops: [{ color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#033f9200'), position: 0 }, { color: authored('focus', POM_NEUTRAL_TARGET.theme.colors.focus, '#61dff03f'), position: 0.22 }, { color: authored('text', POM_NEUTRAL_TARGET.theme.colors.text, '#d8ffff26'), position: 0.46 }, { color: authored('accent', POM_NEUTRAL_TARGET.theme.colors.accent, '#0a6fba2e'), position: 0.7 }, { color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#022f7900'), position: 1 }] }
-    },
-    {
-      authoringGroup: 'overlay',
-      layer: { kind: 'radial-gradient', shape: 'ellipse', x: 0.95, y: 0.8, stops: [{ color: authored('text', POM_NEUTRAL_TARGET.theme.colors.text, '#e7feff00'), position: 0 }, { color: authored('text', POM_NEUTRAL_TARGET.theme.colors.text, '#e7feff18'), position: 0.17 }, { color: authored('focus', POM_NEUTRAL_TARGET.theme.colors.focus, '#e7feffb0'), position: 0.23 }, { color: authored('focus', POM_NEUTRAL_TARGET.theme.colors.focus, '#4dd7eca2'), position: 0.34 }, { color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#0b7bc34f'), position: 0.46 }, { color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#043a9000'), position: 0.64 }] }
-    },
-    { authoringGroup: 'vignette', layer: { kind: 'veil', mode: 'vignette', color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#042f78'), opacity: 0.25 } }
+    { authoringGroup: 'vignette', layer: { kind: 'veil', mode: 'vignette', color: authored('canvas', POM_NEUTRAL_TARGET.theme.colors.canvas, '#031d52'), opacity: 0.2 } }
   ]
 } as const satisfies ThemeCanvasAuthoringProfile;
 
@@ -144,7 +132,7 @@ const BUNNY_CANVAS_AUTHORING = {
 } as const satisfies ThemeCanvasAuthoringProfile;
 
 const ASH_CANVAS_AUTHORING = {
-  defaults: { imageStrength: 100, overlayStrength: 100, gradientAngle: 90, vignetteStrength: 100 },
+  defaults: { imageStrength: 100, overlayStrength: 90, gradientAngle: 90, vignetteStrength: 40 },
   layers: [
     { layer: { kind: 'solid', color: { role: 'canvas' } } },
     {

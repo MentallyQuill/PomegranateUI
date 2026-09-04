@@ -363,7 +363,7 @@ test('Deep Current material calibration stays monotonic through its authored def
 
 for (const target of [
   { label: 'Deep Current', id: 'deep-current', image: true, canvas: '#101820', rgb: 'rgb(16, 24, 32)' },
-  { label: 'PomOS', id: 'pom-neutral', image: false, canvas: '#f8fbff', rgb: 'rgb(248, 251, 255)' },
+  { label: 'PomOS', id: 'pom-neutral', image: true, canvas: '#f8fbff', rgb: 'rgb(248, 251, 255)' },
   { label: 'Ash & Amber', id: 'ash-amber', image: true, canvas: '#101820', rgb: 'rgb(16, 24, 32)' }
 ] as const) {
   test(`${target.label} Canvas controls recolor and rotate the rendered overlay`, async ({ page }) => {
@@ -421,13 +421,25 @@ test('Canvas exposes preset-backed availability instead of theme-specific branch
   await fresh(page);
   await selectTheme(page, 'PomOS');
   let settings = await openAppearance(page);
-  await expect(settings.canvas.getByRole('slider', { name: 'Image Strength' })).toBeDisabled();
-  await expect(settings.canvas.getByText('Not used by this preset')).toHaveCount(1);
+  await expect(settings.canvas.getByRole('slider', { name: 'Image Strength' })).toBeEnabled();
+  await expect(settings.canvas.getByText('Not used by this preset')).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Scene' }).click();
   await selectTheme(page, 'Deep Current');
   settings = await openAppearance(page);
   await expect(settings.canvas.getByRole('slider', { name: 'Image Strength' })).toBeEnabled();
+});
+
+test('Bunny Glass Density reaches genuine transparent glass without an opaque expression fill', async ({ page }) => {
+  await fresh(page);
+  await selectTheme(page, 'Bunny');
+  const materials = widget(page, 'settings.theme-materials');
+  const surface = page.locator('[data-widget-type="story.characters"] .widget-frame');
+
+  await materials.getByRole('slider', { name: 'Glass Density' }).fill('0');
+  await expect.poll(() => surface.evaluate((element) => getComputedStyle(element).backgroundColor))
+    .toMatch(/(?:rgba\([^)]*, 0\)|transparent)/);
+  await expect(surface).toHaveCSS('background-image', 'none');
 });
 
 test('Theme drafts save independently of layout persistence and restore through the overview', async ({ page }) => {

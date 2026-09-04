@@ -304,6 +304,7 @@ export function createLabThemeController(options: {
     ?? registryFromIds(options.availableAssets ?? new Set([
       'icons.minimal',
       'image.atmospheric-reservoir',
+      'image.pomos-tahoe',
       'image.bunny-garden',
       'image.ash-amber-stage'
     ]));

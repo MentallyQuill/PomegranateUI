@@ -25,30 +25,12 @@ export const BUNNY_SURFACE_EXPRESSION: SurfaceExpressionProfile = deepFreeze(
       reader: { cornerRadiiPx: { topLeft: 18, topRight: 18, bottomRight: 18, bottomLeft: 18 } }
     },
     materials: {
-      shelf: {
-        fill: {
-          kind: 'linear-gradient', angleDeg: 150,
-          stops: [
-            { colorRole: 'surfaceElevated', opacity: 0.84, position: 0 },
-            { colorRole: 'chrome', opacity: 0.8, position: 1 }
-          ]
-        }
-      },
       panel: {
         fill: {
           kind: 'linear-gradient', angleDeg: 150,
           stops: [
             { colorRole: 'surfaceElevated', opacity: 0.72, position: 0 },
             { colorRole: 'chrome', opacity: 0.58, position: 1 }
-          ]
-        }
-      },
-      pane: {
-        fill: {
-          kind: 'linear-gradient', angleDeg: 150,
-          stops: [
-            { colorRole: 'surfaceElevated', opacity: 0.95, position: 0 },
-            { colorRole: 'surface', opacity: 0.98, position: 1 }
           ]
         }
       },
@@ -94,33 +76,6 @@ export const BUNNY_SURFACE_EXPRESSION: SurfaceExpressionProfile = deepFreeze(
           stops: [
             { colorRole: 'surfaceElevated', opacity: 0.86, position: 0 },
             { colorRole: 'surface', opacity: 0.78, position: 1 }
-          ]
-        }
-      },
-      menu: {
-        fill: {
-          kind: 'linear-gradient', angleDeg: 150,
-          stops: [
-            { colorRole: 'surfaceElevated', opacity: 0.94, position: 0 },
-            { colorRole: 'surface', opacity: 0.9, position: 1 }
-          ]
-        }
-      },
-      dialog: {
-        fill: {
-          kind: 'linear-gradient', angleDeg: 150,
-          stops: [
-            { colorRole: 'surfaceElevated', opacity: 0.96, position: 0 },
-            { colorRole: 'surface', opacity: 0.92, position: 1 }
-          ]
-        }
-      },
-      floating: {
-        fill: {
-          kind: 'linear-gradient', angleDeg: 150,
-          stops: [
-            { colorRole: 'surfaceElevated', opacity: 0.96, position: 0 },
-            { colorRole: 'surface', opacity: 0.9, position: 1 }
           ]
         }
       }
