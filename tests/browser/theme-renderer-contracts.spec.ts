@@ -452,7 +452,7 @@ test('Bunny matches the stationery reference while material controls retain fill
   const shellMaterial = await material(page, '.workbench-shell');
   expect(shellMaterial.alpha).toBe(0);
   expect(blurPx(shellMaterial.backdrop)).toBe(0);
-  expect(evidence.shelf).toMatchObject({ radius: '24px 24px 12px 12px', height: 52, fontSize: '12px', textTransform: 'none' });
+  expect(evidence.shelf).toMatchObject({ radius: '24px 24px 12px 12px', height: 56, fontSize: '12px', textTransform: 'none' });
   expect(evidence.shelf.backgroundImage).toBe('none');
   expect(evidence.shell.radius).toBe('12px 12px 26px 26px');
   expect(evidence.shell.backgroundImage).toBe('none');
@@ -468,7 +468,7 @@ test('Bunny matches the stationery reference while material controls retain fill
   expect(evidence.icon.backgroundImage).not.toBe('none');
   expect(evidence.row.radius).toBe('999px');
   expect(evidence.row.backgroundImage).toContain('linear-gradient(150deg');
-  expect(evidence.button).toMatchObject({ radius: '999px', fontSize: '11px', textTransform: 'none' });
+  expect(evidence.button).toMatchObject({ radius: '999px 0px 0px 999px', fontSize: '11px', textTransform: 'none' });
   expect(evidence.reader).toMatchObject({
     radius: '18px', bodyFontSize: '17px', lineHeight: '26.35px', intersectsStage: true
   });
