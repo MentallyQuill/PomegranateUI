@@ -40,7 +40,7 @@ function dockKey(placement: DockedPlacement): string {
 export function normalizeShelves(shelves: readonly import('@pomegranate-ui/contracts').ShelfState[]): readonly import('@pomegranate-ui/contracts').ShelfState[] {
   const byRegion = new Map<string, import('@pomegranate-ui/contracts').ShelfState[]>();
   for (const shelf of shelves) {
-    const key = `${shelf.panelId}\u0000${shelf.regionId}`;
+    const key = `${shelf.panelId}\u0000${shelf.regionId}\u0000${shelf.dockColumn ?? 0}`;
     const group = byRegion.get(key) ?? [];
     group.push(shelf);
     byRegion.set(key, group);
@@ -58,6 +58,7 @@ export function normalizeShelves(shelves: readonly import('@pomegranate-ui/contr
   return normalized.sort((left, right) => (
     left.panelId.localeCompare(right.panelId)
     || left.regionId.localeCompare(right.regionId)
+    || (left.dockColumn ?? 0) - (right.dockColumn ?? 0)
     || left.order - right.order
   ));
 }

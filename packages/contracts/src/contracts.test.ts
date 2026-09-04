@@ -11,6 +11,7 @@ import {
   isJsonValue,
   type LayoutStorage,
   type WorkbenchCommand,
+  type WorkbenchEvent,
   type WorkbenchState
 } from './index.js';
 
@@ -714,7 +715,7 @@ describe('public contracts', () => {
     ]);
   });
 
-  it('rejects dock widths outside the preserved 200 to 420 pixel contract', () => {
+  it('rejects invalid dock widths while permitting the six-column maximum', () => {
     expect(WorkbenchCommandSchema.safeParse({
       type: 'panel.resize-dock', panelId, edge: 'left', width: 200
     }).success).toBe(true);
@@ -728,8 +729,97 @@ describe('public contracts', () => {
       type: 'panel.resize-dock', panelId, edge: 'left', width: 199
     }).success).toBe(false);
     expect(WorkbenchCommandSchema.safeParse({
-      type: 'panel.resize-dock', panelId, edge: 'right', width: 421
+      type: 'panel.resize-dock', panelId, edge: 'right', width: 2520
+    }).success).toBe(true);
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'panel.resize-dock', panelId, edge: 'right', width: 2521
     }).success).toBe(false);
+  });
+
+  it('parses Story layout preferences and shelf-owned toolbar columns', () => {
+    const parsed = WorkbenchStateSchema.parse({
+      ...state,
+      panels: [{
+        ...state.panels[0],
+        templateId: 'story-stage.v1',
+        storyLayout: {
+          preferredMeasure: 860,
+          toolbarColumns: { left: 2, right: 3 }
+        }
+      }],
+      shelves: [{ ...state.shelves[0], dockColumn: 1 }]
+    });
+
+    expect(parsed.panels[0]).toMatchObject({
+      storyLayout: { preferredMeasure: 860, toolbarColumns: { left: 2, right: 3 } }
+    });
+    expect(parsed.shelves[0]).toMatchObject({ dockColumn: 1 });
+  });
+
+  it('rejects unusable Story measures, column counts, and shelf indices', () => {
+    const storyPanel = {
+      ...state.panels[0],
+      templateId: 'story-stage.v1',
+      storyLayout: { preferredMeasure: 800, toolbarColumns: { left: 1, right: 1 } }
+    };
+
+    expect(WorkbenchStateSchema.safeParse({
+      ...state,
+      panels: [{ ...storyPanel, storyLayout: { ...storyPanel.storyLayout, preferredMeasure: 419 } }]
+    }).success).toBe(false);
+    expect(WorkbenchStateSchema.safeParse({
+      ...state,
+      panels: [{ ...storyPanel, storyLayout: { ...storyPanel.storyLayout, toolbarColumns: { left: 0, right: 1 } } }]
+    }).success).toBe(false);
+    expect(WorkbenchStateSchema.safeParse({
+      ...state,
+      panels: [{ ...storyPanel, storyLayout: { ...storyPanel.storyLayout, toolbarColumns: { left: 1, right: 7 } } }]
+    }).success).toBe(false);
+    expect(WorkbenchStateSchema.safeParse({
+      ...state,
+      panels: [storyPanel],
+      shelves: [{ ...state.shelves[0], dockColumn: -1 }]
+    }).success).toBe(false);
+  });
+
+  it('parses Story measure and toolbar column commands with exact Widget guards', () => {
+    const commands = [
+      { type: 'panel.set-story-measure', panelId, measure: 860 },
+      { type: 'panel.add-toolbar-column', panelId, edge: 'left' },
+      { type: 'panel.remove-toolbar-column', panelId, edge: 'right', expectedWidgetIds: [widgetId] }
+    ] satisfies readonly WorkbenchCommand[];
+
+    expect(commands.map((command) => WorkbenchCommandSchema.parse(command).type)).toEqual([
+      'panel.set-story-measure',
+      'panel.add-toolbar-column',
+      'panel.remove-toolbar-column'
+    ]);
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'panel.set-story-measure', panelId, measure: 419
+    }).success).toBe(false);
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'panel.add-toolbar-column', panelId, edge: 'main'
+    }).success).toBe(false);
+    expect(WorkbenchCommandSchema.safeParse({
+      type: 'panel.remove-toolbar-column',
+      panelId,
+      edge: 'left',
+      expectedWidgetIds: [widgetId, widgetId]
+    }).success).toBe(false);
+
+    const events = [
+      { type: 'panel.story-measure-changed', revision: 1, panelId, measure: 860 },
+      { type: 'panel.toolbar-column-added', revision: 2, panelId, edge: 'left', columnCount: 2 },
+      {
+        type: 'panel.toolbar-column-removed',
+        revision: 3,
+        panelId,
+        edge: 'right',
+        columnCount: 1,
+        removedWidgetIds: [widgetId]
+      }
+    ] satisfies readonly WorkbenchEvent[];
+    expect(events.map(({ type }) => type)).toHaveLength(3);
   });
 
   it('supports asynchronous adopter-owned storage round trips', async () => {

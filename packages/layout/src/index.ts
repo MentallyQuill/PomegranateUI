@@ -4,5 +4,6 @@ export * from './errors.js';
 export * from './operations.js';
 export * from './persistence.js';
 export * from './state.js';
+export * from './story-layout.js';
 export * from './sub-panels.js';
 export * from './templates.js';

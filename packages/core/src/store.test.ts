@@ -193,6 +193,79 @@ describe('Workbench store', () => {
     expect(store.getState().placements[summaryId]).not.toHaveProperty('height');
   });
 
+  it('routes Story measure and toolbar column changes through one event and one undo', () => {
+    const store = fixtureStore();
+    const before = store.getState();
+
+    const measured = store.dispatch({ type: 'panel.set-story-measure', panelId: sceneId, measure: 920 });
+    expect(measured).toMatchObject({
+      ok: true,
+      state: { revision: 1 },
+      events: [{ type: 'panel.story-measure-changed', panelId: sceneId, measure: 920, revision: 1 }]
+    });
+    expect(store.dispatch({ type: 'layout.undo' }).ok).toBe(true);
+    expect(store.getState()).toEqual({ ...before, revision: 2 });
+
+    const added = store.dispatch({ type: 'panel.add-toolbar-column', panelId: sceneId, edge: 'left' });
+    expect(added).toMatchObject({
+      ok: true,
+      state: { revision: 3 },
+      events: [{ type: 'panel.toolbar-column-added', panelId: sceneId, edge: 'left', columnCount: 2, revision: 3 }]
+    });
+    expect(store.dispatch({ type: 'layout.undo' }).ok).toBe(true);
+    expect(store.getState()).toEqual({ ...before, revision: 4 });
+  });
+
+  it('removes a populated Story column atomically and restores it with one undo', () => {
+    const initial = initialState();
+    const populated: WorkbenchState = {
+      ...initial,
+      panels: initial.panels.map((panel) => panel.id === sceneId
+        ? {
+            ...panel,
+            storyLayout: { preferredMeasure: 800, toolbarColumns: { left: 2, right: 1 } }
+          }
+        : panel),
+      shelves: [
+        ...initial.shelves,
+        { id: 'column-1-primary', panelId: sceneId, regionId: 'left', dockColumn: 1, order: 0, weight: 1 }
+      ],
+      widgets: { [summaryId]: instance() },
+      placements: {
+        [summaryId]: {
+          kind: 'docked', panelId: sceneId, regionId: 'left', shelfId: 'column-1-primary', order: 0
+        }
+      }
+    };
+    const store = createWorkbenchStore({ initialState: populated, registry: fixtureStore().registry });
+
+    const stale = store.dispatch({
+      type: 'panel.remove-toolbar-column', panelId: sceneId, edge: 'left', expectedWidgetIds: []
+    });
+    expect(stale).toMatchObject({ ok: false, error: { code: 'STALE_LAYOUT' }, events: [] });
+    expect(store.getState()).toBe(populated);
+    expect(store.canUndo()).toBe(false);
+
+    const removed = store.dispatch({
+      type: 'panel.remove-toolbar-column', panelId: sceneId, edge: 'left', expectedWidgetIds: [summaryId]
+    });
+    expect(removed).toMatchObject({
+      ok: true,
+      state: { revision: 1 },
+      events: [{
+        type: 'panel.toolbar-column-removed',
+        panelId: sceneId,
+        edge: 'left',
+        columnCount: 1,
+        removedWidgetIds: [summaryId],
+        revision: 1
+      }]
+    });
+    expect(removed.state.widgets[summaryId]).toBeUndefined();
+    expect(store.dispatch({ type: 'layout.undo' }).ok).toBe(true);
+    expect(store.getState()).toEqual({ ...populated, revision: 2 });
+  });
+
   it('publishes one frozen event after an accepted command', () => {
     const store = fixtureStore();
     const seen: number[] = [];

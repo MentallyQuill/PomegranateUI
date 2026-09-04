@@ -4,6 +4,7 @@ import type {
   PanelId,
   PanelRegionDefinition,
   ShelfState,
+  StoryLayoutState,
   SubPanelId,
   SubPanelLayoutId,
   WidgetInstance,
@@ -15,7 +16,7 @@ import type {
 
 import type { WidgetRegistry } from './registry.js';
 import type { WorkbenchStore } from './store.js';
-import { createPanelTemplateRegistry, SUB_PANEL_LAYOUTS, type PanelTemplateRegistry } from '@pomegranate-ui/layout';
+import { createPanelTemplateRegistry, storyLayoutFor, SUB_PANEL_LAYOUTS, type PanelTemplateRegistry } from '@pomegranate-ui/layout';
 
 export interface PanelTabProjection {
   readonly panelId: PanelId;
@@ -62,6 +63,7 @@ export interface PanelSurfaceProjection {
   readonly surfaceId: string;
   readonly docks: Readonly<Record<'left' | 'main' | 'right', readonly WidgetFrameProjection[]>>;
   readonly regions: readonly PanelRegionProjection[];
+  readonly storyLayout: StoryLayoutState | null;
   readonly templateFamily: 'story-stage' | 'focus-support' | 'columns' | null;
   readonly unavailableTemplateId: string | null;
   readonly widgetShelf: readonly WidgetFrameProjection[];
@@ -73,11 +75,17 @@ export interface PanelShelfProjection {
   readonly frames: readonly WidgetFrameProjection[];
 }
 
+export interface PanelToolbarColumnProjection {
+  readonly index: number;
+  readonly shelves: readonly PanelShelfProjection[];
+}
+
 export interface PanelRegionProjection {
   readonly region: PanelRegionDefinition;
   readonly lane: number;
   readonly laneWeight: number;
   readonly shelves: readonly PanelShelfProjection[];
+  readonly toolbarColumns: readonly PanelToolbarColumnProjection[];
 }
 
 export interface WidgetActions {
@@ -206,13 +214,14 @@ export function selectPanelSurface(
     : template.ok
       ? template.template.regions
       : [];
-  const regions = template.ok ? Object.freeze(projectedRegions.map((region, lane) => Object.freeze({
-    region,
-    lane,
-    laneWeight: laneWeights?.[lane] ?? 1,
-    shelves: Object.freeze(state.shelves
+  const regions = template.ok ? Object.freeze(projectedRegions.map((region, lane) => {
+    const shelves = Object.freeze(state.shelves
       .filter((shelf) => shelf.panelId === activePanel.id && shelf.regionId === region.id)
-      .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))
+      .sort((left, right) => (
+        (left.dockColumn ?? 0) - (right.dockColumn ?? 0)
+        || left.order - right.order
+        || left.id.localeCompare(right.id)
+      ))
       .map((shelf) => Object.freeze({
         shelf,
         frames: Object.freeze(frames
@@ -224,8 +233,30 @@ export function selectPanelSurface(
             const rightOrder = right.placement.kind === 'docked' ? right.placement.order : 0;
             return leftOrder - rightOrder || left.instanceId.localeCompare(right.instanceId);
           }))
-      })))
-  }))) : Object.freeze([]);
+      })));
+    const toolbarEdge = template.template.family === 'story-stage'
+      && (region.role === 'left-instruments' || region.role === 'right-instruments')
+      ? region.role === 'left-instruments' ? 'left' as const : 'right' as const
+      : null;
+    const toolbarColumns = toolbarEdge
+      ? (() => {
+          const count = storyLayoutFor(activePanel).toolbarColumns[toolbarEdge];
+          const indices = Array.from({ length: count }, (_, index) => index);
+          if (toolbarEdge === 'right') indices.reverse();
+          return Object.freeze(indices.map((index) => Object.freeze({
+            index,
+            shelves: Object.freeze(shelves.filter(({ shelf }) => (shelf.dockColumn ?? 0) === index))
+          })));
+        })()
+      : Object.freeze([]);
+    return Object.freeze({
+      region,
+      lane,
+      laneWeight: laneWeights?.[lane] ?? 1,
+      shelves,
+      toolbarColumns
+    });
+  })) : Object.freeze([]);
   const widgetShelf = Object.freeze(allFrames
     .filter((frame) => frame.placement.kind === 'shelved')
     .sort((left, right) => left.title.localeCompare(right.title) || left.instanceId.localeCompare(right.instanceId)));
@@ -241,6 +272,7 @@ export function selectPanelSurface(
     surfaceId: `pomegranate-panel-${suffix}`,
     docks: Object.freeze({ left: docked('left'), main: docked('main'), right: docked('right') }),
     regions,
+    storyLayout: template.ok && template.template.family === 'story-stage' ? storyLayoutFor(activePanel) : null,
     templateFamily: template.ok ? template.template.family : null,
     unavailableTemplateId: template.ok ? null : activePanel.templateId,
     widgetShelf,

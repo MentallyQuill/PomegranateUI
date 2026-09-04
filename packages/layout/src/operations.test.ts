@@ -15,6 +15,7 @@ import {
 import {
   activatePanel,
   activateWidgetGroup,
+  addToolbarColumn,
   createAndGroupWidget,
   createInitialWorkbenchState,
   createPanel,
@@ -28,6 +29,7 @@ import {
   placeWidget,
   renamePanel,
   removeWidget,
+  removeToolbarColumn,
   resizeShelf,
   restoreWidget,
   reorderWidgetGroup,
@@ -35,6 +37,7 @@ import {
   resizePanelColumns,
   resizePanelDock,
   resizeWidgetRow,
+  setStoryMeasure,
   shelveWidget
 } from './index.js';
 
@@ -190,6 +193,108 @@ describe('atomic layout operations', () => {
     const rejected = resizePanelDock(resized.state, sceneId, 'right', 421);
     expect(rejected.ok).toBe(false);
     expect(rejected.state).toBe(resized.state);
+  });
+
+  it('changes only a Story Panel preferred measure', () => {
+    const before = populatedState();
+    const result = setStoryMeasure(before, sceneId, 920);
+
+    expect(result.ok).toBe(true);
+    expect(result.state.panels[0]).toMatchObject({
+      storyLayout: { preferredMeasure: 920, toolbarColumns: { left: 1, right: 1 } }
+    });
+    expect(result.state.panels[1]).toBe(before.panels[1]);
+    expect(setStoryMeasure(before, sceneId, 419).state).toBe(before);
+  });
+
+  it('adds an empty innermost toolbar column and expands its requested width', () => {
+    const before = populatedState();
+    const added = addToolbarColumn(before, sceneId, 'left');
+
+    expect(added.ok).toBe(true);
+    expect(added.state.panels[0]).toMatchObject({
+      storyLayout: { preferredMeasure: 800, toolbarColumns: { left: 2, right: 1 } },
+      configuration: { dockWidths: { left: 572 } }
+    });
+    expect(added.state.shelves).toContainEqual({
+      id: 'column-1-primary',
+      panelId: sceneId,
+      regionId: 'left',
+      dockColumn: 1,
+      order: 0,
+      weight: 1
+    });
+  });
+
+  it('removes an empty innermost column but never the permanent outer column', () => {
+    const added = addToolbarColumn(populatedState(), sceneId, 'right');
+    if (!added.ok) throw new Error(added.error.message);
+    const removed = removeToolbarColumn(added.state, sceneId, 'right', []);
+
+    expect(removed.ok).toBe(true);
+    expect(removed.state.panels[0]).toMatchObject({
+      storyLayout: { toolbarColumns: { left: 1, right: 1 } },
+      configuration: { dockWidths: { right: 286 } }
+    });
+    expect(removed.state.shelves.some((shelf) => shelf.dockColumn === 1)).toBe(false);
+
+    const rejected = removeToolbarColumn(removed.state, sceneId, 'right', []);
+    expect(rejected.ok).toBe(false);
+    expect(rejected.state).toBe(removed.state);
+  });
+
+  it('guards populated removal against stale Widget identities', () => {
+    const added = addToolbarColumn(populatedState(), sceneId, 'left');
+    if (!added.ok) throw new Error(added.error.message);
+    const moved = placeWidget(added.state, summaryId, dock(sceneId, 'left', 0, 'column-1-primary'));
+    if (!moved.ok) throw new Error(moved.error.message);
+
+    const stale = removeToolbarColumn(moved.state, sceneId, 'left', []);
+    expect(stale.ok).toBe(false);
+    expect(stale.state).toBe(moved.state);
+    expect(!stale.ok && stale.error.code).toBe('STALE_LAYOUT');
+  });
+
+  it('atomically deletes visible column Widgets and preserves shelved Widgets', () => {
+    const added = addToolbarColumn(populatedState(), sceneId, 'left');
+    if (!added.ok) throw new Error(added.error.message);
+    const summaryMoved = placeWidget(added.state, summaryId, dock(sceneId, 'left', 0, 'column-1-primary'));
+    if (!summaryMoved.ok) throw new Error(summaryMoved.error.message);
+    const notesMoved = placeWidget(summaryMoved.state, notesId, dock(sceneId, 'left', 1, 'column-1-primary'));
+    if (!notesMoved.ok) throw new Error(notesMoved.error.message);
+    const notesShelved = shelveWidget(notesMoved.state, notesId);
+    if (!notesShelved.ok) throw new Error(notesShelved.error.message);
+
+    const removed = removeToolbarColumn(notesShelved.state, sceneId, 'left', [summaryId]);
+
+    expect(removed.ok).toBe(true);
+    expect(removed.state.widgets[summaryId]).toBeUndefined();
+    expect(removed.state.placements[summaryId]).toBeUndefined();
+    expect(removed.state.widgets[notesId]).toEqual(notesShelved.state.widgets[notesId]);
+    expect(removed.state.placements[notesId]).toMatchObject({
+      kind: 'shelved',
+      lastVisible: { kind: 'docked', regionId: 'left', shelfId: 'primary' }
+    });
+    expect(removed.state.shelves.some((shelf) => shelf.id === 'column-1-primary')).toBe(false);
+  });
+
+  it('validates dock resize bounds against the Story column count', () => {
+    const before = populatedState();
+    const twoColumns = addToolbarColumn(before, sceneId, 'left');
+    if (!twoColumns.ok) throw new Error(twoColumns.error.message);
+
+    expect(resizePanelDock(twoColumns.state, sceneId, 'left', 400).ok).toBe(true);
+    expect(resizePanelDock(twoColumns.state, sceneId, 'left', 840).ok).toBe(true);
+    expect(resizePanelDock(twoColumns.state, sceneId, 'left', 399).ok).toBe(false);
+    expect(resizePanelDock(twoColumns.state, sceneId, 'left', 841).ok).toBe(false);
+
+    const nonStory: WorkbenchState = {
+      ...before,
+      panels: before.panels.map((panel) => panel.id === sceneId
+        ? { ...panel, templateId: 'focus-support.v1' }
+        : panel)
+    };
+    expect(resizePanelDock(nonStory, sceneId, 'left', 421).ok).toBe(false);
   });
 
   it('persists normalized column weights on a flat Panel', () => {

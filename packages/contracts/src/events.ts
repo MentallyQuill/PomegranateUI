@@ -14,6 +14,20 @@ export type WorkbenchEvent =
   | (EventBase & { readonly type: 'panel.activated'; readonly panelId: PanelId })
   | (EventBase & { readonly type: 'panel.reordered'; readonly panelId: PanelId })
   | (EventBase & { readonly type: 'panel.dock-resized'; readonly panelId: PanelId; readonly edge: 'left' | 'right' })
+  | (EventBase & { readonly type: 'panel.story-measure-changed'; readonly panelId: PanelId; readonly measure: number })
+  | (EventBase & {
+      readonly type: 'panel.toolbar-column-added';
+      readonly panelId: PanelId;
+      readonly edge: 'left' | 'right';
+      readonly columnCount: number;
+    })
+  | (EventBase & {
+      readonly type: 'panel.toolbar-column-removed';
+      readonly panelId: PanelId;
+      readonly edge: 'left' | 'right';
+      readonly columnCount: number;
+      readonly removedWidgetIds: readonly WidgetInstanceId[];
+    })
   | (EventBase & { readonly type: 'panel.columns-resized'; readonly panelId: PanelId })
   | (EventBase & { readonly type: 'sub-panel.activated'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })
   | (EventBase & { readonly type: 'sub-panel.created'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })

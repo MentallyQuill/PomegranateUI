@@ -17,6 +17,16 @@ import {
 
 import { acceptLayout, rejectLayout, type LayoutFailure, type LayoutResult } from './errors.js';
 import { nextRevision, normalizeColumnWeights, normalizeDockOrders, normalizePanels, normalizeShelves, normalizeTabGroups } from './state.js';
+import {
+  STORY_DEFAULT_MEASURE,
+  STORY_MAX_TOOLBAR_COLUMNS,
+  STORY_MIN_MEASURE,
+  STORY_TOOLBAR_COLUMN_IDEAL,
+  STORY_TOOLBAR_COLUMN_MAX,
+  STORY_TOOLBAR_COLUMN_MIN,
+  storyLayoutFor,
+  type StoryToolbarEdge
+} from './story-layout.js';
 import type { PanelTemplateRegistry } from './templates.js';
 
 export interface ShelfKey {
@@ -128,10 +138,20 @@ export function resizePanelDock(
   if (index < 0) {
     return rejectLayout(state, 'MISSING_PANEL', `Panel '${panelId}' does not exist.`, { panelId });
   }
-  if (!Number.isFinite(width) || width < 200 || width > 420) {
-    return rejectLayout(state, 'INVALID_INDEX', 'Dock width must be between 200 and 420 CSS pixels.', { width });
-  }
   const panel = state.panels[index]!;
+  const columnCount = panel.templateId === 'story-stage.v1'
+    ? storyLayoutFor(panel).toolbarColumns[edge]
+    : 1;
+  const minimum = STORY_TOOLBAR_COLUMN_MIN * columnCount;
+  const maximum = STORY_TOOLBAR_COLUMN_MAX * columnCount;
+  if (!Number.isFinite(width) || width < minimum || width > maximum) {
+    return rejectLayout(
+      state,
+      'INVALID_INDEX',
+      `Dock width must be between ${minimum} and ${maximum} CSS pixels.`,
+      { width, minimum, maximum }
+    );
+  }
   const currentWidths = panel.configuration?.dockWidths;
   const dockWidths = currentWidths !== null && typeof currentWidths === 'object' && !Array.isArray(currentWidths)
     ? currentWidths as JsonObject
@@ -140,6 +160,206 @@ export function resizePanelDock(
   const panels = [...state.panels];
   panels[index] = { ...panel, configuration: { ...panel.configuration, dockWidths: nextDockWidths } };
   return acceptLayout({ ...state, revision: nextRevision(state), panels });
+}
+
+function storyPanelIndex(state: WorkbenchState, panelId: PanelId): number | LayoutFailure {
+  const index = state.panels.findIndex((panel) => panel.id === panelId);
+  if (index < 0) return rejectLayout(state, 'MISSING_PANEL', `Panel '${panelId}' does not exist.`, { panelId });
+  if (state.panels[index]!.templateId !== 'story-stage.v1') {
+    return rejectLayout(state, 'INVALID_INDEX', `Panel '${panelId}' does not use the Story stage template.`, { panelId });
+  }
+  return index;
+}
+
+function dockWidthsFor(panel: PanelState): JsonObject {
+  const current = panel.configuration?.dockWidths;
+  return current !== null && typeof current === 'object' && !Array.isArray(current)
+    ? current as JsonObject
+    : {};
+}
+
+function requestedStoryDockWidth(panel: PanelState, edge: StoryToolbarEdge, count: number): number {
+  const value = dockWidthsFor(panel)[edge];
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : STORY_TOOLBAR_COLUMN_IDEAL * count;
+}
+
+function shelfIdForColumn(
+  state: WorkbenchState,
+  panelId: PanelId,
+  regionId: string,
+  column: number,
+  preferred = `column-${column}-primary`
+): string {
+  const used = new Set(state.shelves
+    .filter((shelf) => shelf.panelId === panelId && shelf.regionId === regionId)
+    .map((shelf) => shelf.id));
+  if (!used.has(preferred)) return preferred;
+  let suffix = 2;
+  while (used.has(`${preferred}-${suffix}`)) suffix += 1;
+  return `${preferred}-${suffix}`;
+}
+
+export function setStoryMeasure(
+  state: WorkbenchState,
+  panelId: PanelId,
+  measure: number
+): LayoutResult {
+  const index = storyPanelIndex(state, panelId);
+  if (typeof index !== 'number') return index;
+  if (!Number.isFinite(measure) || measure < STORY_MIN_MEASURE) {
+    return rejectLayout(state, 'INVALID_INDEX', `Story measure must be at least ${STORY_MIN_MEASURE} CSS pixels.`, { measure });
+  }
+  const panel = state.panels[index]!;
+  const panels = [...state.panels];
+  panels[index] = {
+    ...panel,
+    storyLayout: { ...storyLayoutFor(panel), preferredMeasure: measure }
+  };
+  return acceptLayout({ ...state, revision: nextRevision(state), panels });
+}
+
+export function addToolbarColumn(
+  state: WorkbenchState,
+  panelId: PanelId,
+  edge: StoryToolbarEdge
+): LayoutResult {
+  const index = storyPanelIndex(state, panelId);
+  if (typeof index !== 'number') return index;
+  const panel = state.panels[index]!;
+  const storyLayout = storyLayoutFor(panel);
+  const currentCount = storyLayout.toolbarColumns[edge];
+  if (currentCount >= STORY_MAX_TOOLBAR_COLUMNS) {
+    return rejectLayout(state, 'INVALID_INDEX', `The ${edge} toolbar already has the maximum number of columns.`);
+  }
+  const nextCount = currentCount + 1;
+  const currentWidth = requestedStoryDockWidth(panel, edge, currentCount);
+  const perColumn = Math.min(
+    STORY_TOOLBAR_COLUMN_MAX,
+    Math.max(STORY_TOOLBAR_COLUMN_MIN, currentWidth / currentCount)
+  );
+  const dockWidths = { ...dockWidthsFor(panel), [edge]: perColumn * nextCount };
+  const panels = [...state.panels];
+  panels[index] = {
+    ...panel,
+    configuration: { ...panel.configuration, dockWidths },
+    storyLayout: {
+      preferredMeasure: storyLayout.preferredMeasure,
+      toolbarColumns: { ...storyLayout.toolbarColumns, [edge]: nextCount }
+    }
+  };
+  const shelf: ShelfState = {
+    id: shelfIdForColumn(state, panelId, edge, currentCount),
+    panelId,
+    regionId: edge,
+    dockColumn: currentCount,
+    order: 0,
+    weight: 1
+  };
+  return acceptLayout({
+    ...state,
+    revision: nextRevision(state),
+    panels,
+    shelves: normalizeShelves([...state.shelves, shelf])
+  });
+}
+
+export function removeToolbarColumn(
+  state: WorkbenchState,
+  panelId: PanelId,
+  edge: StoryToolbarEdge,
+  expectedWidgetIds: readonly WidgetInstanceId[]
+): LayoutResult {
+  const index = storyPanelIndex(state, panelId);
+  if (typeof index !== 'number') return index;
+  const panel = state.panels[index]!;
+  const storyLayout = storyLayoutFor(panel);
+  const currentCount = storyLayout.toolbarColumns[edge];
+  if (currentCount <= 1) {
+    return rejectLayout(state, 'INVALID_INDEX', `The permanent outer ${edge} toolbar column cannot be removed.`);
+  }
+  const targetColumn = currentCount - 1;
+  const targetShelves = state.shelves.filter((shelf) => (
+    shelf.panelId === panelId
+    && shelf.regionId === edge
+    && (shelf.dockColumn ?? 0) === targetColumn
+  ));
+  const targetShelfIds = new Set(targetShelves.map((shelf) => shelf.id));
+  const visibleWidgetIds = Object.entries(state.placements)
+    .filter(([, placement]) => placement.kind === 'docked'
+      && placement.panelId === panelId
+      && placement.regionId === edge
+      && targetShelfIds.has(placement.shelfId))
+    .map(([instanceId]) => instanceId)
+    .sort();
+  const expected = [...expectedWidgetIds].sort();
+  if (visibleWidgetIds.length !== expected.length || visibleWidgetIds.some((id, position) => id !== expected[position])) {
+    return rejectLayout(state, 'STALE_LAYOUT', 'Toolbar column contents changed before removal was confirmed.', {
+      expectedWidgetIds: expected,
+      currentWidgetIds: visibleWidgetIds
+    });
+  }
+
+  let shelves = state.shelves.filter((shelf) => !targetShelves.includes(shelf));
+  let outerShelf = shelves.find((shelf) => (
+    shelf.panelId === panelId
+    && shelf.regionId === edge
+    && (shelf.dockColumn ?? 0) === 0
+  ));
+  const widgets = { ...state.widgets };
+  const placements = { ...state.placements };
+  for (const instanceId of visibleWidgetIds) {
+    delete widgets[instanceId];
+    delete placements[instanceId];
+  }
+  for (const [instanceId, placement] of Object.entries(placements)) {
+    if (placement.kind !== 'shelved') continue;
+    const remembered = placement.lastVisible;
+    if (remembered.kind !== 'docked'
+      || remembered.panelId !== panelId
+      || remembered.regionId !== edge
+      || !targetShelfIds.has(remembered.shelfId)) continue;
+    if (!outerShelf) {
+      outerShelf = {
+        id: shelfIdForColumn({ ...state, shelves }, panelId, edge, 0, 'primary'),
+        panelId,
+        regionId: edge,
+        order: 0,
+        weight: 1
+      };
+      shelves = [...shelves, outerShelf];
+    }
+    placements[instanceId] = {
+      ...placement,
+      lastVisible: { ...remembered, shelfId: outerShelf.id }
+    };
+  }
+
+  const nextCount = currentCount - 1;
+  const currentWidth = requestedStoryDockWidth(panel, edge, currentCount);
+  const perColumn = Math.min(
+    STORY_TOOLBAR_COLUMN_MAX,
+    Math.max(STORY_TOOLBAR_COLUMN_MIN, currentWidth / currentCount)
+  );
+  const dockWidths = { ...dockWidthsFor(panel), [edge]: perColumn * nextCount };
+  const panels = [...state.panels];
+  panels[index] = {
+    ...panel,
+    configuration: { ...panel.configuration, dockWidths },
+    storyLayout: {
+      preferredMeasure: storyLayout.preferredMeasure ?? STORY_DEFAULT_MEASURE,
+      toolbarColumns: { ...storyLayout.toolbarColumns, [edge]: nextCount }
+    }
+  };
+  return acceptLayout({
+    ...state,
+    revision: nextRevision(state),
+    panels,
+    shelves: normalizeShelves(shelves),
+    widgets,
+    placements: normalizeTabGroups(normalizeDockOrders(placements))
+  });
 }
 
 export function resizePanelColumns(

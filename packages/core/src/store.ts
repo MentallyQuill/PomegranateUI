@@ -9,6 +9,7 @@ import {
 import {
   activatePanel,
   activateSubPanel,
+  addToolbarColumn,
   changeSubPanelLayout,
   activateWidgetGroup,
   clearPanel,
@@ -30,6 +31,7 @@ import {
   mergeWidgetGroup,
   moveSubPanelWidgets,
   removeWidget,
+  removeToolbarColumn,
   renamePanel,
   renameSubPanel,
   reorderPanel,
@@ -44,6 +46,7 @@ import {
   restoreWidget,
   separateWidgetGroup,
   setSubPanelScroll,
+  setStoryMeasure,
   shelveWidget,
   type PanelTemplateRegistry,
   type LayoutResult
@@ -92,7 +95,8 @@ function malformedCommand(state: WorkbenchState): CommandResult {
   });
 }
 
-function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
+function eventFor(command: WorkbenchCommand, state: WorkbenchState): WorkbenchEvent {
+  const revision = state.revision;
   switch (command.type) {
     case 'panel.create':
       return { type: 'panel.created', revision, panelId: command.panel.id };
@@ -112,6 +116,30 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'panel.reordered', revision, panelId: command.panelId };
     case 'panel.resize-dock':
       return { type: 'panel.dock-resized', revision, panelId: command.panelId, edge: command.edge };
+    case 'panel.set-story-measure':
+      return {
+        type: 'panel.story-measure-changed',
+        revision,
+        panelId: command.panelId,
+        measure: command.measure
+      };
+    case 'panel.add-toolbar-column':
+      return {
+        type: 'panel.toolbar-column-added',
+        revision,
+        panelId: command.panelId,
+        edge: command.edge,
+        columnCount: state.panels.find((panel) => panel.id === command.panelId)?.storyLayout?.toolbarColumns[command.edge] ?? 1
+      };
+    case 'panel.remove-toolbar-column':
+      return {
+        type: 'panel.toolbar-column-removed',
+        revision,
+        panelId: command.panelId,
+        edge: command.edge,
+        columnCount: state.panels.find((panel) => panel.id === command.panelId)?.storyLayout?.toolbarColumns[command.edge] ?? 1,
+        removedWidgetIds: command.expectedWidgetIds
+      };
     case 'panel.resize-columns':
       return { type: 'panel.columns-resized', revision, panelId: command.panelId };
     case 'sub-panel.activate':
@@ -345,6 +373,15 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
           case 'panel.resize-dock':
             transition = resizePanelDock(before, command.panelId, command.edge, command.width);
             break;
+          case 'panel.set-story-measure':
+            transition = setStoryMeasure(before, command.panelId, command.measure);
+            break;
+          case 'panel.add-toolbar-column':
+            transition = addToolbarColumn(before, command.panelId, command.edge);
+            break;
+          case 'panel.remove-toolbar-column':
+            transition = removeToolbarColumn(before, command.panelId, command.edge, command.expectedWidgetIds);
+            break;
           case 'panel.resize-columns':
             transition = resizePanelColumns(before, command.panelId, command.weights, templates);
             break;
@@ -469,7 +506,7 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
         state = transition.state;
         if (command.type === 'layout.hydrate') history.clear();
         else if (command.type !== 'layout.undo') history.record(before, command.type);
-        const event = Object.freeze(eventFor(command, state.revision));
+        const event = Object.freeze(eventFor(command, state));
         const events = Object.freeze([event]);
         for (const listener of [...listeners]) {
           try {

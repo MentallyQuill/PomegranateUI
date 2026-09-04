@@ -110,6 +110,72 @@ function populatedSubPanelState(): WorkbenchState {
 }
 
 describe('layout persistence', () => {
+  it('round-trips Story layout preferences and shelf column ownership', () => {
+    const base = populatedState();
+    const state: WorkbenchState = {
+      ...base,
+      panels: base.panels.map((panel) => panel.id === sceneId
+        ? {
+            ...panel,
+            templateId: 'story-stage.v1',
+            storyLayout: { preferredMeasure: 940, toolbarColumns: { left: 2, right: 1 } }
+          }
+        : panel),
+      shelves: base.shelves.map((shelf) => ({ ...shelf, dockColumn: 1 }))
+    };
+
+    const encoded = expectEncoded(state);
+    const decoded = decodeLayoutSnapshot(encoded, populatedState());
+
+    expect(decoded.ok).toBe(true);
+    expect(decoded.state.panels[0]).toMatchObject({
+      storyLayout: { preferredMeasure: 940, toolbarColumns: { left: 2, right: 1 } }
+    });
+    expect(decoded.state.shelves[0]).toMatchObject({ dockColumn: 1 });
+    expect(expectEncoded(decoded.state)).toBe(encoded);
+  });
+
+  it('normalizes malformed Story preferences and toolbar shelf indices', () => {
+    const base = populatedState();
+    const source = JSON.parse(expectEncoded({
+      ...base,
+      panels: base.panels.map((panel) => panel.id === sceneId
+        ? { ...panel, templateId: 'story-stage.v1' }
+        : panel)
+    }));
+    source.panels[0].storyLayout = {
+      preferredMeasure: 12,
+      toolbarColumns: { left: 2, right: 99 }
+    };
+    source.shelves[0].dockColumn = 8;
+
+    const decoded = decodeLayoutSnapshot(JSON.stringify(source), populatedState());
+
+    expect(decoded.ok).toBe(true);
+    expect(decoded.state.widgets).toEqual(base.widgets);
+    expect(decoded.state.panels[0]).toMatchObject({
+      storyLayout: { preferredMeasure: 800, toolbarColumns: { left: 2, right: 1 } }
+    });
+    expect(decoded.state.shelves[0]).toMatchObject({ dockColumn: 0 });
+  });
+
+  it('keeps legacy Story snapshots implicit and byte-stable', () => {
+    const base = populatedState();
+    const legacyStory: WorkbenchState = {
+      ...base,
+      panels: base.panels.map((panel) => panel.id === sceneId
+        ? { ...panel, templateId: 'story-stage.v1' }
+        : panel)
+    };
+    const encoded = expectEncoded(legacyStory);
+    const decoded = decodeLayoutSnapshot(encoded, populatedState());
+
+    expect(decoded.ok).toBe(true);
+    expect(decoded.state.panels[0]).not.toHaveProperty('storyLayout');
+    expect(decoded.state.shelves[0]).not.toHaveProperty('dockColumn');
+    expect(expectEncoded(decoded.state)).toBe(encoded);
+  });
+
   it('round-trips sub-panel metadata and placement ownership through the versioned snapshot', () => {
     const state = populatedSubPanelState();
 

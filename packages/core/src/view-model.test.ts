@@ -273,6 +273,60 @@ describe('framework-neutral view projections', () => {
     expect(Object.isFrozen(surface?.docks.left)).toBe(true);
   });
 
+  it('projects stable shelf-owned Story toolbar columns in visual edge order', () => {
+    const registry = createWidgetRegistry();
+    const leftOuter = asWidgetInstanceId('left-outer');
+    const leftInner = asWidgetInstanceId('left-inner');
+    const rightOuter = asWidgetInstanceId('right-outer');
+    const rightInner = asWidgetInstanceId('right-inner');
+    const widget = (id: typeof leftOuter) => ({
+      id,
+      type: asWidgetType('story.summary'),
+      manifestVersion: '1.0.0',
+      configuration: {}
+    });
+    const surface = selectPanelSurface({
+      ...state(),
+      panels: state().panels.map((panel) => panel.id === scenePanel
+        ? {
+            ...panel,
+            storyLayout: { preferredMeasure: 900, toolbarColumns: { left: 2, right: 2 } }
+          }
+        : panel),
+      shelves: [
+        { id: 'primary', panelId: scenePanel, regionId: 'left', order: 0, weight: 1 },
+        { id: 'left-inner', panelId: scenePanel, regionId: 'left', dockColumn: 1, order: 0, weight: 1 },
+        { id: 'right-inner', panelId: scenePanel, regionId: 'right', dockColumn: 1, order: 0, weight: 1 },
+        { id: 'primary', panelId: scenePanel, regionId: 'right', order: 0, weight: 1 }
+      ],
+      widgets: {
+        [leftOuter]: widget(leftOuter),
+        [leftInner]: widget(leftInner),
+        [rightOuter]: widget(rightOuter),
+        [rightInner]: widget(rightInner)
+      },
+      placements: {
+        [leftOuter]: { kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'primary', order: 0 },
+        [leftInner]: { kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'left-inner', order: 0 },
+        [rightOuter]: { kind: 'docked', panelId: scenePanel, regionId: 'right', shelfId: 'primary', order: 0 },
+        [rightInner]: { kind: 'docked', panelId: scenePanel, regionId: 'right', shelfId: 'right-inner', order: 0 }
+      }
+    }, registry);
+
+    expect(surface?.storyLayout).toEqual({
+      preferredMeasure: 900,
+      toolbarColumns: { left: 2, right: 2 }
+    });
+    expect(surface?.regions.find(({ region }) => region.id === 'left')?.toolbarColumns).toEqual([
+      expect.objectContaining({ index: 0, shelves: [expect.objectContaining({ frames: [expect.objectContaining({ instanceId: leftOuter })] })] }),
+      expect.objectContaining({ index: 1, shelves: [expect.objectContaining({ frames: [expect.objectContaining({ instanceId: leftInner })] })] })
+    ]);
+    expect(surface?.regions.find(({ region }) => region.id === 'right')?.toolbarColumns).toEqual([
+      expect.objectContaining({ index: 1, shelves: [expect.objectContaining({ frames: [expect.objectContaining({ instanceId: rightInner })] })] }),
+      expect.objectContaining({ index: 0, shelves: [expect.objectContaining({ frames: [expect.objectContaining({ instanceId: rightOuter })] })] })
+    ]);
+  });
+
   it('projects custom column weights with authored defaults kept for reset', () => {
     const surface = selectPanelSurface({
       ...state(),

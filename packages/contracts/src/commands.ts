@@ -49,6 +49,14 @@ export type WorkbenchCommand =
   | { readonly type: 'panel.activate'; readonly panelId: PanelId }
   | { readonly type: 'panel.reorder'; readonly panelId: PanelId; readonly toIndex: number }
   | { readonly type: 'panel.resize-dock'; readonly panelId: PanelId; readonly edge: 'left' | 'right'; readonly width: number }
+  | { readonly type: 'panel.set-story-measure'; readonly panelId: PanelId; readonly measure: number }
+  | { readonly type: 'panel.add-toolbar-column'; readonly panelId: PanelId; readonly edge: 'left' | 'right' }
+  | {
+      readonly type: 'panel.remove-toolbar-column';
+      readonly panelId: PanelId;
+      readonly edge: 'left' | 'right';
+      readonly expectedWidgetIds: readonly WidgetInstanceId[];
+    }
   | { readonly type: 'panel.resize-columns'; readonly panelId: PanelId; readonly weights: readonly number[] }
   | {
       readonly type: 'sub-panel.activate';
@@ -141,7 +149,26 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     type: z.literal('panel.resize-dock'),
     panelId: PanelIdSchema,
     edge: z.enum(['left', 'right']),
-    width: z.number().finite().min(200).max(420)
+    width: z.number().finite().min(200).max(2520)
+  }).strict(),
+  z.object({
+    type: z.literal('panel.set-story-measure'),
+    panelId: PanelIdSchema,
+    measure: z.number().finite().min(420)
+  }).strict(),
+  z.object({
+    type: z.literal('panel.add-toolbar-column'),
+    panelId: PanelIdSchema,
+    edge: z.enum(['left', 'right'])
+  }).strict(),
+  z.object({
+    type: z.literal('panel.remove-toolbar-column'),
+    panelId: PanelIdSchema,
+    edge: z.enum(['left', 'right']),
+    expectedWidgetIds: z.array(WidgetInstanceIdSchema).refine(
+      (ids) => new Set(ids).size === ids.length,
+      { message: 'Expected Widget instance identities must be unique.' }
+    )
   }).strict(),
   z.object({
     type: z.literal('panel.resize-columns'),
@@ -300,6 +327,7 @@ export type CommandErrorCode =
   | 'UNKNOWN_WIDGET_TYPE'
   | 'INVALID_INDEX'
   | 'INVALID_PLACEMENT'
+  | 'STALE_LAYOUT'
   | 'INVALID_SNAPSHOT'
   | 'INTERNAL_ERROR';
 
@@ -334,6 +362,7 @@ export const CommandErrorSchema = z.object({
     'UNKNOWN_WIDGET_TYPE',
     'INVALID_INDEX',
     'INVALID_PLACEMENT',
+    'STALE_LAYOUT',
     'INVALID_SNAPSHOT',
     'INTERNAL_ERROR'
   ]),

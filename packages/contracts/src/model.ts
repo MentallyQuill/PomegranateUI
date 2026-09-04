@@ -70,12 +70,21 @@ export interface WidgetInstance {
   readonly configuration: JsonObject;
 }
 
+export interface StoryLayoutState {
+  readonly preferredMeasure: number;
+  readonly toolbarColumns: {
+    readonly left: number;
+    readonly right: number;
+  };
+}
+
 export interface PanelState {
   readonly id: PanelId;
   readonly name: string;
   readonly templateId: string;
   readonly order: number;
   readonly configuration?: JsonObject;
+  readonly storyLayout?: StoryLayoutState;
   readonly columnWeights?: readonly number[];
   readonly activeSubPanelId?: SubPanelId;
   readonly subPanels?: readonly SubPanelState[];
@@ -135,6 +144,7 @@ export interface ShelfState {
   readonly regionId: string;
   readonly order: number;
   readonly weight: number;
+  readonly dockColumn?: number;
 }
 
 export interface WorkbenchState {
@@ -173,6 +183,7 @@ const unpaddedString = (label: string) => z.string().refine(
 );
 const nonnegativeInteger = z.number().int().nonnegative();
 const finiteNumber = z.number().finite();
+const storyToolbarColumnCount = z.number().int().min(1).max(6);
 const NormalizedColumnWeightsSchema = z.array(finiteNumber.min(0.05).max(1)).min(1).max(6).refine(
   (weights) => Math.abs(weights.reduce((total, weight) => total + weight, 0) - 1) < 1e-6,
   { message: 'Column weights must be normalized to a total of 1.' }
@@ -264,12 +275,21 @@ export const SubPanelStateSchema = z.object({
   }
 });
 
+export const StoryLayoutStateSchema = z.object({
+  preferredMeasure: finiteNumber.min(420),
+  toolbarColumns: z.object({
+    left: storyToolbarColumnCount,
+    right: storyToolbarColumnCount
+  }).strict()
+}).strict();
+
 export const PanelStateSchema = z.object({
   id: PanelIdSchema,
   name: unpaddedString('Panel name'),
   templateId: unpaddedString('templateId'),
   order: nonnegativeInteger,
   configuration: JsonObjectSchema.optional(),
+  storyLayout: StoryLayoutStateSchema.optional(),
   columnWeights: NormalizedColumnWeightsSchema.min(2).optional(),
   activeSubPanelId: SubPanelIdSchema.optional(),
   subPanels: z.array(SubPanelStateSchema).optional()
@@ -366,7 +386,8 @@ export const ShelfStateSchema = z.object({
   panelId: PanelIdSchema,
   regionId: unpaddedString('regionId'),
   order: nonnegativeInteger,
-  weight: finiteNumber.min(0.05).max(1)
+  weight: finiteNumber.min(0.05).max(1),
+  dockColumn: nonnegativeInteger.optional()
 }).strict();
 
 const workbenchCollections = {

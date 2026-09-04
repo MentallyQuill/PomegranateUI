@@ -59,6 +59,17 @@ function canonicalPanel(panel: PanelState): PanelState {
     ...(panel.configuration === undefined
       ? {}
       : { configuration: canonicalJson(panel.configuration) as JsonObject }),
+    ...(panel.storyLayout === undefined
+      ? {}
+      : {
+          storyLayout: {
+            preferredMeasure: panel.storyLayout.preferredMeasure,
+            toolbarColumns: {
+              left: panel.storyLayout.toolbarColumns.left,
+              right: panel.storyLayout.toolbarColumns.right
+            }
+          }
+        }),
     ...(panel.columnWeights === undefined ? {} : { columnWeights: [...panel.columnWeights] }),
     ...(panel.subPanels === undefined || panel.activeSubPanelId === undefined
       ? {}
@@ -72,7 +83,58 @@ function canonicalPanel(panel: PanelState): PanelState {
 }
 
 function canonicalShelf(shelf: ShelfState): ShelfState {
-  return { id: shelf.id, panelId: shelf.panelId, regionId: shelf.regionId, order: shelf.order, weight: shelf.weight };
+  return {
+    id: shelf.id,
+    panelId: shelf.panelId,
+    regionId: shelf.regionId,
+    order: shelf.order,
+    weight: shelf.weight,
+    ...(shelf.dockColumn === undefined ? {} : { dockColumn: shelf.dockColumn })
+  };
+}
+
+function normalizeStoryInput(state: WorkbenchState): WorkbenchState {
+  const counts = new Map<string, { readonly left: number; readonly right: number }>();
+  const panels = Array.isArray(state.panels) ? state.panels.map((panel) => {
+    if (!panel || typeof panel !== 'object' || panel.templateId !== 'story-stage.v1') return panel;
+    const raw = (panel as { storyLayout?: unknown }).storyLayout;
+    if (raw === undefined) {
+      counts.set(panel.id, { left: 1, right: 1 });
+      return panel;
+    }
+    const record = raw !== null && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+    const rawColumns = record.toolbarColumns !== null && typeof record.toolbarColumns === 'object'
+      ? record.toolbarColumns as Record<string, unknown>
+      : {};
+    const validCount = (value: unknown): number => (
+      typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 6 ? value : 1
+    );
+    const toolbarColumns = { left: validCount(rawColumns.left), right: validCount(rawColumns.right) };
+    const preferredMeasure = typeof record.preferredMeasure === 'number'
+      && Number.isFinite(record.preferredMeasure)
+      && record.preferredMeasure >= 420
+      ? record.preferredMeasure
+      : 800;
+    counts.set(panel.id, toolbarColumns);
+    return { ...panel, storyLayout: { preferredMeasure, toolbarColumns } };
+  }) : state.panels;
+  const shelves = Array.isArray(state.shelves) ? state.shelves.map((shelf) => {
+    if (!shelf || typeof shelf !== 'object') return shelf;
+    const available = counts.get(shelf.panelId);
+    if (!available || (shelf.regionId !== 'left' && shelf.regionId !== 'right')) return shelf;
+    const regionId = shelf.regionId as 'left' | 'right';
+    const maximum = available[regionId];
+    const rawColumn = (shelf as { dockColumn?: unknown }).dockColumn;
+    if (rawColumn === undefined) return shelf;
+    const dockColumn = typeof rawColumn === 'number'
+      && Number.isInteger(rawColumn)
+      && rawColumn >= 0
+      && rawColumn < maximum
+      ? rawColumn
+      : 0;
+    return { ...shelf, dockColumn };
+  }) : state.shelves;
+  return { ...state, panels, shelves };
 }
 
 function canonicalWidget(instance: WidgetInstance): WidgetInstance {
@@ -264,17 +326,20 @@ export function decodeLayoutSnapshot(raw: string, currentState: WorkbenchState):
       return normalizeSnapshot(migrateLayoutSnapshotV1(parsed.data as LayoutSnapshotV1), currentState);
     }
     if (schema === LAYOUT_SNAPSHOT_V2_SCHEMA) {
-      const parsed = LayoutSnapshotV2Schema.safeParse(parsedJson);
+      const normalizedInput = parsedJson !== null && typeof parsedJson === 'object'
+        ? { ...normalizeStoryInput(parsedJson as WorkbenchState), schema: LAYOUT_SNAPSHOT_V2_SCHEMA }
+        : parsedJson;
+      const parsed = LayoutSnapshotV2Schema.safeParse(normalizedInput);
       if (!parsed.success) return rejectLayout(currentState, 'INVALID_SNAPSHOT', 'Layout snapshot does not match pomegranate.ui.layout.v2.');
       return normalizeSnapshot(parsed.data as LayoutSnapshotV2, currentState);
     }
     if (schema === LAYOUT_SNAPSHOT_V3_SCHEMA) {
       const normalizedInput = parsedJson !== null && typeof parsedJson === 'object'
         ? {
-            ...normalizeSubPanels({
+            ...normalizeStoryInput(normalizeSubPanels({
               ...(parsedJson as WorkbenchState),
               schema: WORKBENCH_STATE_SCHEMA
-            }),
+            })),
             schema: LAYOUT_SNAPSHOT_V3_SCHEMA
           }
         : parsedJson;
