@@ -31,6 +31,21 @@ export const FONT_ARTIFACTS = Object.freeze([
   'apps/workbench-lab/src/assets/fonts/Alegreya-Variable.ttf'
 ]);
 
+export const BRAND_ARTIFACTS = Object.freeze([
+  'pomegranateui-mark-64.png',
+  'favicon-32x32.png',
+  'favicon-16x16.png',
+  'favicon.ico',
+  'apple-touch-icon.png'
+]);
+
+const BRAND_LINKS = Object.freeze([
+  Object.freeze(['link[rel="icon"][sizes="32x32"]', './favicon-32x32.png']),
+  Object.freeze(['link[rel="icon"][sizes="16x16"]', './favicon-16x16.png']),
+  Object.freeze(['link[rel="shortcut icon"]', './favicon.ico']),
+  Object.freeze(['link[rel="apple-touch-icon"][sizes="180x180"]', './apple-touch-icon.png'])
+]);
+
 export async function verifyLabDist({ root = repositoryRoot } = {}) {
   const dist = path.join(root, 'apps', 'workbench-lab', 'dist');
   const indexPath = path.join(dist, 'index.html');
@@ -42,6 +57,13 @@ export async function verifyLabDist({ root = repositoryRoot } = {}) {
       dom.window.document.head.querySelector('meta[name="darkreader-lock"]'),
       'Workbench Lab dist is missing static Dark Reader lock'
     );
+    for (const [selector, href] of BRAND_LINKS) {
+      assert.equal(
+        dom.window.document.head.querySelector(selector)?.getAttribute('href'),
+        href,
+        `Workbench Lab dist is missing relative brand link ${href}`
+      );
+    }
   } finally {
     dom.window.close();
   }
@@ -68,9 +90,17 @@ export async function verifyLabDist({ root = repositoryRoot } = {}) {
     }
     assert.equal(found, true, `${path.basename(source)} is missing a byte-identical built asset`);
   }
+
+  for (const file of BRAND_ARTIFACTS) {
+    const [actual, expected] = await Promise.all([
+      readFile(path.join(dist, file)),
+      readFile(path.join(root, 'apps', 'workbench-lab', 'public', file))
+    ]);
+    assert.equal(actual.equals(expected), true, `${file} does not match its public source`);
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   await verifyLabDist();
-  console.log(`Workbench Lab artifact verified: ${LEGAL_ARTIFACTS.length} legal files and ${FONT_ARTIFACTS.length} bundled fonts.`);
+  console.log(`Workbench Lab artifact verified: ${LEGAL_ARTIFACTS.length} legal files, ${FONT_ARTIFACTS.length} bundled fonts, and ${BRAND_ARTIFACTS.length} brand assets.`);
 }
