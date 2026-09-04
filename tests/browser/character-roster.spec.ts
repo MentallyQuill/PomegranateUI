@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function fresh(page: Page) {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const labOrigin = process.env.POM_LAB_ORIGIN ?? 'http://127.0.0.1:4174';
+  const labOrigin = `http://127.0.0.1:${process.env.POM_PLAYWRIGHT_PORT ?? '4174'}`;
   await page.goto(labOrigin);
   await page.evaluate(() => window.localStorage.clear());
   await page.reload();

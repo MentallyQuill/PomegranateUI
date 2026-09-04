@@ -36,7 +36,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
     'workbench-surface'
   ]);
   for (const entry of manifest.recipes) {
-    const revised = { 'theme-settings': 6, 'workbench-surface': 2 };
+    const revised = { 'theme-settings': 6, 'widget-frame': 2, 'workbench-surface': 3 };
     assert.equal(entry.revision, revised[entry.id] ?? 1);
     assert.equal(entry.compatiblePomegranateRange, '>=0.1.0-private.0 <0.2.0');
     assert.ok(entry.dependencies.includes('svelte'));
@@ -108,13 +108,36 @@ test('copy-owned Workbench recipes carry optional host title and metadata presen
   assert.match(widgetFrame, /title\?: string/);
   assert.match(widgetFrame, /meta\?: string/);
   assert.match(widgetFrame, /class="widget-frame-meta"/);
+  assert.match(widgetFrame, /onrequestactions\?:/);
+  assert.match(widgetFrame, /aria-keyshortcuts=\{onrequestactions && !grouped \? 'Shift\+F10'/);
+  assert.match(widgetFrame, /oncontextmenu=/);
+  assert.match(widgetFrame, /class="widget-actions-trigger"/);
+  assert.match(widgetFrame, /const grouped = \$derived/);
+  assert.match(widgetFrame, /\{#if !grouped\}<nav/);
+  assert.match(widgetFrame, /@media \(pointer: coarse\)/);
+  assert.match(widgetFrame, /min-width: 44px/);
 
   for (const file of ['WorkbenchSurface.svelte', 'PanelTemplateSurface.svelte', 'DockRegion.svelte', 'DockShelf.svelte', 'WidgetGroup.svelte']) {
     const source = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', file), 'utf8');
     assert.match(source, /titleFor/, `${file} does not carry the host title resolver.`);
+    assert.match(source, /onrequestactions/, `${file} does not carry the Widget action adapter.`);
   }
+  const workbench = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'WorkbenchSurface.svelte'), 'utf8');
+  const panelTemplate = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'PanelTemplateSurface.svelte'), 'utf8');
+  const dockRegion = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'DockRegion.svelte'), 'utf8');
+  const dockShelf = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'DockShelf.svelte'), 'utf8');
+  assert.match(workbench, /<PanelTemplateSurface[^>]*\{onrequestactions\}/s);
+  assert.match(panelTemplate, /<DockRegion[^>]*\{onrequestactions\}/s);
+  assert.match(dockRegion, /<DockShelf[^>]*\{onrequestactions\}/s);
+  assert.match(dockShelf, /<WidgetGroup[^>]*\{onrequestactions\}/s);
   const group = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'WidgetGroup.svelte'), 'utf8');
   assert.match(group, /titleFor\?\.\(frame\) \?\? frame\.title/);
+  assert.match(group, /onrequestactions\?:/);
+  assert.match(group, /data-widget-group-header/);
+  assert.match(group, /aria-keyshortcuts="Shift\+F10"/);
+  assert.match(group, /class="widget-actions-trigger"/);
+  assert.match(group, /@media \(pointer: coarse\)/);
+  assert.match(group, /grid-template-columns: minmax\(0, 1fr\) 44px/);
   const columnResize = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'ColumnResizeHandle.svelte'), 'utf8');
   const rowResize = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'WidgetRowResizeHandle.svelte'), 'utf8');
   assert.match(columnResize, /sub-panel\.resize-columns/);

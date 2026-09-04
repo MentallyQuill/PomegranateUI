@@ -8,6 +8,7 @@
     nextWidgetGroupGestureOwner,
     type WidgetGroupGestureOwner
   } from './widget-group-gesture.js';
+  import { getWidgetActionMenuContext, type WidgetActionRequestSource } from './WidgetActionMenuController.js';
 
   let {
     frames,
@@ -38,6 +39,8 @@
   let dragFrame = $state<WidgetFrameProjection | null>(null);
   let dragging = $state(false);
   let tablist = $state<HTMLElement>();
+  let actionsOpen = $state(false);
+  const requestWidgetActions = getWidgetActionMenuContext();
   let groupGesture: {
     pointerId: number;
     pointerType: string;
@@ -72,6 +75,7 @@
   onDestroy(reorderDrag.destroy);
 
   function dragPointerDown(event: PointerEvent, frame: WidgetFrameProjection) {
+    if (event.button !== 0) return;
     dragFrame = frame;
     groupGesture = {
       pointerId: event.pointerId,
@@ -162,6 +166,11 @@
   }
 
   function tabKeyDown(event: KeyboardEvent, frame: WidgetFrameProjection) {
+    if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
+      event.preventDefault();
+      openActions(frame, event.currentTarget as HTMLElement, 'keyboard');
+      return;
+    }
     if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
     event.preventDefault();
     const delta = event.key === 'ArrowLeft' ? -1 : 1;
@@ -176,6 +185,27 @@
     activate(next);
     void tick().then(() => tablist?.querySelector<HTMLButtonElement>(`[data-group-tab="${CSS.escape(next.instanceId)}"]`)?.focus());
   }
+
+  function openActions(
+    frame: WidgetFrameProjection,
+    anchor: HTMLElement,
+    source: WidgetActionRequestSource,
+    point?: { x: number; y: number }
+  ) {
+    requestWidgetActions?.({
+      frame,
+      title: titleFor?.(frame) ?? frame.title,
+      anchor,
+      source,
+      ...(point ? { point } : {}),
+      onopenchange: (open) => { actionsOpen = open; }
+    });
+  }
+
+  function tabContextMenu(event: MouseEvent, frame: WidgetFrameProjection) {
+    event.preventDefault();
+    openActions(frame, event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
+  }
 </script>
 
 <section
@@ -189,31 +219,47 @@
   data-pom-part="group.surface"
   style={rowHeight === undefined ? undefined : `height:${rowHeight}px;min-height:${rowHeight}px`}
 >
-  <div bind:this={tablist} class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets" data-pom-part="widget.header">
-    {#each ordered as frame (frame.instanceId)}
-      {@const title = titleFor?.(frame) ?? frame.title}
-      <span data-tab-reorder-item>
-        <button
-          type="button"
-          data-pom-part="button.surface"
-          role="tab"
-          data-group-tab={frame.instanceId}
-          data-group-widget-type={frame.instance.type}
-          data-widget-drag-root
-          data-widget-drag-surface
-          data-widget-touch-drag-grip
-          data-tab-touch-reorder-grip
-          aria-selected={frame.instanceId === active?.instanceId}
-          tabindex={frame.instanceId === active?.instanceId ? 0 : -1}
-          onclick={() => { if (!reorderDrag.consumeClick()) activate(frame); }}
-          onkeydown={(event) => tabKeyDown(event, frame)}
-          onpointerdown={(event) => dragPointerDown(event, frame)}
-          onpointermove={dragPointerMove}
-          onpointerup={dragPointerUp}
-          onpointercancel={dragPointerCancel}
-        >{title}</button>
-      </span>
-    {/each}
+  <div class="widget-group-header" data-widget-group-header data-pom-part="widget.header">
+    <div bind:this={tablist} class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets">
+      {#each ordered as frame (frame.instanceId)}
+        {@const title = titleFor?.(frame) ?? frame.title}
+        <span data-tab-reorder-item>
+          <button
+            type="button"
+            data-pom-part="button.surface"
+            role="tab"
+            data-group-tab={frame.instanceId}
+            data-group-widget-type={frame.instance.type}
+            data-widget-drag-root
+            data-widget-drag-surface
+            data-widget-touch-drag-grip
+            data-tab-touch-reorder-grip
+            data-focus-widget-for={frame.instanceId}
+            aria-selected={frame.instanceId === active?.instanceId}
+            aria-keyshortcuts="Shift+F10"
+            tabindex={frame.instanceId === active?.instanceId ? 0 : -1}
+            onclick={() => { if (!reorderDrag.consumeClick()) activate(frame); }}
+            oncontextmenu={(event) => tabContextMenu(event, frame)}
+            onkeydown={(event) => tabKeyDown(event, frame)}
+            onpointerdown={(event) => dragPointerDown(event, frame)}
+            onpointermove={dragPointerMove}
+            onpointerup={dragPointerUp}
+            onpointercancel={dragPointerCancel}
+          >{title}</button>
+        </span>
+      {/each}
+    </div>
+    {#if active}
+      <button
+        class="widget-actions-trigger action-menu"
+        type="button"
+        data-pom-part="button.icon"
+        aria-label="Widget actions"
+        aria-haspopup="menu"
+        aria-expanded={actionsOpen}
+        onclick={(event) => openActions(active, event.currentTarget, 'touch')}
+      >Widget actions</button>
+    {/if}
   </div>
   {#if rendered}
     {@render renderWidget(rendered)}

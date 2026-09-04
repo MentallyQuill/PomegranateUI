@@ -154,7 +154,7 @@ test('Deep Current is indistinguishable from the Atmospheric authority', async (
   const characters = page.locator('[data-widget-type="story.characters"]');
   await characters.hover();
   const placementRailCount = await characters.getByRole('navigation', { name: /placement/i }).count();
-  const actionMenuCount = await characters.getByRole('button', { name: 'Widget actions' }).count();
+  const actionMenuCount = await page.locator('.widget-actions-trigger:visible').count();
   const inventory = await page.locator('[data-widget-type][data-pomegranate-placement], [data-group-widget-type]').evaluateAll((elements) => (
     [...new Set(elements.map((element) => element.getAttribute('data-widget-type') ?? element.getAttribute('data-group-widget-type')).filter(Boolean))]
   ));
@@ -176,7 +176,7 @@ test('Deep Current is indistinguishable from the Atmospheric authority', async (
   if (composerBackdropFilter !== 'none') findings.push(`Composer overlay must not blur the Atmospheric canvas; found ${composerBackdropFilter}`);
   if (!portraitStatus.loaded) findings.push(`Expected four loaded character portraits, found ${portraitStatus.count}`);
   if (placementRailCount !== 0) findings.push(`Hover exposed ${placementRailCount} placement rail`);
-  if (actionMenuCount !== 1) findings.push(`Expected one restrained Widget actions trigger, found ${actionMenuCount}`);
+  if (actionMenuCount !== 0) findings.push(`Expected no visible desktop Widget actions triggers, found ${actionMenuCount}`);
   if (!pixels.compatible) findings.push('Candidate screenshot dimensions differ from the authority');
   else {
     if (pixels.mismatchRatio > contract.thresholds.maxMismatchRatio) findings.push(`Pixel mismatch ratio is ${pixels.mismatchRatio}`);

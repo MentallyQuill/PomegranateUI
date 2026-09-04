@@ -166,22 +166,24 @@ test('AUDIT-P1-SINGLE-PRESENTATION lifted Widget has one compact payload and one
   await cancelPointerDrag(page);
 });
 
-test('AUDIT-P1-GROUP-ACTIONS grouped Widget tabs do not cover the active Widget actions', async ({ page }, testInfo) => {
+test('AUDIT-P1-GROUP-ACTIONS desktop grouped Widget tabs expose unobstructed context actions', async ({ page }, testInfo) => {
   const article = page.getByRole('article', { name: 'Room Ambience' });
   const group = article.locator('xpath=ancestor::*[@data-widget-group][1]');
-  await group.hover({ position: { x: 8, y: 50 } });
-  const action = article.getByRole('button', { name: 'Widget actions' });
-  await expect(action).toHaveCSS('pointer-events', 'auto');
-  const hit = await action.evaluate((node) => {
+  const action = group.getByRole('button', { name: 'Widget actions' });
+  const activeTab = group.getByRole('tab', { selected: true });
+  await expect(action).toBeHidden();
+  const hit = await activeTab.evaluate((node) => {
     const box = node.getBoundingClientRect();
-    const target = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    const target = document.elementFromPoint(box.right - 4, box.y + box.height / 2);
     return {
-      actionReceivesPoint: target === node || node.contains(target),
+      tabReceivesPoint: target === node || node.contains(target),
       hitTag: target?.tagName ?? null,
       hitRole: target?.getAttribute('role') ?? null,
       hitClass: target?.getAttribute('class') ?? null
     };
   });
+  await activeTab.click({ button: 'right' });
+  await expect(page.getByRole('menu', { name: 'Room Ambience Widget actions' })).toBeVisible();
   await testInfo.attach('AUDIT-P1-GROUP-ACTIONS', {
     body: await page.screenshot({ animations: 'disabled' }),
     contentType: 'image/png'
@@ -190,7 +192,7 @@ test('AUDIT-P1-GROUP-ACTIONS grouped Widget tabs do not cover the active Widget 
     body: JSON.stringify(hit, null, 2),
     contentType: 'application/json'
   });
-  expect(hit.actionReceivesPoint).toBe(true);
+  expect(hit.tabReceivesPoint).toBe(true);
 });
 
 const implementedCaseIds = new Set<string>();

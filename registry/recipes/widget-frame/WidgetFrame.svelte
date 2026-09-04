@@ -16,6 +16,7 @@
     contentPart = 'widget.content',
     title,
     meta,
+    onrequestactions,
     class: className = ''
   }: {
     frame: WidgetFrameProjection;
@@ -26,13 +27,37 @@
     contentPart?: 'widget.content' | null;
     title?: string;
     meta?: string | undefined;
+    onrequestactions?: ((request: {
+      frame: WidgetFrameProjection;
+      title: string;
+      anchor: HTMLElement;
+      source: 'pointer' | 'keyboard' | 'touch';
+      point?: { x: number; y: number };
+    }) => void) | undefined;
     class?: string;
   } = $props();
 
   const actions = $derived(createWidgetActions(store, frame.instanceId));
+  const grouped = $derived(frame.placement.kind === 'docked' && Boolean(frame.placement.group));
   const displayTitle = $derived(title ?? frame.title);
   const Renderer = $derived(rendererRegistry.get(frame.instance.type));
   const dispatch = (command: WorkbenchCommand) => store.dispatch(command);
+
+  function requestActions(anchor: HTMLElement, source: 'pointer' | 'keyboard' | 'touch', point?: { x: number; y: number }) {
+    onrequestactions?.({ frame, title: displayTitle, anchor, source, ...(point ? { point } : {}) });
+  }
+
+  function handleContextMenu(event: MouseEvent) {
+    if (!onrequestactions || grouped) return;
+    event.preventDefault();
+    requestActions(event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
+  }
+
+  function handleHeaderKey(event: KeyboardEvent) {
+    if (!onrequestactions || grouped || !(event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey))) return;
+    event.preventDefault();
+    requestActions(event.currentTarget as HTMLElement, 'keyboard');
+  }
 </script>
 
 <article
@@ -42,18 +67,30 @@
   data-pom-part={surfacePart ?? undefined}
   data-pomegranate-placement={frame.placement.kind}
 >
-  <header data-pom-part="widget.header">
+  <header
+    data-pom-part="widget.header"
+    role="toolbar"
+    aria-label={`${displayTitle} Widget header`}
+    aria-keyshortcuts={onrequestactions && !grouped ? 'Shift+F10' : undefined}
+    tabindex={onrequestactions && !grouped ? 0 : undefined}
+    oncontextmenu={handleContextMenu}
+    onkeydown={handleHeaderKey}
+  >
     <div class="widget-frame-heading">
       <h2>{displayTitle}</h2>
       {#if meta}<span class="widget-frame-meta">{meta}</span>{/if}
     </div>
-    <nav aria-label={`${displayTitle} placement`} data-pom-part="widget.actions">
-      <button type="button" data-pom-part="button.icon" onclick={() => actions.dock('left')}>Dock left</button>
-      <button type="button" data-pom-part="button.icon" onclick={() => actions.dock('main')}>Dock main</button>
-      <button type="button" data-pom-part="button.icon" onclick={() => actions.dock('right')}>Dock right</button>
-      <button type="button" data-pom-part="button.icon" onclick={() => actions.float()}>Float</button>
-      <button type="button" data-pom-part="button.icon" onclick={() => actions.remove()}>Remove</button>
-    </nav>
+    {#if !grouped}<nav class:widget-actions-host={Boolean(onrequestactions)} aria-label={`${displayTitle} placement`} data-pom-part="widget.actions">
+      {#if onrequestactions}
+        <button class="widget-actions-trigger" type="button" data-pom-part="button.icon" aria-label="Widget actions" aria-haspopup="menu" onclick={(event) => requestActions(event.currentTarget, 'touch')}>Widget actions</button>
+      {:else}
+        <button type="button" data-pom-part="button.icon" onclick={() => actions.dock('left')}>Dock left</button>
+        <button type="button" data-pom-part="button.icon" onclick={() => actions.dock('main')}>Dock main</button>
+        <button type="button" data-pom-part="button.icon" onclick={() => actions.dock('right')}>Dock right</button>
+        <button type="button" data-pom-part="button.icon" onclick={() => actions.float()}>Float</button>
+        <button type="button" data-pom-part="button.icon" onclick={() => actions.remove()}>Remove</button>
+      {/if}
+    </nav>{/if}
   </header>
   <div data-pom-part={contentPart ?? undefined}>
     {#if Renderer}
@@ -77,3 +114,20 @@
     {/if}
   </div>
 </article>
+
+<style>
+  .widget-actions-host { display: none; width: 0; min-width: 0; flex: 0 0 0; }
+  .widget-actions-trigger { display: none; }
+
+  @media (pointer: coarse) {
+    .widget-actions-host { display: flex; width: 44px; min-width: 44px; flex: 0 0 44px; }
+    .widget-actions-trigger {
+      display: block;
+      box-sizing: border-box;
+      width: 44px;
+      min-width: 44px;
+      height: 44px;
+      min-height: 44px;
+    }
+  }
+</style>

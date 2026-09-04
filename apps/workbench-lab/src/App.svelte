@@ -31,6 +31,8 @@
   import type { CatalogPlacementTarget } from './recipes/CatalogPlacementController.js';
   import type { DockIntent } from './recipes/widget-docking.js';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
+  import WidgetActionMenu from './recipes/WidgetActionMenu.svelte';
+  import { setWidgetActionMenuContext, type WidgetActionRequest } from './recipes/WidgetActionMenuController.js';
   import WorkbenchSurface from './recipes/WorkbenchSurface.svelte';
   import WorkbenchDeveloperDrawer from './recipes/WorkbenchDeveloperDrawer.svelte';
   import { createLocalLayoutStorage, LAB_LAYOUT_KEY } from './storage.js';
@@ -288,11 +290,14 @@
     saveDraft: saveThemeDraft
   }, initialSurfaceState, resolveLabShowcaseMediaProfile(initialThemeSnapshot.activeId)));
   setWorkbenchContext({ store, catalog, rendererRegistry, hostContext });
+  let widgetActionMenu: { open(request: WidgetActionRequest): void };
+  setWidgetActionMenuContext((request) => widgetActionMenu?.open(request));
 
   let workbench: WorkbenchState = $state(store.getState());
   let focusMode = $state(false);
   let focusedFrame = $state<WidgetFrameProjection | null>(null);
   let focusReturnId: string | null = null;
+  let focusReturnElement: HTMLElement | null = null;
   const compactWorkbenchMedia = typeof window.matchMedia === 'function'
     ? window.matchMedia('(max-width: 1180px)')
     : null;
@@ -580,8 +585,9 @@
     subPanelDialog.open(request);
   }
 
-  function focusWidget(frame: WidgetFrameProjection) {
+  function focusWidget(frame: WidgetFrameProjection, returnElement: HTMLElement) {
     focusReturnId = frame.instanceId;
+    focusReturnElement = returnElement;
     focusedFrame = frame;
   }
 
@@ -592,13 +598,15 @@
 
   async function returnFromFocusedWidget() {
     const returnId = focusReturnId;
+    const returnElement = focusReturnElement;
     focusedFrame = null;
     focusReturnId = null;
+    focusReturnElement = null;
     await tick();
     if (!returnId) return;
     const selector = `[data-focus-widget-for="${CSS.escape(returnId)}"]`;
     const control = document.querySelector<HTMLElement>(selector);
-    control?.focus();
+    (returnElement?.isConnected ? returnElement : control)?.focus();
   }
 
   function frameSurfacePart(frame: WidgetFrameProjection) {
@@ -753,7 +761,6 @@
               {store}
               {rendererRegistry}
               {hostContext}
-              onfocuswidget={focusWidget}
               onexpanddock={expandDock}
               surfacePart={frameSurfacePart(frame)}
               title={frameTitle(frame)}
@@ -765,6 +772,8 @@
       {/snippet}
     </WorkbenchSurface>
   </section>
+
+  <WidgetActionMenu bind:this={widgetActionMenu} {store} onfocuswidget={focusWidget} />
 
   <WidgetCatalog
     {catalog}

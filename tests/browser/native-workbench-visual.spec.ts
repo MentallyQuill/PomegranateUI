@@ -357,11 +357,13 @@ async function invokeCompactChromeAction(page: Page, name: string) {
   await action.press('Enter');
 }
 
-async function invokeWidgetAction(widget: ReturnType<Page['locator']>, name: string) {
-  const trigger = widget.getByRole('button', { name: 'Widget actions' });
-  await trigger.focus();
-  await trigger.press('Enter');
-  await widget.getByRole('menuitem', { name }).press('Enter');
+async function invokeWidgetAction(page: Page, widget: ReturnType<Page['locator']>, name: string) {
+  const group = widget.locator('xpath=ancestor::section[@data-widget-group][1]');
+  const surface = await group.count()
+    ? group.getByRole('tab', { selected: true })
+    : widget.locator(':scope > header[data-widget-drag-surface], :scope > .widget-frame > header[data-widget-drag-surface]').first();
+  await surface.click({ button: 'right' });
+  await page.getByRole('menu').getByRole('menuitem', { name }).press('Enter');
 }
 
 async function openAppearanceSettings(page: Page) {
@@ -446,7 +448,7 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await shot(page, 'compact-settings.png');
 
   await fresh(page, 1440, 900);
-  await invokeWidgetAction(page.getByRole('article', { name: 'Room Ambience' }), 'Float');
+  await invokeWidgetAction(page, page.getByRole('article', { name: 'Room Ambience' }), 'Float');
   await shot(page, 'floating-widget.png');
   await page.getByRole('tab', { name: 'Library' }).click();
   await shot(page, 'renderer-error.png');
@@ -517,7 +519,7 @@ test('Theme Settings freezes the focused wide and compact authoring surfaces', a
 
   await fresh(page, 390, 844);
   await openAppearanceSettings(page);
-  await invokeWidgetAction(page.locator('[data-widget-type="settings.theme-colors"]'), 'Focus Widget');
+  await invokeWidgetAction(page, page.locator('[data-widget-type="settings.theme-colors"]'), 'Focus Widget');
   await expect(page.getByRole('dialog', { name: 'Focused Theme Colors' })).toBeVisible();
   await shot(page, 'compact-theme-settings.png');
 });
