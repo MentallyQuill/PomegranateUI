@@ -25,30 +25,12 @@ export const BUNNY_SURFACE_EXPRESSION: SurfaceExpressionProfile = deepFreeze(
       reader: { cornerRadiiPx: { topLeft: 18, topRight: 18, bottomRight: 18, bottomLeft: 18 } }
     },
     materials: {
-      panel: {
-        fill: {
-          kind: 'linear-gradient', angleDeg: 150,
-          stops: [
-            { colorRole: 'surfaceElevated', opacity: 0.72, position: 0 },
-            { colorRole: 'chrome', opacity: 0.58, position: 1 }
-          ]
-        }
-      },
       header: {
         fill: {
           kind: 'linear-gradient', angleDeg: 150,
           stops: [
             { colorRole: 'surfaceElevated', opacity: 0.76, position: 0 },
             { colorRole: 'surface', opacity: 0.64, position: 1 }
-          ]
-        }
-      },
-      content: {
-        fill: {
-          kind: 'linear-gradient', angleDeg: 150,
-          stops: [
-            { colorRole: 'surfaceElevated', opacity: 0.88, position: 0 },
-            { colorRole: 'surface', opacity: 0.84, position: 1 }
           ]
         }
       },

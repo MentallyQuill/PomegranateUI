@@ -53,7 +53,7 @@ export const BUNNY_THEME: ThemeDefinitionV2 = {
     canvas: material({ base: 'canvas', opacity: 0, blurPx: 0, borderWidthPx: 0, reducedTransparency: 'canvas' }),
     shelf: material({ base: 'chrome', fallback: 'surface', opacity: 0.8, blurPx: 22, saturation: 1.08, brightness: 1.04, border: 'surfaceElevated', borderWidthPx: 1.5, borderOpacity: 0.85, rimOpacity: 0.78, shadowOpacity: 0.14, shadowBlurPx: 48, shadowY: 18 }),
     context: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.68, blurPx: 20, saturation: 1.08, brightness: 1.04, border: 'surfaceElevated', borderOpacity: 0.72, rimOpacity: 0.64, shadowOpacity: 0.08, shadowBlurPx: 24, shadowY: 8 }),
-    panel: material({ base: 'chrome', fallback: 'surface', opacity: 0.58, blurPx: 22, saturation: 1.08, brightness: 1.04, border: 'surfaceElevated', borderWidthPx: 1.5, borderOpacity: 0.85, rimOpacity: 0.7, shadowOpacity: 0.14, shadowBlurPx: 48, shadowY: 18 }),
+    panel: material({ base: 'chrome', fallback: 'surface', opacity: 0, blurPx: 0, borderWidthPx: 0, rimOpacity: 0, reducedTransparency: 'panel' }),
     pane: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.88, blurPx: 18, saturation: 1.08, brightness: 1.03, border: 'border', borderWidthPx: 1, borderOpacity: 0.9, rimOpacity: 0.72, shadowOpacity: 0.12, shadowBlurPx: 26, shadowY: 9, shadowSpreadPx: 0 }),
     header: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.16, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),
     content: material({ base: 'surfaceElevated', fallback: 'surface', opacity: 0.1, blurPx: 0, borderWidthPx: 0, rimOpacity: 0 }),

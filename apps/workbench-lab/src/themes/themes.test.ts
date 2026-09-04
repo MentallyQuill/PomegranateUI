@@ -365,6 +365,7 @@ describe('Workbench Lab theme conformance', () => {
     expect(BUNNY_THEME.canvas.find((layer) => layer.kind === 'image')).toMatchObject({
       assetId: 'image.bunny-garden', fit: 'cover', opacity: 1, saturation: 1
     });
+    expect(BUNNY_THEME.materials.panel).toMatchObject({ opacity: 0, backdrop: { blurPx: 0 }, shadows: [] });
     expect(preset?.surfaceExpression).toMatchObject({
       schemaVersion: 'pomegranate.ui.surface-expression.v1',
       id: 'bunny-stationery',
@@ -377,7 +378,9 @@ describe('Workbench Lab theme conformance', () => {
       }
     });
     expect(preset?.surfaceExpression?.materials).not.toHaveProperty('shelf');
+    expect(preset?.surfaceExpression?.materials).not.toHaveProperty('panel');
     expect(preset?.surfaceExpression?.materials).not.toHaveProperty('pane');
+    expect(preset?.surfaceExpression?.materials).not.toHaveProperty('content');
     expect(preset?.surfaceExpression?.materials).not.toHaveProperty('menu');
     expect(preset?.surfaceExpression?.materials).not.toHaveProperty('dialog');
     expect(preset?.surfaceExpression?.materials).not.toHaveProperty('floating');
@@ -439,7 +442,8 @@ describe('Workbench Lab theme conformance', () => {
     expect(controller.getSnapshot().cssText).toContain('--pom-expression-panel-surface-radius:12px 12px 26px 26px');
     expect(controller.getSnapshot().cssText).toContain('--pom-expression-widget-content-radius:18px 18px 18px 18px');
     expect(controller.getSnapshot().cssText).toContain('--pom-expression-widget-content-font-size:17px');
-    expect(controller.getSnapshot().cssText).toContain('--pom-expression-panel-surface-background-image:linear-gradient(150deg');
+    expect(controller.getSnapshot().cssText).not.toContain('--pom-expression-panel-surface-background-image');
+    expect(controller.getSnapshot().cssText).not.toContain('--pom-expression-widget-content-background-image');
     expect(controller.getSnapshot().cssText).not.toContain('--pom-expression-widget-surface-background-image');
 
     expect(controller.activate('deep-current').ok).toBe(true);

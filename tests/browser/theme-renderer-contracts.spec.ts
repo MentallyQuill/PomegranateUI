@@ -449,9 +449,13 @@ test('Bunny matches the stationery reference while material controls retain fill
   });
 
   expect(evidence.colors).toEqual({ canvas: '#faeef6', accent: '#ed75aa', text: '#45364d' });
+  const shellMaterial = await material(page, '.workbench-shell');
+  expect(shellMaterial.alpha).toBe(0);
+  expect(blurPx(shellMaterial.backdrop)).toBe(0);
   expect(evidence.shelf).toMatchObject({ radius: '24px 24px 12px 12px', height: 52, fontSize: '12px', textTransform: 'none' });
   expect(evidence.shelf.backgroundImage).toBe('none');
   expect(evidence.shell.radius).toBe('12px 12px 26px 26px');
+  expect(evidence.shell.backgroundImage).toBe('none');
   expect(evidence.dock.radius).toBe('20px');
   expect(evidence.widget).toMatchObject({
     radius: '17px',
@@ -468,9 +472,9 @@ test('Bunny matches the stationery reference while material controls retain fill
   expect(evidence.reader).toMatchObject({
     radius: '18px', bodyFontSize: '17px', lineHeight: '26.35px', intersectsStage: true
   });
-  expect(evidence.reader.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.reader.backgroundImage).toBe('none');
   expect(evidence.composer.radius).toBe('18px');
-  expect(evidence.composer.backgroundImage).toContain('linear-gradient(150deg');
+  expect(evidence.composer.backgroundImage).toBe('none');
 
   const catalogButton = page.getByRole('button', { name: 'Open Widget Catalog' });
   await catalogButton.focus();
@@ -537,7 +541,7 @@ test('Bunny keeps the compact reader expressive, contained, and responsive', asy
     composerDraft: '',
     sendLabel: 'Continue'
   });
-  expect(evidence.readerImage).toContain('linear-gradient(150deg');
+  expect(evidence.readerImage).toBe('none');
 });
 
 test('Bunny removes decorative gradients under reduced transparency without losing shape', async ({ page }) => {

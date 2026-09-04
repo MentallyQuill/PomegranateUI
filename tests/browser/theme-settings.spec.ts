@@ -435,11 +435,15 @@ test('Bunny Glass Density reaches genuine transparent glass without an opaque ex
   await selectTheme(page, 'Bunny');
   const materials = widget(page, 'settings.theme-materials');
   const surface = page.locator('[data-widget-type="story.characters"] .widget-frame');
+  const content = surface.locator(':scope > [data-pom-part="widget.content"]');
 
   await materials.getByRole('slider', { name: 'Glass Density' }).fill('0');
   await expect.poll(() => surface.evaluate((element) => getComputedStyle(element).backgroundColor))
     .toMatch(/(?:rgba\([^)]*, 0\)|transparent)/);
   await expect(surface).toHaveCSS('background-image', 'none');
+  await expect(content).toHaveCSS('background-image', 'none');
+  await expect.poll(() => content.evaluate((element) => getComputedStyle(element).backgroundColor))
+    .toMatch(/rgba\([^)]*, 0\.1\)/);
 });
 
 test('Theme drafts save independently of layout persistence and restore through the overview', async ({ page }) => {
