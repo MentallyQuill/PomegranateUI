@@ -51,7 +51,7 @@
         checked={draft.draft.toolbarTogglePresentation === 'bottom-chevrons'}
         onclick={() => setToolbarTogglePresentation('bottom-chevrons')}
       />
-      <span>Bottom chevrons</span>
+      <span>Bottom-edge chevrons</span>
     </label>
   </fieldset>
   {#if theme.authoring.diagnostics.length}

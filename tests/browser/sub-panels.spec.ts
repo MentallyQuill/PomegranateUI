@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
-const labOrigin = process.env.POM_LAB_ORIGIN ?? 'http://127.0.0.1:4174';
+const labOrigin = process.env.POM_LAB_ORIGIN ?? `http://127.0.0.1:${process.env.POM_PLAYWRIGHT_PORT ?? '4174'}`;
 const names = [
   'Account and Access',
   'AI and Models',

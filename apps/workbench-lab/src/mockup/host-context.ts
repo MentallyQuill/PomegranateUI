@@ -40,8 +40,8 @@ export interface LabThemeHostContext {
 }
 
 export interface LabHostContext {
-  readonly storyId: string;
   readonly storyTitle: string;
+  readonly currentScene: string;
   readonly frameLabel: string;
   readonly location: string;
   readonly timeLabel: string;
@@ -52,8 +52,8 @@ export interface LabHostContext {
 }
 
 const LAB_STORY_CONTEXT = Object.freeze({
-  storyId: 'STORY / 7E-19',
   storyTitle: 'The Water Remembers',
+  currentScene: 'FIG. 07 / LIMINAL RESERVOIR',
   frameLabel: 'Present frame · Turn 42',
   location: 'Reservoir Concourse',
   timeLabel: 'Blue hour · rain easing',

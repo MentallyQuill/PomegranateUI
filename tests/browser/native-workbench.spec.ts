@@ -6,6 +6,16 @@ import {
   CATALOG_AUTHORITY_MATRIX,
   CATALOG_AUTHORITY_SHA256
 } from '../reference/widget-catalog-authority.ts';
+import {
+  dragTo,
+  dragToShelfRail,
+  dragToWidgetTab,
+  invokeWidgetAction,
+  tearOffTo,
+  widgetDragSurface
+} from './support/widget-interaction-driver.ts';
+
+const labOrigin = `http://127.0.0.1:${process.env.POM_PLAYWRIGHT_PORT ?? '4174'}`;
 
 async function openDeveloperTools(page: import('@playwright/test').Page) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
@@ -59,44 +69,6 @@ async function openWidgetCatalog(page: import('@playwright/test').Page) {
   await launcher.press('Enter');
 }
 
-async function dragTo(
-  page: import('@playwright/test').Page,
-  handle: import('@playwright/test').Locator,
-  point: { x: number; y: number }
-) {
-  const box = await handle.boundingBox();
-  if (!box) throw new Error('Expected drag handle geometry.');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(point.x, point.y, { steps: 6 });
-  await page.mouse.up();
-}
-
-async function dragToShelfRail(
-  page: import('@playwright/test').Page,
-  handle: import('@playwright/test').Locator,
-  region: string,
-  railKind: 'before' | 'between' | 'after' | 'append' = 'append'
-) {
-  const box = await handle.boundingBox();
-  if (!box) throw new Error('Expected drag handle geometry.');
-  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  if (await handle.getAttribute('data-group-tab')) {
-    await page.mouse.move(start.x, start.y + 18, { steps: 3 });
-  } else {
-    await page.mouse.move(start.x + 12, start.y + 12, { steps: 3 });
-  }
-  const rail = page.locator(`[data-pom-part="widget.drop-rail"][data-drop-region="${region}"][data-drop-rail-kind="${railKind}"]`).last();
-  const railBox = await rail.boundingBox();
-  if (!railBox) throw new Error(`Expected ${region} ${railKind} shelf rail geometry.`);
-  await page.mouse.move(railBox.x + railBox.width / 2, railBox.y + railBox.height / 2, { steps: 6 });
-  await expect(rail).toHaveAttribute('data-active', 'true');
-  await page.mouse.up();
-  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
-}
-
 async function dispatchHeldTouchDrag(
   page: import('@playwright/test').Page,
   start: { x: number; y: number },
@@ -115,54 +87,6 @@ async function dispatchHeldTouchDrag(
     });
   }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-}
-
-async function tearOffTo(
-  page: import('@playwright/test').Page,
-  handle: import('@playwright/test').Locator,
-  point: { x: number; y: number }
-) {
-  const box = await handle.boundingBox();
-  if (!box) throw new Error('Expected grouped Widget tab geometry.');
-  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(start.x, start.y + 18, { steps: 3 });
-  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
-  await page.mouse.move(point.x, point.y, { steps: 8 });
-  await page.mouse.up();
-}
-
-async function dragToWidgetTab(
-  page: import('@playwright/test').Page,
-  handle: import('@playwright/test').Locator,
-  target: import('@playwright/test').Locator
-) {
-  const sourceBox = await handle.boundingBox();
-  if (!sourceBox) throw new Error('Expected Widget grouping geometry.');
-  const start = { x: sourceBox.x + sourceBox.width / 2, y: sourceBox.y + sourceBox.height / 2 };
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(start.x + 12, start.y + 12, { steps: 3 });
-  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
-  const targetBox = await widgetDragSurface(target).boundingBox();
-  if (!targetBox) throw new Error('Expected live Widget grouping target geometry.');
-  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2);
-  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', 'tab');
-  await page.mouse.up();
-  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
-}
-
-function widgetDragSurface(widget: import('@playwright/test').Locator) {
-  return widget
-    .locator(':scope > header[data-widget-drag-surface], :scope > .widget-frame > header[data-widget-drag-surface]')
-    .or(widget.locator('xpath=ancestor::section[@data-widget-group][1]//button[@data-widget-drag-surface][@aria-selected="true"]'))
-    .first();
-}
-
-async function invokeWidgetAction(widget: import('@playwright/test').Locator, name: string) {
-  await widget.getByRole('button', { name: 'Widget actions' }).click();
-  await widget.getByRole('menuitem', { name }).click();
 }
 
 async function horizontalOverflowEvidence(locator: import('@playwright/test').Locator) {
@@ -185,18 +109,22 @@ async function horizontalOverflowEvidence(locator: import('@playwright/test').Lo
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('http://127.0.0.1:4174');
+  await page.goto(labOrigin);
   await page.evaluate(() => window.localStorage.clear());
   await page.reload();
   await page.evaluate(() => document.fonts.ready);
 });
 
-test('native workbench POM-PANEL-07856BFE9A POM-PANEL-DF4EC7C581 activates a Panel without changing story identity', async ({ page }) => {
-  const story = page.getByLabel('Active story identity');
-  await expect(story).toContainText('STORY / 7E-19');
+test('native workbench POM-PANEL-07856BFE9A POM-PANEL-DF4EC7C581 keeps story context inside the Scene stage', async ({ page }) => {
+  const shelf = page.locator('.top-shelf');
+  const storyStage = page.getByRole('region', { name: 'Story reading stage' });
+  await expect(shelf).not.toContainText('The Water Remembers');
+  await expect(storyStage.getByRole('heading', { level: 1, name: 'The Water Remembers' })).toBeVisible();
+  await expect(storyStage.locator('.story-context-heading p')).toHaveText('Current scene: FIG. 07 / LIMINAL RESERVOIR');
   await page.getByRole('tab', { name: 'Library' }).click();
   await expect(page.getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
-  await expect(story).toContainText('STORY / 7E-19');
+  await expect(shelf).not.toContainText('The Water Remembers');
+  await expect(page.getByRole('region', { name: 'Story reading stage' })).toHaveCount(0);
   await expect(page.getByRole('alert', { name: 'Character Card renderer failed' })).toBeVisible();
   await expect(page.locator('[data-surface-type="library.workspace"]')).toBeVisible();
 });
@@ -474,22 +402,20 @@ test('Create Panel follows the last Panel tab while the rail has room', async ({
   const lastTab = page.getByRole('tablist', { name: 'Panels' }).getByRole('tab').last();
   const addPanel = page.getByRole('button', { name: 'Create Panel' });
   const widgets = page.getByRole('button', { name: 'Open Widget Catalog' });
-  const storyId = page.locator('.story-lockup > span');
-  const geometry = await Promise.all([lastTab.boundingBox(), addPanel.boundingBox(), widgets.boundingBox(), storyId.boundingBox()]);
+  const geometry = await Promise.all([lastTab.boundingBox(), addPanel.boundingBox(), widgets.boundingBox()]);
   if (geometry.some((box) => !box)) throw new Error('Expected visible Panel chrome geometry.');
-  const [tabBox, addBox, widgetBox, storyIdBox] = geometry as [
+  const [tabBox, addBox, widgetBox] = geometry as [
     NonNullable<typeof geometry[0]>,
     NonNullable<typeof geometry[1]>,
-    NonNullable<typeof geometry[2]>,
-    NonNullable<typeof geometry[3]>
+    NonNullable<typeof geometry[2]>
   ];
 
   expect(Math.abs(addBox.x - (tabBox.x + tabBox.width))).toBeLessThanOrEqual(1);
   expect(widgetBox.x - (addBox.x + addBox.width)).toBeGreaterThan(40);
-  expect(storyIdBox.x).toBe(589);
+  await expect(page.locator('.top-shelf')).not.toContainText('The Water Remembers');
 });
 
-test('four short Panel tabs keep the story lockup while Create Panel follows the rail', async ({ page }) => {
+test('four short Panel tabs keep story context in the stage while Create Panel follows the rail', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1280 });
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Create Panel' }).click();
@@ -505,8 +431,8 @@ test('four short Panel tabs keep the story lockup while Create Panel follows the
   const [tabBox, addBox] = geometry as [NonNullable<typeof geometry[0]>, NonNullable<typeof geometry[1]>];
 
   expect(Math.abs(addBox.x - (tabBox.x + tabBox.width))).toBeLessThanOrEqual(1);
-  await expect(page.locator('.panel-chrome-flow')).toHaveAttribute('data-story-obscured', 'false');
-  await expect(page.locator('.story-lockup')).toBeVisible();
+  await expect(page.locator('.top-shelf')).not.toContainText('The Water Remembers');
+  await expect(page.getByRole('region', { name: 'Story reading stage' })).toHaveCount(0);
 });
 
 test('Create Panel pins immediately before Widgets when the wide Panel rail overflows', async ({ page }) => {
@@ -540,9 +466,8 @@ test('Create Panel pins immediately before Widgets when the wide Panel rail over
   expect(railSize.scrollWidth).toBeGreaterThan(railSize.clientWidth);
   expect(Math.abs(addBox.x - (railBox.x + railBox.width))).toBeLessThanOrEqual(1);
   expect(Math.abs(widgetBox.x - (addBox.x + addBox.width))).toBeLessThanOrEqual(1);
-  const storyIdentity = page.getByLabel('Active story identity');
-  await expect(storyIdentity).toHaveAccessibleName('Active story identity');
-  expect(await storyIdentity.ariaSnapshot()).toContain('STORY / 7E-19');
+  await expect(page.locator('.top-shelf')).not.toContainText('The Water Remembers');
+  await expect(page.getByRole('region', { name: 'Story reading stage' })).toHaveCount(0);
 });
 
 test('Panel tab drag pans an overflowing rail without activation or reorder', async ({ page }) => {
@@ -784,7 +709,7 @@ test('a grouped Widget tears off and docks through a Panel tab', async ({ page }
 
   await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 + 18, { steps: 3 });
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 + 28, { steps: 3 });
   await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
   await page.mouse.move(libraryBox.x + libraryBox.width / 2, libraryBox.y + libraryBox.height / 2, { steps: 8 });
   await expect(libraryTab).toHaveAttribute('aria-selected', 'true');
@@ -834,7 +759,7 @@ test('phone portrait touch exploration pans tabs and opens actions from the acti
   const context = await browser.newContext({ viewport: { width: 1024, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4174');
+    await page.goto(labOrigin);
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     await seedPanelRail(page);
@@ -1074,8 +999,7 @@ test('dragging an inactive grouped Widget holds that Widget rather than the acti
   await page.mouse.move(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2);
   await page.mouse.down();
   await expect(inactiveTab).toHaveAttribute('aria-selected', 'false');
-  await page.mouse.move(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2 + 18, { steps: 3 });
-  await page.mouse.move(tabBox.x + tabBox.width + 100, tabBox.y + tabBox.height / 2 + 18, { steps: 3 });
+  await page.mouse.move(tabBox.x + tabBox.width + 100, tabBox.y + tabBox.height + 10, { steps: 3 });
   await expect(page.locator('[data-pom-part="tab.insertion"]')).toHaveCount(0);
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
 
@@ -1154,7 +1078,7 @@ test('Deep Current edge controls collapse and restore both toolbars without hidi
   await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
 });
 
-test('Theme Library bottom chevrons sit at each toolbar bottom and flip with collapsed state', async ({ page }) => {
+test('Theme Library bottom-edge chevrons reuse edge tabs outside each toolbar and flip with collapsed state', async ({ page }) => {
   await page.getByRole('tab', { name: 'Settings' }).click();
   await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
   await page.getByRole('article', { name: 'Theme Library' }).getByRole('button', { name: /^PomOS/ }).click();
@@ -1165,19 +1089,20 @@ test('Theme Library bottom chevrons sit at each toolbar bottom and flip with col
   const right = page.locator('.toolbar-edge-toggle-right');
   const leftRegion = page.locator('[data-conformance-region="left"]');
   const rightRegion = page.locator('[data-conformance-region="right"]');
+  const viewport = page.viewportSize();
   const [leftBox, rightBox, leftRegionBox, rightRegionBox] = await Promise.all([
     left.boundingBox(), right.boundingBox(), leftRegion.boundingBox(), rightRegion.boundingBox()
   ]);
-  if (!leftBox || !rightBox || !leftRegionBox || !rightRegionBox) throw new Error('Expected toolbar toggle and dock geometry.');
+  if (!viewport || !leftBox || !rightBox || !leftRegionBox || !rightRegionBox) throw new Error('Expected toolbar toggle, dock, and viewport geometry.');
 
-  expect(leftBox.width).toBe(44);
-  expect(leftBox.height).toBe(44);
-  expect(rightBox.width).toBe(44);
-  expect(rightBox.height).toBe(44);
-  expect(Math.abs(leftBox.x + leftBox.width / 2 - (leftRegionBox.x + leftRegionBox.width / 2))).toBeLessThan(2);
-  expect(Math.abs(rightBox.x + rightBox.width / 2 - (rightRegionBox.x + rightRegionBox.width / 2))).toBeLessThan(2);
-  expect(Math.abs(leftBox.y + leftBox.height - (leftRegionBox.y + leftRegionBox.height))).toBeLessThan(2);
-  expect(Math.abs(rightBox.y + rightBox.height - (rightRegionBox.y + rightRegionBox.height))).toBeLessThan(2);
+  expect(leftBox.width).toBe(30);
+  expect(leftBox.height).toBe(116);
+  expect(rightBox.width).toBe(30);
+  expect(rightBox.height).toBe(116);
+  expect(Math.abs(leftBox.x - (leftRegionBox.x + leftRegionBox.width))).toBeLessThan(2);
+  expect(Math.abs(leftBox.y + leftBox.height - viewport.height)).toBeLessThan(2);
+  expect(Math.abs(rightBox.x + rightBox.width - rightRegionBox.x)).toBeLessThan(2);
+  expect(Math.abs(rightBox.y + rightBox.height - viewport.height)).toBeLessThan(2);
   await expect(left).toHaveText('‹');
   await expect(right).toHaveText('›');
 
@@ -1189,6 +1114,12 @@ test('Theme Library bottom chevrons sit at each toolbar bottom and flip with col
   await expect(right).toHaveText('‹');
   await expect(left).toBeVisible();
   await expect(right).toBeVisible();
+  const [collapsedLeftBox, collapsedRightBox] = await Promise.all([left.boundingBox(), right.boundingBox()]);
+  if (!collapsedLeftBox || !collapsedRightBox) throw new Error('Expected collapsed toolbar toggle geometry.');
+  expect(Math.abs(collapsedLeftBox.x)).toBeLessThan(2);
+  expect(Math.abs(collapsedLeftBox.y + collapsedLeftBox.height - viewport.height)).toBeLessThan(2);
+  expect(Math.abs(collapsedRightBox.x + collapsedRightBox.width - viewport.width)).toBeLessThan(2);
+  expect(Math.abs(collapsedRightBox.y + collapsedRightBox.height - viewport.height)).toBeLessThan(2);
 });
 
 test('Deep Current narrow dock keeps the complete contextual Widget Actions menu', async ({ page }) => {
@@ -1210,7 +1141,7 @@ test('Deep Current narrow dock keeps the complete contextual Widget Actions menu
   ]);
 });
 
-test('Deep Current held Widget exposes the Atmospheric card, rails, and tab preview', async ({ page }) => {
+test('Deep Current held Widget exposes one compact identity, rails, and tab preview', async ({ page }) => {
   const characters = page.locator('[data-widget-type="story.characters"]').first();
   const worldState = page.getByRole('article', { name: 'World State' });
   const handle = widgetDragSurface(characters);
@@ -1225,7 +1156,10 @@ test('Deep Current held Widget exposes the Atmospheric card, rails, and tab prev
   const held = page.locator('[data-pom-part="widget.drag-preview"]');
   await expect(held).toBeVisible();
   await expect(held).toContainText('Characters');
-  await expect(held.locator('article')).toHaveCount(1);
+  await expect(held).toHaveAttribute('data-widget-drag-type', 'story.characters');
+  await expect(held.locator('article')).toHaveCount(0);
+  await expect(held.locator('button, input, select, textarea, a[href]')).toHaveCount(0);
+  await expect(page.locator('[data-pom-part="widget.drop-overlay"]')).toHaveText('');
   await expect(page.locator('[data-pom-part="widget.drop-rail"]')).not.toHaveCount(0);
   await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toBeVisible();
   await expect(page.locator('[data-pom-part="widget.tab-insertion"]')).toBeVisible();
@@ -1288,7 +1222,7 @@ test('dragging to a collapsed edge reveals and widens that dock before commit', 
   await expect(page.locator('main')).not.toHaveAttribute('data-drag-reveal-left');
 });
 
-test('grouped Widget tabs reorder horizontally without accidental detachment', async ({ page }) => {
+test('grouped Widget tabs reorder when released inside the tab corridor', async ({ page }) => {
   const customTheme = page.getByRole('article', { name: 'Theme Materials' });
   const characters = page.getByRole('article', { name: 'Characters (Story)' });
   await dragToWidgetTab(page, widgetDragSurface(customTheme), characters);
@@ -1304,7 +1238,6 @@ test('grouped Widget tabs reorder horizontally without accidental detachment', a
   await page.mouse.down();
   await page.mouse.move(secondBox.x + secondBox.width - 2, secondBox.y + secondBox.height / 2, { steps: 8 });
   await expect(page.locator('[data-pom-part="tab.insertion"]')).toBeVisible();
-  await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height + 160, { steps: 4 });
   await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
   await page.mouse.up();
   await expect(group.getByRole('tab')).toHaveText(['Theme Materials', 'Characters (Story)']);
@@ -1316,7 +1249,7 @@ test('grouped Widget tabs reorder horizontally without accidental detachment', a
   await expect(renderedCharacters).toHaveAttribute('data-pomegranate-placement', 'docked');
 });
 
-test('all themes preserve the same held-card docking composition', async ({ page }, testInfo) => {
+test('all themes preserve the same compact held-identity docking composition', async ({ page }, testInfo) => {
   await openDeveloperTools(page);
   const themes = page.getByRole('group', { name: 'Visual target' });
 
@@ -1334,7 +1267,10 @@ test('all themes preserve the same held-card docking composition', async ({ page
 
     const held = page.locator('[data-pom-part="widget.drag-preview"]');
     await expect(held.locator('xpath=ancestor::main[@data-pom-theme-root]')).toHaveCount(1);
-    await expect(held.locator('[data-widget-type="story.characters"]')).toHaveCount(1);
+    await expect(held).toHaveAttribute('data-widget-drag-type', 'story.characters');
+    await expect(held).toContainText('Characters');
+    await expect(held.locator('article, button, input, select, textarea, a[href]')).toHaveCount(0);
+    await expect(page.locator('[data-pom-part="widget.drop-overlay"]')).toHaveText('');
     const [heldBox, snapBox, railCount, colors, viewport] = await Promise.all([
       held.boundingBox(),
       page.locator('[data-pom-part="widget.snap-preview"]').boundingBox(),
@@ -1342,8 +1278,9 @@ test('all themes preserve the same held-card docking composition', async ({ page
       held.evaluate((node) => ({ border: getComputedStyle(node).borderColor, background: getComputedStyle(node).backgroundColor })),
       page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }))
     ]);
-    expect(heldBox?.width).toBeGreaterThanOrEqual(230);
-    expect(heldBox?.height).toBeGreaterThanOrEqual(120);
+    expect(heldBox?.width).toBeGreaterThanOrEqual(180);
+    expect(heldBox?.width).toBeLessThanOrEqual(280);
+    expect(heldBox?.height).toBeCloseTo(42, 1);
     expect(heldBox?.x).toBeGreaterThanOrEqual(0);
     expect(heldBox?.y).toBeGreaterThanOrEqual(0);
     expect((heldBox?.x ?? viewport.width) + (heldBox?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
@@ -1489,7 +1426,7 @@ test('pre-hold touch movement cancels the Widget drag candidate permanently', as
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4174');
+    await page.goto(labOrigin);
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     const handle = widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' }));
@@ -1517,7 +1454,7 @@ test('Deep Current accepts the same shelf placement path from a deliberate coars
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4174');
+    await page.goto(labOrigin);
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     const handle = widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' }));
@@ -1529,9 +1466,10 @@ test('Deep Current accepts the same shelf placement path from a deliberate coars
     const handleElement = await grip.elementHandle();
     if (!handleElement) throw new Error('Expected touch placement handle.');
     const start = { x: handleBox.x + handleBox.width / 2, y: handleBox.y + handleBox.height / 2 };
+    const departureY = handleBox.y + handleBox.height + 10;
     await handleElement.dispatchEvent('pointerdown', { pointerId: 18, pointerType: 'touch', isPrimary: true, button: 0, clientX: start.x, clientY: start.y });
     await page.waitForTimeout(190);
-    await handleElement.dispatchEvent('pointermove', { pointerId: 18, pointerType: 'touch', isPrimary: true, button: 0, clientX: start.x, clientY: start.y + 20 });
+    await handleElement.dispatchEvent('pointermove', { pointerId: 18, pointerType: 'touch', isPrimary: true, button: 0, clientX: start.x, clientY: departureY });
     await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
     const railBox = await page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="left"][data-drop-rail-kind="append"]').last().boundingBox();
     if (!railBox) throw new Error('Expected touch shelf rail geometry.');
@@ -1549,7 +1487,7 @@ test('phone touch panning outside the dedicated Widget grip scrolls and never be
   const context = await browser.newContext({ viewport: { width: 390, height: 500 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4174');
+    await page.goto(labOrigin);
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     await page.getByRole('tab', { name: 'Settings' }).click();
@@ -1758,7 +1696,7 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4174');
+    await page.goto(labOrigin);
     await page.evaluate(() => document.fonts.ready);
     expect(await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches)).toBe(true);
     await openDeveloperTools(page);
@@ -1799,7 +1737,7 @@ test('all 98 reviewed Widget surfaces expose exact ready, state, focus, and resp
   for (const surface of IMPLEMENTED_SURFACES) {
     const fixture = SURFACE_FIXTURES.get(surface.type);
     if (!fixture) throw new Error(`Missing fixture for ${surface.type}.`);
-    await page.goto(`http://127.0.0.1:4174/?surface=${encodeURIComponent(surface.type)}`);
+    await page.goto(`${labOrigin}/?surface=${encodeURIComponent(surface.type)}`);
     await page.evaluate(() => document.fonts.ready);
     const article = page.locator(`[data-widget-type="${surface.type}"] > article`);
     await expect(article).toHaveCount(1);

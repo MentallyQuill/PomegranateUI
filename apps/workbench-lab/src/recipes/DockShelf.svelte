@@ -5,11 +5,12 @@
   import WidgetRowResizeHandle from './WidgetRowResizeHandle.svelte';
   import WidgetGroup from './WidgetGroup.svelte';
 
-  let { projection, store, renderWidget, titleFor, resizable = false, rowResizable = true }: {
+  let { projection, store, renderWidget, titleFor, onexpanddock, resizable = false, rowResizable = true }: {
     projection: PanelShelfProjection;
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
+    onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
     resizable?: boolean;
     rowResizable?: boolean;
   } = $props();
@@ -62,7 +63,7 @@
   {#each items as item (item.id)}
     {@const rowFrame = frameFor(item)}
     {#if item.kind === 'group'}
-      <WidgetGroup frames={item.frames} {store} {renderWidget} {titleFor} />
+      <WidgetGroup frames={item.frames} {store} {renderWidget} {titleFor} {onexpanddock} />
     {:else}
       {@render renderWidget(item.frame)}
     {/if}

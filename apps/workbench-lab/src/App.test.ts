@@ -269,12 +269,23 @@ describe('Svelte Workbench Lab mockup', () => {
     expect([...stage?.querySelectorAll<HTMLElement>('*') ?? []].some((node) => node.style.backgroundImage !== '')).toBe(false);
   });
 
+  it('keeps the story title and current scene in the reading stage instead of the Panel shelf', () => {
+    const { container } = render(App);
+    const shelf = container.querySelector('.top-shelf') as HTMLElement;
+    const storyStage = screen.getByRole('region', { name: 'Story reading stage' });
+
+    expect(within(shelf).queryByText('The Water Remembers')).toBeNull();
+    expect(within(shelf).queryByText('STORY / 7E-19')).toBeNull();
+    const storyTitle = within(storyStage).getByRole('heading', { level: 1, name: 'The Water Remembers' });
+    const currentScene = storyStage.querySelector('.story-context-heading p') as HTMLElement;
+    expect(currentScene).toHaveTextContent('Current scene: FIG. 07 / LIMINAL RESERVOIR');
+    expect(storyTitle.compareDocumentPosition(currentScene) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: 'The Water Remembers' })).toHaveLength(1);
+  });
+
   it('renders the atmospheric shell and the exact recording-visible Scene stack', () => {
     const { container } = render(App);
     expect(screen.getByText('PomegranateUI')).toBeVisible();
-    expect(screen.getAllByText('The Water Remembers').length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('Active story identity')).toHaveTextContent('STORY / 7E-19');
-    expect(screen.getByText('FIG. 07 / LIMINAL RESERVOIR')).toBeVisible();
     expect(within(screen.getByRole('tablist', { name: 'Panels' })).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Library', 'Settings']);
     for (const title of ['Characters (Story)', 'Theme Materials', 'Transcript', 'Composer', 'World State', 'Room Ambience']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();
@@ -391,6 +402,66 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(dialog).not.toHaveAttribute('open');
   });
 
+  it('renders each Panel template as a theme-selected visual card', async () => {
+    const user = userEvent.setup();
+    render(App);
+    await user.click(screen.getByRole('button', { name: 'Create Panel' }));
+    const dialog = screen.getByRole('dialog', { name: 'Create a Panel' });
+    const layoutGroup = within(dialog).getByRole('group', { name: 'Panel layout' });
+
+    const cardFor = (name: RegExp) => {
+      const radio = within(layoutGroup).getByRole('radio', { name });
+      const card = radio.closest('[data-panel-template-card]');
+      if (!(card instanceof HTMLElement)) throw new Error(`Missing visual template card for ${name}.`);
+      return card;
+    };
+
+    const storyStage = cardFor(/Story Stage/);
+    const focusSupport = cardFor(/Focus \+ Support/);
+    const columns = cardFor(/Columns/);
+
+    expect(storyStage).toHaveAttribute('data-pom-part', 'row.surface');
+    expect(focusSupport).toHaveAttribute('data-pom-part', 'row.surface');
+    expect(columns).toHaveAttribute('data-pom-part', 'row.surface');
+    expect(columns).toHaveAttribute('data-pom-selected', 'true');
+    expect(storyStage).not.toHaveAttribute('data-pom-selected');
+    expect(storyStage.querySelectorAll('[data-panel-preview-region]')).toHaveLength(4);
+    expect(focusSupport.querySelectorAll('[data-panel-preview-region]')).toHaveLength(2);
+    expect(columns.querySelectorAll('[data-panel-preview-region="column"]')).toHaveLength(3);
+
+    const columnsRadio = within(layoutGroup).getByRole('radio', { name: /Columns/ });
+    columnsRadio.focus();
+    await user.keyboard('{ArrowLeft}');
+    expect(within(layoutGroup).getByRole('radio', { name: /Focus \+ Support/ })).toBeChecked();
+    expect(focusSupport).toHaveAttribute('data-pom-selected', 'true');
+    await user.keyboard('{ArrowLeft}');
+    expect(storyStage).toHaveAttribute('data-pom-selected', 'true');
+    expect(columns).not.toHaveAttribute('data-pom-selected');
+  });
+
+  it('updates the Columns miniature from an accessible segmented count selector', async () => {
+    const user = userEvent.setup();
+    render(App);
+    await user.click(screen.getByRole('button', { name: 'Create Panel' }));
+    const dialog = screen.getByRole('dialog', { name: 'Create a Panel' });
+    const countGroup = within(dialog).getByRole('group', { name: 'Columns' });
+    const columnsCard = within(dialog).getByRole('radio', { name: /Columns/ }).closest('[data-panel-template-card]');
+    if (!(columnsCard instanceof HTMLElement)) throw new Error('Missing Columns visual template card.');
+
+    expect(within(countGroup).getAllByRole('radio')).toHaveLength(5);
+    expect(within(countGroup).getByRole('radio', { name: '3' })).toBeChecked();
+    expect(within(dialog).queryByRole('combobox', { name: 'Columns' })).toBeNull();
+    const threeColumns = within(countGroup).getByRole('radio', { name: '3' });
+    threeColumns.focus();
+    await user.keyboard('{ArrowRight}{ArrowRight}');
+    expect(within(countGroup).getByRole('radio', { name: '5' })).toBeChecked();
+    expect(within(countGroup).getByRole('radio', { name: '5' }).closest('[data-column-count-option]')).toHaveAttribute('data-pom-selected', 'true');
+    expect(columnsCard.querySelectorAll('[data-panel-preview-region="column"]')).toHaveLength(5);
+
+    await user.click(within(dialog).getByRole('radio', { name: /Focus \+ Support/ }));
+    expect(within(dialog).queryByRole('group', { name: 'Columns' })).toBeNull();
+  });
+
   it('contains one failed implemented renderer without disabling its implemented siblings', async () => {
     const user = userEvent.setup();
     render(App);
@@ -493,7 +564,7 @@ describe('Svelte Workbench Lab mockup', () => {
     await user.clear(within(dialog).getByRole('textbox', { name: 'Panel name' }));
     await user.type(within(dialog).getByRole('textbox', { name: 'Panel name' }), 'Four Columns');
     await user.click(within(dialog).getByRole('radio', { name: /Columns/ }));
-    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Columns' }), '4');
+    await user.click(within(within(dialog).getByRole('group', { name: 'Columns' })).getByRole('radio', { name: '4' }));
     await user.click(within(dialog).getByRole('button', { name: 'Create Panel' }));
     expect(screen.getByRole('tab', { name: 'Four Columns' })).toHaveAttribute('aria-selected', 'true');
     expect([...container.querySelectorAll('[data-pomegranate-region-surface]')].map((node) => node.getAttribute('data-pomegranate-region-surface'))).toEqual([
@@ -618,7 +689,7 @@ describe('Svelte Workbench Lab mockup', () => {
     const controls = within(customTheme).getByRole('group', { name: 'Toolbar controls' });
 
     expect(within(controls).getByRole('radio', { name: 'Edge labels' })).toBeChecked();
-    await user.click(within(controls).getByRole('radio', { name: 'Bottom chevrons' }));
+    await user.click(within(controls).getByRole('radio', { name: 'Bottom-edge chevrons' }));
     expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
     await user.click(screen.getByRole('tab', { name: 'Scene' }));
     expect(screen.getByRole('button', { name: 'Close left toolbar' })).toHaveTextContent('‹');
@@ -635,6 +706,6 @@ describe('Svelte Workbench Lab mockup', () => {
     const library = screen.getByRole('article', { name: 'Theme Library' });
     await user.click(within(library).getByRole('button', { name: /^PomOS/ }));
     expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
-    expect(within(resetControls).getByRole('radio', { name: 'Bottom chevrons' })).toBeChecked();
+    expect(within(resetControls).getByRole('radio', { name: 'Bottom-edge chevrons' })).toBeChecked();
   });
 });

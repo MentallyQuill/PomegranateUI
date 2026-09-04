@@ -102,6 +102,6 @@
 - [x] Run unit, typecheck, native, build, recipe, pack, and browser verification.
 - [x] Inspect the rendered controls and interactions in the real Workbench Lab.
 - [x] Review the complete diff for unrelated changes and legal coverage.
-- [ ] Commit the scoped implementation.
-- [ ] Integrate the latest remote `main` without touching the dirty primary checkout.
-- [ ] Push the verified commit directly to `main` and confirm the remote head.
+- [x] Commit the scoped implementation.
+- [x] Integrate the latest remote `main` without touching the dirty primary checkout.
+- [x] Push the verified commit directly to `main` and confirm the remote head.

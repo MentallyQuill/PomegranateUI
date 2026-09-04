@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 test.skip(process.platform !== 'win32', 'Visual baselines are reviewed on Windows; functional browser coverage remains cross-platform.');
 
-const labOrigin = process.env.POM_LAB_ORIGIN ?? 'http://127.0.0.1:4174';
+const labOrigin = process.env.POM_LAB_ORIGIN ?? `http://127.0.0.1:${process.env.POM_PLAYWRIGHT_PORT ?? '4174'}`;
 
 async function fresh(page: Page, width: number, height: number) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -53,6 +53,19 @@ async function openDeveloperTools(page: Page) {
 async function closeDeveloperTools(page: Page) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
   if (await drawer.getAttribute('open') !== null) await page.getByText('Developer tools', { exact: true }).click();
+}
+
+async function openPanelCreateDialog(page: Page) {
+  await openDeveloperTools(page);
+  const launchers = page.getByRole('button', { name: 'Create Panel' });
+  for (let index = 0; index < await launchers.count(); index += 1) {
+    if (!await launchers.nth(index).isVisible()) continue;
+    await launchers.nth(index).click();
+    const drawer = page.locator('[data-workbench-developer-drawer]');
+    await drawer.evaluate((node: HTMLDetailsElement) => { node.open = false; });
+    return page.getByRole('dialog', { name: 'Create a Panel' });
+  }
+  throw new Error('Expected a visible Create Panel launcher.');
 }
 
 async function seedOverflowingPanels(page: Page) {
@@ -388,6 +401,28 @@ const shot = (page: Page, name: string) => expect(page).toHaveScreenshot(name, {
   fullPage: false
 });
 
+for (const theme of maintainedThemes) {
+  test(`${theme.label} visually composes the responsive Panel template picker`, async ({ page }) => {
+    await fresh(page, 1200, 800);
+    await selectTheme(page, theme.label);
+    let dialog = await openPanelCreateDialog(page);
+    await expect(dialog.locator('[data-panel-template-card]')).toHaveCount(3);
+    await expect(dialog).toHaveScreenshot(`create-panel-${theme.slug}.png`, {
+      animations: 'disabled',
+      caret: 'hide'
+    });
+
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await settle(page);
+    dialog = await openPanelCreateDialog(page);
+    await expect(dialog).toHaveScreenshot(`create-panel-${theme.slug}-compact.png`, {
+      animations: 'disabled',
+      caret: 'hide'
+    });
+  });
+}
+
 test('native workbench stable mockup surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);
   await shot(page, 'wide-scene.png');
@@ -451,6 +486,19 @@ test('Deep Current freezes reviewed phone and mobile desktop-site compositions',
     await shot(page, target.name);
     await context.close();
   }
+});
+
+test('Deep Current freezes the authored bottom-edge toolbar controls', async ({ page }) => {
+  await fresh(page, 408, 844);
+  await openAppearanceSettings(page);
+  await page.getByRole('group', { name: 'Toolbar controls' })
+    .getByRole('radio', { name: 'Bottom-edge chevrons' })
+    .click();
+  await page.getByRole('tab', { name: 'Scene' }).click();
+  const leftDock = page.locator('[data-conformance-region="left"]');
+  if (!await leftDock.isVisible()) await page.locator('.toolbar-edge-toggle-left').click();
+  await expect(leftDock).toBeVisible();
+  await shot(page, 'deep-mobile-bottom-edge-chevrons.png');
 });
 
 test('Theme Settings freezes the focused wide and compact authoring surfaces', async ({ page }) => {

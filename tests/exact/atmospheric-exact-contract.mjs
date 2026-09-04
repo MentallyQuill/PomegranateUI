@@ -15,7 +15,7 @@ export const ATMOSPHERIC_EXACT_GEOMETRY = Object.freeze({
   left: Object.freeze({ x: 0, y: 40, width: 286, height: 1240 }),
   stage: Object.freeze({ x: 286, y: 40, width: 1348, height: 1240 }),
   right: Object.freeze({ x: 1634, y: 40, width: 286, height: 1240 }),
-  story: Object.freeze({ x: 620, y: 1038.109375, width: 680, height: 139.890625 }),
+  story: Object.freeze({ x: 620, y: 1072.109375, width: 680, height: 105.890625 }),
   composer: Object.freeze({ x: 620, y: 1206, width: 680, height: 56 })
 });
 

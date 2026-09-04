@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const labOrigin = process.env.POM_LAB_ORIGIN ?? 'http://127.0.0.1:4174';
+const labOrigin = process.env.POM_LAB_ORIGIN ?? `http://127.0.0.1:${process.env.POM_PLAYWRIGHT_PORT ?? '4174'}`;
 
 async function openFresh(page: Page, width: number, height: number) {
   await page.setViewportSize({ width, height });
@@ -87,7 +87,7 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
         return display !== 'none' && display !== 'contents';
       })
       .map((element, index) => rect(element, `shelf child ${index}`));
-    const visibleShelfInternals = [...document.querySelectorAll('.top-shelf :is([role="tab"], .story-lockup > *, .shelf-actions > *)')]
+    const visibleShelfInternals = [...document.querySelectorAll('.top-shelf :is([role="tab"], .shelf-actions > *)')]
       .filter((element): element is HTMLElement => {
         if (!(element instanceof HTMLElement)) return false;
         const bounds = element.getBoundingClientRect();
@@ -291,6 +291,55 @@ test('PomOS grouped controls keep one translucent material owner and transparent
   expect(evidence.rowBackdrop).toBe('none');
 });
 
+test('story title context keeps readable computed contrast across maintained themes', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber'] as const) {
+    if (theme !== 'Deep Current') await selectTheme(page, theme);
+    const evidence = await page.locator('.story-context-heading').evaluate((heading) => {
+      const channels = (value: string) => {
+        const values = value.match(/[\d.]+/g)?.map(Number) ?? [];
+        if (values.length < 3) throw new Error(`Could not parse color: ${value}`);
+        const scale = value.startsWith('color(srgb') ? 255 : 1;
+        return { red: values[0]! * scale, green: values[1]! * scale, blue: values[2]! * scale, alpha: values[3] ?? 1 };
+      };
+      const luminance = ({ red, green, blue }: { red: number; green: number; blue: number }) => {
+        const linear = [red, green, blue].map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!;
+      };
+      return [...heading.querySelectorAll<HTMLElement>('h1, p')].map((element) => {
+        const style = getComputedStyle(element);
+        const foreground = channels(style.color);
+        const background = channels(style.backgroundColor);
+        const composite = {
+          red: foreground.red * foreground.alpha + background.red * (1 - foreground.alpha),
+          green: foreground.green * foreground.alpha + background.green * (1 - foreground.alpha),
+          blue: foreground.blue * foreground.alpha + background.blue * (1 - foreground.alpha)
+        };
+        const foregroundLuminance = luminance(composite);
+        const backgroundLuminance = luminance(background);
+        return {
+          role: element.tagName === 'H1' ? 'story title' : 'current scene',
+          backgroundAlpha: background.alpha,
+          contrast: (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+            / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05),
+          textShadow: style.textShadow
+        };
+      });
+    });
+
+    expect(evidence).toHaveLength(2);
+    for (const sample of evidence) {
+      expect(sample.backgroundAlpha, `${theme} ${sample.role} backing opacity`).toBe(1);
+      expect(sample.contrast, `${theme} ${sample.role} contrast`).toBeGreaterThanOrEqual(4.5);
+      expect(sample.textShadow, `${theme} ${sample.role} protective shadow`).not.toBe('none');
+    }
+  }
+});
+
 test('PomOS metadata remains legible and the compact composer retains its complete status line', async ({ page }) => {
   await openFresh(page, 1440, 900);
   await activatePomOS(page);
@@ -303,8 +352,8 @@ test('PomOS metadata remains legible and the compact composer retains its comple
     };
     return {
       wordmark: fontSize('.wordmark small'),
-      storyLabel: fontSize('.story-lockup span'),
-      storyMeta: fontSize('.story-lockup small'),
+      storyTitle: fontSize('.story-context-heading h1'),
+      currentScene: fontSize('.story-context-heading p'),
       transcriptKicker: fontSize('.transcript .widget-kicker'),
       themeControls: fontSize('[data-theme-authoring-element="materials"]'),
       characterName: fontSize('.recording-character-copy strong'),
@@ -412,7 +461,9 @@ test('native workbench keeps literal relationships and keyboard navigation witho
   await expect(tabs).toHaveText(order);
   await page.getByRole('tab', { name: 'Settings' }).press('Home');
   await expect(scene).toBeFocused();
-  await expect(page.getByLabel('Active story identity')).toContainText('STORY / 7E-19');
+  const storyStage = page.getByRole('region', { name: 'Story reading stage' });
+  await expect(storyStage.getByRole('heading', { level: 1, name: 'The Water Remembers' })).toBeVisible();
+  await expect(storyStage.locator('.story-context-heading p')).toHaveText('Current scene: FIG. 07 / LIMINAL RESERVOIR');
 });
 
 test('non-compact Panel tabs keep secondary actions out of their visible spacing', async ({ page }) => {
@@ -1359,6 +1410,19 @@ test.describe('coarse-pointer Deep controls', () => {
       expect(Math.round((await slider.boundingBox())?.height ?? 0)).toBeGreaterThanOrEqual(44);
     }
   });
+
+  test('preserves 44px Panel column-count targets', async ({ page }) => {
+    await openFresh(page, 390, 844);
+    await page.getByText('Developer tools', { exact: true }).click();
+    await page.getByRole('button', { name: 'Create Panel' }).click();
+    const choices = page.getByRole('dialog', { name: 'Create a Panel' }).locator('[data-column-count-option]');
+    await expect(choices).toHaveCount(5);
+    for (const choice of await choices.all()) {
+      const box = await choice.boundingBox();
+      expect(Math.round(box?.width ?? 0)).toBeGreaterThanOrEqual(44);
+      expect(Math.round(box?.height ?? 0)).toBeGreaterThanOrEqual(44);
+    }
+  });
 });
 
 test('Panel creation uses the browser modal top layer and restores focus', async ({ page }) => {
@@ -1373,3 +1437,83 @@ test('Panel creation uses the browser modal top layer and restores focus', async
   await expect(dialog).toBeHidden();
   await expect(launcher).toBeFocused();
 });
+
+for (const viewport of [
+  { name: 'wide', width: 1180, height: 800, columns: 3 },
+  { name: 'compact portrait', width: 390, height: 844, columns: 1 },
+  { name: 'short landscape', width: 844, height: 390, columns: 3 },
+  { name: '200-percent zoom equivalent', width: 800, height: 450, columns: 3 }
+]) {
+  test(`Panel template picker ${viewport.name} stays contained with one clear selection`, async ({ page }) => {
+    await openFresh(page, viewport.width, viewport.height);
+    await page.getByText('Developer tools', { exact: true }).click();
+    await page.getByRole('button', { name: 'Create Panel' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
+    const columnsCard = dialog.locator('[data-panel-template-card="columns"]');
+    const evidence = await dialog.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const body = element.querySelector('.panel-create-body');
+      const footer = element.querySelector('.panel-create-footer');
+      const grid = element.querySelector('.panel-template-grid');
+      const heading = element.querySelector('h2');
+      if (!(body instanceof HTMLElement) || !(footer instanceof HTMLElement) || !(grid instanceof HTMLElement) || !(heading instanceof HTMLElement)) {
+        throw new Error('Missing Panel picker composition.');
+      }
+      const footerBox = footer.getBoundingClientRect();
+      const rootStyle = getComputedStyle(document.querySelector('main')!);
+      return {
+        bounds: { top: box.top, right: box.right, bottom: box.bottom, left: box.left },
+        viewport: { width: innerWidth, height: innerHeight },
+        footer: { top: footerBox.top, bottom: footerBox.bottom },
+        bodyOverflow: getComputedStyle(body).overflowY,
+        gridColumns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        headingFont: getComputedStyle(heading).fontFamily,
+        uiFont: rootStyle.getPropertyValue('--pom-font-ui').trim(),
+        headingSize: getComputedStyle(heading).fontSize,
+        mediumSize: rootStyle.getPropertyValue('--pom-type-md').trim(),
+        selectedCards: element.querySelectorAll('[data-panel-template-card][data-pom-selected="true"]').length
+      };
+    });
+
+    expect(evidence.bounds.top).toBeGreaterThanOrEqual(0);
+    expect(evidence.bounds.left).toBeGreaterThanOrEqual(0);
+    expect(evidence.bounds.right).toBeLessThanOrEqual(evidence.viewport.width);
+    expect(evidence.bounds.bottom).toBeLessThanOrEqual(evidence.viewport.height);
+    expect(evidence.footer.top).toBeGreaterThanOrEqual(evidence.bounds.top);
+    expect(evidence.footer.bottom).toBeLessThanOrEqual(evidence.bounds.bottom + 1);
+    expect(evidence.bodyOverflow).toBe('auto');
+    expect(evidence.gridColumns).toBe(viewport.columns);
+    expect(evidence.headingFont).toBe(evidence.uiFont);
+    expect(evidence.headingSize).toBe(evidence.mediumSize);
+    expect(evidence.selectedCards).toBe(1);
+    if (viewport.name === 'short landscape') {
+      const fixedRegionsBefore = await dialog.evaluate((element) => {
+        const body = element.querySelector('.panel-create-body');
+        const header = element.querySelector('.panel-create-header');
+        const footer = element.querySelector('.panel-create-footer');
+        if (!(body instanceof HTMLElement) || !(header instanceof HTMLElement) || !(footer instanceof HTMLElement)) {
+          throw new Error('Missing Panel picker scroll regions.');
+        }
+        return {
+          bodyScrollHeight: body.scrollHeight,
+          bodyClientHeight: body.clientHeight,
+          headerTop: header.getBoundingClientRect().top,
+          footerTop: footer.getBoundingClientRect().top
+        };
+      });
+      expect(fixedRegionsBefore.bodyScrollHeight).toBeGreaterThan(fixedRegionsBefore.bodyClientHeight);
+      await dialog.locator('.panel-create-body').evaluate((body: HTMLElement) => { body.scrollTop = body.scrollHeight; });
+      const fixedRegionsAfter = await dialog.evaluate((element) => ({
+        headerTop: element.querySelector('.panel-create-header')!.getBoundingClientRect().top,
+        footerTop: element.querySelector('.panel-create-footer')!.getBoundingClientRect().top,
+        bodyScrollTop: (element.querySelector('.panel-create-body') as HTMLElement).scrollTop
+      }));
+      expect(fixedRegionsAfter.bodyScrollTop).toBeGreaterThan(0);
+      expect(fixedRegionsAfter.headerTop).toBe(fixedRegionsBefore.headerTop);
+      expect(fixedRegionsAfter.footerTop).toBe(fixedRegionsBefore.footerTop);
+    }
+    await expect(columnsCard.locator('[data-panel-preview-region="column"]')).toHaveCount(3);
+    await dialog.locator('[data-column-count-option="6"]').click();
+    await expect(columnsCard.locator('[data-panel-preview-region="column"]')).toHaveCount(6);
+  });
+}

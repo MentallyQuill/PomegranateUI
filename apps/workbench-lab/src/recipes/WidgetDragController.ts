@@ -34,6 +34,7 @@ interface DragCandidate {
   slot: HTMLElement | null;
   slotIntentKey: string | null;
   intent: DockIntent | null;
+  revealedDock: 'left' | 'right' | null;
   canFloat: boolean;
   committing: boolean;
   sourceMounted: boolean;
@@ -45,6 +46,7 @@ interface DragCandidate {
 
 export interface WidgetDragController {
   pointerDown(event: PointerEvent): void;
+  activate(event: PointerEvent): void;
   pointerMove(event: PointerEvent): void;
   pointerUp(event: PointerEvent): void;
   pointerCancel(event: PointerEvent): void;
@@ -55,7 +57,8 @@ interface WidgetDragControllerOptions {
   readonly getFrame: () => WidgetFrameProjection;
   readonly getStore: () => WorkbenchStore;
   readonly setDragging: (dragging: boolean) => void;
-  readonly activation?: 'any' | 'vertical-tearoff';
+  readonly onExpandDock?: ((edge: 'left' | 'right') => void) | undefined;
+  readonly activation?: 'any' | 'vertical-tearoff' | 'manual';
 }
 
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
@@ -75,27 +78,6 @@ function positionFixed(element: HTMLElement, rect: DockRect) {
   element.style.top = `${rect.y}px`;
   element.style.width = `${rect.width}px`;
   element.style.height = `${rect.height}px`;
-}
-
-function makeVisualClone(source: HTMLElement): HTMLElement {
-  const clone = source.cloneNode(true) as HTMLElement;
-  clone.removeAttribute('style');
-  for (const element of [clone, ...clone.querySelectorAll<HTMLElement>('*')]) {
-    element.removeAttribute('id');
-    element.removeAttribute('name');
-    element.removeAttribute('for');
-    element.removeAttribute('aria-controls');
-    element.removeAttribute('aria-labelledby');
-    element.removeAttribute('data-pomegranate-widget');
-    element.removeAttribute('data-widget-drag-root');
-    element.removeAttribute('data-widget-drag-surface');
-    element.setAttribute('tabindex', '-1');
-    if (element instanceof HTMLButtonElement || element instanceof HTMLInputElement
-      || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
-      element.disabled = true;
-    }
-  }
-  return clone;
 }
 
 function visiblePlacement(frame: WidgetFrameProjection) {
@@ -207,14 +189,20 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     const box = current.visualRoot.getBoundingClientRect();
     const themeRoot = current.surface.closest<HTMLElement>('main[data-pom-theme-root]');
     const overlayOwner = themeRoot ?? document.body;
-    const width = Math.min(Math.max(230, box.width), 360, Math.max(180, window.innerWidth - 16));
-    const height = Math.min(Math.max(120, box.height), 340, Math.max(120, window.innerHeight - 16));
+    const width = Math.min(Math.max(180, box.width), 280, Math.max(160, window.innerWidth - 16));
+    const height = Math.min(42, Math.max(32, window.innerHeight - 16));
     const held = document.createElement('div');
     held.className = 'widget-drag-preview';
     held.dataset.pomPart = 'widget.drag-preview';
+    held.dataset.widgetDragType = options.getFrame().instance.type;
     held.setAttribute('aria-hidden', 'true');
     held.inert = true;
-    held.append(makeVisualClone(current.visualRoot));
+    const identity = document.createElement('span');
+    identity.className = 'widget-drag-preview-identity';
+    identity.textContent = current.visualRoot
+      .querySelector<HTMLElement>('[data-pomegranate-widget]')
+      ?.getAttribute('aria-label') ?? options.getFrame().title;
+    held.append(identity);
     held.style.width = `${width}px`;
     held.style.height = `${height}px`;
     overlayOwner.append(held);
@@ -353,9 +341,23 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     if (!root) return;
     const surface = activeSurface(current);
     if (!surface) return;
-    const side = dockRevealSide(point, rectOf(surface.getBoundingClientRect()), 34);
-    const revealLeft = side === 'left' && root.classList.contains('left-collapsed');
-    const revealRight = side === 'right' && root.classList.contains('right-collapsed');
+    let revealedDock = current.revealedDock;
+    if (revealedDock) {
+      const revealedRegion = surface.querySelector<HTMLElement>(
+        `[data-pomegranate-region-surface="${revealedDock}"]`
+      );
+      if (!revealedRegion || !pointInside(point, rectOf(revealedRegion.getBoundingClientRect()))) {
+        revealedDock = null;
+      }
+    }
+    if (!revealedDock) {
+      const side = dockRevealSide(point, rectOf(surface.getBoundingClientRect()), 34);
+      if (side === 'left' && root.classList.contains('left-collapsed')) revealedDock = 'left';
+      if (side === 'right' && root.classList.contains('right-collapsed')) revealedDock = 'right';
+    }
+    current.revealedDock = revealedDock;
+    const revealLeft = revealedDock === 'left';
+    const revealRight = revealedDock === 'right';
     const changed = root.hasAttribute('data-drag-reveal-left') !== revealLeft
       || root.hasAttribute('data-drag-reveal-right') !== revealRight;
     if (revealLeft) root.dataset.dragRevealLeft = 'true';
@@ -382,9 +384,6 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       rail.dataset.dropInsertOrder = String(target.insertOrder ?? 0);
       rail.dataset.active = String(intent?.targetId === target.id);
       positionFixed(rail, target.rect);
-      const label = document.createElement('span');
-      label.textContent = target.label ?? 'New shelf';
-      rail.append(label);
       overlay.append(rail);
     }
     if (!intent) return;
@@ -407,16 +406,6 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       });
       overlay.append(marker);
     }
-    const label = document.createElement('div');
-    label.className = 'widget-drop-intent-label';
-    label.textContent = intent.label;
-    positionFixed(label, {
-      x: intent.previewRect.x + 12,
-      y: intent.previewRect.y + 8,
-      width: Math.max(120, Math.min(240, intent.previewRect.width - 24)),
-      height: 26
-    });
-    overlay.append(label);
   }
 
   function updateDropState(current: DragCandidate, point: DockPoint) {
@@ -483,6 +472,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       cleanup();
       return;
     }
+    if (current.revealedDock === current.intent.regionId) options.onExpandDock?.(current.revealedDock);
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!held || reduceMotion) {
       cleanup();
@@ -532,6 +522,26 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     finishPointerCancel(event);
   }
 
+  function activateCandidate(current: DragCandidate, event: PointerEvent) {
+    if (current.active) return;
+    const currentVisualRoot = current.root.closest<HTMLElement>('[data-widget-type]')
+      ?? current.root.closest<HTMLElement>('[data-widget-group]')?.querySelector<HTMLElement>('[data-widget-type]');
+    if (currentVisualRoot) {
+      const box = currentVisualRoot.getBoundingClientRect();
+      current.visualRoot = currentVisualRoot;
+      current.grabX = current.startX - box.left;
+      current.grabY = current.startY - box.top;
+    }
+    current.active = true;
+    createHeldState(current, event);
+  }
+
+  function updateActiveCandidate(current: DragCandidate, event: PointerEvent) {
+    updateHeldPosition(current, event);
+    syncPanelHover(current, current.lastPoint);
+    updateDropState(current, current.lastPoint);
+  }
+
   function movePointer(event: PointerEvent) {
     if (handledPointerMove === event) return;
     handledPointerMove = event;
@@ -539,7 +549,9 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     candidate.lastPoint = { x: event.clientX, y: event.clientY };
     const dx = event.clientX - candidate.startX;
     const dy = event.clientY - candidate.startY;
-    const decision = options.activation === 'vertical-tearoff'
+    const decision = options.activation === 'manual'
+      ? 'pending'
+      : options.activation === 'vertical-tearoff'
       ? tabDragDecision({
         dx,
         dy,
@@ -558,22 +570,9 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       return;
     }
     const shouldActivate = decision === 'tear-off' || decision === 'ready';
-    if (!candidate.active && shouldActivate) {
-      const currentVisualRoot = candidate.root.closest<HTMLElement>('[data-widget-type]')
-        ?? candidate.root.closest<HTMLElement>('[data-widget-group]')?.querySelector<HTMLElement>('[data-widget-type]');
-      if (currentVisualRoot) {
-        const box = currentVisualRoot.getBoundingClientRect();
-        candidate.visualRoot = currentVisualRoot;
-        candidate.grabX = candidate.startX - box.left;
-        candidate.grabY = candidate.startY - box.top;
-      }
-      candidate.active = true;
-      createHeldState(candidate, event);
-    }
+    if (!candidate.active && shouldActivate) activateCandidate(candidate, event);
     if (!candidate.active) return;
-    updateHeldPosition(candidate, event);
-    syncPanelHover(candidate, candidate.lastPoint);
-    updateDropState(candidate, candidate.lastPoint);
+    updateActiveCandidate(candidate, event);
   }
 
   function floatAt(current: DragCandidate, event: PointerEvent) {
@@ -766,6 +765,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         slot: null,
         slotIntentKey: null,
         intent: null,
+        revealedDock: null,
         canFloat: false,
         committing: false,
         sourceMounted: true,
@@ -783,6 +783,13 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       window.addEventListener('pointerup', windowPointerUp);
       window.addEventListener('pointercancel', windowPointerCancel);
       event.preventDefault();
+    },
+
+    activate(event: PointerEvent) {
+      if (!candidate || candidate.pointerId !== event.pointerId) return;
+      candidate.lastPoint = { x: event.clientX, y: event.clientY };
+      activateCandidate(candidate, event);
+      updateActiveCandidate(candidate, event);
     },
 
     pointerMove(event: PointerEvent) {

@@ -271,18 +271,18 @@ git commit -m "test(browser): reproduce widget interaction defects"
 - Create: `tests/browser/support/widget-interaction-matrix.test.ts`
 
 **Interfaces:**
-- Produces: `OriginKind`, `IntentKind`, `DestinationKind`, `CompletionKind`, `InteractionCase`, `INTERACTION_CASES`, and `interactionCoverageGaps()`.
+- Produces: `OriginKind`, `IntentKind`, `DestinationKind`, `CompletionKind`, `InteractionCase`, `INTERACTION_CASES`, and `curatedInteractionCoverageGaps()`.
 
 - [ ] **Step 1: Write a failing coverage validation test**
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { INTERACTION_CASES, interactionCoverageGaps } from './widget-interaction-matrix.js';
+import { INTERACTION_CASES, curatedInteractionCoverageGaps } from './widget-interaction-matrix.js';
 
 describe('Widget interaction playtest matrix', () => {
-  it('covers every approved axis value and required reachable pair', () => {
+  it('covers every approved axis value and curated required pair', () => {
     expect(INTERACTION_CASES.map(({ id }) => id)).toEqual([...INTERACTION_CASES.map(({ id }) => id)].sort());
-    expect(interactionCoverageGaps(INTERACTION_CASES)).toEqual([]);
+    expect(curatedInteractionCoverageGaps(INTERACTION_CASES)).toEqual([]);
   });
 });
 ```
@@ -313,7 +313,7 @@ type AxisName = Exclude<keyof InteractionCase, 'id'>;
 interface RequiredPairSide { readonly axis: AxisName; readonly value: string }
 interface RequiredPair { readonly left: RequiredPairSide; readonly right: RequiredPairSide }
 
-const REQUIRED_REACHABLE_PAIRS: readonly RequiredPair[] = Object.freeze([
+const CURATED_REQUIRED_PAIRS: readonly RequiredPair[] = Object.freeze([
   { left: { axis: 'origin', value: 'grouped-inactive' }, right: { axis: 'destination', value: 'open-canvas' } },
   { left: { axis: 'origin', value: 'grouped-inactive' }, right: { axis: 'intent', value: 'float' } },
   { left: { axis: 'origin', value: 'grouped-active' }, right: { axis: 'intent', value: 'reorder' } },
@@ -330,12 +330,12 @@ const REQUIRED_REACHABLE_PAIRS: readonly RequiredPair[] = Object.freeze([
   { left: { axis: 'destination', value: 'occupied-widget' }, right: { axis: 'completion', value: 'save-reload' } }
 ]);
 
-export function interactionCoverageGaps(cases: readonly InteractionCase[]): readonly string[] {
+export function curatedInteractionCoverageGaps(cases: readonly InteractionCase[]): readonly string[] {
   const gaps: string[] = [];
   for (const [name, values] of Object.entries({ origin: ORIGINS, intent: INTENTS, destination: DESTINATIONS, completion: COMPLETIONS })) {
     for (const value of values) if (!cases.some((entry) => entry[name as keyof InteractionCase] === value)) gaps.push(`${name}:${value}`);
   }
-  for (const required of REQUIRED_REACHABLE_PAIRS) {
+  for (const required of CURATED_REQUIRED_PAIRS) {
     if (!cases.some((entry) => entry[required.left.axis] === required.left.value && entry[required.right.axis] === required.right.value)) {
       gaps.push(`${required.left.axis}:${required.left.value}+${required.right.axis}:${required.right.value}`);
     }
@@ -348,7 +348,7 @@ The literal required-pair list above excludes impossible semantic pairs such as 
 
 - [ ] **Step 4: Add the sorted canonical case catalog**
 
-Include at least these journeys, adding cases until `interactionCoverageGaps()` returns no entries:
+Include at least these journeys, adding cases until `curatedInteractionCoverageGaps()` returns no entries. This is a deliberately curated high-risk set, not exhaustive pairwise coverage:
 
 ```ts
 export const INTERACTION_CASES: readonly InteractionCase[] = Object.freeze([

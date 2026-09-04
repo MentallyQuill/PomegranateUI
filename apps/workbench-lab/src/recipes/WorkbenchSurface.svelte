@@ -15,6 +15,9 @@
     store,
     renderWidget,
     titleFor,
+    onexpanddock,
+    storyTitle,
+    currentScene,
     leftCollapsed = false,
     rightCollapsed = false,
     showDockResizers = false,
@@ -26,6 +29,9 @@
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
+    onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
+    storyTitle: string;
+    currentScene: string;
     leftCollapsed?: boolean;
     rightCollapsed?: boolean;
     showDockResizers?: boolean;
@@ -106,16 +112,16 @@
           {store}
           {renderWidget}
           {titleFor}
-          toolbarControls={surface.templateFamily === 'story-stage' && toolbarTogglePresentation === 'bottom-chevrons'
-            ? toolbarControls
-            : undefined}
+          {onexpanddock}
+          {storyTitle}
+          {currentScene}
         />
       {/if}
       {#if surface.templateFamily === 'story-stage' || showDockResizers}
         <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
         <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />
       {/if}
-      {#if surface.templateFamily === 'story-stage' && toolbarTogglePresentation !== 'bottom-chevrons'}
+      {#if surface.templateFamily === 'story-stage'}
         {@render toolbarControls()}
       {/if}
       <div data-pomegranate-floating-layer>

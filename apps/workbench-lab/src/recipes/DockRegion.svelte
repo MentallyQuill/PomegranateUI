@@ -3,11 +3,12 @@
   import type { PanelRegionProjection, WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core';
   import DockShelf from './DockShelf.svelte';
 
-  let { projection, store, renderWidget, titleFor, surfacePart = 'dock.surface', rowResizable = true }: {
+  let { projection, store, renderWidget, titleFor, onexpanddock, surfacePart = 'dock.surface', rowResizable = true }: {
     projection: PanelRegionProjection;
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
+    onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
     surfacePart?: 'dock.surface' | null;
     rowResizable?: boolean;
   } = $props();
@@ -32,6 +33,6 @@
   aria-label={`${projection.region.label} region`}
 >
   {#each projection.shelves as shelf, index (`${shelf.shelf.regionId}:${shelf.shelf.id}`)}
-    <DockShelf projection={shelf} {store} {renderWidget} {titleFor} resizable={index < projection.shelves.length - 1} {rowResizable} />
+    <DockShelf projection={shelf} {store} {renderWidget} {titleFor} {onexpanddock} resizable={index < projection.shelves.length - 1} {rowResizable} />
   {/each}
 </section>

@@ -4,7 +4,7 @@ const draftKey = 'pomegranate-ui.workbench-lab.theme-draft.v2.deep-current';
 
 async function fresh(page: Page, width = 1440, height = 900) {
   await page.setViewportSize({ width, height });
-  await page.goto('http://127.0.0.1:4174');
+  await page.goto('/');
   await page.evaluate(() => window.localStorage.clear());
   await page.reload();
   await page.evaluate(async () => {
@@ -110,7 +110,7 @@ test('Toolbar controls author, persist, and reset the live toggle presentation',
   let controls = settings.overview.getByRole('group', { name: 'Toolbar controls' });
 
   await expect(controls.getByRole('radio', { name: 'Edge labels' })).toBeChecked();
-  await controls.getByRole('radio', { name: 'Bottom chevrons' }).click();
+  await controls.getByRole('radio', { name: 'Bottom-edge chevrons' }).click();
   await expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
 
   await page.getByRole('tab', { name: 'Scene' }).click();
@@ -130,7 +130,7 @@ test('Toolbar controls author, persist, and reset the live toggle presentation',
 
   settings = await openAppearance(page);
   controls = settings.overview.getByRole('group', { name: 'Toolbar controls' });
-  await expect(controls.getByRole('radio', { name: 'Bottom chevrons' })).toBeChecked();
+  await expect(controls.getByRole('radio', { name: 'Bottom-edge chevrons' })).toBeChecked();
   await settings.overview.getByRole('button', { name: 'Reset' }).click();
   await expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'edge-labels');
   await expect(controls.getByRole('radio', { name: 'Edge labels' })).toBeChecked();
@@ -180,6 +180,40 @@ test('Theme Colors propagates all semantic roles and preserves the last valid ta
   await expect(settings.colors.getByRole('list', { name: 'Color diagnostics' })).toHaveCount(0);
   await expect(settings.materials.getByRole('slider', { name: 'Glass Density' })).toHaveValue('61');
   await expect(root).toHaveAttribute('data-workbench-revision', revision!);
+});
+
+test('Theme Colors tracks saturation and value throughout a pointer drag', async ({ page }) => {
+  await fresh(page);
+  const settings = await openAppearance(page);
+  await expect(settings.colors.locator('.widget-frame')).toHaveCSS('transform', 'none');
+  const plane = settings.colors.getByRole('application', { name: 'Saturation and value' });
+  const box = await plane.boundingBox();
+  expect(box).not.toBeNull();
+  const position = async () => {
+    const text = await settings.colors.locator('.theme-color-plane-value').textContent();
+    const match = text?.match(/Saturation (\d+)% · Value (\d+)%/);
+    expect(match).not.toBeNull();
+    return { saturation: Number(match![1]), value: Number(match![2]) };
+  };
+  const isNear = async (saturation: number, value: number) => {
+    const current = await position();
+    return Math.abs(current.saturation - saturation) <= 3 && Math.abs(current.value - value) <= 3;
+  };
+
+  await page.mouse.move(box!.x + box!.width * 0.2, box!.y + box!.height * 0.2);
+  await page.mouse.down();
+  await expect.poll(() => isNear(20, 80)).toBe(true);
+
+  await page.mouse.move(box!.x + box!.width * 0.8, box!.y + box!.height * 0.7, { steps: 6 });
+  await expect.poll(() => isNear(80, 30)).toBe(true);
+
+  await page.mouse.move(box!.x + box!.width * 0.9, box!.y + box!.height * 0.9);
+  await page.mouse.up();
+  await expect.poll(() => isNear(90, 10)).toBe(true);
+  const released = await position();
+
+  await page.mouse.move(box!.x + box!.width * 0.1, box!.y + box!.height * 0.1);
+  expect(await position()).toEqual(released);
 });
 
 test('Materials and Ambient elements control their semantic bindings', async ({ page }) => {

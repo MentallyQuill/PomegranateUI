@@ -6,6 +6,15 @@ import { createStaticServer } from '../../scripts/serve-static.mjs';
 const host = '127.0.0.1';
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
+export function resolveBrowserServerPort(value = process.env.POM_PLAYWRIGHT_PORT) {
+  if (value === undefined || value === '') return 4174;
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Error(`POM_PLAYWRIGHT_PORT must be a valid TCP port; received ${JSON.stringify(value)}.`);
+  }
+  return port;
+}
+
 function listen(server, port) {
   return new Promise((resolve, reject) => {
     const onError = (error) => {
@@ -69,6 +78,6 @@ export async function startBrowserServer({
 }
 
 export default async function globalSetup() {
-  const running = await startBrowserServer({ root: repositoryRoot });
+  const running = await startBrowserServer({ root: repositoryRoot, port: resolveBrowserServerPort() });
   return () => running.close();
 }

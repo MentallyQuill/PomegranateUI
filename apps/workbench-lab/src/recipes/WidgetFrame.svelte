@@ -15,6 +15,7 @@
     rendererRegistry,
     hostContext,
     onfocuswidget,
+    onexpanddock,
     surfacePart = 'widget.surface',
     contentPart = 'widget.content',
     title,
@@ -26,6 +27,7 @@
     rendererRegistry: WidgetRendererRegistry<THostContext>;
     hostContext: THostContext;
     onfocuswidget?: (frame: WidgetFrameProjection) => void;
+    onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
     surfacePart?: 'widget.surface' | 'widget.content' | 'floating.surface' | null;
     contentPart?: 'widget.content' | null;
     title?: string;
@@ -42,7 +44,8 @@
   const drag = createWidgetDragController({
     getFrame: () => frame,
     getStore: () => store,
-    setDragging: (next) => { dragging = next; }
+    setDragging: (next) => { dragging = next; },
+    onExpandDock: (edge) => onexpanddock?.(edge)
   });
   onDestroy(drag.destroy);
 
