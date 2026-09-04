@@ -990,6 +990,157 @@ test('every theme shares centered draggable Story measure controls and restores 
   expect(Math.abs(keyboard.transcript.width - keyboard.composer.width)).toBeLessThan(2);
 });
 
+test('Story prose expands with the Story measure instead of stopping at a fixed line width', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const resize = page.getByRole('separator', { name: 'Resize Story width from right edge' });
+  const transcript = page.locator('[data-widget-type="story.transcript"] .transcript');
+  const prose = transcript.locator(':scope > .transcript-prose').first();
+
+  await resize.press('Home');
+  const narrow = await prose.evaluate((node) => node.getBoundingClientRect().width);
+  await resize.press('End');
+  const [wideTranscript, wideProse] = await Promise.all([
+    transcript.evaluate((node) => node.getBoundingClientRect().width),
+    prose.evaluate((node) => node.getBoundingClientRect().width)
+  ]);
+
+  expect(wideProse).toBeGreaterThan(narrow + 500);
+  expect(Math.abs(wideProse - wideTranscript)).toBeLessThan(2);
+});
+
+test('Story width controls render as illuminated lines outside the composer edges', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const composer = page.locator('[data-widget-type="story.composer"]');
+  const left = page.getByRole('separator', { name: 'Resize Story width from left edge' });
+  const right = page.getByRole('separator', { name: 'Resize Story width from right edge' });
+
+  const affordance = async (handle: typeof left, edge: 'left' | 'right') => {
+    const line = handle.locator('span');
+    const [composerBox, handleBox, lineBox, handleStyle, lineOpacity] = await Promise.all([
+      composer.boundingBox(),
+      handle.boundingBox(),
+      line.boundingBox(),
+      handle.evaluate((node) => {
+        const style = getComputedStyle(node);
+        return {
+          backgroundColor: style.backgroundColor,
+          borderLeftWidth: style.borderLeftWidth,
+          borderRightWidth: style.borderRightWidth,
+          boxShadow: style.boxShadow
+        };
+      }),
+      line.evaluate((node) => Number(getComputedStyle(node).opacity))
+    ]);
+    if (!composerBox || !handleBox || !lineBox) throw new Error(`Missing ${edge} Story control geometry.`);
+    const lineCenter = lineBox.x + lineBox.width / 2;
+    const composerEdge = edge === 'left' ? composerBox.x : composerBox.x + composerBox.width;
+    const gap = edge === 'left' ? composerEdge - lineCenter : lineCenter - composerEdge;
+    const overlap = edge === 'left'
+      ? handleBox.x + handleBox.width - composerBox.x
+      : composerBox.x + composerBox.width - handleBox.x;
+    return { gap, overlap, handleStyle, lineOpacity, lineWidth: lineBox.width };
+  };
+
+  for (const [handle, edge] of [[left, 'left'], [right, 'right']] as const) {
+    const resting = await affordance(handle, edge);
+    expect(resting.gap).toBeGreaterThanOrEqual(5);
+    expect(resting.gap).toBeLessThanOrEqual(10);
+    expect(resting.overlap).toBeLessThanOrEqual(0);
+    expect(resting.lineWidth).toBeLessThanOrEqual(2);
+    expect(resting.handleStyle).toEqual({
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+      borderLeftWidth: '0px',
+      borderRightWidth: '0px',
+      boxShadow: 'none'
+    });
+    expect(resting.lineOpacity).toBeLessThanOrEqual(0.12);
+
+    await handle.hover();
+    await expect.poll(async () => (await affordance(handle, edge)).lineOpacity).toBeGreaterThanOrEqual(0.7);
+    expect((await affordance(handle, edge)).handleStyle.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  }
+});
+
+test('Story width and resize lines follow asymmetric toolbar drags and restore the preferred measure', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const storyLeft = page.getByRole('separator', { name: 'Resize Story width from left edge' });
+  const storyRight = page.getByRole('separator', { name: 'Resize Story width from right edge' });
+  const toolbarLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
+  const toolbarRight = page.getByRole('separator', { name: 'Resize right toolbar' });
+
+  const geometry = () => page.evaluate(() => {
+    const composer = document.querySelector<HTMLElement>('[data-widget-type="story.composer"]');
+    const transcript = document.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .widget-frame');
+    const leftLine = document.querySelector<HTMLElement>('[data-story-measure-resizer="left"] > span');
+    const rightLine = document.querySelector<HTMLElement>('[data-story-measure-resizer="right"] > span');
+    if (!composer || !transcript || !leftLine || !rightLine) throw new Error('Missing Story layout geometry.');
+    const composerBox = composer.getBoundingClientRect();
+    const transcriptBox = transcript.getBoundingClientRect();
+    const leftLineBox = leftLine.getBoundingClientRect();
+    const rightLineBox = rightLine.getBoundingClientRect();
+    return {
+      composer: { left: composerBox.left, right: composerBox.right, width: composerBox.width },
+      transcript: { left: transcriptBox.left, right: transcriptBox.right, width: transcriptBox.width },
+      leftGap: composerBox.left - (leftLineBox.left + leftLineBox.width / 2),
+      rightGap: rightLineBox.left + rightLineBox.width / 2 - composerBox.right
+    };
+  });
+
+  await storyRight.press('End');
+  const wide = await geometry();
+  expect(wide.composer.width).toBeGreaterThan(1100);
+
+  await dragHorizontally(page, toolbarLeft, 120);
+  await expect(toolbarLeft).toHaveAttribute('aria-valuenow', '406');
+  const leftExpanded = await geometry();
+  expect(leftExpanded.composer.width).toBeLessThan(wide.composer.width - 100);
+  expect(Math.abs(leftExpanded.composer.width - leftExpanded.transcript.width)).toBeLessThan(2);
+  expect(leftExpanded.leftGap).toBeGreaterThanOrEqual(5);
+  expect(leftExpanded.leftGap).toBeLessThanOrEqual(10);
+  expect(leftExpanded.rightGap).toBeGreaterThanOrEqual(5);
+  expect(leftExpanded.rightGap).toBeLessThanOrEqual(10);
+
+  await dragHorizontally(page, toolbarRight, -100);
+  await expect(toolbarRight).toHaveAttribute('aria-valuenow', '386');
+  const bothExpanded = await geometry();
+  expect(bothExpanded.composer.width).toBeLessThan(leftExpanded.composer.width - 80);
+  expect(bothExpanded.leftGap).toBeGreaterThanOrEqual(5);
+  expect(bothExpanded.leftGap).toBeLessThanOrEqual(10);
+  expect(bothExpanded.rightGap).toBeGreaterThanOrEqual(5);
+  expect(bothExpanded.rightGap).toBeLessThanOrEqual(10);
+
+  await dragHorizontally(page, toolbarLeft, -120);
+  await dragHorizontally(page, toolbarRight, 100);
+  await expect.poll(async () => (await geometry()).composer.width).toBeGreaterThan(wide.composer.width - 2);
+  const restored = await geometry();
+  expect(Math.abs(restored.composer.width - wide.composer.width)).toBeLessThan(2);
+  expect(restored.leftGap).toBeGreaterThanOrEqual(5);
+  expect(restored.leftGap).toBeLessThanOrEqual(10);
+  expect(restored.rightGap).toBeGreaterThanOrEqual(5);
+  expect(restored.rightGap).toBeLessThanOrEqual(10);
+  await expect(storyLeft).toHaveAttribute('aria-valuenow', await storyRight.getAttribute('aria-valuenow') ?? '');
+});
+
+test('adding and removing toolbar columns contracts and restores the preferred Story measure', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const storyRight = page.getByRole('separator', { name: 'Resize Story width from right edge' });
+  const leftAdd = page.getByRole('button', { name: 'Add column to left toolbar' });
+  const leftRemove = page.getByRole('button', { name: 'Remove column from left toolbar' });
+  const composer = page.locator('[data-widget-type="story.composer"]');
+  const width = () => composer.evaluate((node) => node.getBoundingClientRect().width);
+
+  await storyRight.press('End');
+  const wide = await width();
+  await leftAdd.click();
+  await expect(page.locator('[data-conformance-region="left"] [data-dock-column]')).toHaveCount(2);
+  await expect.poll(width).toBeLessThan(wide - 100);
+
+  await leftRemove.click();
+  await expect(page.locator('[data-conformance-region="left"] [data-dock-column]')).toHaveCount(1);
+  await expect.poll(width).toBeGreaterThan(wide - 2);
+  expect(Math.abs(await width() - wide)).toBeLessThan(2);
+});
+
 test('Story toolbar columns add inward and populated removal warns, cancels, confirms, and undoes', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   const leftAdd = page.getByRole('button', { name: 'Add column to left toolbar' });
