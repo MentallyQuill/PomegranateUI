@@ -4172,6 +4172,7 @@ main[data-pom-theme-root].right-collapsed [data-conformance-region="right"] {
     gap: 1px 9px;
     margin-top: 5px;
   }
+  main[data-pom-shell-presentation="instrumented"] .composer-field > .composer-meta > * { min-width: 0; }
   main[data-pom-shell-presentation="instrumented"] .composer-field > .composer-meta > :last-child { grid-column: 1 / -1; }
   main[data-pom-shell-presentation="instrumented"] .composer > button {
     width: 78px;

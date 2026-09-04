@@ -866,7 +866,7 @@ for (const viewport of [
       const evidence = await page.locator('[data-widget-type="story.composer"] .composer-field')
          .evaluate((field) => {
            const textarea = field.querySelector('textarea');
-           const metadata = field.querySelector(':scope > span');
+           const metadata = field.querySelector(':scope > .composer-meta');
            const placement = field.closest('[data-widget-type="story.composer"]');
            const shelf = field.closest('.dock-shelf');
            const region = field.closest('.dock-region');
@@ -887,6 +887,7 @@ for (const viewport of [
             textareaScrollHeight: textarea.scrollHeight,
              metadataClientWidth: metadata.clientWidth,
              metadataScrollWidth: metadata.scrollWidth,
+             metadataChildMinWidths: [...metadata.children].map((child) => getComputedStyle(child).minWidth),
              textareaTop: textarea.getBoundingClientRect().top,
              textareaBottom: textarea.getBoundingClientRect().bottom,
              metadataTop: metadataBox.top,
@@ -911,6 +912,9 @@ for (const viewport of [
         .toBeLessThanOrEqual(evidence.textareaClientHeight + 1);
        expect(evidence.metadataScrollWidth, `${theme} ${viewport.name} composer metadata width`)
          .toBeLessThanOrEqual(evidence.metadataClientWidth + 1);
+       if (theme === 'Deep Current' && viewport.name === 'phone portrait') {
+         expect(evidence.metadataChildMinWidths).toEqual(['0px', '0px', '0px']);
+       }
        expect(evidence.textareaTop, `${theme} ${viewport.name} textarea top containment`)
          .toBeGreaterThanOrEqual(evidence.fieldTop - 1);
        expect(evidence.metadataTop, `${theme} ${viewport.name} composer metadata top containment`)
