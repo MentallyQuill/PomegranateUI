@@ -1385,8 +1385,10 @@ for (const viewport of [
     expect(evidence.composer.left).toBeGreaterThanOrEqual(evidence.stage.left);
     expect(evidence.composer.right).toBeLessThanOrEqual(evidence.stage.right);
     if (viewport.width <= 860) {
-      expect(evidence.left.width).toBeLessThanOrEqual(1);
-      expect(evidence.right.width).toBeLessThanOrEqual(1);
+      expect(evidence.left.width).toBeGreaterThan(250);
+      expect(evidence.left.right).toBeLessThanOrEqual(0);
+      expect(evidence.right.width).toBeGreaterThan(250);
+      expect(evidence.right.left).toBeGreaterThanOrEqual(evidence.viewport.width);
     }
   });
 }

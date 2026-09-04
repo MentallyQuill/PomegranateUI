@@ -4251,17 +4251,186 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
   }
 }
 
+/* Story Stage side toolbars answer immediately, then ease into their resting edge. */
+@property --pom-story-left-track {
+  syntax: "<length-percentage>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --pom-story-right-track {
+  syntax: "<length-percentage>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+@media (min-width: 861px) {
+  main[data-pom-theme-root] .workbench-surface {
+    --pom-story-left-track: var(--pom-left-width, var(--pom-side-width));
+    --pom-story-right-track: var(--pom-right-width, var(--pom-side-width));
+  }
+  main[data-pom-theme-root].left-collapsed .workbench-surface {
+    --pom-story-left-track: 0px;
+  }
+  main[data-pom-theme-root].right-collapsed .workbench-surface {
+    --pom-story-right-track: 0px;
+  }
+  main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="story-stage"] {
+    grid-template-columns: minmax(0, var(--pom-story-left-track)) minmax(0, 1fr) minmax(0, var(--pom-story-right-track));
+  }
+  main[data-pom-theme-root] .toolbar-edge-toggle-left:not([data-toolbar-toggle-presentation="bottom-chevrons"]) {
+    left: var(--pom-story-left-track, var(--pom-left-width, var(--pom-side-width)));
+  }
+  main[data-pom-theme-root] .toolbar-edge-toggle-right:not([data-toolbar-toggle-presentation="bottom-chevrons"]) {
+    right: var(--pom-story-right-track, var(--pom-right-width, var(--pom-side-width)));
+  }
+  main[data-pom-theme-root]
+  .panel-template-surface[data-panel-template-family="story-stage"]
+  :is([data-pomegranate-region-role="left-instruments"], [data-pomegranate-region-role="right-instruments"]) {
+    display: flex;
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  main[data-pom-theme-root].left-collapsed
+  .panel-template-surface[data-panel-template-family="story-stage"]
+  [data-pomegranate-region-role="left-instruments"] {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateX(-10px);
+    pointer-events: none;
+  }
+  main[data-pom-theme-root].right-collapsed
+  .panel-template-surface[data-panel-template-family="story-stage"]
+  [data-pomegranate-region-role="right-instruments"] {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateX(10px);
+    pointer-events: none;
+  }
+}
+
+@media (min-width: 861px) and (max-width: 1180px) {
+  main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="story-stage"] {
+    grid-template-columns: minmax(0, min(var(--pom-story-left-track), 230px)) minmax(0, 1fr) minmax(0, min(var(--pom-story-right-track), 230px));
+  }
+}
+
+@media (max-width: 1180px) {
+  main[data-pom-theme-root][data-pom-shell-presentation="instrumented"] .workbench-surface {
+    --pom-story-left-track: min(320px, calc(100% - 56px));
+    --pom-story-right-track: min(320px, calc(100% - 56px));
+  }
+  main[data-pom-theme-root][data-pom-shell-presentation="instrumented"].left-collapsed .workbench-surface {
+    --pom-story-left-track: 0px;
+  }
+  main[data-pom-theme-root][data-pom-shell-presentation="instrumented"].right-collapsed .workbench-surface {
+    --pom-story-right-track: 0px;
+  }
+  main[data-pom-theme-root][data-pom-shell-presentation="instrumented"]
+  .panel-template-surface[data-panel-template-family="story-stage"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  main[data-pom-theme-root][data-pom-shell-presentation="instrumented"]
+  .toolbar-edge-toggle-left:not([data-toolbar-toggle-presentation="bottom-chevrons"]) {
+    left: 14px;
+  }
+  main[data-pom-theme-root][data-pom-shell-presentation="instrumented"]
+  .toolbar-edge-toggle-right:not([data-toolbar-toggle-presentation="bottom-chevrons"]) {
+    right: 14px;
+  }
+  main[data-pom-theme-root][data-pom-shell-presentation="instrumented"]
+  .panel-template-surface[data-panel-template-family="story-stage"]
+  :is([data-pomegranate-region-role="left-instruments"], [data-pomegranate-region-role="right-instruments"]) {
+    display: flex !important;
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  main[data-pom-theme-root][data-pom-shell-presentation="instrumented"].left-collapsed
+  .panel-template-surface[data-panel-template-family="story-stage"]
+  [data-pomegranate-region-role="left-instruments"] {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateX(calc(-100% - 12px));
+    pointer-events: none;
+  }
+  main[data-pom-theme-root][data-pom-shell-presentation="instrumented"].right-collapsed
+  .panel-template-surface[data-panel-template-family="story-stage"]
+  [data-pomegranate-region-role="right-instruments"] {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateX(calc(100% + 12px));
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  main[data-pom-theme-root] .workbench-surface {
+    transition:
+      --pom-story-left-track var(--pom-story-toolbar-motion-duration, 220ms) var(--pom-story-toolbar-motion-easing, cubic-bezier(.16, 1, .3, 1)),
+      --pom-story-right-track var(--pom-story-toolbar-motion-duration, 220ms) var(--pom-story-toolbar-motion-easing, cubic-bezier(.16, 1, .3, 1));
+  }
+  main[data-pom-theme-root]
+  .panel-template-surface[data-panel-template-family="story-stage"]
+  :is([data-pomegranate-region-role="left-instruments"], [data-pomegranate-region-role="right-instruments"]) {
+    transition:
+      opacity var(--pom-story-toolbar-fade-duration, 140ms) var(--pom-story-toolbar-motion-easing, cubic-bezier(.16, 1, .3, 1)),
+      transform var(--pom-story-toolbar-motion-duration, 220ms) var(--pom-story-toolbar-motion-easing, cubic-bezier(.16, 1, .3, 1)),
+      visibility 0s linear;
+  }
+  main[data-pom-theme-root].left-collapsed
+  .panel-template-surface[data-panel-template-family="story-stage"]
+  [data-pomegranate-region-role="left-instruments"],
+  main[data-pom-theme-root].right-collapsed
+  .panel-template-surface[data-panel-template-family="story-stage"]
+  [data-pomegranate-region-role="right-instruments"] {
+    transition-delay: 0s, 0s, var(--pom-story-toolbar-motion-duration, 220ms);
+  }
+  main[data-pom-theme-root] .toolbar-edge-toggle-left:not([data-toolbar-toggle-presentation="bottom-chevrons"]) {
+    transition:
+      left var(--pom-story-toolbar-motion-duration, 220ms) var(--pom-story-toolbar-motion-easing, cubic-bezier(.16, 1, .3, 1)),
+      color 120ms ease,
+      background-color 120ms ease;
+  }
+  main[data-pom-theme-root] .toolbar-edge-toggle-right:not([data-toolbar-toggle-presentation="bottom-chevrons"]) {
+    transition:
+      right var(--pom-story-toolbar-motion-duration, 220ms) var(--pom-story-toolbar-motion-easing, cubic-bezier(.16, 1, .3, 1)),
+      color 120ms ease,
+      background-color 120ms ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main[data-pom-theme-root] .workbench-surface,
+  main[data-pom-theme-root]
+  .panel-template-surface[data-panel-template-family="story-stage"]
+  :is([data-pomegranate-region-role="left-instruments"], [data-pomegranate-region-role="right-instruments"]),
+  main[data-pom-theme-root] .toolbar-edge-toggle {
+    transition: none;
+  }
+}
+
 /* Final drag-discovery authority must follow compact/instrumented collapse rules. */
 main[data-pom-theme-root].left-collapsed[data-drag-reveal-left="true"] .workbench-surface {
   --pom-left-width: var(--pom-drag-reveal-width, 286px) !important;
+  --pom-story-left-track: var(--pom-drag-reveal-width, 286px);
+  transition: none;
 }
 main[data-pom-theme-root].right-collapsed[data-drag-reveal-right="true"] .workbench-surface {
   --pom-right-width: var(--pom-drag-reveal-width, 286px) !important;
+  --pom-story-right-track: var(--pom-drag-reveal-width, 286px);
+  transition: none;
 }
 main[data-pom-theme-root].left-collapsed[data-drag-reveal-left="true"] [data-conformance-region="left"],
 main[data-pom-theme-root].right-collapsed[data-drag-reveal-right="true"] [data-conformance-region="right"] {
   display: flex !important;
   visibility: visible !important;
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+  pointer-events: auto !important;
+  transition: none;
 }
 
 @media (pointer: coarse) {

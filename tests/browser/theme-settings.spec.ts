@@ -44,6 +44,13 @@ async function selectTheme(page: Page, label: string) {
   await page.getByText('Developer tools', { exact: true }).click();
 }
 
+async function ensureStoryToolbarOpen(page: Page, side: 'left' | 'right') {
+  const toggle = page.locator(`.toolbar-edge-toggle-${side}`);
+  if (await toggle.getAttribute('aria-pressed') === 'true') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator(`[data-conformance-region="${side}"]`)).toBeVisible();
+}
+
 async function binding(page: Page, property: string) {
   return page.locator('main').evaluate((root, name) => getComputedStyle(root).getPropertyValue(name).trim(), property);
 }
@@ -254,7 +261,7 @@ test('Theme Materials slider hover keeps the enlarged hit target visually transp
       await page.setViewportSize(viewport);
       await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
       const materials = widget(page, 'settings.theme-materials');
-      if (!await materials.isVisible()) await page.getByRole('button', { name: 'Open left toolbar' }).click();
+      await ensureStoryToolbarOpen(page, 'left');
       await expect(materials).toBeVisible();
 
       for (const name of ['Glass Density', 'Bar Opacity', 'Selected Strength', 'Frost Level']) {
@@ -285,11 +292,9 @@ test('every Theme Materials control changes a rendered surface in every theme an
       await page.setViewportSize(viewport);
       await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
       const materials = widget(page, 'settings.theme-materials');
-      if (!await materials.isVisible()) await page.getByRole('button', { name: 'Open left toolbar' }).click();
+      await ensureStoryToolbarOpen(page, 'left');
       await expect(materials).toBeVisible();
-      if (theme === 'Deep Current' && !await page.locator('[data-conformance-region="right"]').isVisible()) {
-        await page.getByRole('button', { name: 'Open right toolbar' }).click();
-      }
+      if (theme === 'Deep Current') await ensureStoryToolbarOpen(page, 'right');
 
       for (const control of cases) {
         const selector = 'surface' in control
@@ -335,10 +340,8 @@ test('Deep Current material calibration stays monotonic through its authored def
     await page.setViewportSize(viewport);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const materials = widget(page, 'settings.theme-materials');
-    if (!await materials.isVisible()) await page.getByRole('button', { name: 'Open left toolbar' }).click();
-    if (!await page.locator('[data-conformance-region="right"]').isVisible()) {
-      await page.getByRole('button', { name: 'Open right toolbar' }).click();
-    }
+    await ensureStoryToolbarOpen(page, 'left');
+    await ensureStoryToolbarOpen(page, 'right');
 
     for (const control of cases) {
       const slider = materials.getByRole('slider', { name: control.name });

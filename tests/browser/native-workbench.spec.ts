@@ -89,6 +89,25 @@ async function dispatchHeldTouchDrag(
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
 
+async function toggleAndSampleToolbar(
+  toggle: import('@playwright/test').Locator,
+  side: 'left' | 'right',
+  frames = 16
+) {
+  return toggle.evaluate(async (node: HTMLButtonElement, options) => {
+    const region = document.querySelector<HTMLElement>(`[data-conformance-region="${options.side}"]`);
+    if (!region) throw new Error(`Missing ${options.side} toolbar.`);
+    const startedAt = performance.now();
+    node.click();
+    const samples: Array<{ elapsedMs: number; x: number; width: number }> = [];
+    for (let frame = 0; frame < options.frames; frame += 1) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const rect = region.getBoundingClientRect();
+      samples.push({ elapsedMs: performance.now() - startedAt, x: rect.x, width: rect.width });
+    }
+    return samples;
+  }, { side, frames });
+}
 async function horizontalOverflowEvidence(locator: import('@playwright/test').Locator) {
   return locator.evaluate((root) => {
     const rootRect = root.getBoundingClientRect();
@@ -1078,6 +1097,146 @@ test('Deep Current edge controls collapse and restore both toolbars without hidi
   await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
 });
 
+test('Story Stage side toolbars ease through intermediate widths and reverse without snapping', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  for (const side of ['left', 'right'] as const) {
+    const toggle = page.getByRole('button', { name: `Close ${side} toolbar` });
+    const toolbar = page.locator(`[data-conformance-region="${side}"]`);
+    const expandedWidth = await toolbar.evaluate((node) => node.getBoundingClientRect().width);
+    expect(expandedWidth).toBeGreaterThan(200);
+
+    const closing = await toggleAndSampleToolbar(toggle, side);
+    const closingWidths = closing.map(({ width }) => width);
+    const firstClosingFrame = closingWidths.findIndex((width) => width < expandedWidth - 1);
+    expect(firstClosingFrame, JSON.stringify(closingWidths)).toBeGreaterThanOrEqual(0);
+    expect(closing[firstClosingFrame]!.elapsedMs, JSON.stringify(closing)).toBeLessThanOrEqual(120);
+    expect(closingWidths.some((width) => width > 1 && width < expandedWidth - 1), JSON.stringify(closingWidths)).toBe(true);
+
+    await expect(toolbar).toBeHidden();
+    await expect.poll(() => toolbar.evaluate((node) => node.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+
+    const opening = await toggleAndSampleToolbar(
+      page.getByRole('button', { name: `Open ${side} toolbar` }),
+      side
+    );
+    const openingWidths = opening.map(({ width }) => width);
+    const firstOpeningFrame = openingWidths.findIndex((width) => width > 1);
+    expect(firstOpeningFrame, JSON.stringify(openingWidths)).toBeGreaterThanOrEqual(0);
+    expect(opening[firstOpeningFrame]!.elapsedMs, JSON.stringify(opening)).toBeLessThanOrEqual(120);
+    expect(openingWidths.some((width) => width > 1 && width < expandedWidth - 1), JSON.stringify(openingWidths)).toBe(true);
+
+    await expect(toolbar).toBeVisible();
+    await expect.poll(() => toolbar.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(expandedWidth, 0);
+
+    const reversal = await page.getByRole('button', { name: `Close ${side} toolbar` })
+      .evaluate(async (node: HTMLButtonElement, dockSide) => {
+        const region = document.querySelector<HTMLElement>(`[data-conformance-region="${dockSide}"]`);
+        if (!region) throw new Error(`Missing ${dockSide} toolbar.`);
+        node.click();
+        const closing: number[] = [];
+        for (let frame = 0; frame < 4; frame += 1) {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          closing.push(region.getBoundingClientRect().width);
+        }
+        node.click();
+        const reopening: number[] = [];
+        for (let frame = 0; frame < 16; frame += 1) {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          reopening.push(region.getBoundingClientRect().width);
+        }
+        return { closing, reopening };
+      }, side);
+    expect(reversal.closing.at(-1), JSON.stringify(reversal)).toBeGreaterThan(1);
+    expect(reversal.closing.at(-1), JSON.stringify(reversal)).toBeLessThan(expandedWidth - 1);
+    expect(reversal.reopening[0], JSON.stringify(reversal)).toBeGreaterThan(1);
+    expect(reversal.reopening[0], JSON.stringify(reversal)).toBeLessThan(expandedWidth - 1);
+    expect(Math.max(...reversal.reopening), JSON.stringify(reversal)).toBeGreaterThan(reversal.reopening[0]! + 1);
+    await expect(toolbar).toBeVisible();
+    await expect.poll(() => toolbar.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(expandedWidth, 0);
+  }
+});
+
+test('compact Story Stage side toolbars ease off canvas without collapsing their width', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 720 });
+  const main = page.locator('main');
+  await expect(main).toHaveAttribute('data-pom-shell-presentation', 'instrumented');
+  await expect(main).toHaveClass(/left-collapsed/);
+  await expect(main).toHaveClass(/right-collapsed/);
+
+  for (const side of ['left', 'right'] as const) {
+    const direction = side === 'left' ? -1 : 1;
+    const toolbar = page.locator(`[data-conformance-region="${side}"]`);
+    await expect(toolbar).toBeHidden();
+    const collapsedRect = await toolbar.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return { x: rect.x, width: rect.width, display: style.display, position: style.position, visibility: style.visibility, styleWidth: style.width };
+    });
+    expect(collapsedRect.width, JSON.stringify(collapsedRect)).toBeGreaterThan(250);
+
+    const opening = await toggleAndSampleToolbar(
+      page.getByRole('button', { name: `Open ${side} toolbar` }),
+      side
+    );
+    const firstOpeningFrame = opening.findIndex(({ x }) => direction * (x - collapsedRect.x) < -1);
+    expect(firstOpeningFrame, JSON.stringify(opening)).toBeGreaterThanOrEqual(0);
+    expect(opening[firstOpeningFrame]!.elapsedMs, JSON.stringify(opening)).toBeLessThanOrEqual(100);
+    expect(opening.some(({ x }) => {
+      const travel = direction * (x - collapsedRect.x);
+      return travel < -1 && travel > -(collapsedRect.width - 1);
+    }), JSON.stringify(opening)).toBe(true);
+    expect(opening.every(({ width }) => Math.abs(width - collapsedRect.width) <= 1), JSON.stringify(opening)).toBe(true);
+    await expect(toolbar).toBeVisible();
+    const expandedX = await toolbar.evaluate((node) => node.getBoundingClientRect().x);
+    const toggleInset = await page.getByRole('button', { name: `Close ${side} toolbar` })
+      .evaluate((node: HTMLButtonElement, dockSide) => {
+        const toggleRect = node.getBoundingClientRect();
+        return dockSide === 'left'
+          ? toggleRect.left
+          : innerWidth - toggleRect.right;
+      }, side);
+    expect(toggleInset).toBeCloseTo(14, 0);
+
+    const closing = await toggleAndSampleToolbar(
+      page.getByRole('button', { name: `Close ${side} toolbar` }),
+      side
+    );
+    const firstClosingFrame = closing.findIndex(({ x }) => direction * (x - expandedX) > 1);
+    expect(firstClosingFrame, JSON.stringify(closing)).toBeGreaterThanOrEqual(0);
+    expect(closing[firstClosingFrame]!.elapsedMs, JSON.stringify(closing)).toBeLessThanOrEqual(100);
+    expect(closing.some(({ x }) => {
+      const travel = direction * (x - expandedX);
+      return travel > 1 && travel < collapsedRect.width - 1;
+    }), JSON.stringify(closing)).toBe(true);
+    expect(closing.every(({ width }) => Math.abs(width - collapsedRect.width) <= 1), JSON.stringify(closing)).toBe(true);
+    await expect(toolbar).toBeHidden();
+    await expect.poll(() => toolbar.evaluate((node) => node.getBoundingClientRect().x)).toBeCloseTo(collapsedRect.x, 0);
+  }
+});
+
+test('reduced motion makes Story Stage toolbar state changes immediate and transition-free', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.reload();
+  await page.evaluate(() => document.fonts.ready);
+
+  const surface = page.locator('.workbench-surface');
+  const leftToolbar = page.locator('[data-conformance-region="left"]');
+  const leftToggle = page.getByRole('button', { name: 'Close left toolbar' });
+  for (const target of [surface, leftToolbar, leftToggle]) {
+    await expect.poll(() => target.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return { duration: style.transitionDuration, property: style.transitionProperty };
+    })).toEqual({ duration: '0s', property: 'none' });
+  }
+
+  await leftToggle.evaluate((node: HTMLButtonElement) => node.click());
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  await expect(leftToolbar).toBeHidden();
+  expect(await leftToolbar.evaluate((node) => node.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+});
+
 test('Theme Library bottom-edge chevrons reuse edge tabs outside each toolbar and flip with collapsed state', async ({ page }) => {
   await page.getByRole('tab', { name: 'Settings' }).click();
   await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
@@ -1089,6 +1248,16 @@ test('Theme Library bottom-edge chevrons reuse edge tabs outside each toolbar an
   const right = page.locator('.toolbar-edge-toggle-right');
   const leftRegion = page.locator('[data-conformance-region="left"]');
   const rightRegion = page.locator('[data-conformance-region="right"]');
+  await expect.poll(async () => {
+    const [leftToggleBox, rightToggleBox, leftDockBox, rightDockBox] = await Promise.all([
+      left.boundingBox(), right.boundingBox(), leftRegion.boundingBox(), rightRegion.boundingBox()
+    ]);
+    if (!leftToggleBox || !rightToggleBox || !leftDockBox || !rightDockBox) return Number.POSITIVE_INFINITY;
+    return Math.max(
+      Math.abs(leftToggleBox.x - (leftDockBox.x + leftDockBox.width)),
+      Math.abs(rightToggleBox.x + rightToggleBox.width - rightDockBox.x)
+    );
+  }).toBeLessThan(2);
   const viewport = page.viewportSize();
   const [leftBox, rightBox, leftRegionBox, rightRegionBox] = await Promise.all([
     left.boundingBox(), right.boundingBox(), leftRegion.boundingBox(), rightRegion.boundingBox()

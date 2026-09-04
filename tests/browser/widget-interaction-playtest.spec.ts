@@ -279,7 +279,7 @@ interactionTest('collapsed-dock-reveal-commit', async ({ page, expectActiveDrag 
 test('AUDIT-P2-COLLAPSED-DOCK-SYMMETRY accepted right-dock drop expands its destination', async ({ page }) => {
   const toggle = page.locator('.toolbar-edge-toggle-right');
   await toggle.click();
-  const source = page.getByRole('article', { name: 'Theme Materials' });
+  const source = page.getByRole('article', { name: 'Characters (Story)' });
   const originRect = await source.boundingBox();
   const sourceIdentity = await captureWidgetIdentity(source);
   const beforeRevision = await workbenchRevision(page);
@@ -290,7 +290,9 @@ test('AUDIT-P2-COLLAPSED-DOCK-SYMMETRY accepted right-dock drop expands its dest
     { x: targetX, y: 120 }
   ]);
   await expect(page.locator('main')).toHaveAttribute('data-drag-reveal-right', 'true');
-  const targetBox = await page.getByRole('article', { name: 'World State' }).boundingBox();
+  const targetBox = await page.getByRole('article', { name: 'World State' })
+    .locator(':scope > [data-pom-part="widget.content"]')
+    .boundingBox();
   if (!targetBox) throw new Error('Expected revealed right-dock Widget geometry.');
   await movePointerPath(page, [{
     x: targetBox.x + targetBox.width / 2,
@@ -301,7 +303,7 @@ test('AUDIT-P2-COLLAPSED-DOCK-SYMMETRY accepted right-dock drop expands its dest
   await expectActiveWidgetDrag(page, sourceIdentity, { reservationCount: 1, originRect });
   await finishPointerDrag(page);
 
-  await expect(page.locator('[data-widget-type="settings.theme-materials"]')).toHaveAttribute('data-pomegranate-edge', 'right');
+  await expect(page.locator('[data-widget-type="story.characters"]')).toHaveAttribute('data-pomegranate-edge', 'right');
   expect(await workbenchRevision(page)).toBeGreaterThan(beforeRevision);
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
