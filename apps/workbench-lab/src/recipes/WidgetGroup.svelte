@@ -190,6 +190,7 @@
           data-widget-drag-root
           data-widget-drag-surface
           data-widget-touch-drag-grip
+          data-tab-touch-reorder-grip
           aria-selected={frame.instanceId === active?.instanceId}
           tabindex={frame.instanceId === active?.instanceId ? 0 : -1}
           onclick={() => { if (!reorderDrag.consumeClick()) activate(frame); }}

@@ -24,11 +24,13 @@ export function nextWidgetGroupGestureOwner(input: {
     || input.y > input.corridor.bottom + departureMargin;
   if (input.owner === 'reorder') return leftCorridor ? 'tear-off' : 'reorder';
 
-  return tabDragDecision({
+  const activation = tabDragDecision({
     dx: input.dx,
     dy: input.dy,
     pointerType: input.pointerType,
     elapsedMs: input.elapsedMs,
     allowTearOff: true
   });
+  if (activation === 'pending' || activation === 'cancelled') return activation;
+  return leftCorridor ? 'tear-off' : 'reorder';
 }

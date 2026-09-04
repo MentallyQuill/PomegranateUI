@@ -32,6 +32,15 @@ describe('Widget group gesture arbitration', () => {
     })).toBe('cancelled');
   });
 
+  it('uses the tab corridor as the authority once a mouse gesture activates', () => {
+    expect(nextWidgetGroupGestureOwner({
+      owner: 'pending', dx: 2, dy: 12, y: 61, corridor, pointerType: 'mouse', elapsedMs: 20
+    })).toBe('reorder');
+    expect(nextWidgetGroupGestureOwner({
+      owner: 'pending', dx: 18, dy: 2, y: 88, corridor, pointerType: 'mouse', elapsedMs: 20
+    })).toBe('tear-off');
+  });
+
   it('does not mistake horizontal travel beyond the strip ends for a tear-off', () => {
     expect(nextWidgetGroupGestureOwner({
       owner: 'reorder', dx: 280, dy: 3, y: 59, corridor, pointerType: 'pen', elapsedMs: 40

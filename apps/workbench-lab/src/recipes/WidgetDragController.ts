@@ -276,10 +276,23 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
   function syncCollapsedDockReveal(current: DragCandidate, point: DockPoint) {
     const root = current.surface.closest<HTMLElement>('main[data-pom-theme-root]');
     if (!root) return;
-    const side = dockRevealSide(point, rectOf(current.surface.getBoundingClientRect()), 34);
-    const revealLeft = side === 'left' && root.classList.contains('left-collapsed');
-    const revealRight = side === 'right' && root.classList.contains('right-collapsed');
-    current.revealedDock = revealLeft ? 'left' : revealRight ? 'right' : null;
+    let revealedDock = current.revealedDock;
+    if (revealedDock) {
+      const revealedRegion = current.surface.querySelector<HTMLElement>(
+        `[data-pomegranate-region-surface="${revealedDock}"]`
+      );
+      if (!revealedRegion || !pointInside(point, rectOf(revealedRegion.getBoundingClientRect()))) {
+        revealedDock = null;
+      }
+    }
+    if (!revealedDock) {
+      const side = dockRevealSide(point, rectOf(current.surface.getBoundingClientRect()), 34);
+      if (side === 'left' && root.classList.contains('left-collapsed')) revealedDock = 'left';
+      if (side === 'right' && root.classList.contains('right-collapsed')) revealedDock = 'right';
+    }
+    current.revealedDock = revealedDock;
+    const revealLeft = revealedDock === 'left';
+    const revealRight = revealedDock === 'right';
     const changed = root.hasAttribute('data-drag-reveal-left') !== revealLeft
       || root.hasAttribute('data-drag-reveal-right') !== revealRight;
     if (revealLeft) root.dataset.dragRevealLeft = 'true';
