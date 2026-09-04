@@ -18,6 +18,7 @@
   const active = $derived(ordered.find((frame) => frame.placement.kind === 'docked' && frame.placement.group?.active) ?? ordered[0]);
   const rowHeight = $derived(active?.placement.kind === 'docked' ? active.placement.height : undefined);
   let lastSecondaryPointer: { anchor: HTMLElement; frameId: string; x: number; y: number; at: number } | undefined;
+  let lastTouchPointerAt = Number.NEGATIVE_INFINITY;
 
   function requestActions(frame: WidgetFrameProjection, anchor: HTMLElement, source: 'pointer' | 'keyboard' | 'touch', point?: { x: number; y: number }) {
     onrequestactions?.({ frame, title: titleFor?.(frame) ?? frame.title, anchor, source, ...(point ? { point } : {}) });
@@ -26,12 +27,8 @@
   function handleContextMenu(event: MouseEvent, frame: WidgetFrameProjection) {
     if (!onrequestactions) return;
     event.preventDefault();
-    if (
-      ('pointerType' in event && event.pointerType === 'touch')
-      || (typeof window.matchMedia === 'function'
-        && window.matchMedia('(pointer: coarse)').matches
-        && !window.matchMedia('(any-pointer: fine)').matches)
-    ) return;
+    const pointerType = (event as MouseEvent & { pointerType?: string }).pointerType;
+    if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) return;
     const anchor = event.currentTarget as HTMLElement;
     const previous = lastSecondaryPointer;
     lastSecondaryPointer = undefined;
@@ -46,7 +43,12 @@
   }
 
   function handleSecondaryPointerDown(event: PointerEvent, frame: WidgetFrameProjection) {
-    if (!onrequestactions || event.button !== 2 || event.pointerType === 'touch') return;
+    if (!onrequestactions) return;
+    if (event.pointerType === 'touch') {
+      lastTouchPointerAt = event.timeStamp;
+      return;
+    }
+    if (event.button !== 2) return;
     event.preventDefault();
     const anchor = event.currentTarget as HTMLElement;
     lastSecondaryPointer = { anchor, frameId: frame.instanceId, x: event.clientX, y: event.clientY, at: event.timeStamp };

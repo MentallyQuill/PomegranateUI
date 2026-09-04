@@ -36,6 +36,7 @@
   const dispatch = (command: WorkbenchCommand) => store.dispatch(command);
   let dragging = $state(false);
   let actionsOpen = $state(false);
+  let lastTouchPointerAt = Number.NEGATIVE_INFINITY;
   const requestWidgetActions = getWidgetActionMenuContext();
   const drag = createWidgetDragController({
     getFrame: () => frame,
@@ -50,6 +51,7 @@
     && Boolean(target.closest('button, a, input, textarea, select, summary, [role="menu"]'))
   );
   const dragSurfacePointerDown = (event: PointerEvent) => {
+    if (event.pointerType === 'touch') lastTouchPointerAt = event.timeStamp;
     if (event.button === 2) {
       if (!grouped && event.pointerType !== 'touch') {
         event.preventDefault();
@@ -74,12 +76,8 @@
   const handleContextMenu = (event: MouseEvent) => {
     if (grouped) return;
     event.preventDefault();
-    if (
-      ('pointerType' in event && event.pointerType === 'touch')
-      || (typeof window.matchMedia === 'function'
-        && window.matchMedia('(pointer: coarse)').matches
-        && !window.matchMedia('(any-pointer: fine)').matches)
-    ) return;
+    const pointerType = (event as MouseEvent & { pointerType?: string }).pointerType;
+    if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) return;
     openActions(event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
   };
   const handleHeaderKey = (event: KeyboardEvent) => {

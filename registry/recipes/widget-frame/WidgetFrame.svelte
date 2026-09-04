@@ -43,6 +43,7 @@
   const Renderer = $derived(rendererRegistry.get(frame.instance.type));
   const dispatch = (command: WorkbenchCommand) => store.dispatch(command);
   let lastSecondaryPointer: { anchor: HTMLElement; x: number; y: number; at: number } | undefined;
+  let lastTouchPointerAt = Number.NEGATIVE_INFINITY;
 
   function requestActions(anchor: HTMLElement, source: 'pointer' | 'keyboard' | 'touch', point?: { x: number; y: number }) {
     onrequestactions?.({ frame, title: displayTitle, anchor, source, ...(point ? { point } : {}) });
@@ -51,12 +52,8 @@
   function handleContextMenu(event: MouseEvent) {
     if (!onrequestactions || grouped) return;
     event.preventDefault();
-    if (
-      ('pointerType' in event && event.pointerType === 'touch')
-      || (typeof window.matchMedia === 'function'
-        && window.matchMedia('(pointer: coarse)').matches
-        && !window.matchMedia('(any-pointer: fine)').matches)
-    ) return;
+    const pointerType = (event as MouseEvent & { pointerType?: string }).pointerType;
+    if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) return;
     const anchor = event.currentTarget as HTMLElement;
     const previous = lastSecondaryPointer;
     lastSecondaryPointer = undefined;
@@ -70,7 +67,12 @@
   }
 
   function handleSecondaryPointerDown(event: PointerEvent) {
-    if (!onrequestactions || grouped || event.button !== 2 || event.pointerType === 'touch') return;
+    if (!onrequestactions || grouped) return;
+    if (event.pointerType === 'touch') {
+      lastTouchPointerAt = event.timeStamp;
+      return;
+    }
+    if (event.button !== 2) return;
     event.preventDefault();
     const anchor = event.currentTarget as HTMLElement;
     lastSecondaryPointer = { anchor, x: event.clientX, y: event.clientY, at: event.timeStamp };

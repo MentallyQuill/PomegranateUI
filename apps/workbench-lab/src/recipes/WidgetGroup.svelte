@@ -40,6 +40,7 @@
   let dragging = $state(false);
   let tablist = $state<HTMLElement>();
   let actionsOpen = $state(false);
+  let lastTouchPointerAt = Number.NEGATIVE_INFINITY;
   const requestWidgetActions = getWidgetActionMenuContext();
   let groupGesture: {
     pointerId: number;
@@ -75,6 +76,7 @@
   onDestroy(reorderDrag.destroy);
 
   function dragPointerDown(event: PointerEvent, frame: WidgetFrameProjection) {
+    if (event.pointerType === 'touch') lastTouchPointerAt = event.timeStamp;
     if (event.button === 2) {
       if (event.pointerType !== 'touch') {
         event.preventDefault();
@@ -211,12 +213,8 @@
 
   function tabContextMenu(event: MouseEvent, frame: WidgetFrameProjection) {
     event.preventDefault();
-    if (
-      ('pointerType' in event && event.pointerType === 'touch')
-      || (typeof window.matchMedia === 'function'
-        && window.matchMedia('(pointer: coarse)').matches
-        && !window.matchMedia('(any-pointer: fine)').matches)
-    ) return;
+    const pointerType = (event as MouseEvent & { pointerType?: string }).pointerType;
+    if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) return;
     openActions(frame, event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
   }
 </script>

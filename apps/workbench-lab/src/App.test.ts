@@ -10,10 +10,17 @@ import { themeDraftStorageKey } from './themes/draft-storage.js';
 import { LAB_THEME_PRESETS } from './themes/presets.js';
 import { themePreviewStyle } from './themes/preview.js';
 
+const nativeMatchMedia = window.matchMedia;
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
   window.history.replaceState({}, '', '/');
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: nativeMatchMedia
+  });
 });
 
 describe('Svelte Workbench Lab mockup', () => {
@@ -532,6 +539,66 @@ describe('Svelte Workbench Lab mockup', () => {
     if (!widgetActions) throw new Error('Expected the shared Widget action surface.');
     expect(widgetActions).toHaveAttribute('aria-label', 'World State Widget actions');
     expect(widgetActions).toHaveAttribute('data-fallback-open');
+  });
+
+  it('honors an actual mouse context menu even when pointer media reports coarse-only input', async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: (query: string) => ({
+        matches: query === '(pointer: coarse)',
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false
+      }) satisfies MediaQueryList
+    });
+    render(App);
+    const worldStateHeader = within(screen.getByRole('article', { name: 'World State' }))
+      .getByRole('toolbar', { name: 'World State draggable Widget header' });
+
+    await fireEvent.contextMenu(worldStateHeader, {
+      button: 2,
+      pointerType: 'mouse',
+      clientX: 32,
+      clientY: 48
+    });
+
+    const widgetActions = document.querySelector<HTMLElement>('.widget-actions-menu');
+    if (!widgetActions) throw new Error('Expected the shared Widget action surface.');
+    expect(widgetActions).toHaveAttribute('aria-label', 'World State Widget actions');
+    expect(widgetActions).toHaveAttribute('data-fallback-open');
+  });
+
+  it('does not turn a touch long-press context menu into a Widget action request', async () => {
+    render(App);
+    const worldStateHeader = within(screen.getByRole('article', { name: 'World State' }))
+      .getByRole('toolbar', { name: 'World State draggable Widget header' });
+
+    await fireEvent.pointerDown(worldStateHeader, {
+      button: 0,
+      pointerId: 14,
+      pointerType: 'touch',
+      clientX: 32,
+      clientY: 48
+    });
+    await fireEvent.contextMenu(worldStateHeader, {
+      button: 2,
+      clientX: 32,
+      clientY: 48
+    });
+    await fireEvent.pointerCancel(worldStateHeader, {
+      pointerId: 14,
+      pointerType: 'touch'
+    });
+
+    const widgetActions = document.querySelector<HTMLElement>('.widget-actions-menu');
+    if (!widgetActions) throw new Error('Expected the shared Widget action surface.');
+    expect(widgetActions).toHaveAttribute('aria-label', 'Widget actions');
+    expect(widgetActions).not.toHaveAttribute('data-fallback-open');
   });
 
   it('keeps host presentation titles through Focus', async () => {
