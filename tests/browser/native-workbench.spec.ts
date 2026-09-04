@@ -1307,6 +1307,36 @@ test('Deep Current edge controls collapse and restore both toolbars without hidi
   await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
 });
 
+test('collapsed Story Stage toolbars never create a horizontal Workbench scroll range', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const surface = page.locator('.workbench-surface');
+  const assertHorizontallyFixed = async (state: string) => {
+    const extent = await surface.evaluate((node) => ({
+      clientWidth: node.clientWidth,
+      scrollWidth: node.scrollWidth
+    }));
+    expect(extent.scrollWidth, `${state}: ${JSON.stringify(extent)}`).toBe(extent.clientWidth);
+
+    await surface.evaluate((node) => { node.scrollLeft = node.scrollWidth; });
+    expect(await surface.evaluate((node) => node.scrollLeft), state).toBe(0);
+  };
+
+  await assertHorizontallyFixed('both toolbars open');
+
+  await page.getByRole('button', { name: 'Close right toolbar' }).click();
+  await expect(page.locator('[data-conformance-region="right"]')).toBeHidden();
+  await assertHorizontallyFixed('right toolbar collapsed');
+
+  await page.getByRole('button', { name: 'Close left toolbar' }).click();
+  await expect(page.locator('[data-conformance-region="left"]')).toBeHidden();
+  await assertHorizontallyFixed('both toolbars collapsed');
+
+  await page.getByRole('button', { name: 'Open right toolbar' }).click();
+  await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
+  await assertHorizontallyFixed('left toolbar collapsed');
+});
+
 test('Story Stage side toolbars ease through intermediate widths and reverse without snapping', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 

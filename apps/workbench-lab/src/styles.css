@@ -4578,6 +4578,7 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
   }
   main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="story-stage"] {
     grid-template-columns: minmax(0, var(--pom-story-left-track)) minmax(0, 1fr) minmax(0, var(--pom-story-right-track));
+    overflow-x: clip;
   }
   main[data-pom-theme-root] .toolbar-edge-toggle-left:not([data-toolbar-toggle-presentation="bottom-chevrons"]) {
     left: var(--pom-story-left-track, var(--pom-left-width, var(--pom-side-width)));
