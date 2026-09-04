@@ -65,6 +65,12 @@ describe('migrateTheme', () => {
       material: 'widget',
       shape: 'widget'
     });
+    expect(result.theme.recipes.parts['story.measure-resizer']).toMatchObject({
+      material: 'field',
+      shape: 'none',
+      spacing: 'xs',
+      elevation: 0
+    });
     expect(result.theme.controls.slider.hitTargetPx).toBe(44);
   });
 

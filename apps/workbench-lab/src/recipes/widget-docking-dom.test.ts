@@ -54,6 +54,7 @@ describe('docking DOM targets', () => {
     preview.sync(columnTargets, intent);
     expect(inner.querySelector('[data-pom-part="widget.dock-slot"]')).not.toBeNull();
     expect(outer.querySelector('[data-pom-part="widget.dock-slot"]')).toBeNull();
+    expect(document.querySelector<HTMLElement>('[data-pom-part="widget.snap-preview"]')?.dataset.dropColumn).toBe('1');
     preview.destroy();
   });
 

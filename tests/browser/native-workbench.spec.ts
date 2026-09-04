@@ -886,6 +886,134 @@ test('Deep Current dock separators resize with keyboard and persist exact bounde
   await expect.poll(() => page.locator('[data-pomegranate-dock="right"]').evaluate((node) => node.getBoundingClientRect().width)).toBe(420);
 });
 
+test('every theme shares centered draggable Story measure controls and restores the preferred width', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const left = page.getByRole('separator', { name: 'Resize Story width from left edge' });
+  const right = page.getByRole('separator', { name: 'Resize Story width from right edge' });
+
+  await openDeveloperTools(page);
+  const themes = page.getByRole('group', { name: 'Visual target' });
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
+    await themes.getByRole('button', { name: theme, exact: true }).click();
+    await closeDeveloperTools(page);
+    for (const [handle, edge] of [[left, 'left'], [right, 'right']] as const) {
+      await expect(handle).toBeVisible();
+      await expect(handle).toHaveAttribute('data-story-measure-resizer', edge);
+      await expect(handle).toHaveAttribute('data-pom-part', 'story.measure-resizer');
+      await expect(handle).toHaveCSS('cursor', 'col-resize');
+      await expect(handle).toHaveAttribute('aria-valuenow', '800');
+    }
+    await openDeveloperTools(page);
+  }
+  await closeDeveloperTools(page);
+
+  const revision = await page.locator('main').getAttribute('data-workbench-revision');
+  await left.click();
+  await left.dblclick();
+  await left.dispatchEvent('pointerdown', { button: 0, clientX: 400, pointerId: 41, pointerType: 'touch' });
+  await left.dispatchEvent('pointerup', { button: 0, clientX: 400, pointerId: 41, pointerType: 'touch' });
+  await expect(page.locator('main')).toHaveAttribute('data-workbench-revision', revision ?? '0');
+
+  const storyBoxes = () => page.evaluate(() => {
+    const transcript = document.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .widget-frame');
+    const composer = document.querySelector<HTMLElement>('[data-widget-type="story.composer"]');
+    if (!transcript || !composer) throw new Error('Missing Story measure surfaces.');
+    const box = (node: HTMLElement) => {
+      const rect = node.getBoundingClientRect();
+      return { width: rect.width, center: rect.left + rect.width / 2 };
+    };
+    return { transcript: box(transcript), composer: box(composer) };
+  });
+  const before = await storyBoxes();
+  await dragHorizontally(page, left, -48);
+  await expect(left).toHaveAttribute('aria-valuenow', '896');
+  const after = await storyBoxes();
+  expect(after.transcript.width).toBeGreaterThan(before.transcript.width + 80);
+  expect(Math.abs(after.transcript.width - after.composer.width)).toBeLessThan(2);
+  expect(Math.abs(after.transcript.center - before.transcript.center)).toBeLessThan(2);
+  expect(Math.abs(after.composer.center - before.composer.center)).toBeLessThan(2);
+
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await expect(left).toHaveAttribute('aria-valuenow', '420');
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect(left).toHaveAttribute('aria-valuenow', '896');
+  await right.press('ArrowRight');
+  await expect(right).toHaveAttribute('aria-valuenow', '912');
+  const keyboard = await storyBoxes();
+  expect(keyboard.transcript.width).toBeGreaterThan(after.transcript.width + 14);
+  expect(Math.abs(keyboard.transcript.width - keyboard.composer.width)).toBeLessThan(2);
+});
+
+test('Story toolbar columns add inward and populated removal warns, cancels, confirms, and undoes', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const leftAdd = page.getByRole('button', { name: 'Add column to left toolbar' });
+  const leftRemove = page.getByRole('button', { name: 'Remove column from left toolbar' });
+  const rightAdd = page.getByRole('button', { name: 'Add column to right toolbar' });
+  const rightRemove = page.getByRole('button', { name: 'Remove column from right toolbar' });
+  const columns = (edge: 'left' | 'right') => page.locator(`[data-conformance-region="${edge}"] [data-dock-column]`);
+
+  await expect(leftRemove).toBeDisabled();
+  await expect(rightRemove).toBeDisabled();
+  expect(await leftAdd.boundingBox()).toMatchObject({ width: 30, height: 30 });
+  expect(await leftRemove.boundingBox()).toMatchObject({ width: 30, height: 30 });
+
+  await rightAdd.click();
+  await expect(columns('right')).toHaveCount(2);
+  await expect(columns('right').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-dock-column'))))
+    .resolves.toEqual(['1', '0']);
+  await rightRemove.click();
+  await expect(columns('right')).toHaveCount(1);
+
+  await leftAdd.click();
+  await expect(columns('left')).toHaveCount(2);
+  await expect(columns('left').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-dock-column'))))
+    .resolves.toEqual(['0', '1']);
+  const inner = columns('left').filter({ has: page.locator('[data-pomegranate-shelf]') }).nth(1);
+  const worldStateHandle = widgetDragSurface(page.getByRole('article', { name: 'World State' }));
+  const sourceBox = await worldStateHandle.boundingBox();
+  if (!sourceBox) throw new Error('Expected World State drag geometry.');
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 12, sourceBox.y + sourceBox.height / 2 + 12, { steps: 3 });
+  const innerRail = page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="left"][data-drop-column="1"]').last();
+  const railBox = await innerRail.boundingBox();
+  if (!railBox) throw new Error('Expected an inner-column drop rail.');
+  await page.mouse.move(railBox.x + railBox.width / 2, railBox.y + railBox.height / 2, { steps: 6 });
+  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-column', '1');
+  await page.mouse.up();
+  await expect(inner.getByRole('article', { name: 'World State' })).toBeVisible();
+
+  await leftRemove.click();
+  const dialog = page.getByRole('dialog', { name: 'Remove left toolbar column?' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('1 Widget');
+  await expect(dialog.getByRole('list', { name: 'Widgets that will be removed' })).toHaveText('World State');
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(leftRemove).toBeFocused();
+  await expect(inner.getByRole('article', { name: 'World State' })).toBeVisible();
+
+  await leftRemove.click();
+  await dialog.getByRole('button', { name: 'Remove column' }).click();
+  await expect(columns('left')).toHaveCount(1);
+  await expect(page.getByRole('article', { name: 'World State' })).toHaveCount(0);
+  await expect(leftAdd).toBeFocused();
+  await page.getByRole('button', { name: 'Undo layout' }).press('Enter');
+  await expect(columns('left')).toHaveCount(2);
+  await expect(columns('left').nth(1).getByRole('article', { name: 'World State' })).toBeVisible();
+
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await expect(leftAdd).toHaveCount(0);
+  await expect(leftRemove).toHaveCount(0);
+  await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveCount(0);
+  await expect(columns('left')).toHaveCount(2);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect(leftAdd).toBeVisible();
+  await expect(leftRemove).toBeVisible();
+  await expect(columns('left')).toHaveCount(2);
+});
+
 test('Settings columns and Theme Canvas row resize by keyboard and pointer and persist', async ({ page }) => {
   await page.getByRole('tab', { name: 'Settings' }).click();
   await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
@@ -2432,7 +2560,7 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
     x: targetBox.x + targetBox.width / 2,
     y: targetBox.y + targetBox.height / 2
   });
-  expect(proxyEvidence.target).toBe(`${JSON.stringify(['rail', 'scene', null, 0, 'left', 'append'])}:append`);
+  expect(proxyEvidence.target).toBe(`${JSON.stringify(['rail', 'scene', null, null, 0, 'left', 'append'])}:append`);
   const selectedTarget = page.locator('[data-pom-part="widget.drop-rail"][data-active="true"]');
   await expect(selectedTarget).toHaveCount(1);
   await expect(selectedTarget).toHaveAttribute('data-drop-region', 'left');
@@ -2752,7 +2880,7 @@ test('Catalog pointer placement selects the topmost nested compatible target ben
   }, { x: innerBox.x, y: innerBox.y, width: innerBox.width, height: innerBox.height });
   await page.mouse.move(point.x, point.y, { steps: 2 });
 
-  const expectedTarget = `${JSON.stringify(['region', 'scene', null, 0, 'right'])}:region`;
+  const expectedTarget = `${JSON.stringify(['region', 'scene', null, 0, null, 'right'])}:region`;
   await expect(page.locator('[data-catalog-placement-proxy]')).toHaveAttribute('data-placement-target', expectedTarget);
   await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-region', 'right');
   await expect(page.locator('.widget-drop-intent-label')).toContainText('Nested right instruments region');

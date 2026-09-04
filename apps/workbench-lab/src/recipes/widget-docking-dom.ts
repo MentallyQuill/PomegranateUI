@@ -214,6 +214,7 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
       rail.dataset.dropRegion = target.regionId;
       rail.dataset.dropRailKind = target.railKind ?? 'append';
       rail.dataset.dropInsertOrder = String(target.insertOrder ?? 0);
+      if (target.dockColumn !== undefined) rail.dataset.dropColumn = String(target.dockColumn);
       rail.dataset.active = String(intent?.targetId === target.id);
       positionFixed(rail, target.rect);
       const label = ownerDocument.createElement('span');
@@ -227,6 +228,7 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
     snap.dataset.pomPart = 'widget.snap-preview';
     snap.dataset.dropIntent = intent.kind;
     snap.dataset.dropRegion = intent.regionId;
+    if (intent.dockColumn !== undefined) snap.dataset.dropColumn = String(intent.dockColumn);
     positionFixed(snap, intent.previewRect);
     overlay.append(snap);
     if (intent.kind === 'tab') {

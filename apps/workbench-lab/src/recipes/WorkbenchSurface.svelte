@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { ToolbarTogglePresentation, WorkbenchState } from '@pomegranate-ui/contracts';
+  import { resolveStoryLayoutGeometry } from '@pomegranate-ui/layout';
   import {
     selectPanelSurface,
     selectSubPanelTabs,
@@ -41,26 +42,49 @@
     class?: string;
   } = $props();
 
-  let state = $state<WorkbenchState>();
+  let workbenchState = $state<WorkbenchState>();
+  let panelRoot = $state<HTMLElement>();
+  let availableWidth = $state(1920);
   $effect(() => {
     const current = store;
-    state = current.getState();
-    return current.subscribe((next) => { state = next; });
+    workbenchState = current.getState();
+    return current.subscribe((next) => { workbenchState = next; });
   });
-  const surface = $derived(state ? selectPanelSurface(state, store.registry, store.templates) : null);
-  const activeSubPanel = $derived(state
-    ? selectSubPanelTabs(state).find((subPanel) => subPanel.selected)
+  const surface = $derived(workbenchState ? selectPanelSurface(workbenchState, store.registry, store.templates) : null);
+  const activeSubPanel = $derived(workbenchState
+    ? selectSubPanelTabs(workbenchState).find((subPanel) => subPanel.selected)
     : undefined);
-  const activePanel = $derived(state?.panels.find((panel) => panel.id === state?.activePanelId));
+  const activePanel = $derived(workbenchState?.panels.find((panel) => panel.id === workbenchState?.activePanelId));
+  $effect(() => {
+    const root = panelRoot;
+    if (!root) return;
+    const update = () => {
+      const measuredWidth = root.clientWidth - 14;
+      if (measuredWidth > 0) availableWidth = measuredWidth;
+    };
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(update);
+    observer.observe(root);
+    return () => observer.disconnect();
+  });
   const panelDockWidths = $derived.by(() => {
     const raw = activePanel?.configuration?.dockWidths;
     if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return {};
     return raw as Readonly<Record<string, unknown>>;
   });
-  const leftWidth = $derived(typeof panelDockWidths.left === 'number' ? panelDockWidths.left : 286);
-  const rightWidth = $derived(typeof panelDockWidths.right === 'number' ? panelDockWidths.right : 286);
-  const leftCssWidth = $derived(typeof panelDockWidths.left === 'number' ? `${leftWidth}px` : 'var(--pom-side-width)');
-  const rightCssWidth = $derived(typeof panelDockWidths.right === 'number' ? `${rightWidth}px` : 'var(--pom-side-width)');
+  const storyGeometry = $derived(activePanel && surface?.templateFamily === 'story-stage'
+    ? resolveStoryLayoutGeometry({
+        panel: activePanel,
+        availableWidth,
+        leftOpen: !leftCollapsed,
+        rightOpen: !rightCollapsed
+      })
+    : null);
+  const leftWidth = $derived(storyGeometry?.left.renderedWidth ?? (typeof panelDockWidths.left === 'number' ? panelDockWidths.left : 286));
+  const rightWidth = $derived(storyGeometry?.right.renderedWidth ?? (typeof panelDockWidths.right === 'number' ? panelDockWidths.right : 286));
+  const leftCssWidth = $derived(storyGeometry ? `${leftWidth}px` : typeof panelDockWidths.left === 'number' ? `${leftWidth}px` : 'var(--pom-side-width)');
+  const rightCssWidth = $derived(storyGeometry ? `${rightWidth}px` : typeof panelDockWidths.right === 'number' ? `${rightWidth}px` : 'var(--pom-side-width)');
   const leftToggleLabel = $derived(`${leftCollapsed ? 'Open' : 'Close'} left toolbar`);
   const rightToggleLabel = $derived(`${rightCollapsed ? 'Open' : 'Close'} right toolbar`);
 
@@ -87,6 +111,7 @@
 
 {#if surface}
   <div
+    bind:this={panelRoot}
     class={className}
     id={surface.surfaceId}
     role="tabpanel"
@@ -94,7 +119,7 @@
     data-pomegranate-panel={surface.panelId}
     data-sub-panel-layout={surface.activeSubPanelLayoutId ?? undefined}
     data-pom-part="panel.surface"
-    style={`--pom-left-width:${leftCssWidth};--pom-right-width:${rightCssWidth}`}
+    style={`--pom-left-width:${leftCssWidth};--pom-right-width:${rightCssWidth};--pom-story-measure:${storyGeometry?.renderedMeasure ?? 800}px`}
   >
     <div
       class="sub-panel-surface"
@@ -115,11 +140,30 @@
           {onexpanddock}
           {storyTitle}
           {currentScene}
+          {storyGeometry}
+          {leftCollapsed}
+          {rightCollapsed}
         />
       {/if}
-      {#if surface.templateFamily === 'story-stage' || showDockResizers}
-        <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
-        <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />
+      {#if surface.templateFamily === 'story-stage' ? storyGeometry?.left.visible && !storyGeometry.left.compressed : showDockResizers}
+        <ToolbarResizeHandle
+          edge="left"
+          panelId={surface.panelId}
+          width={leftWidth}
+          minimum={(storyGeometry?.left.renderedColumnCount ?? 1) * 200}
+          maximum={(storyGeometry?.left.renderedColumnCount ?? 1) * 420}
+          {store}
+        />
+      {/if}
+      {#if surface.templateFamily === 'story-stage' ? storyGeometry?.right.visible && !storyGeometry.right.compressed : showDockResizers}
+        <ToolbarResizeHandle
+          edge="right"
+          panelId={surface.panelId}
+          width={rightWidth}
+          minimum={(storyGeometry?.right.renderedColumnCount ?? 1) * 200}
+          maximum={(storyGeometry?.right.renderedColumnCount ?? 1) * 420}
+          {store}
+        />
       {/if}
       {#if surface.templateFamily === 'story-stage'}
         {@render toolbarControls()}

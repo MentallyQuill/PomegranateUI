@@ -42,6 +42,7 @@ const PART_MATERIALS: Readonly<Record<ThemePartId, ThemeMaterialRole>> = {
   'widget.actions': 'widget',
   'row.surface': 'field',
   separator: 'field',
+  'story.measure-resizer': 'field',
   'field.surface': 'field',
   'button.surface': 'button',
   'button.icon': 'button',
@@ -69,6 +70,7 @@ const PART_SHAPES: Readonly<Record<ThemePartId, string>> = {
   'widget.actions': 'widget',
   'row.surface': 'small',
   separator: 'none',
+  'story.measure-resizer': 'none',
   'field.surface': 'small',
   'button.surface': 'small',
   'button.icon': 'pill',
@@ -184,11 +186,11 @@ function migrateV1(theme: ThemeDefinitionV1): ThemeDefinitionV2 | null {
     material: PART_MATERIALS[part],
     shape: PART_SHAPES[part],
     typography: 'ui',
-    spacing: part === 'canvas.surface' || part === 'separator' ? 'xs' : 'md',
+    spacing: part === 'canvas.surface' || part === 'separator' || part === 'story.measure-resizer' ? 'xs' : 'md',
     overflow: part === 'widget.content' ? 'scroll' : 'visible',
     separator: part === 'separator' ? theme.geometry.sharedEdge === 'none' ? 'space' : 'hairline' : 'none',
     elevation: part === 'sub-panel.bar' ? 3
-      : ['canvas.surface', 'separator', 'slider.input', 'slider.track', 'slider.fill'].includes(part) ? 0 : 2,
+      : ['canvas.surface', 'separator', 'story.measure-resizer', 'slider.input', 'slider.track', 'slider.fill'].includes(part) ? 0 : 2,
     states: { disabledOpacity: 0.5 }
   } satisfies ThemePartRecipeV2])) as Record<ThemePartId, ThemePartRecipeV2>;
 

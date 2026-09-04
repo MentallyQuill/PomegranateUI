@@ -145,6 +145,7 @@ const PART_MATERIALS: Readonly<Record<ThemePartId, LabMaterialId>> = {
   'widget.actions': 'header',
   'row.surface': 'row',
   separator: 'row',
+  'story.measure-resizer': 'row',
   'field.surface': 'field',
   'button.surface': 'button',
   'button.icon': 'button',
@@ -172,6 +173,7 @@ const PART_SHAPES: Readonly<Record<ThemePartId, string>> = {
   'widget.actions': 'content',
   'row.surface': 'row',
   separator: 'none',
+  'story.measure-resizer': 'none',
   'field.surface': 'field',
   'button.surface': 'button',
   'button.icon': 'pill',
@@ -193,8 +195,8 @@ export function themeRecipes(options: {
   const parts = Object.fromEntries(THEME_PART_IDS.map((part) => [part, {
     material: PART_MATERIALS[part],
     shape: PART_SHAPES[part],
-    typography: part === 'separator' ? 'technical' : 'ui',
-    spacing: part === 'canvas.surface' || part === 'separator' ? 'xs' : 'md',
+    typography: part === 'separator' || part === 'story.measure-resizer' ? 'technical' : 'ui',
+    spacing: part === 'canvas.surface' || part === 'separator' || part === 'story.measure-resizer' ? 'xs' : 'md',
     overflow: ['widget.surface', 'menu.surface', 'dialog.surface', 'floating.surface'].includes(part) ? 'clip' : 'visible',
     separator: part === 'separator' ? 'hairline' : 'none',
     elevation: part === 'floating.surface' || part === 'dialog.surface' ? 4

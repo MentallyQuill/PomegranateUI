@@ -136,6 +136,42 @@ describe('CatalogPlacementController', () => {
     controller.destroy();
   });
 
+  it('inherits a toolbar role from the enclosing dock while targeting a physical column', () => {
+    const root = document.body.appendChild(document.createElement('main'));
+    root.dataset.pomegranatePanel = 'panel-story';
+    const toolbar = root.appendChild(document.createElement('section'));
+    toolbar.dataset.pomegranateRegionRole = 'left-instruments';
+    const column = toolbar.appendChild(document.createElement('section'));
+    column.dataset.pomegranateRegionSurface = 'left';
+    column.dataset.dockColumn = '1';
+    column.setAttribute('aria-label', 'Left toolbar column 2');
+    Object.defineProperty(column, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(100, 100, 280, 300)
+    });
+    const origin = document.body.appendChild(document.createElement('article'));
+    Object.defineProperty(origin, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(10, 10, 286, 360)
+    });
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit: vi.fn()
+    });
+
+    controller.keyDown(new KeyboardEvent('keydown', { key: ' ', cancelable: true }), manifest, origin);
+
+    expect(controller.getState().targets[0]?.identity).toMatchObject({
+      regionId: 'left',
+      regionRole: 'left-instruments',
+      dockColumn: 1
+    });
+    controller.destroy();
+  });
+
 
   it('keeps duplicate semantic regions in separate lanes uniquely addressable', () => {
     const { root, origin, target: first } = placementSurface();

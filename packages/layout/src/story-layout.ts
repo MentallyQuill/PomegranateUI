@@ -26,6 +26,7 @@ export interface StoryLayoutGeometry {
   readonly compact: boolean;
   readonly preferredMeasure: number;
   readonly renderedMeasure: number;
+  readonly maximumMeasure: number;
   readonly left: StoryToolbarGeometry;
   readonly right: StoryToolbarGeometry;
 }
@@ -91,20 +92,37 @@ export function resolveStoryLayoutGeometry({
 
   const requestedLeft = requestedDockWidth(panel, 'left', layout.toolbarColumns.left);
   const requestedRight = requestedDockWidth(panel, 'right', layout.toolbarColumns.right);
-  const leftWidth = leftVisible
+  let leftWidth = leftVisible
     ? clamp(
       requestedLeft,
       leftRenderedColumns * STORY_TOOLBAR_COLUMN_MIN,
       leftRenderedColumns * STORY_TOOLBAR_COLUMN_MAX
     )
     : 0;
-  const rightWidth = rightVisible
+  let rightWidth = rightVisible
     ? clamp(
       requestedRight,
       rightRenderedColumns * STORY_TOOLBAR_COLUMN_MIN,
       rightRenderedColumns * STORY_TOOLBAR_COLUMN_MAX
     )
     : 0;
+  if (!compact) {
+    const dockBudget = Math.max(0, availableWidth - STORY_MIN_MEASURE - STORY_OUTER_GUTTERS);
+    const totalWidth = leftWidth + rightWidth;
+    if (totalWidth > dockBudget) {
+      const leftMinimum = leftRenderedColumns * STORY_TOOLBAR_COLUMN_MIN;
+      const rightMinimum = rightRenderedColumns * STORY_TOOLBAR_COLUMN_MIN;
+      const leftFlex = Math.max(0, leftWidth - leftMinimum);
+      const rightFlex = Math.max(0, rightWidth - rightMinimum);
+      const flex = leftFlex + rightFlex;
+      const overflow = totalWidth - dockBudget;
+      if (flex > 0) {
+        const leftReduction = Math.min(leftFlex, overflow * leftFlex / flex);
+        leftWidth -= leftReduction;
+        rightWidth -= Math.min(rightFlex, overflow - leftReduction);
+      }
+    }
+  }
   const centerCapacity = Math.max(0, availableWidth - leftWidth - rightWidth - STORY_OUTER_GUTTERS);
   const renderedMeasure = compact
     ? centerCapacity
@@ -128,6 +146,7 @@ export function resolveStoryLayoutGeometry({
     compact,
     preferredMeasure: layout.preferredMeasure,
     renderedMeasure,
+    maximumMeasure: centerCapacity,
     left: Object.freeze({
       columnCount: layout.toolbarColumns.left,
       renderedColumnCount: leftRenderedColumns,

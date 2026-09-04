@@ -51,6 +51,7 @@ export const THEME_PART_IDS = [
   'widget.actions',
   'row.surface',
   'separator',
+  'story.measure-resizer',
   'field.surface',
   'button.surface',
   'button.icon',

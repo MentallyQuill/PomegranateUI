@@ -834,4 +834,19 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
     expect(within(resetControls).getByRole('radio', { name: 'Bottom-edge chevrons' })).toBeChecked();
   });
+
+  it('exposes the shared Story measure and one-column toolbar controls', () => {
+    render(App);
+
+    expect(screen.getByRole('separator', { name: 'Resize Story width from left edge' })).toHaveAttribute(
+      'data-story-measure-resizer', 'left'
+    );
+    expect(screen.getByRole('separator', { name: 'Resize Story width from right edge' })).toHaveAttribute(
+      'data-story-measure-resizer', 'right'
+    );
+    expect(screen.getByRole('button', { name: 'Remove column from left toolbar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add column to left toolbar' })).toHaveTextContent('+');
+    expect(screen.getByRole('button', { name: 'Remove column from right toolbar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add column to right toolbar' })).toHaveTextContent('+');
+  });
 });

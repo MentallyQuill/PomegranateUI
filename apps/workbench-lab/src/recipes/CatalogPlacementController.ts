@@ -98,7 +98,7 @@ interface PointerCandidate {
   captured: boolean;
 }
 
-const TARGET_SELECTOR = '[data-pomegranate-region-surface][data-pomegranate-region-role]';
+const TARGET_SELECTOR = '[data-pomegranate-region-surface]';
 const POINTER_LIFT_THRESHOLD = 6;
 const CLICK_SUPPRESSION_MS = 400;
 
@@ -115,7 +115,8 @@ function targetIdentity(element: HTMLElement, manifest: WidgetManifest): Catalog
   const panel = element.closest<HTMLElement>('[data-pomegranate-panel]');
   const panelId = panel?.dataset.pomegranatePanel;
   const regionId = element.dataset.pomegranateRegionSurface;
-  const regionRole = element.dataset.pomegranateRegionRole;
+  const regionRole = element.dataset.pomegranateRegionRole
+    ?? element.closest<HTMLElement>('[data-pomegranate-region-role]')?.dataset.pomegranateRegionRole;
   if (!panelId || !regionId || !regionRole) return null;
   const subPanel = element.closest<HTMLElement>('[data-sub-panel]')?.dataset.subPanel;
   const rawLane = element.dataset.subPanelLane;

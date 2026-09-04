@@ -56,6 +56,18 @@ describe('Story layout geometry', () => {
     expect(result.right.compressed).toBe(false);
   });
 
+  it('shrinks requested docks before violating the minimum Story measure', () => {
+    const result = resolveStoryLayoutGeometry({
+      panel: storyPanel({ configuration: { dockWidths: { left: 420, right: 420 } } }),
+      availableWidth: 1200
+    });
+
+    expect(result.renderedMeasure).toBe(420);
+    expect(result.left.renderedWidth + result.right.renderedWidth).toBe(732);
+    expect(result.left.renderedWidth).toBe(366);
+    expect(result.right.renderedWidth).toBe(366);
+  });
+
   it('reports add eligibility from the next column minimum and center reserve', () => {
     const wide = resolveStoryLayoutGeometry({ panel: storyPanel(), availableWidth: 1800 });
     const tight = resolveStoryLayoutGeometry({ panel: storyPanel(), availableWidth: 1050 });

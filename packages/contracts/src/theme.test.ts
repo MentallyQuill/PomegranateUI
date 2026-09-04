@@ -202,7 +202,7 @@ describe('ThemeDefinitionSchema', () => {
     expect(THEME_PART_IDS).toEqual([
       'canvas.surface', 'chrome.shelf', 'chrome.context', 'dock.surface',
       'panel.surface', 'sub-panel.bar', 'sub-panel.surface', 'group.surface', 'widget.surface', 'widget.header',
-      'widget.content', 'widget.actions', 'row.surface', 'separator',
+      'widget.content', 'widget.actions', 'row.surface', 'separator', 'story.measure-resizer',
       'field.surface', 'button.surface', 'button.icon', 'menu.surface',
       'dialog.surface', 'floating.surface', 'slider.input', 'slider.track',
       'slider.fill', 'slider.thumb'

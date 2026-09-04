@@ -116,9 +116,9 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
       developerLauncher: rect(document.querySelector('[data-workbench-developer-drawer] > summary'), 'developer launcher'),
       workbench: rect(document.querySelector('.workbench-shell'), 'workbench'),
       leftDock: rect(document.querySelector('[data-conformance-region="left"]'), 'left dock'),
-      leftStack: stack('[data-conformance-region="left"] > .dock-shelf'),
+      leftStack: stack('[data-conformance-region="left"] [data-dock-column="0"] > .dock-shelf'),
       rightDock: rect(document.querySelector('[data-conformance-region="right"]'), 'right dock'),
-      rightStack: stack('[data-conformance-region="right"] > .dock-shelf'),
+      rightStack: stack('[data-conformance-region="right"] [data-dock-column="0"] > .dock-shelf'),
       stage: rect(document.querySelector('[data-conformance-region="stage"]'), 'stage'),
       transcript: rect(document.querySelector('[data-widget-type="story.transcript"]'), 'transcript'),
       transcriptHeader: rect(document.querySelector('[data-widget-type="story.transcript"] .widget-frame > header'), 'transcript header'),
@@ -795,7 +795,7 @@ test('wide text-profile Developer tools keeps a centered 44px SVG launcher', asy
   expect(geometry.verticalOffset).toBeLessThanOrEqual(1);
 });
 
-test('all themes keep centered story prose aligned with the composer instrument', async ({ page }) => {
+test('all themes keep story prose inside the centered transcript and composer measure', async ({ page }) => {
   await openFresh(page, 1600, 900);
 
   for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
@@ -837,8 +837,8 @@ test('all themes keep centered story prose aligned with the composer instrument'
       expect(geometry.composer.right - geometry.composer.left, `${theme} unified composer width`).toBeLessThanOrEqual(800.5);
     }
     if (geometry.shellPresentation === 'instrumented') {
-      expect(Math.abs(geometry.prose.left - geometry.composer.left), `${theme} Atmospheric prose left edge`).toBeLessThanOrEqual(1);
-      expect(Math.abs((geometry.composer.right - geometry.prose.right) - 30), `${theme} Atmospheric prose right gutter`).toBeLessThanOrEqual(1);
+      expect(geometry.prose.left, `${theme} Atmospheric prose left containment`).toBeGreaterThanOrEqual(geometry.transcript.left);
+      expect(geometry.prose.right, `${theme} Atmospheric prose right containment`).toBeLessThanOrEqual(geometry.transcript.right);
     } else {
       expect(Math.abs(geometry.prose.center - geometry.stage.center), `${theme} prose center`).toBeLessThanOrEqual(1);
       expect(
@@ -1403,6 +1403,39 @@ test('native workbench exposes coarse-pointer targets separately from compact ic
   expect(style).toContain('width: 44px');
 });
 
+test('Story measure controls expose focus, motion, forced-color, and responsive semantics', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+  const left = page.getByRole('separator', { name: 'Resize Story width from left edge' });
+  const add = page.getByRole('button', { name: 'Add column to left toolbar' });
+  await expect(left).toHaveAttribute('aria-orientation', 'vertical');
+  await expect(left).toHaveAttribute('aria-valuemin', '420');
+  await expect(left).toHaveAttribute('aria-valuenow', '800');
+  await left.evaluate((node) => {
+    if (!(node instanceof HTMLElement)) throw new Error('Expected an HTML Story resize control.');
+    const focusable = [...document.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter((candidate) => !candidate.hasAttribute('disabled'));
+    focusable[Math.max(0, focusable.indexOf(node) - 1)]?.focus();
+  });
+  await page.keyboard.press('Tab');
+  await expect(left).toBeFocused();
+  await expect.poll(() => left.locator('span').evaluate((node) => Number(getComputedStyle(node).opacity))).toBeGreaterThan(0);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(left.locator('span')).toHaveCSS('transition-duration', '0s');
+  await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' });
+  await left.focus();
+  await expect.poll(() => left.locator('span').evaluate((node) => Number(getComputedStyle(node).opacity))).toBe(1);
+
+  await page.emulateMedia({ forcedColors: 'none', reducedMotion: 'no-preference' });
+  await page.setViewportSize({ width: 800, height: 450 });
+  await expect(left).toHaveCount(0);
+  await expect(add).toHaveCount(0);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(left).toBeVisible();
+  await expect(left).toHaveAttribute('aria-valuenow', '800');
+  await expect(add).toBeVisible();
+});
+
 test.describe('coarse-pointer Deep controls', () => {
   test.use({ hasTouch: true });
 
@@ -1423,6 +1456,20 @@ test.describe('coarse-pointer Deep controls', () => {
     await expect(choices).toHaveCount(5);
     for (const choice of await choices.all()) {
       const box = await choice.boundingBox();
+      expect(Math.round(box?.width ?? 0)).toBeGreaterThanOrEqual(44);
+      expect(Math.round(box?.height ?? 0)).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  test('preserves 44px Story resize and column-control targets in the wide shell', async ({ page }) => {
+    await openFresh(page, 1440, 900);
+    for (const control of [
+      page.getByRole('separator', { name: 'Resize Story width from left edge' }),
+      page.getByRole('separator', { name: 'Resize Story width from right edge' }),
+      page.getByRole('button', { name: 'Add column to left toolbar' }),
+      page.getByRole('button', { name: 'Remove column from left toolbar' })
+    ]) {
+      const box = await control.boundingBox();
       expect(Math.round(box?.width ?? 0)).toBeGreaterThanOrEqual(44);
       expect(Math.round(box?.height ?? 0)).toBeGreaterThanOrEqual(44);
     }
