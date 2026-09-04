@@ -13,6 +13,7 @@ import {
   activateWidgetGroup,
   clearPanel,
   createInitialWorkbenchState,
+  createAndGroupWidget,
   createPanel,
   createSubPanel,
   createPanelTemplateRegistry,
@@ -37,6 +38,9 @@ import {
   resetPanel,
   resizeShelf,
   resizePanelDock,
+  resizePanelColumns,
+  resizeSubPanelColumns,
+  resizeWidgetRow,
   restoreWidget,
   separateWidgetGroup,
   setSubPanelScroll,
@@ -108,6 +112,8 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'panel.reordered', revision, panelId: command.panelId };
     case 'panel.resize-dock':
       return { type: 'panel.dock-resized', revision, panelId: command.panelId, edge: command.edge };
+    case 'panel.resize-columns':
+      return { type: 'panel.columns-resized', revision, panelId: command.panelId };
     case 'sub-panel.activate':
       return { type: 'sub-panel.activated', revision, panelId: command.panelId, subPanelId: command.subPanelId };
     case 'sub-panel.create':
@@ -120,6 +126,8 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'sub-panel.reordered', revision, panelId: command.panelId, subPanelId: command.subPanelId };
     case 'sub-panel.change-layout':
       return { type: 'sub-panel.layout-changed', revision, panelId: command.panelId, subPanelId: command.subPanelId };
+    case 'sub-panel.resize-columns':
+      return { type: 'sub-panel.columns-resized', revision, panelId: command.panelId, subPanelId: command.subPanelId };
     case 'sub-panel.set-scroll':
       return { type: 'sub-panel.scroll-retained', revision, panelId: command.panelId, subPanelId: command.subPanelId };
     case 'sub-panel.move-widgets':
@@ -146,6 +154,8 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'shelf.resized', revision, panelId: command.panelId, shelfId: command.shelfId };
     case 'widget.create':
       return { type: 'widget.created', revision, instanceId: command.instance.id };
+    case 'widget.create-and-group':
+      return { type: 'widget.grouped', revision, instanceId: command.instance.id };
     case 'widget.place':
       return { type: 'widget.placed', revision, instanceId: command.instanceId };
     case 'widget.group':
@@ -156,6 +166,8 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'widget.group-reordered', revision, instanceId: command.instanceId };
     case 'widget.group.separate':
       return { type: 'widget.group-separated', revision, instanceId: command.instanceId };
+    case 'widget.resize-row':
+      return { type: 'widget.row-resized', revision, instanceId: command.instanceId };
     case 'widget.shelve':
       return { type: 'widget.shelved', revision, instanceId: command.instanceId };
     case 'widget.restore':
@@ -264,12 +276,17 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
         if (!parsed.success) return malformedCommand(before);
         const command = parsed.data as WorkbenchCommand;
 
-        if (command.type === 'widget.create' && !registry.has(command.instance.type)) {
+        const createdInstance = command.type === 'widget.create' || command.type === 'widget.create-and-group'
+          ? command.instance
+          : command.type === 'shelf.create-and-place'
+            ? command.instance
+            : undefined;
+        if (createdInstance && !registry.has(createdInstance.type)) {
           return rejected(before, {
             code: 'UNKNOWN_WIDGET_TYPE',
-            message: `Widget type '${command.instance.type}' is not registered.`,
+            message: `Widget type '${createdInstance.type}' is not registered.`,
             recoverable: true,
-            details: { widgetType: command.instance.type }
+            details: { widgetType: createdInstance.type }
           });
         }
 
@@ -328,6 +345,9 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
           case 'panel.resize-dock':
             transition = resizePanelDock(before, command.panelId, command.edge, command.width);
             break;
+          case 'panel.resize-columns':
+            transition = resizePanelColumns(before, command.panelId, command.weights, templates);
+            break;
           case 'sub-panel.activate':
             transition = activateSubPanel(
               before,
@@ -357,6 +377,9 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
           case 'sub-panel.change-layout':
             transition = changeSubPanelLayout(before, command.panelId, command.subPanelId, command.layoutId);
             break;
+          case 'sub-panel.resize-columns':
+            transition = resizeSubPanelColumns(before, command.panelId, command.subPanelId, command.weights);
+            break;
           case 'sub-panel.set-scroll':
             transition = setSubPanelScroll(before, command.panelId, command.subPanelId, command.scrollTop);
             break;
@@ -380,7 +403,8 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
               command.shelf,
               command.instanceId,
               command.placement,
-              placementContext
+              placementContext,
+              command.instance
             );
             break;
           case 'shelf.resize':
@@ -388,6 +412,16 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
             break;
           case 'widget.create':
             transition = createWidget(before, command.instance, command.placement, placementContext);
+            break;
+          case 'widget.create-and-group':
+            transition = createAndGroupWidget(
+              before,
+              command.instance,
+              command.placement,
+              command.targetInstanceId,
+              command.groupId,
+              placementContext
+            );
             break;
           case 'widget.place':
             transition = placeWidget(before, command.instanceId, command.placement, placementContext);
@@ -412,6 +446,9 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
             break;
           case 'widget.group.separate':
             transition = separateWidgetGroup(before, command.instanceId, command.placement, placementContext);
+            break;
+          case 'widget.resize-row':
+            transition = resizeWidgetRow(before, command.instanceId, command.height);
             break;
           case 'widget.remove':
             transition = removeWidget(before, command.instanceId);

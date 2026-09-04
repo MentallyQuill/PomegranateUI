@@ -22,6 +22,17 @@ export function normalizePanels(panels: readonly PanelState[]): readonly PanelSt
   return panels.map((panel, order) => ({ ...panel, order }));
 }
 
+export function normalizeColumnWeights(weights: readonly number[]): readonly number[] | null {
+  if (weights.length < 1 || weights.length > 6 || weights.some((weight) => !Number.isFinite(weight) || weight <= 0)) {
+    return null;
+  }
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  if (!Number.isFinite(total) || total <= 0) return null;
+  const normalized = weights.map((weight) => weight / total);
+  if (normalized.some((weight) => weight < 0.05)) return null;
+  return Object.freeze(normalized);
+}
+
 function dockKey(placement: DockedPlacement): string {
   return `${placement.panelId}\u0000${placement.subPanelId ?? ''}\u0000${placement.lane ?? ''}\u0000${placement.regionId}\u0000${placement.shelfId}`;
 }

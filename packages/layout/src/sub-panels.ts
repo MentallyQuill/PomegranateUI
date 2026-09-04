@@ -13,7 +13,7 @@ import {
 } from '@pomegranate-ui/contracts';
 
 import { acceptLayout, rejectLayout, type LayoutResult } from './errors.js';
-import { nextRevision } from './state.js';
+import { nextRevision, normalizeColumnWeights } from './state.js';
 
 export interface SubPanelLayoutDefinition {
   readonly id: SubPanelLayoutId;
@@ -35,12 +35,14 @@ function exactSubPanel(value: {
   readonly layoutId: SubPanelLayoutId;
   readonly order: number;
   readonly scrollTop: number;
+  readonly columnWeights?: readonly number[] | undefined;
   readonly shipped?: boolean | undefined;
   readonly hidden?: boolean | undefined;
 }): SubPanelState {
-  const { shipped, hidden, ...required } = value;
+  const { shipped, hidden, columnWeights, ...required } = value;
   return {
     ...required,
+    ...(columnWeights === undefined ? {} : { columnWeights }),
     ...(shipped === undefined ? {} : { shipped }),
     ...(hidden === undefined ? {} : { hidden })
   };
@@ -52,6 +54,13 @@ export function normalizeSubPanels(state: WorkbenchState): WorkbenchState {
     readonly subPanels: readonly SubPanelState[];
   }>();
   const panels = state.panels.map((panel) => {
+    const normalizedPanelWeights = Array.isArray((panel as { columnWeights?: unknown }).columnWeights)
+      ? normalizeColumnWeights((panel as { columnWeights: readonly number[] }).columnWeights)
+      : null;
+    const { columnWeights: _rawPanelWeights, ...panelWithoutWeights } = panel;
+    const normalizedPanel = normalizedPanelWeights && normalizedPanelWeights.length >= 2
+      ? { ...panelWithoutWeights, columnWeights: normalizedPanelWeights }
+      : panelWithoutWeights;
     const rawSubPanels = Array.isArray(panel.subPanels)
       ? (panel.subPanels as readonly unknown[])
       : [];
@@ -80,6 +89,14 @@ export function normalizeSubPanels(state: WorkbenchState): WorkbenchState {
         layoutId,
         order: 0,
         scrollTop,
+        ...(Array.isArray(record.columnWeights)
+          ? (() => {
+              const weights = normalizeColumnWeights(record.columnWeights as readonly number[]);
+              return weights && weights.length === SUB_PANEL_LAYOUTS[layoutId].columns.length
+                ? { columnWeights: weights }
+                : {};
+            })()
+          : {}),
         ...(typeof record.shipped === 'boolean' ? { shipped: record.shipped } : {}),
         ...(typeof record.hidden === 'boolean' ? { hidden: record.hidden } : {}),
         sourceIndex: index,
@@ -89,7 +106,7 @@ export function normalizeSubPanels(state: WorkbenchState): WorkbenchState {
     });
 
     if (candidates.length === 0) {
-      const { activeSubPanelId: _activeSubPanelId, subPanels: _subPanels, ...flatPanel } = panel;
+      const { activeSubPanelId: _activeSubPanelId, subPanels: _subPanels, ...flatPanel } = normalizedPanel;
       panelMetadata.set(panel.id, { subPanels: [] });
       return flatPanel;
     }
@@ -106,11 +123,11 @@ export function normalizeSubPanels(state: WorkbenchState): WorkbenchState {
       ? requestedActive!
       : subPanels.find((candidate) => !candidate.hidden)!.id;
     panelMetadata.set(panel.id, { activeSubPanelId, subPanels });
-    return { ...panel, activeSubPanelId, subPanels };
+    return { ...normalizedPanel, activeSubPanelId, subPanels };
   });
 
   const placements = Object.fromEntries(Object.entries(state.placements).map(([instanceId, placement]) => {
-    const visible = visiblePlacement(placement);
+    const visible = normalizeVisibleSizing(visiblePlacement(placement));
     const metadata = panelMetadata.get(visible.panelId);
     if (!metadata || metadata.subPanels.length === 0 || !metadata.activeSubPanelId) {
       if (visible.kind === 'floating') {
@@ -275,6 +292,13 @@ function visiblePlacement(placement: WidgetPlacement): VisibleWidgetPlacement {
   return placement.kind === 'shelved' ? placement.lastVisible : placement;
 }
 
+function normalizeVisibleSizing(placement: VisibleWidgetPlacement): VisibleWidgetPlacement {
+  if (placement.kind !== 'docked' || placement.height === undefined) return placement;
+  if (Number.isFinite(placement.height) && placement.height >= 64 && placement.height <= 2048) return placement;
+  const { height: _height, ...withoutHeight } = placement;
+  return withoutHeight;
+}
+
 function replaceVisiblePlacement(
   placement: WidgetPlacement,
   visible: VisibleWidgetPlacement
@@ -356,10 +380,42 @@ export function changeSubPanelLayout(
   panels[panelIndex] = {
     ...panel,
     subPanels: panel.subPanels!.map((candidate) => candidate.id === subPanelId
-      ? { ...candidate, layoutId }
+      ? (() => {
+          const { columnWeights: _columnWeights, ...rest } = candidate;
+          return { ...rest, layoutId };
+        })()
       : candidate)
   };
   return acceptLayout({ ...state, revision: nextRevision(state), panels, placements });
+}
+
+export function resizeSubPanelColumns(
+  state: WorkbenchState,
+  panelId: PanelId,
+  subPanelId: SubPanelId,
+  weights: readonly number[]
+): LayoutResult {
+  const panelIndex = state.panels.findIndex((candidate) => candidate.id === panelId);
+  if (panelIndex < 0) {
+    return rejectLayout(state, 'MISSING_PANEL', `Panel '${panelId}' does not exist.`, { panelId });
+  }
+  const panel = state.panels[panelIndex]!;
+  const subPanel = panel.subPanels?.find((candidate) => candidate.id === subPanelId);
+  if (!subPanel) {
+    return rejectLayout(state, 'INVALID_INDEX', `Sub-panel '${subPanelId}' does not exist.`, { panelId, subPanelId });
+  }
+  const normalized = normalizeColumnWeights(weights);
+  if (!normalized || normalized.length !== SUB_PANEL_LAYOUTS[subPanel.layoutId].columns.length || normalized.length < 2) {
+    return rejectLayout(state, 'INVALID_INDEX', 'Column weights must match the selected sub-panel layout.');
+  }
+  const panels = [...state.panels];
+  panels[panelIndex] = {
+    ...panel,
+    subPanels: panel.subPanels!.map((candidate) => candidate.id === subPanelId
+      ? { ...candidate, columnWeights: normalized }
+      : candidate)
+  };
+  return acceptLayout({ ...state, revision: nextRevision(state), panels });
 }
 
 export interface SubPanelDuplicateIds {
@@ -441,6 +497,7 @@ export function duplicateSubPanel(
   const duplicatedSubPanel: SubPanelState = {
     ...exactSubPanel(parsedSubPanel.data),
     layoutId: source.layoutId,
+    ...(source.columnWeights === undefined ? {} : { columnWeights: source.columnWeights }),
     order: panel.subPanels!.length,
     scrollTop: 0
   };

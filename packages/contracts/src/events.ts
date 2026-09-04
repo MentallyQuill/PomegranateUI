@@ -14,12 +14,14 @@ export type WorkbenchEvent =
   | (EventBase & { readonly type: 'panel.activated'; readonly panelId: PanelId })
   | (EventBase & { readonly type: 'panel.reordered'; readonly panelId: PanelId })
   | (EventBase & { readonly type: 'panel.dock-resized'; readonly panelId: PanelId; readonly edge: 'left' | 'right' })
+  | (EventBase & { readonly type: 'panel.columns-resized'; readonly panelId: PanelId })
   | (EventBase & { readonly type: 'sub-panel.activated'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })
   | (EventBase & { readonly type: 'sub-panel.created'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })
   | (EventBase & { readonly type: 'sub-panel.renamed'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })
   | (EventBase & { readonly type: 'sub-panel.duplicated'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })
   | (EventBase & { readonly type: 'sub-panel.reordered'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })
   | (EventBase & { readonly type: 'sub-panel.layout-changed'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })
+  | (EventBase & { readonly type: 'sub-panel.columns-resized'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })
   | (EventBase & { readonly type: 'sub-panel.scroll-retained'; readonly panelId: PanelId; readonly subPanelId: SubPanelId })
   | (EventBase & {
       readonly type: 'sub-panel.widgets-moved';
@@ -42,6 +44,7 @@ export type WorkbenchEvent =
   | (EventBase & { readonly type: 'widget.group-activated'; readonly instanceId: WidgetInstanceId })
   | (EventBase & { readonly type: 'widget.group-reordered'; readonly instanceId: WidgetInstanceId })
   | (EventBase & { readonly type: 'widget.group-separated'; readonly instanceId: WidgetInstanceId })
+  | (EventBase & { readonly type: 'widget.row-resized'; readonly instanceId: WidgetInstanceId })
   | (EventBase & { readonly type: 'widget.shelved'; readonly instanceId: WidgetInstanceId })
   | (EventBase & { readonly type: 'widget.restored'; readonly instanceId: WidgetInstanceId })
   | (EventBase & { readonly type: 'widget.deleted'; readonly instanceId: WidgetInstanceId })

@@ -1,0 +1,11 @@
+[data-pom-part='widget.drag-preview'] {
+  box-shadow: none !important;
+  opacity: 1 !important;
+  transform: translate(16px, 16px) !important;
+  transition: none !important;
+  will-change: auto !important;
+}
+
+[data-pom-part='widget.drag-preview'] > * {
+  visibility: hidden !important;
+}

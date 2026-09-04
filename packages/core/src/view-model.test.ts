@@ -273,6 +273,31 @@ describe('framework-neutral view projections', () => {
     expect(Object.isFrozen(surface?.docks.left)).toBe(true);
   });
 
+  it('projects custom column weights with authored defaults kept for reset', () => {
+    const surface = selectPanelSurface({
+      ...state(),
+      activePanelId: libraryPanel,
+      panels: state().panels.map((panel) => panel.id === libraryPanel
+        ? {
+            ...panel,
+            activeSubPanelId: notesSubPanel,
+            subPanels: [{
+              id: notesSubPanel,
+              name: 'Appearance',
+              layoutId: 'three-equal' as const,
+              order: 0,
+              scrollTop: 0,
+              columnWeights: [0.2, 0.5, 0.3]
+            }]
+          }
+        : panel)
+    }, createWidgetRegistry());
+
+    expect(surface?.columnWeights).toEqual([0.2, 0.5, 0.3]);
+    expect(surface?.defaultColumnWeights).toEqual([1 / 3, 1 / 3, 1 / 3]);
+    expect(surface?.regions.map(({ laneWeight }) => laneWeight)).toEqual([0.2, 0.5, 0.3]);
+  });
+
   it('appends a Widget to an occupied dock through the public store', () => {
     const registry = createWidgetRegistry();
     registry.register({

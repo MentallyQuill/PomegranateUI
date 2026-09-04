@@ -76,7 +76,8 @@ export function createThemeDraft(
       selectedStrength: materialOpacity(parsed, 'selected', 12),
       frostLevel: percentage((parsed.theme.materials.pane?.backdrop.blurPx ?? 20) / 40)
     },
-    canvas
+    canvas,
+    toolbarTogglePresentation: parsed.theme.recipes.toolbarTogglePresentation ?? 'edge-labels'
   });
 }
 
@@ -161,7 +162,13 @@ export function projectThemeDraft(
     ...parsedBase.data,
     theme: {
       ...parsedBase.data.theme,
-      colors: projectedColors
+      colors: projectedColors,
+      recipes: {
+        ...parsedBase.data.theme.recipes,
+        toolbarTogglePresentation: parsedDraft.data.toolbarTogglePresentation
+          ?? parsedBase.data.theme.recipes.toolbarTogglePresentation
+          ?? 'edge-labels'
+      }
     },
     canvas: {
       ...parsedBase.data.canvas,

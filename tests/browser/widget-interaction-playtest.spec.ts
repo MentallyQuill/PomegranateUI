@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import {
@@ -17,6 +19,13 @@ import {
 import type { ActiveDragExpectation } from './support/widget-interaction-driver.ts';
 import { INTERACTION_CASES } from './support/widget-interaction-matrix.ts';
 
+const DRAG_PREVIEW_SCREENSHOT_STYLE = fileURLToPath(
+  new URL('./support/widget-drag-screenshot.css', import.meta.url)
+);
+const DRAG_DESTINATION_SCREENSHOT_STYLE = fileURLToPath(
+  new URL('./support/widget-drag-destination-screenshot.css', import.meta.url)
+);
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => window.localStorage.clear());
@@ -28,8 +37,13 @@ async function expectWindowsPageScreenshot(page: Page, name: string): Promise<vo
   if (process.platform === 'win32') await expect(page).toHaveScreenshot(name, { animations: 'disabled' });
 }
 
-async function expectWindowsLocatorScreenshot(locator: Locator, name: string): Promise<void> {
-  if (process.platform === 'win32') await expect(locator).toHaveScreenshot(name, { animations: 'disabled' });
+async function expectWindowsLocatorScreenshot(locator: Locator, name: string, stylePath: string): Promise<void> {
+  if (process.platform === 'win32') {
+    await expect(locator).toHaveScreenshot(name, {
+      animations: 'disabled',
+      stylePath
+    });
+  }
 }
 
 async function expectWindowsClippedScreenshot(
@@ -38,6 +52,23 @@ async function expectWindowsClippedScreenshot(
   clip: { x: number; y: number; width: number; height: number }
 ): Promise<void> {
   if (process.platform === 'win32') await expect(page).toHaveScreenshot(name, { animations: 'disabled', clip });
+}
+
+async function expectSettledDockPreview(page: Page, expectedText: string): Promise<void> {
+  const preview = page.locator('[data-pom-part="widget.drag-preview"]');
+  const destination = page.locator('[data-pom-part="widget.dock-slot"]');
+  await expect(preview).not.toHaveAttribute('data-float-ready');
+  await expect(preview).toHaveText(expectedText);
+  await expect(preview).toHaveCSS('pointer-events', 'none');
+  await expect(preview).toHaveCSS('border-style', 'solid');
+  await expect.poll(() => preview.evaluate((node) => getComputedStyle(node).opacity)).toBe('0.9');
+  const previewBox = await preview.boundingBox();
+  expect(previewBox).not.toBeNull();
+  expect(previewBox?.width).toBeGreaterThanOrEqual(180);
+  expect(previewBox?.width).toBeLessThanOrEqual(280);
+  expect(previewBox?.height).toBe(42);
+  await expect(destination).toHaveText('');
+  await expect(destination.locator('article, button, input, select, textarea, [data-widget-type]')).toHaveCount(0);
 }
 
 async function createGroup(page: Page, sourceName: string, targetName: string) {
@@ -113,13 +144,16 @@ test('AUDIT-P1-SINGLE-PRESENTATION lifted Widget has one compact payload and one
   await beginPointerDrag(page, widgetDragSurface(source));
   await movePointerPath(page, [{ x: targetBox.x + targetBox.width / 2, y: targetBox.y + targetBox.height * 0.12 }]);
   const evidence = await expectActiveWidgetDrag(page, sourceIdentity, { reservationCount: 1, originRect });
+  await expectSettledDockPreview(page, 'Characters (Story)');
   await expectWindowsLocatorScreenshot(
     page.locator('[data-pom-part="widget.drag-preview"]'),
-    'widget-lifted-singleton.png'
+    'widget-lifted-singleton.png',
+    DRAG_PREVIEW_SCREENSHOT_STYLE
   );
   await expectWindowsLocatorScreenshot(
     page.locator('[data-pomegranate-region-surface="right"]'),
-    'widget-occupied-gap-insertion.png'
+    'widget-occupied-gap-insertion.png',
+    DRAG_DESTINATION_SCREENSHOT_STYLE
   );
   await testInfo.attach('AUDIT-P1-SINGLE-PRESENTATION', {
     body: await page.screenshot({ animations: 'disabled' }),
@@ -183,7 +217,7 @@ test.afterAll(() => {
 });
 
 interactionTest('collapsed-dock-reveal-commit', async ({ page, expectActiveDrag }) => {
-  const toggle = page.getByRole('button', { name: 'Toggle left dock' });
+  const toggle = page.locator('.toolbar-edge-toggle-left');
   await toggle.click();
   const source = page.getByRole('article', { name: 'Room Ambience' });
   const originRect = await source.boundingBox();
@@ -204,9 +238,11 @@ interactionTest('collapsed-dock-reveal-commit', async ({ page, expectActiveDrag 
   await expect(page.locator('main')).toHaveAttribute('data-drag-reveal-left', 'true');
   await expect(page.locator('[data-pom-part="widget.dock-slot"]')).toBeVisible();
   await expectActiveDrag(sourceIdentity, { reservationCount: 1, originRect });
+  await expectSettledDockPreview(page, 'Room Ambience');
   await expectWindowsLocatorScreenshot(
     page.locator('[data-pomegranate-region-surface="left"]'),
-    'widget-collapsed-dock-reveal.png'
+    'widget-collapsed-dock-reveal.png',
+    DRAG_DESTINATION_SCREENSHOT_STYLE
   );
   await cancelPointerDrag(page);
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
@@ -239,7 +275,7 @@ interactionTest('collapsed-dock-reveal-commit', async ({ page, expectActiveDrag 
 });
 
 test('AUDIT-P2-COLLAPSED-DOCK-SYMMETRY accepted right-dock drop expands its destination', async ({ page }) => {
-  const toggle = page.getByRole('button', { name: 'Toggle right dock' });
+  const toggle = page.locator('.toolbar-edge-toggle-right');
   await toggle.click();
   const source = page.getByRole('article', { name: 'Theme Materials' });
   const originRect = await source.boundingBox();

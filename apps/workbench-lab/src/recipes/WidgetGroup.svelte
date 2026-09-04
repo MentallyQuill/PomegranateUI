@@ -29,6 +29,7 @@
     return leftOrder - rightOrder || left.instanceId.localeCompare(right.instanceId);
   }));
   const active = $derived(ordered.find((frame) => frame.placement.kind === 'docked' && frame.placement.group?.active) ?? ordered[0]);
+  const rowHeight = $derived(active?.placement.kind === 'docked' ? active.placement.height : undefined);
   let previewFrameId = $state<WidgetFrameProjection['instanceId'] | null>(null);
   const rendered = $derived(previewFrameId === null
     ? active
@@ -52,7 +53,8 @@
       dragging = next;
       if (!next) previewFrameId = null;
     },
-    onExpandDock: (edge) => onexpanddock?.(edge)
+    onExpandDock: (edge) => onexpanddock?.(edge),
+    activation: 'manual'
   });
   onDestroy(drag.destroy);
 
@@ -119,7 +121,7 @@
       reorderDrag.pointerCancel(event);
       previewFrameId = dragFrame?.instanceId ?? null;
       void tick().then(() => {
-        if (groupGesture?.pointerId === event.pointerId && groupGesture.owner === 'tear-off') drag.pointerMove(event);
+        if (groupGesture?.pointerId === event.pointerId && groupGesture.owner === 'tear-off') drag.activate(event);
       });
     }
   }
@@ -176,7 +178,17 @@
   }
 </script>
 
-<section class="widget-group" class:is-dragging={dragging} role="group" aria-label="Widget group" data-widget-group data-widget-group-id={groupId} data-pom-part="group.surface">
+<section
+  class="widget-group"
+  class:is-dragging={dragging}
+  role="group"
+  aria-label="Widget group"
+  data-widget-group
+  data-widget-group-id={groupId}
+  data-pomegranate-row-height={rowHeight}
+  data-pom-part="group.surface"
+  style={rowHeight === undefined ? undefined : `height:${rowHeight}px;min-height:${rowHeight}px`}
+>
   <div bind:this={tablist} class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets" data-pom-part="widget.header">
     {#each ordered as frame (frame.instanceId)}
       {@const title = titleFor?.(frame) ?? frame.title}

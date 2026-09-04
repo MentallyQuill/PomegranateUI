@@ -244,8 +244,8 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByText('Perspective: Aven')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Continue' })).toBeVisible();
     expect(container.querySelector('.composer-placeholder')).toHaveTextContent('Describe what you do, say, or notice…');
-    expect(screen.getByRole('button', { name: 'Toggle left dock' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'Toggle right dock' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Close left toolbar' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Close right toolbar' })).toHaveAttribute('aria-pressed', 'false');
     expect([...container.querySelectorAll('[data-conformance-region="shelf"], [data-pomegranate-region-surface]')].map((region) => region.getAttribute('data-conformance-region') ?? region.getAttribute('data-pomegranate-region-surface'))).toEqual([
       'shelf', 'left', 'stage', 'composer', 'right'
     ]);
@@ -261,17 +261,21 @@ describe('Svelte Workbench Lab mockup', () => {
     const user = userEvent.setup();
     const { container } = render(App);
     const root = container.querySelector('main');
-    const leftToggle = screen.getByRole('button', { name: 'Toggle left dock' });
-    const rightToggle = screen.getByRole('button', { name: 'Toggle right dock' });
+    const leftToggle = screen.getByRole('button', { name: 'Close left toolbar' });
+    const rightToggle = screen.getByRole('button', { name: 'Close right toolbar' });
 
-    expect(leftToggle).toHaveTextContent('OPEN TOOLBAR LFT');
-    expect(rightToggle).toHaveTextContent('OPEN TOOLBAR RGT');
+    expect(leftToggle).toHaveTextContent('CLOSE TOOLBAR LFT');
+    expect(rightToggle).toHaveTextContent('CLOSE TOOLBAR RGT');
     await user.click(leftToggle);
     expect(root).toHaveClass('left-collapsed');
     expect(leftToggle).toHaveAttribute('aria-pressed', 'true');
+    expect(leftToggle).toHaveAccessibleName('Open left toolbar');
+    expect(leftToggle).toHaveTextContent('OPEN TOOLBAR LFT');
     await user.click(rightToggle);
     expect(root).toHaveClass('right-collapsed');
     expect(rightToggle).toHaveAttribute('aria-pressed', 'true');
+    expect(rightToggle).toHaveAccessibleName('Open right toolbar');
+    expect(rightToggle).toHaveTextContent('OPEN TOOLBAR RGT');
   });
 
   it('carries the full audited 98-definition Catalog with exact category totals', async () => {
@@ -532,4 +536,35 @@ describe('Svelte Workbench Lab mockup', () => {
     await user.click(within(screen.getByRole('article', { name: 'Custom Theme' })).getByRole('button', { name: 'Save draft' }));
     expect(window.localStorage.getItem('pomegranate-ui.workbench-lab.theme-draft.v1')).not.toBeNull();
   }, 10_000);
+
+  it('authors toolbar controls in Theme Settings and resets them to the active Theme Library target', async () => {
+    const user = userEvent.setup();
+    const { container } = render(App);
+    const root = container.querySelector('main');
+
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+    await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
+    const customTheme = screen.getByRole('article', { name: 'Custom Theme' });
+    const controls = within(customTheme).getByRole('group', { name: 'Toolbar controls' });
+
+    expect(within(controls).getByRole('radio', { name: 'Edge labels' })).toBeChecked();
+    await user.click(within(controls).getByRole('radio', { name: 'Bottom chevrons' }));
+    expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
+    await user.click(screen.getByRole('tab', { name: 'Scene' }));
+    expect(screen.getByRole('button', { name: 'Close left toolbar' })).toHaveTextContent('‹');
+    expect(screen.getByRole('button', { name: 'Close right toolbar' })).toHaveTextContent('›');
+
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+    await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
+    const resetTheme = screen.getByRole('article', { name: 'Custom Theme' });
+    const resetControls = within(resetTheme).getByRole('group', { name: 'Toolbar controls' });
+    await user.click(within(resetTheme).getByRole('button', { name: 'Reset' }));
+    expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'edge-labels');
+    expect(within(resetControls).getByRole('radio', { name: 'Edge labels' })).toBeChecked();
+
+    const library = screen.getByRole('article', { name: 'Theme Library' });
+    await user.click(within(library).getByRole('button', { name: /^PomOS/ }));
+    expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
+    expect(within(resetControls).getByRole('radio', { name: 'Bottom chevrons' })).toBeChecked();
+  });
 });

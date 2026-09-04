@@ -21,7 +21,8 @@ export const ATMOSPHERIC_EXACT_GEOMETRY = Object.freeze({
 
 const ATMOSPHERIC_APPROVED_LAYOUT_BOUNDS = Object.freeze({
   'header-panel-control-adjacent': Object.freeze({ x: 372, y: 0, width: 33, height: 40 }),
-  'header-panel-control-previous': Object.freeze({ x: 532, y: 0, width: 33, height: 40 })
+  'header-panel-control-previous': Object.freeze({ x: 532, y: 0, width: 33, height: 40 }),
+  'left-character-roster': Object.freeze({ x: 0, y: 68, width: 286, height: 214 })
 });
 
 function isRecord(value) {

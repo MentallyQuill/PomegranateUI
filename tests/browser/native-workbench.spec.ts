@@ -573,6 +573,162 @@ test('Widget drag teardown clears global held state when its Panel unmounts', as
   await page.mouse.up();
 });
 
+test('held Widget dwells over a Panel tab and docks on the activated Panel', async ({ page }) => {
+  const source = page.getByRole('article', { name: 'Characters (Story)' });
+  const handleBox = await widgetDragSurface(source).boundingBox();
+  const libraryTab = page.getByRole('tab', { name: 'Library' });
+  const libraryTabBox = await libraryTab.boundingBox();
+  if (!handleBox || !libraryTabBox) throw new Error('Expected cross-Panel drag geometry.');
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + 18, handleBox.y + handleBox.height / 2 + 18, { steps: 3 });
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+
+  await page.mouse.move(
+    libraryTabBox.x + libraryTabBox.width / 2,
+    libraryTabBox.y + libraryTabBox.height / 2,
+    { steps: 8 }
+  );
+  await expect.poll(() => libraryTab.evaluate((tab) => ({
+    style: getComputedStyle(tab).outlineStyle,
+    width: getComputedStyle(tab).outlineWidth
+  }))).toEqual({ style: 'solid', width: '2px' });
+  await page.waitForTimeout(200);
+  await expect(libraryTab).toHaveAttribute('aria-selected', 'false');
+  await page.waitForTimeout(200);
+
+  await expect(libraryTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+  const support = page.locator('[data-pomegranate-region-surface="support"]');
+  const supportBox = await support.boundingBox();
+  if (!supportBox) throw new Error('Expected activated Library dock geometry.');
+  await page.mouse.move(supportBox.x + supportBox.width / 2, supportBox.y + supportBox.height - 8, { steps: 8 });
+  const rail = page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="support"][data-drop-rail-kind="append"]');
+  const railBox = await rail.boundingBox();
+  if (!railBox) throw new Error('Expected a Library support dock rail.');
+  await page.mouse.move(railBox.x + railBox.width / 2, railBox.y + railBox.height / 2, { steps: 4 });
+  await expect(rail).toHaveAttribute('data-active', 'true');
+  await page.mouse.up();
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
+
+  const moved = page.locator('[data-widget-type="story.characters"]');
+  await expect(moved).toHaveAttribute('data-pomegranate-region', 'support');
+  await expect(moved.locator('xpath=ancestor::*[@data-pomegranate-panel][1]')).toHaveAttribute('data-pomegranate-panel', 'library');
+  await page.getByRole('tab', { name: 'Scene' }).click();
+  await expect(page.locator('[data-widget-type="story.characters"]')).toHaveCount(0);
+});
+
+test('held Widget can float on the free canvas of an activated Panel', async ({ page }) => {
+  const source = page.getByRole('article', { name: 'Characters (Story)' });
+  const handleBox = await widgetDragSurface(source).boundingBox();
+  const sourceBox = await source.locator('xpath=ancestor::*[@data-widget-type][1]').boundingBox();
+  const libraryTab = page.getByRole('tab', { name: 'Library' });
+  const libraryTabBox = await libraryTab.boundingBox();
+  if (!handleBox || !sourceBox || !libraryTabBox) throw new Error('Expected cross-Panel float geometry.');
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + 18, handleBox.y + handleBox.height / 2 + 18, { steps: 3 });
+  await page.mouse.move(libraryTabBox.x + libraryTabBox.width / 2, libraryTabBox.y + libraryTabBox.height / 2, { steps: 8 });
+  await expect(libraryTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+
+  const freePoint = await page.locator('[data-pomegranate-panel="library"]').evaluate((surface) => {
+    const box = surface.getBoundingClientRect();
+    const blockers = [...surface.querySelectorAll<HTMLElement>('[data-widget-type]'),
+      ...document.querySelectorAll<HTMLElement>('[data-pom-part="widget.drop-rail"]')]
+      .map((element) => element.getBoundingClientRect());
+    for (let y = box.y + 24; y < box.bottom - 24; y += 24) {
+      for (let x = box.x + 24; x < box.right - 24; x += 24) {
+        if (blockers.every((blocker) => x < blocker.left || x > blocker.right || y < blocker.top || y > blocker.bottom)) {
+          return { x, y };
+        }
+      }
+    }
+    throw new Error('Expected free Library canvas geometry.');
+  });
+  await page.mouse.move(freePoint.x, freePoint.y, { steps: 8 });
+  const held = page.locator('[data-pom-part="widget.drag-preview"]');
+  await expect(held).toHaveAttribute('data-float-ready', '');
+  await page.mouse.up();
+  await expect(held).toHaveCount(0);
+
+  const moved = page.locator('[data-widget-type="story.characters"]');
+  await expect(moved).toHaveAttribute('data-pomegranate-placement', 'floating');
+  await expect(moved.locator('xpath=ancestor::*[@data-pomegranate-panel][1]')).toHaveAttribute('data-pomegranate-panel', 'library');
+  const floatingSize = await moved.evaluate((node) => ({
+    width: Number.parseFloat(node.style.width),
+    height: Number.parseFloat(node.style.minHeight)
+  }));
+  expect(floatingSize.width).toBeCloseTo(Math.min(420, Math.max(320, sourceBox.width)), 1);
+  expect(floatingSize.height).toBeCloseTo(Math.min(520, Math.max(240, sourceBox.height)), 1);
+});
+
+test('Escape after a drag-activated Panel restores the exact Widget origin', async ({ page }) => {
+  const source = page.locator('[data-pomegranate-panel="scene"] [data-widget-type="story.characters"]');
+  const handleBox = await widgetDragSurface(source).boundingBox();
+  const libraryTab = page.getByRole('tab', { name: 'Library' });
+  const libraryTabBox = await libraryTab.boundingBox();
+  const sceneTab = page.getByRole('tab', { name: 'Scene' });
+  const sceneTabBox = await sceneTab.boundingBox();
+  if (!handleBox || !libraryTabBox || !sceneTabBox) throw new Error('Expected cross-Panel cancellation geometry.');
+  await expect(source).toHaveAttribute('data-pomegranate-region', 'left');
+  await expect(source).toHaveAttribute('data-pomegranate-shelf', 'primary');
+  await expect(source).toHaveAttribute('data-pomegranate-order', '0');
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + 18, handleBox.y + handleBox.height / 2 + 18, { steps: 3 });
+  await page.mouse.move(libraryTabBox.x + libraryTabBox.width / 2, libraryTabBox.y + libraryTabBox.height / 2, { steps: 8 });
+  await expect(libraryTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+
+  await page.mouse.move(sceneTabBox.x + sceneTabBox.width / 2, sceneTabBox.y + sceneTabBox.height / 2, { steps: 8 });
+  await expect(sceneTab).toHaveAttribute('aria-selected', 'true');
+  await expect(source).toHaveAttribute('data-widget-drag-placeholder', 'true');
+
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(page.locator('[data-pom-part="widget.drag-preview"], [data-pom-part="widget.drop-overlay"]')).toHaveCount(0);
+  await expect(page.locator('body')).not.toHaveClass(/pom-widget-drag-active/);
+  const restored = page.locator('[data-pomegranate-panel="scene"] [data-widget-type="story.characters"]');
+  await expect(restored).toHaveAttribute('data-pomegranate-region', 'left');
+  await expect(restored).toHaveAttribute('data-pomegranate-shelf', 'primary');
+  await expect(restored).toHaveAttribute('data-pomegranate-order', '0');
+});
+
+test('a grouped Widget tears off and docks through a Panel tab', async ({ page }) => {
+  const group = page.locator('[data-widget-group]').filter({ has: page.getByRole('tab', { name: 'Room Ambience' }) });
+  const sourceTab = group.getByRole('tab', { name: 'Room Ambience' });
+  const sourceBox = await sourceTab.boundingBox();
+  const libraryTab = page.getByRole('tab', { name: 'Library' });
+  const libraryBox = await libraryTab.boundingBox();
+  if (!sourceBox || !libraryBox) throw new Error('Expected grouped cross-Panel drag geometry.');
+
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 + 28, { steps: 3 });
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+  await page.mouse.move(libraryBox.x + libraryBox.width / 2, libraryBox.y + libraryBox.height / 2, { steps: 8 });
+  await expect(libraryTab).toHaveAttribute('aria-selected', 'true');
+
+  const support = page.locator('[data-pomegranate-region-surface="support"]');
+  const supportBox = await support.boundingBox();
+  if (!supportBox) throw new Error('Expected Library support geometry.');
+  await page.mouse.move(supportBox.x + supportBox.width / 2, supportBox.y + supportBox.height - 8, { steps: 8 });
+  const rail = page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="support"][data-drop-rail-kind="append"]');
+  const railBox = await rail.boundingBox();
+  if (!railBox) throw new Error('Expected grouped Widget destination rail.');
+  await page.mouse.move(railBox.x + railBox.width / 2, railBox.y + railBox.height / 2, { steps: 4 });
+  await expect(rail).toHaveAttribute('data-active', 'true');
+  await page.mouse.up();
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
+
+  const moved = page.locator('[data-pomegranate-panel="library"] [data-widget-type="story.room-ambience"]');
+  await expect(moved).toHaveAttribute('data-pomegranate-region', 'support');
+});
+
 test('Panel tabs pan by pen and never expose a reorder gesture on touch', async ({ page }) => {
   await seedPanelRail(page);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -704,6 +860,103 @@ test('Deep Current dock separators resize with keyboard and persist exact bounde
   await expect.poll(() => page.locator('[data-pomegranate-dock="right"]').evaluate((node) => node.getBoundingClientRect().width)).toBe(420);
 });
 
+test('Settings columns and Theme Canvas row resize by keyboard and pointer and persist', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+
+  const firstBoundary = page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' });
+  await expect(firstBoundary).toHaveAttribute('aria-valuenow', '50');
+  const firstColumn = page.locator('[data-sub-panel-lane="0"]');
+  const initialWidth = await firstColumn.evaluate((node) => node.getBoundingClientRect().width);
+  await firstBoundary.press('ArrowRight');
+  await expect(firstBoundary).toHaveAttribute('aria-valuenow', '55');
+  await expect.poll(() => firstColumn.evaluate((node) => node.getBoundingClientRect().width)).toBeGreaterThan(initialWidth + 20);
+
+  const boundaryBox = await firstBoundary.boundingBox();
+  if (!boundaryBox) throw new Error('Expected the Settings column separator to have geometry.');
+  await page.mouse.move(boundaryBox.x + boundaryBox.width / 2, boundaryBox.y + boundaryBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(boundaryBox.x + boundaryBox.width / 2 + 35, boundaryBox.y + boundaryBox.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await expect(firstBoundary).not.toHaveAttribute('aria-valuenow', '55');
+
+  const canvas = page.locator('[data-widget-type="settings.theme-canvas"]');
+  const row = page.getByRole('separator', { name: 'Resize Theme Canvas row' });
+  await expect(row).toHaveAttribute('aria-valuemin', '220');
+  await expect(row).toHaveAttribute('aria-valuemax', '420');
+  await row.press('Home');
+  await expect(canvas).toHaveAttribute('data-pomegranate-row-height', '220');
+  await expect.poll(() => canvas.evaluate((node) => Math.round(node.getBoundingClientRect().height))).toBe(220);
+
+  const rowBox = await row.boundingBox();
+  if (!rowBox) throw new Error('Expected the Theme Canvas row separator to have geometry.');
+  await page.mouse.move(rowBox.x + rowBox.width / 2, rowBox.y + rowBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(rowBox.x + rowBox.width / 2, rowBox.y + rowBox.height / 2 + 40, { steps: 4 });
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute('data-pomegranate-row-height', '260');
+
+  await openDeveloperTools(page);
+  await page.getByRole('button', { name: 'Save layout' }).click();
+  await page.reload();
+  await expect(page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' })).not.toHaveAttribute('aria-valuenow', '50');
+  await expect(page.locator('[data-widget-type="settings.theme-canvas"]')).toHaveAttribute('data-pomegranate-row-height', '260');
+
+  await page.getByRole('separator', { name: 'Resize Theme Canvas row' }).dblclick();
+  await expect(page.locator('[data-widget-type="settings.theme-canvas"]')).not.toHaveAttribute('data-pomegranate-row-height');
+  await page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' }).dblclick();
+  await expect(page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' })).toHaveAttribute('aria-valuenow', '50');
+});
+
+test('all themes expose the same transparent row and column resize controls', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  await openDeveloperTools(page);
+  const themes = page.getByRole('group', { name: 'Visual target' });
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
+    await themes.getByRole('button', { name: theme, exact: true }).click();
+    await closeDeveloperTools(page);
+    for (const [separator, cursor] of [
+      [page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' }), 'col-resize'],
+      [page.getByRole('separator', { name: 'Resize Theme Canvas row' }), 'row-resize']
+    ] as const) {
+      await expect(separator).toBeVisible();
+      expect(await separator.evaluate((node) => ({
+        cursor: getComputedStyle(node).cursor,
+        background: getComputedStyle(node).backgroundColor
+      }))).toEqual({ cursor, background: 'rgba(0, 0, 0, 0)' });
+    }
+    await openDeveloperTools(page);
+  }
+});
+
+test('responsive Settings collapse hides desktop column separators without losing weights', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  const boundary = page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' });
+  await boundary.press('ArrowRight');
+  await expect(boundary).toHaveAttribute('aria-valuenow', '55');
+
+  await page.setViewportSize({ width: 800, height: 720 });
+  await expect(boundary).toBeHidden();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(boundary).toBeVisible();
+  await expect(boundary).toHaveAttribute('aria-valuenow', '55');
+});
+
+test('multi-shelf separators resize by pointer drag', async ({ page }) => {
+  await dragToShelfRail(page, widgetDragSurface(page.getByRole('article', { name: 'World State' })), 'left', 'after');
+  const shelf = page.getByRole('separator', { name: 'Resize primary shelf in left' });
+  const before = Number(await shelf.getAttribute('aria-valuenow'));
+  const box = await shelf.boundingBox();
+  if (!box) throw new Error('Expected a shelf separator to have geometry.');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 35, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(async () => Number(await shelf.getAttribute('aria-valuenow'))).toBeGreaterThan(before);
+});
+
 test('Deep Current Widgets merge into an accessible persistent tab group and reorder', async ({ page }) => {
   const customTheme = page.getByRole('article', { name: 'Theme Materials' });
   const characters = page.getByRole('article', { name: 'Characters (Story)' });
@@ -799,22 +1052,66 @@ test('Deep Current pointer drag floats and subsequently moves a Widget within th
 });
 
 test('Deep Current edge controls collapse and restore both toolbars without hiding themselves', async ({ page }) => {
-  const left = page.getByRole('button', { name: 'Toggle left dock' });
-  const right = page.getByRole('button', { name: 'Toggle right dock' });
+  const left = page.locator('.toolbar-edge-toggle-left');
+  const right = page.locator('.toolbar-edge-toggle-right');
+
+  await expect(left).toHaveText('CLOSE TOOLBAR LFT');
+  await expect(right).toHaveText('CLOSE TOOLBAR RGT');
 
   await left.focus();
   await left.press('Enter');
   await expect(page.locator('main')).toHaveClass(/left-collapsed/);
   await expect(page.locator('[data-conformance-region="left"]')).toBeHidden();
   await expect(left).toBeVisible();
+  await expect(left).toHaveAccessibleName('Open left toolbar');
+  await expect(left).toHaveText('OPEN TOOLBAR LFT');
   await right.click();
   await expect(page.locator('main')).toHaveClass(/right-collapsed/);
   await expect(page.locator('[data-conformance-region="right"]')).toBeHidden();
   await expect(right).toBeVisible();
+  await expect(right).toHaveAccessibleName('Open right toolbar');
+  await expect(right).toHaveText('OPEN TOOLBAR RGT');
   await left.click();
   await right.click();
   await expect(page.locator('[data-conformance-region="left"]')).toBeVisible();
   await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
+});
+
+test('Theme Library bottom chevrons sit at each toolbar bottom and flip with collapsed state', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+  await page.getByRole('article', { name: 'Theme Library' }).getByRole('button', { name: /^PomOS/ }).click();
+  await expect(page.locator('main')).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
+  await page.getByRole('tab', { name: 'Scene' }).click();
+
+  const left = page.locator('.toolbar-edge-toggle-left');
+  const right = page.locator('.toolbar-edge-toggle-right');
+  const leftRegion = page.locator('[data-conformance-region="left"]');
+  const rightRegion = page.locator('[data-conformance-region="right"]');
+  const [leftBox, rightBox, leftRegionBox, rightRegionBox] = await Promise.all([
+    left.boundingBox(), right.boundingBox(), leftRegion.boundingBox(), rightRegion.boundingBox()
+  ]);
+  if (!leftBox || !rightBox || !leftRegionBox || !rightRegionBox) throw new Error('Expected toolbar toggle and dock geometry.');
+
+  expect(leftBox.width).toBe(44);
+  expect(leftBox.height).toBe(44);
+  expect(rightBox.width).toBe(44);
+  expect(rightBox.height).toBe(44);
+  expect(Math.abs(leftBox.x + leftBox.width / 2 - (leftRegionBox.x + leftRegionBox.width / 2))).toBeLessThan(2);
+  expect(Math.abs(rightBox.x + rightBox.width / 2 - (rightRegionBox.x + rightRegionBox.width / 2))).toBeLessThan(2);
+  expect(Math.abs(leftBox.y + leftBox.height - (leftRegionBox.y + leftRegionBox.height))).toBeLessThan(2);
+  expect(Math.abs(rightBox.y + rightBox.height - (rightRegionBox.y + rightRegionBox.height))).toBeLessThan(2);
+  await expect(left).toHaveText('‹');
+  await expect(right).toHaveText('›');
+
+  await left.click();
+  await right.click();
+  await expect(left).toHaveAccessibleName('Open left toolbar');
+  await expect(right).toHaveAccessibleName('Open right toolbar');
+  await expect(left).toHaveText('›');
+  await expect(right).toHaveText('‹');
+  await expect(left).toBeVisible();
+  await expect(right).toBeVisible();
 });
 
 test('Deep Current narrow dock keeps the complete contextual Widget Actions menu', async ({ page }) => {
@@ -896,7 +1193,7 @@ test('held Widget leaves a vacant origin and a full-size in-layout welcoming slo
 });
 
 test('dragging to a collapsed edge reveals and widens that dock before commit', async ({ page }) => {
-  await page.getByRole('button', { name: 'Toggle left dock' }).click();
+  await page.getByRole('button', { name: 'Close left toolbar' }).click();
   const source = page.getByRole('article', { name: 'Room Ambience' });
   const handleBox = await widgetDragSurface(source).boundingBox();
   if (!handleBox) throw new Error('Expected Room Ambience drag geometry.');
@@ -1233,29 +1530,28 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   await dragToShelfRail(page, widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' })), 'left');
 
   await page.getByRole('tab', { name: 'Library' }).click();
-  const libraryLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
-  await libraryLeft.focus();
-  await libraryLeft.press('Home');
+  const libraryColumns = page.getByRole('separator', { name: 'Resize Focus and Support columns' });
+  await libraryColumns.focus();
+  await libraryColumns.press('Home');
   const character = page.getByRole('article', { name: 'Character Card' });
-  const characterBox = await character.boundingBox();
-  if (!characterBox) throw new Error('Expected Character Card geometry.');
-  await dragTo(page, widgetDragSurface(page.getByRole('article', { name: 'Lore Entry Tree' })), {
-    x: characterBox.x + characterBox.width / 2,
-    y: characterBox.y + 16
-  });
+  await dragToWidgetTab(
+    page,
+    widgetDragSurface(page.getByRole('article', { name: 'Lore Entry Tree' })),
+    character
+  );
 
   await page.getByRole('tab', { name: 'Settings' }).click();
-  const settingsRight = page.getByRole('separator', { name: 'Resize right toolbar' });
-  await settingsRight.focus();
-  await settingsRight.press('ArrowLeft');
+  const settingsColumns = page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' });
+  await settingsColumns.focus();
+  await settingsColumns.press('ArrowLeft');
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Save layout' }).click();
   await page.reload();
 
   await expect(page.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('separator', { name: 'Resize right toolbar' })).toHaveAttribute('aria-valuenow', '278');
+  await expect(page.getByRole('separator', { name: 'Resize Column 1 and Column 2 columns' })).toHaveAttribute('aria-valuenow', '45');
   await page.getByRole('tab', { name: 'Library' }).click();
-  await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '200');
+  await expect(page.getByRole('separator', { name: 'Resize Focus and Support columns' })).toHaveAttribute('aria-valuenow', '10');
   await expect(page.getByRole('group', { name: 'Widget group' }).getByRole('tab')).toHaveText(['Character Card', 'Lore Entry Tree']);
   await page.getByRole('tab', { name: 'Scene' }).click();
   await expect(page.getByRole('separator', { name: 'Resize left toolbar' })).toHaveAttribute('aria-valuenow', '420');
@@ -1415,7 +1711,7 @@ test('coarse-pointer controls retain 44px interaction targets independently of t
 });
 
 test('all 98 reviewed Widget surfaces expose exact ready, state, focus, and responsive contracts', async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   const themeAuthoringElements = new Map<string, string>([
     ['settings.custom-theme', 'overview'],
     ['settings.theme-colors', 'colors'],
@@ -1750,9 +2046,9 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
   const proxy = page.locator('[data-catalog-placement-proxy]');
   await expect(proxy).toBeVisible();
   await expect(catalog).toBeHidden();
-  const targets = page.locator('[data-catalog-placement-target]');
+  const targets = page.locator('[data-pom-part="widget.drop-rail"]');
   await expect(targets).not.toHaveCount(0);
-  const leftTarget = page.locator('[data-catalog-placement-target][data-pomegranate-region-surface="left"]').first();
+  const leftTarget = page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="left"][data-drop-rail-kind="append"]');
   await expect(leftTarget).toBeVisible();
   const targetBox = await leftTarget.boundingBox();
   if (!targetBox) throw new Error('Missing compatible Catalog placement target.');
@@ -1768,10 +2064,10 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
     x: targetBox.x + targetBox.width / 2,
     y: targetBox.y + targetBox.height / 2
   });
-  expect(proxyEvidence.target).toBe(JSON.stringify(['scene', null, 'left', 0, 'primary']));
-  const selectedTarget = page.locator(`[data-catalog-placement-target=${JSON.stringify(proxyEvidence.target)}]`);
+  expect(proxyEvidence.target).toBe(`${JSON.stringify(['rail', 'scene', null, 0, 'left', 'append'])}:append`);
+  const selectedTarget = page.locator('[data-pom-part="widget.drop-rail"][data-active="true"]');
   await expect(selectedTarget).toHaveCount(1);
-  await expect(selectedTarget).toHaveClass(/is-catalog-target-active/);
+  await expect(selectedTarget).toHaveAttribute('data-drop-region', 'left');
   const selectedBox = await selectedTarget.boundingBox();
   if (!selectedBox) throw new Error('Missing selected Catalog placement target geometry.');
   expect(proxyEvidence.x).toBeGreaterThanOrEqual(selectedBox.x);
@@ -1803,14 +2099,15 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
     .map(([id]) => id);
   expect(persistedLibraryIds).toHaveLength(1);
   const firstLibraryId = persistedLibraryIds[0] ?? '';
+  const firstLibraryShelfId = `left-shelf-${initialRevision + 2}`;
   const firstLibraryPlacement = {
-    kind: 'docked', panelId: 'scene', regionId: 'left', shelfId: 'primary', order: 3
+    kind: 'docked', panelId: 'scene', regionId: 'left', shelfId: firstLibraryShelfId, order: 0
   } as const;
   expect(saved?.placements[firstLibraryId]).toEqual(firstLibraryPlacement);
 
   await page.getByRole('button', { name: 'Reload saved layout' }).click();
   await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 3));
-  await expect(page.locator(`[data-pomegranate-placement][data-widget-type="library.workspace"][data-pomegranate-region="left"][data-pomegranate-shelf="primary"]`)).toHaveCount(1);
+  await expect(page.locator(`[data-pomegranate-placement][data-widget-type="library.workspace"][data-pomegranate-region="left"][data-pomegranate-shelf="${firstLibraryShelfId}"]`)).toHaveCount(1);
   await page.getByRole('button', { name: 'Save layout' }).click();
   const hydrated = await page.evaluate(() => JSON.parse(localStorage.getItem('pomegranate-ui.workbench-lab.layout.v1') ?? 'null') as {
     revision: number;
@@ -1867,9 +2164,183 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
         id: expect.stringMatching(/^catalog-library-workspace-/),
         type: 'library.workspace', manifestVersion: '1.0.0', configuration: {}
       },
-      placement: { ...firstLibraryPlacement, order: 4 }
+      placement: { kind: 'docked', panelId: 'scene', regionId: 'left', shelfId: 'primary', order: 3 }
     }
   ]);
+});
+
+test('Catalog pointer drag exposes populated dock rails and widget body docking zones before placement', async ({ page }) => {
+  await openWidgetCatalog(page);
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const result = catalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
+  await result.scrollIntoViewIfNeeded();
+  const originBox = await result.boundingBox();
+  if (!originBox) throw new Error('Missing Catalog docking-parity origin geometry.');
+
+  await page.mouse.move(originBox.x + 8, originBox.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(originBox.x + 14, originBox.y + 8);
+  await expect(catalog).toBeHidden();
+
+  const rails = page.locator('[data-pom-part="widget.drop-rail"]');
+  await expect(rails).not.toHaveCount(0);
+  await expect(page.locator('[data-catalog-placement-target].is-catalog-placement-target')).toHaveCount(0);
+
+  const characters = page.getByRole('article', { name: 'Characters (Story)' });
+  const body = characters.locator(':scope > [data-pom-part="widget.content"]');
+  const bodyBox = await body.boundingBox();
+  if (!bodyBox) throw new Error('Missing populated Widget body geometry.');
+  await page.mouse.move(
+    bodyBox.x + bodyBox.width / 2,
+    bodyBox.y + bodyBox.height * .875,
+    { steps: 3 }
+  );
+
+  const slot = page.locator('[data-pom-part="widget.dock-slot"]');
+  await expect(slot).toBeVisible();
+  await expect(slot).toHaveAttribute('data-drop-intent', 'insert-after');
+  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', 'insert-after');
+
+  await page.mouse.up();
+  const placed = page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])');
+  await expect(placed).toHaveCount(1);
+  await expect(placed).toHaveAttribute('data-pomegranate-region', 'left');
+  await expect(placed).not.toHaveAttribute('data-pomegranate-shelf', 'primary');
+  await expect(page.locator('[data-pom-part="widget.drop-overlay"], [data-pom-part="widget.dock-slot"]')).toHaveCount(0);
+});
+
+test('Catalog tab drop creates and groups the Widget in one undo step', async ({ page }) => {
+  const workbench = page.locator('main[data-workbench-revision]');
+  const initialRevision = Number(await workbench.getAttribute('data-workbench-revision'));
+  await openWidgetCatalog(page);
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const result = catalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
+  await result.scrollIntoViewIfNeeded();
+  const originBox = await result.boundingBox();
+  if (!originBox) throw new Error('Missing Catalog tab-drop origin geometry.');
+  await page.mouse.move(originBox.x + 8, originBox.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(originBox.x + 14, originBox.y + 8);
+  await expect(catalog).toBeHidden();
+
+  const characters = page.getByRole('article', { name: 'Characters (Story)' });
+  const headerBox = await widgetDragSurface(characters).boundingBox();
+  if (!headerBox) throw new Error('Missing Catalog tab-drop target geometry.');
+  await page.mouse.move(headerBox.x + headerBox.width / 2, headerBox.y + headerBox.height / 2, { steps: 3 });
+  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', 'tab');
+  await expect(page.locator('[data-pom-part="widget.tab-insertion"]')).toBeVisible();
+  await page.mouse.up();
+
+  await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 1));
+  const group = page.getByRole('group', { name: 'Widget group' })
+    .filter({ has: page.getByRole('tab', { name: 'Characters (Story)' }) });
+  await expect(group.getByRole('tab')).toHaveText(['Characters (Story)', 'Library']);
+  await expect(group.getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
+
+  await catalog.getByRole('button', { name: 'Close Widget Catalog' }).click();
+  await page.getByRole('button', { name: 'Undo layout' }).press('Enter');
+  await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 2));
+  await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(0);
+  await expect(page.getByRole('article', { name: 'Characters (Story)' })).toBeVisible();
+});
+
+test('Catalog pointer drag derives dock rails from every built-in Panel layout', async ({ page }) => {
+  const panels = page.getByRole('tablist', { name: 'Panels' });
+  for (const expectation of [
+    { panel: 'Scene', regions: ['left', 'right', 'stage'] },
+    { panel: 'Library', regions: ['focus', 'support'] },
+    {
+      panel: 'Settings',
+      subPanel: 'Appearance and Accessibility',
+      regions: ['column-1', 'column-2', 'column-3']
+    }
+  ]) {
+    await panels.getByRole('tab', { name: expectation.panel, exact: true }).click();
+    if (expectation.subPanel) {
+      await page.getByRole('tab', { name: expectation.subPanel, exact: true }).click();
+    }
+    await openWidgetCatalog(page);
+    const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+    const result = catalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
+    await result.scrollIntoViewIfNeeded();
+    const originBox = await result.boundingBox();
+    if (!originBox) throw new Error(`Missing ${expectation.panel} Catalog origin geometry.`);
+
+    await page.mouse.move(originBox.x + 8, originBox.y + 8);
+    await page.mouse.down();
+    await page.mouse.move(originBox.x + 14, originBox.y + 8);
+    await expect(catalog).toBeHidden();
+    const rails = page.locator('[data-pom-part="widget.drop-rail"]');
+    await expect(rails).not.toHaveCount(0);
+    const regions = await rails.evaluateAll((nodes) => [...new Set(nodes.map((node) => (
+      (node as HTMLElement).dataset.dropRegion ?? ''
+    )))].filter(Boolean).sort());
+    expect(regions).toEqual(expectation.regions);
+
+    await page.mouse.up();
+    await expect(catalog).toBeVisible();
+    await catalog.getByRole('button', { name: 'Close Widget Catalog' }).click();
+  }
+});
+
+test('Catalog pointer drag reveals a collapsed dock as a live destination', async ({ page }) => {
+  const main = page.locator('main[data-pom-theme-root]');
+  const leftRegion = page.locator('[data-pomegranate-region-surface="left"]');
+  await page.getByRole('button', { name: 'Close left toolbar' }).click();
+  await expect(main).toHaveClass(/left-collapsed/);
+
+  await openWidgetCatalog(page);
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const result = catalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
+  await result.scrollIntoViewIfNeeded();
+  const originBox = await result.boundingBox();
+  if (!originBox) throw new Error('Missing collapsed-dock Catalog origin geometry.');
+  await page.mouse.move(originBox.x + 8, originBox.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(originBox.x + 14, originBox.y + 8);
+  await expect(catalog).toBeHidden();
+
+  const surfaceBox = await page.locator('#workbench').boundingBox();
+  if (!surfaceBox) throw new Error('Missing collapsed-dock Workbench geometry.');
+  await page.mouse.move(surfaceBox.x + 4, surfaceBox.y + surfaceBox.height / 2, { steps: 3 });
+  await expect(main).toHaveAttribute('data-drag-reveal-left', 'true');
+  await expect.poll(() => leftRegion.evaluate((node) => node.getBoundingClientRect().width)).toBeGreaterThan(200);
+  await expect(page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="left"]')).not.toHaveCount(0);
+
+  await page.mouse.move(surfaceBox.x + surfaceBox.width / 2, 8);
+  await page.mouse.up();
+  await expect(catalog).toBeVisible();
+  await expect(main).not.toHaveAttribute('data-drag-reveal-left');
+});
+
+test('Catalog drag starts when every compatible side dock is collapsed', async ({ page }) => {
+  const main = page.locator('main[data-pom-theme-root]');
+  await page.getByRole('button', { name: 'Close left toolbar' }).click();
+  await page.getByRole('button', { name: 'Close right toolbar' }).click();
+  await expect(main).toHaveClass(/left-collapsed/);
+  await expect(main).toHaveClass(/right-collapsed/);
+
+  await openWidgetCatalog(page);
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const result = catalog.locator('[data-catalog-result][data-widget-type="ext:atlas:campaign-clock"]');
+  await result.scrollIntoViewIfNeeded();
+  const originBox = await result.boundingBox();
+  if (!originBox) throw new Error('Missing collapsed-only Catalog origin geometry.');
+  await page.mouse.move(originBox.x + 8, originBox.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(originBox.x + 14, originBox.y + 8);
+  await expect(catalog).toBeHidden();
+
+  const surfaceBox = await page.locator('#workbench').boundingBox();
+  if (!surfaceBox) throw new Error('Missing collapsed-only Workbench geometry.');
+  await page.mouse.move(surfaceBox.x + 4, surfaceBox.y + surfaceBox.height / 2, { steps: 3 });
+  await expect(main).toHaveAttribute('data-drag-reveal-left', 'true');
+  await expect(page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="left"]')).not.toHaveCount(0);
+
+  await page.mouse.move(surfaceBox.x + surfaceBox.width / 2, 8);
+  await page.mouse.up();
+  await expect(catalog).toBeVisible();
+  await expect(main).not.toHaveAttribute('data-drag-reveal-left');
 });
 
 test('Catalog pointer placement selects the topmost nested compatible target beneath an overlay', async ({ page }) => {
@@ -1913,10 +2384,10 @@ test('Catalog pointer placement selects the topmost nested compatible target ben
   }, { x: innerBox.x, y: innerBox.y, width: innerBox.width, height: innerBox.height });
   await page.mouse.move(point.x, point.y, { steps: 2 });
 
-  const expectedTarget = await inner.getAttribute('data-catalog-placement-target');
-  expect(expectedTarget).toBe(JSON.stringify(['scene', null, 'right', 0, 'primary']));
-  await expect(page.locator('[data-catalog-placement-proxy]')).toHaveAttribute('data-placement-target', expectedTarget!);
-  await expect(inner).toHaveClass(/is-catalog-target-active/);
+  const expectedTarget = `${JSON.stringify(['region', 'scene', null, 0, 'right'])}:region`;
+  await expect(page.locator('[data-catalog-placement-proxy]')).toHaveAttribute('data-placement-target', expectedTarget);
+  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-region', 'right');
+  await expect(page.locator('.widget-drop-intent-label')).toContainText('Nested right instruments region');
   await page.mouse.up();
   await expect(page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])')).toHaveCount(1);
   await page.locator('[data-review-target-overlay]').evaluate((overlay) => overlay.remove());
@@ -1947,6 +2418,6 @@ test('Catalog pointer placement selects the topmost nested compatible target ben
     committed.placement.regionId,
     committed.placement.lane ?? 0,
     committed.placement.shelfId
-  ]).toEqual(JSON.parse(expectedTarget!));
+  ]).toEqual(['scene', null, 'right', 0, 'primary']);
   expect(committed.placement.regionId).not.toBe('stage');
 });

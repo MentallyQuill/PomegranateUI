@@ -103,6 +103,39 @@ test('Scene and Settings material controls share one draft bidirectionally', asy
   await expect(settings.materials.getByRole('slider', { name: 'Bar Opacity' })).toHaveValue('60');
 });
 
+test('Toolbar controls author, persist, and reset the live toggle presentation', async ({ page }) => {
+  await fresh(page);
+  const root = page.locator('main');
+  let settings = await openAppearance(page);
+  let controls = settings.overview.getByRole('group', { name: 'Toolbar controls' });
+
+  await expect(controls.getByRole('radio', { name: 'Edge labels' })).toBeChecked();
+  await controls.getByRole('radio', { name: 'Bottom chevrons' }).click();
+  await expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
+
+  await page.getByRole('tab', { name: 'Scene' }).click();
+  const left = page.locator('.toolbar-edge-toggle-left');
+  const right = page.locator('.toolbar-edge-toggle-right');
+  await expect(left).toHaveText('‹');
+  await expect(right).toHaveText('›');
+  await left.click();
+  await expect(left).toHaveAccessibleName('Open left toolbar');
+  await expect(left).toHaveText('›');
+
+  settings = await openAppearance(page);
+  await settings.overview.getByRole('button', { name: 'Save draft' }).click();
+  await expect.poll(() => page.evaluate((key) => window.localStorage.getItem(key), draftKey)).not.toBeNull();
+  await page.reload();
+  await expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
+
+  settings = await openAppearance(page);
+  controls = settings.overview.getByRole('group', { name: 'Toolbar controls' });
+  await expect(controls.getByRole('radio', { name: 'Bottom chevrons' })).toBeChecked();
+  await settings.overview.getByRole('button', { name: 'Reset' }).click();
+  await expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'edge-labels');
+  await expect(controls.getByRole('radio', { name: 'Edge labels' })).toBeChecked();
+});
+
 test('Theme Colors propagates all semantic roles and preserves the last valid target', async ({ page }) => {
   await fresh(page);
   const root = page.locator('main');
@@ -187,7 +220,7 @@ test('Theme Materials slider hover keeps the enlarged hit target visually transp
       await page.setViewportSize(viewport);
       await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
       const materials = widget(page, 'settings.theme-materials');
-      if (!await materials.isVisible()) await page.getByRole('button', { name: 'Toggle left dock' }).click();
+      if (!await materials.isVisible()) await page.getByRole('button', { name: 'Open left toolbar' }).click();
       await expect(materials).toBeVisible();
 
       for (const name of ['Glass Density', 'Bar Opacity', 'Selected Strength', 'Frost Level']) {
@@ -218,10 +251,10 @@ test('every Theme Materials control changes a rendered surface in every theme an
       await page.setViewportSize(viewport);
       await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
       const materials = widget(page, 'settings.theme-materials');
-      if (!await materials.isVisible()) await page.getByRole('button', { name: 'Toggle left dock' }).click();
+      if (!await materials.isVisible()) await page.getByRole('button', { name: 'Open left toolbar' }).click();
       await expect(materials).toBeVisible();
       if (theme === 'Deep Current' && !await page.locator('[data-conformance-region="right"]').isVisible()) {
-        await page.getByRole('button', { name: 'Toggle right dock' }).click();
+        await page.getByRole('button', { name: 'Open right toolbar' }).click();
       }
 
       for (const control of cases) {
@@ -268,9 +301,9 @@ test('Deep Current material calibration stays monotonic through its authored def
     await page.setViewportSize(viewport);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const materials = widget(page, 'settings.theme-materials');
-    if (!await materials.isVisible()) await page.getByRole('button', { name: 'Toggle left dock' }).click();
+    if (!await materials.isVisible()) await page.getByRole('button', { name: 'Open left toolbar' }).click();
     if (!await page.locator('[data-conformance-region="right"]').isVisible()) {
-      await page.getByRole('button', { name: 'Toggle right dock' }).click();
+      await page.getByRole('button', { name: 'Open right toolbar' }).click();
     }
 
     for (const control of cases) {

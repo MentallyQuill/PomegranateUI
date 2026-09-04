@@ -291,6 +291,7 @@ const themeMaterialIdSchema = themeIdSchema;
 const themeShapeIdSchema = themeIdSchema;
 
 export const ThemePartIdSchema = z.enum(THEME_PART_IDS);
+export const ToolbarTogglePresentationSchema = z.enum(['edge-labels', 'bottom-chevrons']);
 
 export const ThemeShadowV2Schema = z.object({
   x: boundedNumber(-64, 64),
@@ -374,7 +375,8 @@ export const ThemeRecipesV2Schema = z.object({
   widgetGrouping: z.enum(['individual', 'unified']),
   chromePresentation: z.enum(['full', 'compact', 'overlay']),
   shellPresentation: z.enum(['standard', 'instrumented']).optional(),
-  actionPresentation: z.enum(['always', 'compact', 'hover-focus'])
+  actionPresentation: z.enum(['always', 'compact', 'hover-focus']),
+  toolbarTogglePresentation: ToolbarTogglePresentationSchema.optional()
 }).strict();
 
 export const ThemeControlsV2Schema = z.object({
@@ -521,6 +523,7 @@ export type ThemeMaterialV2 = z.infer<typeof ThemeMaterialV2Schema>;
 export type ThemeShapeV2 = z.infer<typeof ThemeShapeV2Schema>;
 export type ThemePartRecipeV2 = z.infer<typeof ThemePartRecipeV2Schema>;
 export type ThemeRecipesV2 = z.infer<typeof ThemeRecipesV2Schema>;
+export type ToolbarTogglePresentation = z.infer<typeof ToolbarTogglePresentationSchema>;
 export type ThemeControlsV2 = z.infer<typeof ThemeControlsV2Schema>;
 export type ThemeDefinitionV2 = z.infer<typeof ThemeDefinitionV2Schema>;
 

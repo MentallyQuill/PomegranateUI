@@ -86,7 +86,10 @@ function populatedSubPanelState(): WorkbenchState {
           activeSubPanelId: notesId,
           subPanels: [
             { id: overviewId, name: 'Overview', layoutId: 'single' as const, order: 0, scrollTop: 144 },
-            { id: notesId, name: 'Notes', layoutId: 'two-equal' as const, order: 1, scrollTop: 28 }
+            {
+              id: notesId, name: 'Notes', layoutId: 'two-equal' as const, order: 1, scrollTop: 28,
+              columnWeights: [0.62, 0.38]
+            }
           ]
         }
       : panel),
@@ -99,7 +102,8 @@ function populatedSubPanelState(): WorkbenchState {
         lane: 0,
         regionId: 'left',
         shelfId: 'primary',
-        order: 0
+        order: 0,
+        height: 284
       }
     }
   };
@@ -109,7 +113,8 @@ describe('layout persistence', () => {
   it('round-trips sub-panel metadata and placement ownership through the versioned snapshot', () => {
     const state = populatedSubPanelState();
 
-    expect(WorkbenchStateSchema.safeParse(state).success).toBe(true);
+    const parsedState = WorkbenchStateSchema.safeParse(state);
+    expect(parsedState.success, parsedState.success ? '' : JSON.stringify(parsedState.error.issues)).toBe(true);
     const encoded = expectEncoded(state);
     expect(JSON.parse(encoded).schema).toBe('pomegranate.ui.layout.v3');
     const decoded = decodeLayoutSnapshot(encoded, populatedState());
@@ -119,10 +124,10 @@ describe('layout persistence', () => {
       activeSubPanelId: notesId,
       subPanels: [
         { id: overviewId, layoutId: 'single', scrollTop: 144 },
-        { id: notesId, layoutId: 'two-equal', scrollTop: 28 }
+        { id: notesId, layoutId: 'two-equal', scrollTop: 28, columnWeights: [0.62, 0.38] }
       ]
     });
-    expect(decoded.state.placements[summaryId]).toMatchObject({ subPanelId: overviewId, lane: 0 });
+    expect(decoded.state.placements[summaryId]).toMatchObject({ subPanelId: overviewId, lane: 0, height: 284 });
     expect(expectEncoded(decoded.state)).toBe(encoded);
   });
 
@@ -133,8 +138,10 @@ describe('layout persistence', () => {
     hostile.panels[0].subPanels[0].layoutId = 'unknown-layout';
     hostile.panels[0].subPanels[0].scrollTop = -50;
     hostile.panels[0].subPanels[0].subPanels = [];
+    hostile.panels[0].subPanels[1].columnWeights = [1, 0];
     hostile.placements[summaryId].subPanelId = 'scene-missing';
     hostile.placements[summaryId].lane = 99;
+    hostile.placements[summaryId].height = -40;
 
     const decoded = decodeLayoutSnapshot(JSON.stringify(hostile), populatedState());
 
@@ -148,7 +155,9 @@ describe('layout persistence', () => {
         { id: notesId, layoutId: 'two-equal', order: 1, scrollTop: 28 }
       ]
     });
+    expect(decoded.state.panels[0]?.subPanels?.[1]).not.toHaveProperty('columnWeights');
     expect(decoded.state.placements[summaryId]).toMatchObject({ subPanelId: overviewId, lane: 0 });
+    expect(decoded.state.placements[summaryId]).not.toHaveProperty('height');
   });
 
   it('encodes deterministically across record and JSON object insertion order', () => {

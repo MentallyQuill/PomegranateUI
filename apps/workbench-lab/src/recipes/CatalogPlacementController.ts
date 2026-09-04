@@ -1,5 +1,20 @@
 import type { WidgetManifest } from '@pomegranate-ui/contracts';
 
+import {
+  dockRevealSide,
+  resolveDockIntent,
+  stabilizeDockIntent,
+  type DockIntent,
+  type DockPoint,
+  type DockTarget
+} from './widget-docking.js';
+import {
+  collectDockTargets,
+  createDockPreviewController,
+  dockRectOf,
+  type DockPreviewController
+} from './widget-docking-dom.js';
+
 export type CatalogPlacementInput = 'pointer' | 'keyboard';
 export type CatalogPlacementPhase = 'idle' | 'pressing' | 'lifted';
 
@@ -50,7 +65,9 @@ export interface CatalogPlacementControllerOptions {
   readonly getTargetRoot: () => ParentNode | null;
   readonly getInstanceCount: (manifest: WidgetManifest) => number;
   readonly isCompatibleTarget: (manifest: WidgetManifest, target: HTMLElement) => boolean;
+  readonly isPotentialDockTarget?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
   readonly onCommit: (manifest: WidgetManifest, target: CatalogPlacementTarget) => void;
+  readonly onDockCommit?: (manifest: WidgetManifest, intent: DockIntent) => void;
   readonly onAnnounce?: (message: string) => void;
   readonly captureScrollAnchor?: () => unknown;
   readonly restoreScrollAnchor?: (anchor: unknown) => void;
@@ -149,6 +166,9 @@ export function createCatalogPlacementController(
   let suppressNextClick = false;
   let clickSuppressionTimer: ReturnType<typeof setTimeout> | null = null;
   let savedScrollAnchor: unknown;
+  let dockTargets: readonly DockTarget[] = Object.freeze([]);
+  let dockIntent: DockIntent | null = null;
+  let dockPreview: DockPreviewController | null = null;
   const listeners = new Set<(state: CatalogPlacementState) => void>();
   const targetAttributes = new Map<HTMLElement, {
     readonly placementTarget: string | null;
@@ -214,6 +234,7 @@ export function createCatalogPlacementController(
   const clearTargets = () => {
     for (const target of state.targets) {
       const previous = targetAttributes.get(target.element);
+      if (!previous) continue;
       for (const [attribute, value] of [
         ['data-catalog-placement-target', previous?.placementTarget ?? null],
         ['tabindex', previous?.tabindex ?? null],
@@ -245,10 +266,22 @@ export function createCatalogPlacementController(
 
   const reset = () => {
     const origin = candidate?.origin ?? null;
+    const ownerDocument = candidate?.document ?? null;
+    const targetRoot = options.getTargetRoot();
+    const themeRoot = targetRoot instanceof HTMLElement
+      ? targetRoot.closest<HTMLElement>('main[data-pom-theme-root]')
+      : null;
     const input = state.input;
     const anchor = savedScrollAnchor;
     removePointerListeners();
     clearTargets();
+    dockPreview?.destroy();
+    dockPreview = null;
+    dockTargets = Object.freeze([]);
+    dockIntent = null;
+    ownerDocument?.body.classList.remove('pom-widget-drag-active');
+    themeRoot?.removeAttribute('data-drag-reveal-left');
+    themeRoot?.removeAttribute('data-drag-reveal-right');
     origin?.classList.remove('is-catalog-drag-origin');
     candidate = null;
     publish(IDLE_STATE);
@@ -261,15 +294,58 @@ export function createCatalogPlacementController(
     savedScrollAnchor = undefined;
   };
 
-  const compatibleTargets = (manifest: WidgetManifest): readonly CatalogPlacementTarget[] => {
+  const compatibleTargets = (
+    manifest: WidgetManifest,
+    predicate = options.isCompatibleTarget
+  ): readonly CatalogPlacementTarget[] => {
     const root = options.getTargetRoot();
     if (!root) return Object.freeze([]);
     return Object.freeze([...root.querySelectorAll<HTMLElement>(TARGET_SELECTOR)]
-      .filter((element) => options.isCompatibleTarget(manifest, element))
+      .filter((element) => predicate(manifest, element))
       .flatMap((element) => {
         const identity = targetIdentity(element, manifest);
         return identity ? [Object.freeze({ identity, rect: rectSnapshot(element.getBoundingClientRect()), element })] : [];
       }));
+  };
+
+  const compatibleDockTargets = (
+    manifest: WidgetManifest,
+    compatibleRegions: readonly CatalogPlacementTarget[]
+  ): readonly DockTarget[] => {
+    const root = options.getTargetRoot();
+    if (!(root instanceof HTMLElement)) return Object.freeze([]);
+    return Object.freeze(collectDockTargets(root, {
+      regions: compatibleRegions.map(({ element }) => element),
+      ownerForRegion: (region) => {
+        const identity = targetIdentity(region, manifest);
+        return identity ? {
+          panelId: identity.panelId,
+          ...(identity.subPanelId === undefined ? {} : { subPanelId: identity.subPanelId }),
+          ...(identity.lane === undefined ? {} : { lane: identity.lane }),
+          regionId: identity.regionId
+        } : null;
+      }
+    }));
+  };
+
+  const syncCollapsedDockReveal = (point: DockPoint) => {
+    const targetRoot = options.getTargetRoot();
+    if (!(targetRoot instanceof HTMLElement)) return;
+    const themeRoot = targetRoot.closest<HTMLElement>('main[data-pom-theme-root]');
+    if (!themeRoot) return;
+    const side = dockRevealSide(point, dockRectOf(targetRoot.getBoundingClientRect()), 34);
+    const revealLeft = side === 'left' && themeRoot.classList.contains('left-collapsed');
+    const revealRight = side === 'right' && themeRoot.classList.contains('right-collapsed');
+    const changed = themeRoot.hasAttribute('data-drag-reveal-left') !== revealLeft
+      || themeRoot.hasAttribute('data-drag-reveal-right') !== revealRight;
+    if (revealLeft) themeRoot.dataset.dragRevealLeft = 'true';
+    else themeRoot.removeAttribute('data-drag-reveal-left');
+    if (revealRight) themeRoot.dataset.dragRevealRight = 'true';
+    else themeRoot.removeAttribute('data-drag-reveal-right');
+    if (changed) {
+      dockPreview?.clearSlot();
+      void themeRoot.offsetWidth;
+    }
   };
 
   const lift = (
@@ -285,7 +361,15 @@ export function createCatalogPlacementController(
       reset();
       return false;
     }
-    const targets = compatibleTargets(candidate.manifest);
+    const targetRoot = options.getTargetRoot();
+    const richPointer = input === 'pointer'
+      && options.onDockCommit !== undefined
+      && targetRoot instanceof HTMLElement;
+    const visibleTargets = compatibleTargets(candidate.manifest);
+    const targets = richPointer
+      ? compatibleTargets(candidate.manifest, options.isPotentialDockTarget ?? options.isCompatibleTarget)
+      : visibleTargets;
+    const nextDockTargets = richPointer ? compatibleDockTargets(candidate.manifest, visibleTargets) : Object.freeze([]);
     if (targets.length === 0) {
       options.onAnnounce?.(`No compatible target is available for ${candidate.manifest.title}.`);
       reset();
@@ -296,27 +380,38 @@ export function createCatalogPlacementController(
     const scale = originRect.width > 0 ? width / originRect.width : 1;
     const height = Math.min(360, Math.round(originRect.height * scale));
     const selectedTargetId = input === 'keyboard' ? targets[0]?.identity.id ?? null : null;
-    for (const target of targets) {
-      targetAttributes.set(target.element, {
-        placementTarget: target.element.getAttribute('data-catalog-placement-target'),
-        tabindex: target.element.getAttribute('tabindex'),
-        role: target.element.getAttribute('role'),
-        ariaLabel: target.element.getAttribute('aria-label'),
-        placementClass: target.element.classList.contains('is-catalog-placement-target'),
-        activeClass: target.element.classList.contains('is-catalog-target-active')
-      });
-      target.element.dataset.catalogPlacementTarget = target.identity.id;
-      target.element.classList.add('is-catalog-placement-target');
-      target.element.classList.toggle('is-catalog-target-active', target.identity.id === selectedTargetId);
-      target.element.tabIndex = target.identity.id === selectedTargetId ? 0 : -1;
-      target.element.setAttribute('role', 'button');
-      target.element.setAttribute('aria-label', `Place ${candidate.manifest.title} in ${target.element.getAttribute('aria-label') ?? target.identity.regionRole}`);
+    if (!richPointer) {
+      for (const target of targets) {
+        targetAttributes.set(target.element, {
+          placementTarget: target.element.getAttribute('data-catalog-placement-target'),
+          tabindex: target.element.getAttribute('tabindex'),
+          role: target.element.getAttribute('role'),
+          ariaLabel: target.element.getAttribute('aria-label'),
+          placementClass: target.element.classList.contains('is-catalog-placement-target'),
+          activeClass: target.element.classList.contains('is-catalog-target-active')
+        });
+        target.element.dataset.catalogPlacementTarget = target.identity.id;
+        target.element.classList.add('is-catalog-placement-target');
+        target.element.classList.toggle('is-catalog-target-active', target.identity.id === selectedTargetId);
+        target.element.tabIndex = target.identity.id === selectedTargetId ? 0 : -1;
+        target.element.setAttribute('role', 'button');
+        target.element.setAttribute('aria-label', `Place ${candidate.manifest.title} in ${target.element.getAttribute('aria-label') ?? target.identity.regionRole}`);
+      }
     }
     savedScrollAnchor = options.captureScrollAnchor?.();
     candidate.origin.classList.add('is-catalog-drag-origin');
     releasePointerCaptureBeforeLift();
     options.catalog.suspend();
     suspended = true;
+    if (richPointer) {
+      const root = options.getTargetRoot();
+      if (root instanceof HTMLElement) {
+        dockTargets = nextDockTargets;
+        dockPreview = createDockPreviewController(root);
+        candidate.document.body.classList.add('pom-widget-drag-active');
+        dockPreview.sync(dockTargets, null);
+      }
+    }
     publish(Object.freeze({
       phase: 'lifted',
       input,
@@ -359,6 +454,21 @@ export function createCatalogPlacementController(
     }
     if (state.phase === 'lifted' && state.input === 'pointer' && state.proxy) {
       event.preventDefault();
+      if (options.onDockCommit && dockPreview) {
+        const point = { x: event.clientX, y: event.clientY };
+        syncCollapsedDockReveal(point);
+        const targets = compatibleTargets(candidate.manifest);
+        dockTargets = compatibleDockTargets(candidate.manifest, targets);
+        const next = resolveDockIntent(point, dockTargets);
+        dockIntent = stabilizeDockIntent(point, dockIntent, next, 10);
+        dockIntent = dockPreview.sync(dockTargets, dockIntent);
+        publish(Object.freeze({
+          ...state,
+          proxy: Object.freeze({ ...state.proxy, x: event.clientX, y: event.clientY }),
+          selectedTargetId: dockIntent?.key ?? null
+        }));
+        return;
+      }
       const hit = candidate.document.elementFromPoint?.(event.clientX, event.clientY) ?? null;
       selectPointerTarget(hit, Object.freeze({ ...state, proxy: Object.freeze({ ...state.proxy, x: event.clientX, y: event.clientY }) }));
     }
@@ -372,7 +482,8 @@ export function createCatalogPlacementController(
     if (!candidate || event.pointerId !== candidate.pointerId) return;
     if (state.phase === 'lifted') {
       suppressClickBriefly();
-      if (event.type !== 'pointercancel' && state.selectedTargetId) commitSelectedTarget();
+      if (event.type !== 'pointercancel' && dockIntent && options.onDockCommit) commitDockIntent();
+      else if (event.type !== 'pointercancel' && state.selectedTargetId) commitSelectedTarget();
       else cancelPlacement();
       return;
     }
@@ -478,6 +589,18 @@ export function createCatalogPlacementController(
     const activeManifest = candidate.manifest;
     try {
       options.onCommit(activeManifest, target);
+    } finally {
+      reset();
+    }
+    return true;
+  };
+
+  const commitDockIntent = () => {
+    if (state.phase !== 'lifted' || !candidate || !dockIntent || !options.onDockCommit) return false;
+    const activeManifest = candidate.manifest;
+    const activeIntent = dockIntent;
+    try {
+      options.onDockCommit(activeManifest, activeIntent);
     } finally {
       reset();
     }

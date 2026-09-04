@@ -3,7 +3,12 @@ import type { ThemeDefinitionV2 } from '@pomegranate-ui/contracts';
 import { material, shapePalette, themeRecipes, themeTarget } from './base.js';
 
 const POM_NEUTRAL_RECIPES: ThemeDefinitionV2['recipes'] = (() => {
-  const recipes = themeRecipes({ widgetGrouping: 'individual', chromePresentation: 'overlay', actionPresentation: 'hover-focus' });
+  const recipes = themeRecipes({
+    widgetGrouping: 'individual',
+    chromePresentation: 'overlay',
+    actionPresentation: 'hover-focus',
+    toolbarTogglePresentation: 'bottom-chevrons'
+  });
   recipes.parts['group.surface'] = {
     ...recipes.parts['group.surface'],
     material: 'pane',

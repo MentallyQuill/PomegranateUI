@@ -11,7 +11,8 @@ import {
 const SOURCE_FRAGMENT_SHA256 = '38878d2cf8a86f5e879faba4b41a214e4293f22ed755975023e02c962d61b913';
 const APPROVED_LAYOUT_BOUNDS = [
   { id: 'header-panel-control-adjacent', x: 372, y: 0, width: 33, height: 40 },
-  { id: 'header-panel-control-previous', x: 532, y: 0, width: 33, height: 40 }
+  { id: 'header-panel-control-previous', x: 532, y: 0, width: 33, height: 40 },
+  { id: 'left-character-roster', x: 0, y: 68, width: 286, height: 214 }
 ];
 
 function png(width, height, pixels) {
@@ -109,13 +110,13 @@ test('Atmospheric exact contract permits approved layout masks only inside named
   assert.throws(() => validateAtmosphericContract(contract({
     approvedLayoutBounds: [
       { ...APPROVED_LAYOUT_BOUNDS[0], width: 34 },
-      APPROVED_LAYOUT_BOUNDS[1]
+      ...APPROVED_LAYOUT_BOUNDS.slice(1)
     ]
   }), { skipReferenceImageHash: true }), /layout bound.*drifted/i);
   assert.throws(() => validateAtmosphericContract(contract({
     approvedLayoutBounds: [
       { ...APPROVED_LAYOUT_BOUNDS[0], x: 371 },
-      APPROVED_LAYOUT_BOUNDS[1]
+      ...APPROVED_LAYOUT_BOUNDS.slice(1)
     ]
   }), { skipReferenceImageHash: true }), /layout bound.*drifted/i);
   assert.throws(() => validateAtmosphericContract(contract({

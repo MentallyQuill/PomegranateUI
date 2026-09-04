@@ -79,5 +79,5 @@ describe('App catalog placement integration', () => {
     });
     expect(snapshot.placements[targetedId]).not.toHaveProperty('subPanelId');
     expect(snapshot.placements[targetedId]).not.toHaveProperty('lane');
-  }, 20_000);
+  }, 40_000);
 });

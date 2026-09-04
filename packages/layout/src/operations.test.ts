@@ -15,6 +15,7 @@ import {
 import {
   activatePanel,
   activateWidgetGroup,
+  createAndGroupWidget,
   createInitialWorkbenchState,
   createPanel,
   createPanelTemplateRegistry,
@@ -31,8 +32,10 @@ import {
   restoreWidget,
   reorderWidgetGroup,
   reorderPanel,
-  resizePanelDock
-  ,shelveWidget
+  resizePanelColumns,
+  resizePanelDock,
+  resizeWidgetRow,
+  shelveWidget
 } from './index.js';
 
 const sceneId = asPanelId('scene');
@@ -189,6 +192,36 @@ describe('atomic layout operations', () => {
     expect(rejected.state).toBe(resized.state);
   });
 
+  it('persists normalized column weights on a flat Panel', () => {
+    const before: WorkbenchState = {
+      ...populatedState(),
+      panels: [{ id: sceneId, name: 'Columns', templateId: 'columns.v1', order: 0, configuration: { columns: 3 } }],
+      activePanelId: sceneId
+    };
+    const resized = resizePanelColumns(before, sceneId, [2, 1, 1]);
+    expect(resized.ok).toBe(true);
+    expect(resized.state.panels[0]?.columnWeights).toEqual([0.5, 0.25, 0.25]);
+    expect(resizePanelColumns(resized.state, sceneId, [1, 0, 1]).ok).toBe(false);
+  });
+
+  it('resizes one docked Widget row and keeps a tab group synchronized', () => {
+    const single = resizeWidgetRow(populatedState(), summaryId, 284);
+    expect(single.ok).toBe(true);
+    expect(single.state.placements[summaryId]).toMatchObject({ height: 284 });
+
+    const grouped = mergeWidgetGroup(single.state, notesId, summaryId, 'reading-stack');
+    expect(grouped.ok).toBe(true);
+    const resized = resizeWidgetRow(grouped.state, notesId, 320);
+    expect(resized.ok).toBe(true);
+    expect(resized.state.placements[summaryId]).toMatchObject({ height: 320 });
+    expect(resized.state.placements[notesId]).toMatchObject({ height: 320 });
+
+    const reset = resizeWidgetRow(resized.state, summaryId, null);
+    expect(reset.ok).toBe(true);
+    expect(reset.state.placements[summaryId]).not.toHaveProperty('height');
+    expect(reset.state.placements[notesId]).not.toHaveProperty('height');
+  });
+
   it('merges, activates, and reorders a same-Panel Widget tab group', () => {
     const grouped = mergeWidgetGroup(populatedState(), notesId, summaryId, 'reading-stack');
     expect(grouped.ok).toBe(true);
@@ -208,6 +241,34 @@ describe('atomic layout operations', () => {
     expect(reordered.ok).toBe(true);
     expect(reordered.state.placements[notesId]).toMatchObject({ group: { order: 0 } });
     expect(reordered.state.placements[summaryId]).toMatchObject({ group: { order: 1 } });
+  });
+
+  it('creates and groups a new Widget as one atomic revision', () => {
+    const before = populatedState();
+    const catalogId = asWidgetInstanceId('catalog-library');
+    const catalogInstance = instance(catalogId, 'story.summary');
+    const placement = dock(sceneId, 'left', 1) as DockedPlacement;
+    const context = { templates: createPanelTemplateRegistry(), manifestFor: () => undefined };
+
+    const result = createAndGroupWidget(before, catalogInstance, placement, summaryId, 'catalog-group', context);
+
+    expect(result.ok).toBe(true);
+    expect(result.state.revision).toBe(before.revision + 1);
+    expect(result.state.widgets[catalogId]).toEqual(catalogInstance);
+    expect(result.state.placements[summaryId]).toMatchObject({ group: { id: 'catalog-group', active: false } });
+    expect(result.state.placements[catalogId]).toMatchObject({ group: { id: 'catalog-group', active: true } });
+
+    const rejected = createAndGroupWidget(
+      before,
+      catalogInstance,
+      placement,
+      asWidgetInstanceId('missing'),
+      'catalog-group',
+      context
+    );
+    expect(rejected.ok).toBe(false);
+    expect(rejected.state).toBe(before);
+    expect(rejected.state.widgets[catalogId]).toBeUndefined();
   });
 
   it('rejects invalid grouping without changing state identity', () => {
@@ -317,6 +378,23 @@ describe('atomic layout operations', () => {
     expect(rejected.ok).toBe(false);
     expect(rejected.state).toBe(before);
     expect(rejected.state.shelves.some((candidate) => candidate.id === shelf.id)).toBe(false);
+  });
+
+  it('creates a new Widget with its new Shelf as one atomic revision', () => {
+    const before = populatedState();
+    const catalogId = asWidgetInstanceId('catalog-library');
+    const catalogInstance = instance(catalogId, 'story.summary');
+    const shelf = { id: 'catalog-shelf', panelId: sceneId, regionId: 'left', order: 1, weight: 0.5 };
+    const placement = dock(sceneId, 'left', 0, shelf.id) as DockedPlacement;
+    const context = { templates: createPanelTemplateRegistry(), manifestFor: () => undefined };
+
+    const result = createShelfWithWidget(before, shelf, catalogId, placement, context, catalogInstance);
+
+    expect(result.ok).toBe(true);
+    expect(result.state.revision).toBe(1);
+    expect(result.state.widgets[catalogId]).toEqual(catalogInstance);
+    expect(result.state.shelves).toContainEqual(expect.objectContaining({ id: shelf.id, panelId: sceneId }));
+    expect(result.state.placements[catalogId]).toMatchObject({ shelfId: shelf.id, order: 0 });
   });
 
   it('shelves a Widget without deleting it and restores its exact origin', () => {

@@ -46,6 +46,7 @@ function canonicalSubPanel(subPanel: SubPanelState): SubPanelState {
     layoutId: subPanel.layoutId,
     order: subPanel.order,
     scrollTop: subPanel.scrollTop,
+    ...(subPanel.columnWeights === undefined ? {} : { columnWeights: [...subPanel.columnWeights] }),
     ...(subPanel.shipped === undefined ? {} : { shipped: subPanel.shipped }),
     ...(subPanel.hidden === undefined ? {} : { hidden: subPanel.hidden })
   };
@@ -58,6 +59,7 @@ function canonicalPanel(panel: PanelState): PanelState {
     ...(panel.configuration === undefined
       ? {}
       : { configuration: canonicalJson(panel.configuration) as JsonObject }),
+    ...(panel.columnWeights === undefined ? {} : { columnWeights: [...panel.columnWeights] }),
     ...(panel.subPanels === undefined || panel.activeSubPanelId === undefined
       ? {}
       : {
@@ -98,7 +100,8 @@ function canonicalVisiblePlacement(placement: VisibleWidgetPlacement): VisibleWi
       : { subPanelId: placement.subPanelId, lane: placement.lane }),
     regionId: placement.regionId,
     shelfId: placement.shelfId,
-    order: placement.order
+    order: placement.order,
+    ...(placement.height === undefined ? {} : { height: placement.height })
   };
   return placement.group === undefined ? base : {
     ...base,

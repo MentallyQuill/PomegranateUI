@@ -41,7 +41,8 @@
   ],
   "approvedLayoutBounds": [
     { "id": "header-panel-control-adjacent", "x": 372, "y": 0, "width": 33, "height": 40 },
-    { "id": "header-panel-control-previous", "x": 532, "y": 0, "width": 33, "height": 40 }
+    { "id": "header-panel-control-previous", "x": 532, "y": 0, "width": 33, "height": 40 },
+    { "id": "left-character-roster", "x": 0, "y": 68, "width": 286, "height": 214 }
   ],
   "masks": [
     { "id": "header-wordmark", "textBoundId": "header-copy", "x": 9, "y": 4, "width": 157, "height": 31, "kind": "glyph-only" },
@@ -61,6 +62,7 @@
     { "id": "left-character-two", "textBoundId": "left-copy", "x": 52, "y": 130, "width": 228, "height": 36, "kind": "glyph-only" },
     { "id": "left-character-three", "textBoundId": "left-copy", "x": 52, "y": 182, "width": 228, "height": 36, "kind": "glyph-only" },
     { "id": "left-character-four", "textBoundId": "left-copy", "x": 52, "y": 234, "width": 228, "height": 36, "kind": "glyph-only" },
+    { "id": "left-character-roster-interactions", "layoutBoundId": "left-character-roster", "x": 0, "y": 68, "width": 286, "height": 214, "kind": "approved-layout" },
     { "id": "left-add-remove", "textBoundId": "left-copy", "x": 229, "y": 548, "width": 52, "height": 29, "kind": "glyph-only" },
     { "id": "left-theme-heading", "textBoundId": "left-copy", "x": 7, "y": 590, "width": 272, "height": 25, "kind": "glyph-only" },
     { "id": "left-glass-label", "textBoundId": "left-copy", "x": 7, "y": 625, "width": 270, "height": 20, "kind": "glyph-only" },

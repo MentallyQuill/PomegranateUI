@@ -59,8 +59,23 @@ describe('Theme draft projection', () => {
         ambient: '#51493E', text: '#F3F0EA', source: '#D2B57A'
       },
       materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 },
-      canvas: { imageStrength: 100, overlayStrength: 100, gradientAngle: 0, vignetteStrength: 100 }
+      canvas: { imageStrength: 100, overlayStrength: 100, gradientAngle: 0, vignetteStrength: 100 },
+      toolbarTogglePresentation: 'edge-labels'
     });
+  });
+
+  it('projects an authored toolbar toggle presentation without mutating its base target', () => {
+    const before = structuredClone(DEEP_CURRENT_TARGET);
+    const draft = {
+      ...createThemeDraft(DEEP_CURRENT_TARGET),
+      toolbarTogglePresentation: 'bottom-chevrons' as const
+    };
+    const result = projectThemeDraft(DEEP_CURRENT_TARGET, draft, DEEP_CURRENT_TARGET.ambient);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.target.theme.recipes.toolbarTogglePresentation).toBe('bottom-chevrons');
+    expect(DEEP_CURRENT_TARGET).toEqual(before);
   });
 
   it('round-trips a target-owned non-accent ambient role without rewriting its accent', () => {
