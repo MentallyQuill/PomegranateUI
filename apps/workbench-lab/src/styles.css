@@ -33,8 +33,8 @@ main {
 .top-shelf { display: grid; grid-template-columns: auto minmax(17rem, 1fr) auto; align-items: center; gap: .9rem; min-height: 4.4rem; padding: .55rem .7rem; border-radius: var(--pom-radius-large, .85rem) var(--pom-radius-large, .85rem) var(--pom-radius-small, .4rem) var(--pom-radius-small, .4rem); }
 .wordmark { display: grid; grid-template-columns: 2.4rem auto; color: inherit; text-decoration: none; line-height: 1; }
 .wordmark-mark { grid-row: 1 / 3; display: block; width: 2rem; height: 2rem; object-fit: contain; }
-.wordmark strong { letter-spacing: .025em; }
-.wordmark small { margin-top: .3rem; color: var(--faint); font-size: .68rem; letter-spacing: .13em; text-transform: uppercase; }
+.wordmark strong { letter-spacing: .025em; transform: translateY(7px); }
+.wordmark small { margin-top: .3rem; color: var(--faint); font-size: .68rem; letter-spacing: .13em; text-transform: uppercase; transform: translateY(7px); }
 .panel-tabs button { min-height: 2.2rem; border: var(--pom-border-width, 1px) solid transparent; background: transparent; color: var(--muted); }
 .panel-tabs [role="tab"] { padding: .45rem .8rem; border-radius: var(--pom-radius-small, .5rem); }
 [data-tab-touch-reorder-grip] { touch-action: none; }
@@ -3128,6 +3128,7 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
     font-size: 12px;
     font-weight: 500;
     letter-spacing: .17em;
+    transform: translateY(2px);
   }
   main[data-pom-shell-presentation="instrumented"] .wordmark > small {
     position: absolute;
@@ -3136,6 +3137,7 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
     margin: -1px;
     overflow: hidden;
     clip: rect(0 0 0 0);
+    transform: none;
   }
   main[data-pom-shell-presentation="instrumented"] .shelf-actions > [data-pom-action="open-catalog"] {
     width: 100px;
