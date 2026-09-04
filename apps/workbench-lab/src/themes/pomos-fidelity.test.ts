@@ -5,9 +5,12 @@ import { POM_NEUTRAL_THEME } from './pom-neutral.js';
 import { POMOS_PRESENTATION_PROFILE } from './pomos-presentation.js';
 import { LAB_THEME_PRESETS } from './presets.js';
 
-function compositeOverBlack(color: string, opacity: number): string {
+function compositeColors(foreground: string, background: string, opacity: number): string {
   const channels = [1, 3, 5].map((offset) => (
-    Math.round(Number.parseInt(color.slice(offset, offset + 2), 16) * opacity)
+    Math.round(
+      Number.parseInt(foreground.slice(offset, offset + 2), 16) * opacity
+      + Number.parseInt(background.slice(offset, offset + 2), 16) * (1 - opacity)
+    )
       .toString(16)
       .padStart(2, '0')
   ));
@@ -66,13 +69,15 @@ describe('PomOS fidelity data', () => {
     const stops = preset?.surfaceExpression?.materials.content?.fill.stops;
 
     expect(stops).toEqual([
-      { colorRole: 'surfaceElevated', opacity: 0.64, position: 0 },
-      { colorRole: 'surface', opacity: 0.58, position: 1 }
+      { colorRole: 'surfaceElevated', opacity: 0.7, position: 0 },
+      { colorRole: 'surface', opacity: 0.66, position: 1 }
     ]);
     for (const stop of stops ?? []) {
+      const background = compositeColors(POM_NEUTRAL_THEME.colors[stop.colorRole], '#000000', stop.opacity);
+      const renderedParagraph = compositeColors(POM_NEUTRAL_THEME.colors.text, background, 0.78);
       expect(contrastRatio(
-        POM_NEUTRAL_THEME.colors.text,
-        compositeOverBlack(POM_NEUTRAL_THEME.colors[stop.colorRole], stop.opacity)
+        renderedParagraph,
+        background
       )).toBeGreaterThanOrEqual(POM_NEUTRAL_THEME.accessibility.minimumContrast);
     }
   });

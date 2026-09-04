@@ -22,8 +22,8 @@ export const POMOS_SURFACE_EXPRESSION: SurfaceExpressionProfile = deepFreeze(
           kind: 'linear-gradient',
           angleDeg: 150,
           stops: [
-            { colorRole: 'surfaceElevated', opacity: 0.64, position: 0 },
-            { colorRole: 'surface', opacity: 0.58, position: 1 }
+            { colorRole: 'surfaceElevated', opacity: 0.7, position: 0 },
+            { colorRole: 'surface', opacity: 0.66, position: 1 }
           ]
         }
       }

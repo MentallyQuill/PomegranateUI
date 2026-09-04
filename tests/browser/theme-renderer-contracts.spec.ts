@@ -290,16 +290,19 @@ test('PomOS is a seamless continuous-rounded blue glass composition', async ({ p
     '[data-widget-type="story.transcript"] .widget-frame > [data-pom-part="widget.content"]'
   ).evaluate((element) => {
     const style = getComputedStyle(element);
+    const paragraph = element.querySelector<HTMLElement>('.transcript p');
     return {
       backgroundImage: style.backgroundImage,
       color: style.color,
+      paragraphColor: paragraph ? getComputedStyle(paragraph).color : null,
       alphas: [...style.backgroundImage.matchAll(/rgba\([^,]+, [^,]+, [^,]+, ([\d.]+)\)/g)]
         .map((match) => Number(match[1]))
     };
   });
   expect(readerScrim.backgroundImage).toContain('linear-gradient');
-  expect(readerScrim.alphas).toEqual([0.64, 0.58]);
+  expect(readerScrim.alphas).toEqual([0.7, 0.66]);
   expect(readerScrim.color).toBe('rgb(16, 24, 32)');
+  expect(readerScrim.paragraphColor).toContain('/ 0.78)');
   const root = page.locator('main');
   await expect(root).toHaveAttribute('data-pom-widget-grouping', 'individual');
   await expect(root).toHaveAttribute('data-pom-chrome-presentation', 'overlay');

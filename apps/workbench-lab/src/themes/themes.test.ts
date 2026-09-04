@@ -431,7 +431,7 @@ describe('Workbench Lab theme conformance', () => {
   it('atomically replaces PomOS reader expression bindings with Bunny stationery bindings', () => {
     const controller = createLabThemeController({ initialId: 'pom-neutral' });
     expect(controller.getSnapshot().expressionBindings).toEqual({
-      '--pom-expression-widget-content-background-image': 'linear-gradient(150deg, rgba(255, 255, 255, 0.64) 0%, rgba(234, 244, 255, 0.58) 100%)'
+      '--pom-expression-widget-content-background-image': 'linear-gradient(150deg, rgba(255, 255, 255, 0.7) 0%, rgba(234, 244, 255, 0.66) 100%)'
     });
 
     const result = controller.activate('bunny');
