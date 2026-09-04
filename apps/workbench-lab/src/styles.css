@@ -1193,11 +1193,19 @@ main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .to
 [data-conformance-region="left"] > .dock-shelf,
 .story-toolbar[data-conformance-region="left"] .story-toolbar-column > .dock-shelf {
   display: grid;
+  grid-template-rows: repeat(var(--pom-shelf-item-count, 1), minmax(0, 1fr));
+}
+[data-conformance-region="left"] > .dock-shelf[data-pomegranate-shelf-item-count="2"],
+.story-toolbar[data-conformance-region="left"] .story-toolbar-column > .dock-shelf[data-pomegranate-shelf-item-count="2"] {
   grid-template-rows: minmax(0, 41.3fr) minmax(0, 58.7fr);
 }
 [data-conformance-region="right"] > .dock-shelf,
 .story-toolbar[data-conformance-region="right"] .story-toolbar-column > .dock-shelf {
   display: grid;
+  grid-template-rows: repeat(var(--pom-shelf-item-count, 1), minmax(0, 1fr));
+}
+[data-conformance-region="right"] > .dock-shelf[data-pomegranate-shelf-item-count="2"],
+.story-toolbar[data-conformance-region="right"] .story-toolbar-column > .dock-shelf[data-pomegranate-shelf-item-count="2"] {
   grid-template-rows: minmax(0, 52fr) minmax(0, 48fr);
 }
 [data-conformance-region="left"] .widget-frame,
@@ -2866,8 +2874,8 @@ main[data-pom-widget-grouping="unified"] .widget-group > [data-widget-type] .wid
   backdrop-filter: none;
 }
 main[data-pom-widget-grouping="unified"] .widget-frame > header { min-height: 34px; padding: 0 12px; }
-main[data-pom-widget-grouping="unified"] [data-conformance-region="right"] > .dock-shelf,
-main[data-pom-widget-grouping="unified"] .story-toolbar[data-conformance-region="right"] .story-toolbar-column > .dock-shelf {
+main[data-pom-widget-grouping="unified"] [data-conformance-region="right"] > .dock-shelf[data-pomegranate-shelf-item-count="2"],
+main[data-pom-widget-grouping="unified"] .story-toolbar[data-conformance-region="right"] .story-toolbar-column > .dock-shelf[data-pomegranate-shelf-item-count="2"] {
   grid-template-rows: 41.3% 58.7%;
 }
 
@@ -3484,6 +3492,12 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
     color: rgb(226 239 233 / 72%);
     font: 10px/14px var(--pom-font-technical, monospace);
   }
+  main[data-pom-shell-presentation="instrumented"]
+  [data-conformance-region="left"] > .dock-shelf,
+  main[data-pom-shell-presentation="instrumented"]
+  .story-toolbar[data-conformance-region="left"] .story-toolbar-column > .dock-shelf {
+    position: relative;
+  }
   main[data-pom-shell-presentation="instrumented"] .widget-frame > header {
     border-top: 1px solid rgb(236 248 244 / 14%);
     border-right: 0;
@@ -3499,16 +3513,15 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
     border-left: 0;
   }
   main[data-pom-shell-presentation="instrumented"]
-  [data-conformance-region="left"] > .dock-shelf,
+  [data-conformance-region="left"] > .dock-shelf[data-pomegranate-shelf-item-count="2"],
   main[data-pom-shell-presentation="instrumented"]
-  .story-toolbar[data-conformance-region="left"] .story-toolbar-column > .dock-shelf {
-    position: relative;
+  .story-toolbar[data-conformance-region="left"] .story-toolbar-column > .dock-shelf[data-pomegranate-shelf-item-count="2"] {
     grid-template-rows: minmax(0, 44.2623fr) minmax(0, 55.7377fr);
   }
   main[data-pom-shell-presentation="instrumented"]
-  [data-conformance-region="left"] > .dock-shelf::before,
+  [data-conformance-region="left"] > .dock-shelf[data-pomegranate-shelf-item-count="2"]::before,
   main[data-pom-shell-presentation="instrumented"]
-  .story-toolbar[data-conformance-region="left"] .story-toolbar-column > .dock-shelf::before {
+  .story-toolbar[data-conformance-region="left"] .story-toolbar-column > .dock-shelf[data-pomegranate-shelf-item-count="2"]::before {
     position: absolute;
     z-index: 4;
     top: 540px;
@@ -3520,9 +3533,9 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
     pointer-events: none;
   }
   main[data-pom-shell-presentation="instrumented"]
-  [data-conformance-region="right"] > .dock-shelf,
+  [data-conformance-region="right"] > .dock-shelf[data-pomegranate-shelf-item-count="2"],
   main[data-pom-shell-presentation="instrumented"]
-  .story-toolbar[data-conformance-region="right"] .story-toolbar-column > .dock-shelf {
+  .story-toolbar[data-conformance-region="right"] .story-toolbar-column > .dock-shelf[data-pomegranate-shelf-item-count="2"] {
     grid-template-rows: minmax(0, 41.0656fr) minmax(0, 58.9344fr);
   }
 

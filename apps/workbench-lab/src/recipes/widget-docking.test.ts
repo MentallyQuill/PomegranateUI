@@ -155,6 +155,39 @@ describe('Atmospheric docking intent', () => {
     expect(stabilizeDockIntent({ x: 120, y: 265 }, center, after, 10)).toBe(after);
   });
 
+  it('lets an exact adjacent shelf rail replace the previous rail without hysteresis', () => {
+    const targets = buildShelfRails(
+      { x: 0, y: 0, width: 300, height: 500 },
+      [{ id: 'primary', order: 0, rect: { x: 0, y: 0, width: 300, height: 500 } }],
+      { panelId: 'scene', regionId: 'left' }
+    );
+    const after = resolveDockIntent({ x: 120, y: 472 }, targets)!;
+    const append = resolveDockIntent({ x: 120, y: 488 }, targets)!;
+    expect(after.railKind).toBe('after');
+    expect(append.railKind).toBe('append');
+    expect(stabilizeDockIntent({ x: 120, y: 488 }, after, append, 10)).toBe(append);
+  });
+
+  it('lets an exact shelf rail replace a stale full-height Widget body zone', () => {
+    const region = { x: 0, y: 0, width: 300, height: 500 };
+    const targets = buildShelfRails(
+      region,
+      [{ id: 'primary', order: 0, rect: region }],
+      { panelId: 'scene', regionId: 'left' }
+    );
+    const fullHeightWidget: DockTarget = {
+      ...widget,
+      rect: region,
+      headerRect: { x: 0, y: 0, width: 300, height: 32 },
+      bodyRect: { x: 0, y: 32, width: 300, height: 468 }
+    };
+    const bodyAfter = resolveDockIntent({ x: 120, y: 470 }, [fullHeightWidget])!;
+    const append = resolveDockIntent({ x: 120, y: 488 }, targets)!;
+    expect(bodyAfter.kind).toBe('insert-after');
+    expect(append.railKind).toBe('append');
+    expect(stabilizeDockIntent({ x: 120, y: 488 }, bodyAfter, append, 10)).toBe(append);
+  });
+
   it('preserves the grab offset while clamping a held card to the viewport', () => {
     expect(clampHeldRect(
       { x: 1180, y: 760 },

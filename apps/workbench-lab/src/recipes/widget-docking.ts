@@ -243,6 +243,7 @@ export function stabilizeDockIntent(
     || previous.dockColumn !== next.dockColumn
     || previous.regionId !== next.regionId
   )) return next;
+  if (next?.kind === 'shelf') return next;
   return contains(previous.targetRect, point, hysteresis) ? previous : next;
 }
 

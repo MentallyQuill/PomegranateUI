@@ -2328,6 +2328,33 @@ test('Deep Current title-bar drag docks a Widget across both instrument rails', 
   await expect(characters).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
 });
 
+test('Deep Current single-Widget shelves use all available height without phantom rows', async ({ page }) => {
+  const ambience = page.getByRole('article', { name: 'Room Ambience' });
+  await dragToShelfRail(page, widgetDragSurface(ambience), 'left');
+
+  const placed = page.locator('[data-widget-type="story.room-ambience"]');
+  const shelf = page.locator('.dock-shelf[data-pomegranate-shelf^="left-shelf-"]').filter({ has: placed });
+  await expect(shelf).toHaveCount(1);
+
+  const geometry = await shelf.evaluate((node) => {
+    const item = node.querySelector<HTMLElement>(':scope > [data-widget-type]');
+    if (!item) throw new Error('Missing the shelf Widget row.');
+    const content = item.querySelector<HTMLElement>('.implemented-widget');
+    if (!content) throw new Error('Missing the rendered Widget content.');
+    const style = getComputedStyle(node);
+    return {
+      availableHeight: node.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom),
+      itemHeight: item.getBoundingClientRect().height,
+      contentOverflow: content.scrollHeight - content.clientHeight,
+      separatorContent: getComputedStyle(node, '::before').content
+    };
+  });
+
+  expect(Math.abs(geometry.itemHeight - geometry.availableHeight)).toBeLessThanOrEqual(1);
+  expect(geometry.contentOverflow).toBeLessThanOrEqual(1);
+  expect(geometry.separatorContent).toBe('none');
+});
+
 test('Deep Current drag creates a new shelf and invalid release restores exact origin', async ({ page }) => {
   const effects = page.getByRole('article', { name: 'Room Ambience' });
   const effectsRoot = effects.locator('xpath=ancestor::*[@data-widget-type][1]');
