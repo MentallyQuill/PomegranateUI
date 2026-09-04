@@ -745,8 +745,7 @@ test('dragging an inactive grouped Widget holds that Widget rather than the acti
   await page.mouse.move(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2);
   await page.mouse.down();
   await expect(inactiveTab).toHaveAttribute('aria-selected', 'false');
-  await page.mouse.move(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2 + 18, { steps: 3 });
-  await page.mouse.move(tabBox.x + tabBox.width + 100, tabBox.y + tabBox.height / 2 + 18, { steps: 3 });
+  await page.mouse.move(tabBox.x + tabBox.width + 100, tabBox.y + tabBox.height + 10, { steps: 3 });
   await expect(page.locator('[data-pom-part="tab.insertion"]')).toHaveCount(0);
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
 
@@ -1162,9 +1161,10 @@ test('Deep Current accepts the same shelf placement path from a deliberate coars
     const handleElement = await grip.elementHandle();
     if (!handleElement) throw new Error('Expected touch placement handle.');
     const start = { x: handleBox.x + handleBox.width / 2, y: handleBox.y + handleBox.height / 2 };
+    const departureY = handleBox.y + handleBox.height + 10;
     await handleElement.dispatchEvent('pointerdown', { pointerId: 18, pointerType: 'touch', isPrimary: true, button: 0, clientX: start.x, clientY: start.y });
     await page.waitForTimeout(190);
-    await handleElement.dispatchEvent('pointermove', { pointerId: 18, pointerType: 'touch', isPrimary: true, button: 0, clientX: start.x, clientY: start.y + 20 });
+    await handleElement.dispatchEvent('pointermove', { pointerId: 18, pointerType: 'touch', isPrimary: true, button: 0, clientX: start.x, clientY: departureY });
     await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
     const railBox = await page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="left"][data-drop-rail-kind="append"]').last().boundingBox();
     if (!railBox) throw new Error('Expected touch shelf rail geometry.');

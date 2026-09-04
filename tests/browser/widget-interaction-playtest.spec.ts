@@ -1,19 +1,20 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import {
   beginPointerDrag,
   cancelPointerDrag,
-  captureInteractionEvidence,
   capturePlacementSnapshot,
+  captureWidgetIdentity,
   dispatchPointerCancel,
   dragToShelfRail,
-  dragToWidgetTab,
+  expectActiveWidgetDrag,
   expectNoWidgetDragResidue,
   finishPointerDrag,
   invokeWidgetAction,
   movePointerPath,
   widgetDragSurface
 } from './support/widget-interaction-driver.ts';
+import type { ActiveDragExpectation } from './support/widget-interaction-driver.ts';
 import { INTERACTION_CASES } from './support/widget-interaction-matrix.ts';
 
 test.beforeEach(async ({ page }) => {
@@ -23,10 +24,35 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => document.fonts.ready);
 });
 
+async function expectWindowsPageScreenshot(page: Page, name: string): Promise<void> {
+  if (process.platform === 'win32') await expect(page).toHaveScreenshot(name, { animations: 'disabled' });
+}
+
+async function expectWindowsLocatorScreenshot(locator: Locator, name: string): Promise<void> {
+  if (process.platform === 'win32') await expect(locator).toHaveScreenshot(name, { animations: 'disabled' });
+}
+
+async function expectWindowsClippedScreenshot(
+  page: Page,
+  name: string,
+  clip: { x: number; y: number; width: number; height: number }
+): Promise<void> {
+  if (process.platform === 'win32') await expect(page).toHaveScreenshot(name, { animations: 'disabled', clip });
+}
+
 async function createGroup(page: Page, sourceName: string, targetName: string) {
   const source = page.getByRole('article', { name: sourceName });
   const target = page.getByRole('article', { name: targetName });
-  await dragToWidgetTab(page, widgetDragSurface(source), target);
+  const sourceIdentity = await captureWidgetIdentity(source);
+  const sourceRect = await source.boundingBox();
+  const start = await beginPointerDrag(page, widgetDragSurface(source));
+  await movePointerPath(page, [{ x: start.x + 12, y: start.y + 12 }]);
+  const targetBox = await widgetDragSurface(target).boundingBox();
+  if (!targetBox) throw new Error('Expected live Widget grouping target geometry.');
+  await movePointerPath(page, [{ x: targetBox.x + targetBox.width / 2, y: targetBox.y + targetBox.height / 2 }]);
+  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', 'tab');
+  await expectActiveWidgetDrag(page, sourceIdentity, { reservationCount: 1, originRect: sourceRect });
+  await finishPointerDrag(page);
   return page.getByRole('group', { name: 'Widget group' })
     .filter({ has: page.getByRole('tab', { name: sourceName, exact: true }) });
 }
@@ -53,11 +79,15 @@ test('AUDIT-P1-GROUP-DIRECT-FLOAT grouped tab reaches open Scene space after hor
   const tabBox = await tab.boundingBox();
   const stageBox = await stage.boundingBox();
   if (!tabBox || !stageBox) throw new Error('Expected grouped-tab and Scene geometry.');
+  const originRect = await group.locator('[data-widget-type]').boundingBox();
+  const sourceIdentity = await captureWidgetIdentity(tab);
   const start = await beginPointerDrag(page, tab);
   await movePointerPath(page, [
     { x: start.x + 18, y: start.y },
     { x: stageBox.x + stageBox.width * 0.72, y: stageBox.y + 90 }
   ]);
+  await expectActiveWidgetDrag(page, sourceIdentity, { reservationCount: 0, originRect });
+  await expectWindowsPageScreenshot(page, 'widget-grouped-tab-direct-float.png');
   await testInfo.attach('AUDIT-P1-GROUP-DIRECT-FLOAT', {
     body: await page.screenshot({ animations: 'disabled' }),
     contentType: 'image/png'
@@ -78,9 +108,19 @@ test('AUDIT-P1-SINGLE-PRESENTATION lifted Widget has one compact payload and one
   const target = page.getByRole('article', { name: 'World State' });
   const targetBox = await target.boundingBox();
   if (!targetBox) throw new Error('Expected occupied destination geometry.');
+  const originRect = await source.boundingBox();
+  const sourceIdentity = await captureWidgetIdentity(source);
   await beginPointerDrag(page, widgetDragSurface(source));
   await movePointerPath(page, [{ x: targetBox.x + targetBox.width / 2, y: targetBox.y + targetBox.height * 0.12 }]);
-  const evidence = await captureInteractionEvidence(page, source);
+  const evidence = await expectActiveWidgetDrag(page, sourceIdentity, { reservationCount: 1, originRect });
+  await expectWindowsLocatorScreenshot(
+    page.locator('[data-pom-part="widget.drag-preview"]'),
+    'widget-lifted-singleton.png'
+  );
+  await expectWindowsLocatorScreenshot(
+    page.locator('[data-pomegranate-region-surface="right"]'),
+    'widget-occupied-gap-insertion.png'
+  );
   await testInfo.attach('AUDIT-P1-SINGLE-PRESENTATION', {
     body: await page.screenshot({ animations: 'disabled' }),
     contentType: 'image/png'
@@ -89,12 +129,6 @@ test('AUDIT-P1-SINGLE-PRESENTATION lifted Widget has one compact payload and one
     body: JSON.stringify(evidence, null, 2),
     contentType: 'application/json'
   });
-  expect(evidence.proxyCount).toBe(1);
-  expect.soft(evidence.proxyArticleCount).toBe(0);
-  expect.soft(evidence.proxyInteractiveCount).toBe(0);
-  expect.soft(evidence.overlayText).toBe('');
-  expect.soft(evidence.originVacant).toBe(true);
-  expect.soft(evidence.activeReservationCount).toBe(1);
   await cancelPointerDrag(page);
 });
 
@@ -126,21 +160,34 @@ test('AUDIT-P1-GROUP-ACTIONS grouped Widget tabs do not cover the active Widget 
 });
 
 const implementedCaseIds = new Set<string>();
-type PlaytestBody = (args: { page: Page }) => Promise<void>;
+type PlaytestBody = (args: {
+  page: Page;
+  expectActiveDrag(origin: Locator | string, expectation: ActiveDragExpectation): Promise<void>;
+}) => Promise<void>;
 
 function interactionTest(id: string, body: PlaytestBody): void {
   implementedCaseIds.add(id);
-  test(id, body);
+  test(id, async ({ page }) => {
+    await body({
+      page,
+      expectActiveDrag: async (origin, expectation) => {
+        await expectActiveWidgetDrag(page, origin, expectation);
+      }
+    });
+    await expectNoWidgetDragResidue(page);
+  });
 }
 
 test.afterAll(() => {
   expect([...implementedCaseIds].sort()).toEqual(INTERACTION_CASES.map(({ id }) => id));
 });
 
-interactionTest('collapsed-dock-reveal-commit', async ({ page }) => {
+interactionTest('collapsed-dock-reveal-commit', async ({ page, expectActiveDrag }) => {
   const toggle = page.getByRole('button', { name: 'Toggle left dock' });
   await toggle.click();
   const source = page.getByRole('article', { name: 'Room Ambience' });
+  const originRect = await source.boundingBox();
+  const sourceIdentity = await captureWidgetIdentity(source);
   const beforeRevision = await workbenchRevision(page);
   let start = await beginPointerDrag(page, widgetDragSurface(source));
   await movePointerPath(page, [
@@ -148,7 +195,19 @@ interactionTest('collapsed-dock-reveal-commit', async ({ page }) => {
     { x: 18, y: 320 }
   ]);
   await expect(page.locator('main')).toHaveAttribute('data-drag-reveal-left', 'true');
+  let targetBox = await page.getByRole('article', { name: 'Characters (Story)' }).boundingBox();
+  if (!targetBox) throw new Error('Expected revealed left-dock Widget geometry.');
+  await movePointerPath(page, [{
+    x: targetBox.x + targetBox.width / 2,
+    y: targetBox.y + targetBox.height * 0.12
+  }]);
+  await expect(page.locator('main')).toHaveAttribute('data-drag-reveal-left', 'true');
   await expect(page.locator('[data-pom-part="widget.dock-slot"]')).toBeVisible();
+  await expectActiveDrag(sourceIdentity, { reservationCount: 1, originRect });
+  await expectWindowsLocatorScreenshot(
+    page.locator('[data-pomegranate-region-surface="left"]'),
+    'widget-collapsed-dock-reveal.png'
+  );
   await cancelPointerDrag(page);
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-conformance-region="left"]')).toBeHidden();
@@ -160,7 +219,15 @@ interactionTest('collapsed-dock-reveal-commit', async ({ page }) => {
     { x: 18, y: 320 }
   ]);
   await expect(page.locator('main')).toHaveAttribute('data-drag-reveal-left', 'true');
+  targetBox = await page.getByRole('article', { name: 'Characters (Story)' }).boundingBox();
+  if (!targetBox) throw new Error('Expected revealed left-dock Widget geometry.');
+  await movePointerPath(page, [{
+    x: targetBox.x + targetBox.width / 2,
+    y: targetBox.y + targetBox.height * 0.12
+  }]);
+  await expect(page.locator('main')).toHaveAttribute('data-drag-reveal-left', 'true');
   await expect(page.locator('[data-pom-part="widget.dock-slot"]')).toBeVisible();
+  await expectActiveDrag(sourceIdentity, { reservationCount: 1, originRect });
   await finishPointerDrag(page);
 
   const placed = page.locator('[data-widget-type="story.room-ambience"]');
@@ -175,6 +242,8 @@ test('AUDIT-P2-COLLAPSED-DOCK-SYMMETRY accepted right-dock drop expands its dest
   const toggle = page.getByRole('button', { name: 'Toggle right dock' });
   await toggle.click();
   const source = page.getByRole('article', { name: 'Theme Materials' });
+  const originRect = await source.boundingBox();
+  const sourceIdentity = await captureWidgetIdentity(source);
   const beforeRevision = await workbenchRevision(page);
   const start = await beginPointerDrag(page, widgetDragSurface(source));
   const targetX = await page.evaluate(() => window.innerWidth - 18);
@@ -185,8 +254,13 @@ test('AUDIT-P2-COLLAPSED-DOCK-SYMMETRY accepted right-dock drop expands its dest
   await expect(page.locator('main')).toHaveAttribute('data-drag-reveal-right', 'true');
   const targetBox = await page.getByRole('article', { name: 'World State' }).boundingBox();
   if (!targetBox) throw new Error('Expected revealed right-dock Widget geometry.');
-  await movePointerPath(page, [{ x: targetX, y: targetBox.y + targetBox.height * 0.12 }]);
+  await movePointerPath(page, [{
+    x: targetBox.x + targetBox.width / 2,
+    y: targetBox.y + targetBox.height * 0.12
+  }]);
+  await expect(page.locator('main')).toHaveAttribute('data-drag-reveal-right', 'true');
   await expect(page.locator('[data-pom-part="widget.dock-slot"]')).toBeVisible();
+  await expectActiveWidgetDrag(page, sourceIdentity, { reservationCount: 1, originRect });
   await finishPointerDrag(page);
 
   await expect(page.locator('[data-widget-type="settings.theme-materials"]')).toHaveAttribute('data-pomegranate-edge', 'right');
@@ -196,30 +270,36 @@ test('AUDIT-P2-COLLAPSED-DOCK-SYMMETRY accepted right-dock drop expands its dest
   await expectNoWidgetDragResidue(page);
 });
 
-interactionTest('floating-invalid-cancel', async ({ page }) => {
+interactionTest('floating-invalid-cancel', async ({ page, expectActiveDrag }) => {
   await invokeWidgetAction(page.getByRole('article', { name: 'World State' }), 'Float');
   const source = page.locator('[data-widget-type="systems.world-state"][data-pomegranate-placement="floating"]');
   const before = await capturePlacementSnapshot(source);
+  const originRect = await source.boundingBox();
+  const sourceIdentity = await captureWidgetIdentity(source);
   const beforeRevision = await workbenchRevision(page);
   await beginPointerDrag(page, widgetDragSurface(source));
   await movePointerPath(page, [{ x: 2, y: 2 }]);
   await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+  await expectActiveDrag(sourceIdentity, { reservationCount: 0, originRect });
   await cancelPointerDrag(page);
 
   expect(await capturePlacementSnapshot(source)).toEqual(before);
   expect(await workbenchRevision(page)).toBe(beforeRevision);
 });
 
-interactionTest('floating-to-empty-pointercancel', async ({ page }) => {
+interactionTest('floating-to-empty-pointercancel', async ({ page, expectActiveDrag }) => {
   await invokeWidgetAction(page.getByRole('article', { name: 'Characters (Story)' }), 'Dock right');
   await invokeWidgetAction(page.getByRole('article', { name: 'Theme Materials' }), 'Dock right');
   const emptyRegion = page.locator('[data-pomegranate-region-surface="left"]');
   await expect(emptyRegion.locator('[data-widget-type]')).toHaveCount(0);
   const source = page.locator('[data-widget-type="systems.world-state"]');
+  const sourceIdentity = await captureWidgetIdentity(source);
+  let originRect = await source.boundingBox();
   const stageBox = await page.locator('[data-pomegranate-dock="main"]').boundingBox();
   if (!stageBox) throw new Error('Expected Scene stage geometry.');
   await beginPointerDrag(page, widgetDragSurface(source));
   await movePointerPath(page, [{ x: stageBox.x + stageBox.width * 0.72, y: stageBox.y + 90 }]);
+  await expectActiveDrag(sourceIdentity, { reservationCount: 0, originRect });
   await finishPointerDrag(page);
   await expect(source).toHaveAttribute('data-pomegranate-placement', 'floating');
   const before = await capturePlacementSnapshot(source);
@@ -227,10 +307,12 @@ interactionTest('floating-to-empty-pointercancel', async ({ page }) => {
   const targetBox = await emptyRegion.boundingBox();
   if (!targetBox) throw new Error('Expected empty composer region geometry.');
   const handle = widgetDragSurface(source);
+  originRect = await source.boundingBox();
   await beginPointerDrag(page, handle);
   const target = { x: targetBox.x + targetBox.width / 2, y: targetBox.y + targetBox.height / 2 };
   await movePointerPath(page, [target]);
   await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', 'region');
+  await expectActiveDrag(sourceIdentity, { reservationCount: 1, originRect });
   await dispatchPointerCancel(page, handle, target);
 
   expect(await capturePlacementSnapshot(source)).toEqual(before);
@@ -254,14 +336,16 @@ interactionTest('grouped-active-reorder-commit', async ({ page }) => {
   await expectNoWidgetDragResidue(page);
 });
 
-interactionTest('grouped-active-to-existing-group-blur', async ({ page }) => {
+interactionTest('grouped-active-to-existing-group-blur', async ({ page, expectActiveDrag }) => {
   const sourceGroup = await createReferenceGroup(page);
   const targetGroup = page.getByRole('group', { name: 'Widget group' })
     .filter({ has: page.getByRole('tab', { name: 'Room Ambience', exact: true }) });
   const sourceRoot = page.locator('[data-widget-type="settings.theme-materials"]');
   const before = await capturePlacementSnapshot(sourceRoot);
+  const originRect = await sourceRoot.boundingBox();
   const beforeRevision = await workbenchRevision(page);
   const sourceTab = sourceGroup.getByRole('tab', { name: 'Theme Materials' });
+  const sourceIdentity = await captureWidgetIdentity(sourceTab);
   const targetTabs = targetGroup.getByRole('tablist', { name: 'Grouped Widgets' });
   const start = await beginPointerDrag(page, sourceTab);
   const targetBox = await targetTabs.boundingBox();
@@ -271,6 +355,18 @@ interactionTest('grouped-active-to-existing-group-blur', async ({ page }) => {
     { x: targetBox.x + targetBox.width / 2, y: targetBox.y + targetBox.height / 2 }
   ]);
   await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', 'tab');
+  await expectActiveDrag(sourceIdentity, { reservationCount: 1, originRect });
+  const groupBox = await targetGroup.boundingBox();
+  const viewport = page.viewportSize();
+  if (!groupBox || !viewport) throw new Error('Expected grouped-tab insertion screenshot geometry.');
+  const clipX = Math.max(0, groupBox.x - 180);
+  const clipY = Math.max(0, groupBox.y - 32);
+  await expectWindowsClippedScreenshot(page, 'widget-grouped-tab-insertion.png', {
+    x: clipX,
+    y: clipY,
+    width: Math.min(viewport.width - clipX, groupBox.width + 180),
+    height: Math.min(viewport.height - clipY, groupBox.height + 64)
+  });
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await page.mouse.up();
 
@@ -279,10 +375,12 @@ interactionTest('grouped-active-to-existing-group-blur', async ({ page }) => {
   await expectNoWidgetDragResidue(page);
 });
 
-interactionTest('grouped-inactive-direct-float', async ({ page }) => {
+interactionTest('grouped-inactive-direct-float', async ({ page, expectActiveDrag }) => {
   const group = await createReferenceGroup(page);
   await group.getByRole('tab', { name: 'Characters (Story)' }).click();
   const sourceTab = group.getByRole('tab', { name: 'Theme Materials' });
+  const originRect = await group.locator('[data-widget-type]').boundingBox();
+  const sourceIdentity = await captureWidgetIdentity(sourceTab);
   const stage = page.locator('[data-pomegranate-region-surface="stage"]');
   const stageBox = await stage.boundingBox();
   if (!stageBox) throw new Error('Expected open Scene canvas geometry.');
@@ -292,6 +390,7 @@ interactionTest('grouped-inactive-direct-float', async ({ page }) => {
     { x: start.x + 18, y: start.y },
     { x: stageBox.x + stageBox.width * 0.72, y: stageBox.y + 90 }
   ]);
+  await expectActiveDrag(sourceIdentity, { reservationCount: 0, originRect });
   await test.info().attach('grouped-inactive-direct-float', {
     body: await page.screenshot({ animations: 'disabled' }),
     contentType: 'image/png'
@@ -308,11 +407,13 @@ interactionTest('grouped-inactive-direct-float', async ({ page }) => {
   await expectNoWidgetDragResidue(page);
 });
 
-interactionTest('grouped-inactive-insert-after-unmount', async ({ page }) => {
+interactionTest('grouped-inactive-insert-after-unmount', async ({ page, expectActiveDrag }) => {
   const group = await createReferenceGroup(page);
   await group.getByRole('tab', { name: 'Characters (Story)' }).click();
   const tabsBefore = await group.getByRole('tab').allTextContents();
   const sourceTab = group.getByRole('tab', { name: 'Theme Materials' });
+  const originRect = await group.locator('[data-widget-type]').boundingBox();
+  const sourceIdentity = await captureWidgetIdentity(sourceTab);
   const targetBody = page.getByRole('article', { name: 'World State' })
     .locator('[data-pom-part="widget.content"]');
   const targetBox = await targetBody.boundingBox();
@@ -324,6 +425,7 @@ interactionTest('grouped-inactive-insert-after-unmount', async ({ page }) => {
     { x: targetBox.x + targetBox.width / 2, y: targetBox.y + targetBox.height * 0.88 }
   ]);
   await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', 'insert-after');
+  await expectActiveDrag(sourceIdentity, { reservationCount: 1, originRect });
   await page.getByRole('tab', { name: 'Library' }).evaluate((button: HTMLButtonElement) => button.click());
   await expectNoWidgetDragResidue(page);
   await page.mouse.up();
@@ -352,9 +454,11 @@ interactionTest('singleton-group-existing', async ({ page }) => {
   await expectNoWidgetDragResidue(page);
 });
 
-interactionTest('singleton-insert-before-undo', async ({ page }) => {
+interactionTest('singleton-insert-before-undo', async ({ page, expectActiveDrag }) => {
   const source = page.locator('[data-widget-type="systems.world-state"]');
   const before = await capturePlacementSnapshot(source);
+  const originRect = await source.boundingBox();
+  const sourceIdentity = await captureWidgetIdentity(source);
   const targetBody = page.getByRole('article', { name: 'Characters (Story)' })
     .locator('[data-pom-part="widget.content"]');
   const targetBox = await targetBody.boundingBox();
@@ -366,6 +470,7 @@ interactionTest('singleton-insert-before-undo', async ({ page }) => {
   }]);
   await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', 'insert-before');
   await expect(page.locator('[data-pom-part="widget.dock-slot"]')).toBeVisible();
+  await expectActiveDrag(sourceIdentity, { reservationCount: 1, originRect });
   await finishPointerDrag(page);
   await expect(source).toHaveAttribute('data-pomegranate-edge', 'left');
 
@@ -416,6 +521,8 @@ test('AUDIT-P2-KEYBOARD-GROUP grouped tabs reorder and persist without pointer o
 test('AUDIT-P2-PEN-CANCEL pen lift exposes the same drag state and cancels exactly', async ({ page }) => {
   const source = page.locator('[data-widget-type="systems.world-state"]');
   const before = await capturePlacementSnapshot(source);
+  const originRect = await source.boundingBox();
+  const sourceIdentity = await captureWidgetIdentity(source);
   const beforeRevision = await workbenchRevision(page);
   const handle = widgetDragSurface(source);
   const box = await handle.boundingBox();
@@ -442,6 +549,7 @@ test('AUDIT-P2-PEN-CANCEL pen lift exposes the same drag state and cancels exact
     clientY: end.y
   });
   await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+  await expectActiveWidgetDrag(page, sourceIdentity, { reservationCount: 'at-most-one', originRect });
   await dispatchPointerCancel(page, handle, end, 'pen', 31);
   expect(await capturePlacementSnapshot(source)).toEqual(before);
   expect(await workbenchRevision(page)).toBe(beforeRevision);
@@ -461,8 +569,10 @@ test('AUDIT-P2-TOUCH-COMMIT deliberate coarse hold lifts and docks through the s
     await touchPage.reload();
     await touchPage.evaluate(() => document.fonts.ready);
     expect(await touchPage.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
-    const source = touchPage.locator('[data-widget-type="story.room-ambience"]');
+    const source = touchPage.locator('[data-widget-type="systems.world-state"]');
     const before = await capturePlacementSnapshot(source);
+    const originRect = await source.boundingBox();
+    const sourceIdentity = await captureWidgetIdentity(source);
     const beforeRevision = await workbenchRevision(touchPage);
     const handle = widgetDragSurface(source);
     const grip = await handle.getAttribute('data-widget-touch-drag-grip') === null
@@ -505,6 +615,7 @@ test('AUDIT-P2-TOUCH-COMMIT deliberate coarse hold lifts and docks through the s
       clientX: end.x,
       clientY: end.y
     });
+    await expectActiveWidgetDrag(touchPage, sourceIdentity, { reservationCount: 1, originRect });
     await handleElement.dispatchEvent('pointerup', {
       pointerId: 18,
       pointerType: 'touch',
@@ -519,6 +630,104 @@ test('AUDIT-P2-TOUCH-COMMIT deliberate coarse hold lifts and docks through the s
     expect(after.region).toBe('left');
     expect(after.shelf).toMatch(/^left-shelf-/);
     expect(await workbenchRevision(touchPage)).toBe(beforeRevision + 1);
+  } finally {
+    await context.close();
+  }
+});
+
+test('AUDIT-P2-TOUCH-GROUP-REORDER deliberate coarse hold reorders a grouped tab in its corridor', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    hasTouch: true,
+    isMobile: true,
+    ...(baseURL === undefined ? {} : { baseURL })
+  });
+  const touchPage = await context.newPage();
+  try {
+    await touchPage.goto('/');
+    await touchPage.evaluate(() => window.localStorage.clear());
+    await touchPage.reload();
+    await touchPage.evaluate(() => document.fonts.ready);
+    expect(await touchPage.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+    const group = await createReferenceGroup(touchPage);
+    const source = group.getByRole('tab', { name: 'Theme Materials' });
+    await expect(source).toHaveAttribute('data-tab-touch-reorder-grip', '');
+    const target = group.getByRole('tab', { name: 'Characters (Story)' });
+    const sourceBox = await source.boundingBox();
+    const targetBox = await target.boundingBox();
+    const sourceElement = await source.elementHandle();
+    if (!sourceBox || !targetBox || !sourceElement) throw new Error('Expected grouped touch reorder geometry.');
+    const start = { x: sourceBox.x + sourceBox.width / 2, y: sourceBox.y + sourceBox.height / 2 };
+    const end = { x: targetBox.x + 2, y: targetBox.y + targetBox.height / 2 };
+    const beforeRevision = await workbenchRevision(touchPage);
+    await sourceElement.dispatchEvent('pointerdown', {
+      pointerId: 41, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1,
+      clientX: start.x, clientY: start.y
+    });
+    await touchPage.waitForTimeout(190);
+    await sourceElement.dispatchEvent('pointermove', {
+      pointerId: 41, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1,
+      clientX: end.x, clientY: end.y
+    });
+    await expect(touchPage.locator('[data-pom-part="tab.insertion"]')).toBeVisible();
+    await sourceElement.dispatchEvent('pointerup', {
+      pointerId: 41, pointerType: 'touch', isPrimary: true, button: 0, buttons: 0,
+      clientX: end.x, clientY: end.y
+    });
+    await expect(group.getByRole('tab')).toHaveText(['Theme Materials', 'Characters (Story)']);
+    expect(await workbenchRevision(touchPage)).toBe(beforeRevision + 1);
+    await expectNoWidgetDragResidue(touchPage);
+  } finally {
+    await context.close();
+  }
+});
+
+test('AUDIT-P2-TOUCH-GROUP-TEAROFF one coarse departure leaves the tab corridor and floats directly', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    hasTouch: true,
+    isMobile: true,
+    ...(baseURL === undefined ? {} : { baseURL })
+  });
+  const touchPage = await context.newPage();
+  try {
+    await touchPage.goto('/');
+    await touchPage.evaluate(() => window.localStorage.clear());
+    await touchPage.reload();
+    await touchPage.evaluate(() => document.fonts.ready);
+    expect(await touchPage.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+    const group = await createReferenceGroup(touchPage);
+    const source = group.getByRole('tab', { name: 'Theme Materials' });
+    const originRect = await group.locator('[data-widget-type]').boundingBox();
+    const sourceIdentity = await captureWidgetIdentity(source);
+    const stageBox = await touchPage.locator('[data-pomegranate-region-surface="stage"]').boundingBox();
+    const sourceBox = await source.boundingBox();
+    const sourceElement = await source.elementHandle();
+    if (!originRect || !stageBox || !sourceBox || !sourceElement) throw new Error('Expected grouped touch tear-off geometry.');
+    const start = { x: sourceBox.x + sourceBox.width / 2, y: sourceBox.y + sourceBox.height / 2 };
+    const departure = { x: start.x + 60, y: sourceBox.y + sourceBox.height + 12 };
+    await sourceElement.dispatchEvent('pointerdown', {
+      pointerId: 42, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1,
+      clientX: start.x, clientY: start.y
+    });
+    await touchPage.waitForTimeout(190);
+    await sourceElement.dispatchEvent('pointermove', {
+      pointerId: 42, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1,
+      clientX: departure.x, clientY: departure.y
+    });
+    await expect(touchPage.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+    const end = { x: stageBox.x + stageBox.width * 0.72, y: stageBox.y + 90 };
+    await sourceElement.dispatchEvent('pointermove', {
+      pointerId: 42, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1,
+      clientX: end.x, clientY: end.y
+    });
+    await expectActiveWidgetDrag(touchPage, sourceIdentity, { reservationCount: 0, originRect });
+    await sourceElement.dispatchEvent('pointerup', {
+      pointerId: 42, pointerType: 'touch', isPrimary: true, button: 0, buttons: 0,
+      clientX: end.x, clientY: end.y
+    });
+    await expect(touchPage.locator('[data-widget-type="settings.theme-materials"][data-pomegranate-placement="floating"]')).toBeVisible();
+    await expectNoWidgetDragResidue(touchPage);
   } finally {
     await context.close();
   }

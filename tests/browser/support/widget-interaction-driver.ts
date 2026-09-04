@@ -24,6 +24,11 @@ export interface InteractionEvidence {
   readonly revision: string | null;
 }
 
+export interface ActiveDragExpectation {
+  readonly reservationCount: 0 | 1 | 'at-most-one';
+  readonly originRect?: RectSnapshot | null;
+}
+
 export interface PlacementSnapshot {
   readonly instanceId: string;
   readonly placement: string | null;
@@ -92,6 +97,40 @@ export async function expectNoWidgetDragResidue(page: Page): Promise<void> {
   await expect(page.locator('main')).not.toHaveAttribute('data-drag-reveal-right');
 }
 
+export async function expectActiveWidgetDrag(
+  page: Page,
+  origin: Locator | string,
+  expectation: ActiveDragExpectation
+): Promise<InteractionEvidence> {
+  const evidence = await captureInteractionEvidence(page, origin);
+  expect(evidence.proxyCount).toBe(1);
+  expect(evidence.proxyArticleCount).toBe(0);
+  expect(evidence.proxyInteractiveCount).toBe(0);
+  expect(evidence.overlayText).toBe('');
+  expect(evidence.originVacant).toBe(true);
+  if (expectation.reservationCount === 'at-most-one') {
+    expect(evidence.activeReservationCount).toBeLessThanOrEqual(1);
+  } else {
+    expect(evidence.activeReservationCount).toBe(expectation.reservationCount);
+  }
+  await expect(page.locator('body')).toHaveClass(/pom-widget-drag-active/);
+
+  const proxyRect = await page.locator('[data-pom-part="widget.drag-preview"]').boundingBox();
+  const viewport = page.viewportSize();
+  if (!proxyRect || !viewport) throw new Error('Expected visible drag proxy and viewport geometry.');
+  expect(proxyRect.x).toBeGreaterThanOrEqual(0);
+  expect(proxyRect.y).toBeGreaterThanOrEqual(0);
+  expect(proxyRect.x + proxyRect.width).toBeLessThanOrEqual(viewport.width);
+  expect(proxyRect.y + proxyRect.height).toBeLessThanOrEqual(viewport.height);
+
+  if (expectation.originRect) {
+    expect(evidence.originRect).not.toBeNull();
+    expect(evidence.originRect?.width).toBeCloseTo(expectation.originRect.width, 0);
+    expect(evidence.originRect?.height).toBeCloseTo(expectation.originRect.height, 0);
+  }
+  return evidence;
+}
+
 export async function dragTo(page: Page, handle: Locator, point: Point): Promise<void> {
   const box = await handle.boundingBox();
   if (!box) throw new Error('Expected drag handle geometry.');
@@ -113,7 +152,7 @@ export async function dragToShelfRail(
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   if (await handle.getAttribute('data-group-tab')) {
-    await page.mouse.move(start.x, start.y + 18, { steps: 3 });
+    await page.mouse.move(start.x, box.y + box.height + 10, { steps: 3 });
   } else {
     await page.mouse.move(start.x + 12, start.y + 12, { steps: 3 });
   }
@@ -134,7 +173,7 @@ export async function tearOffTo(page: Page, handle: Locator, point: Point): Prom
   const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
-  await page.mouse.move(start.x, start.y + 18, { steps: 3 });
+  await page.mouse.move(start.x, box.y + box.height + 10, { steps: 3 });
   await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
   await page.mouse.move(point.x, point.y, { steps: 8 });
   await page.mouse.up();
@@ -163,14 +202,22 @@ export function widgetDragSurface(widget: Locator): Locator {
     .first();
 }
 
-export async function captureInteractionEvidence(page: Page, origin: Locator): Promise<InteractionEvidence> {
+export async function captureWidgetIdentity(origin: Locator): Promise<string> {
   const originIdentity = await origin.evaluate((node) => {
     const root = node.matches('[data-pomegranate-widget]')
       ? node
       : node.closest('[data-pomegranate-widget]') ?? node.querySelector('[data-pomegranate-widget]');
-    return root?.getAttribute('data-pomegranate-widget') ?? null;
+    return root?.getAttribute('data-pomegranate-widget')
+      ?? node.getAttribute('data-group-tab')
+      ?? node.closest('[data-group-tab]')?.getAttribute('data-group-tab')
+      ?? null;
   });
   if (!originIdentity) throw new Error('Expected an origin Widget identity.');
+  return originIdentity;
+}
+
+export async function captureInteractionEvidence(page: Page, origin: Locator | string): Promise<InteractionEvidence> {
+  const originIdentity = typeof origin === 'string' ? origin : await captureWidgetIdentity(origin);
   return page.evaluate((instanceId) => {
     const originNode = [...document.querySelectorAll<HTMLElement>('[data-pomegranate-widget]')]
       .find((node) => node.getAttribute('data-pomegranate-widget') === instanceId);

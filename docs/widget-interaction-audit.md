@@ -10,9 +10,9 @@
 
 **Themes:** Deep Current, PomOS, Bunny, and Ash & Amber remain covered by the shared native lifecycle test. The literal failure reproductions use Deep Current; all four themes consume the same controller, group recipe, and semantic parts.
 
-**Audit result:** 16 Playwright journeys completed in 32.4 seconds: 12 passed and four expected-failure executions represented three unique P1 defects. The nine-case catalog covers every approved origin, intent, destination, and completion value plus every required reachable pair. No journey is skipped.
+**Audit result:** 16 Playwright journeys completed in 32.4 seconds: 12 passed and four expected-failure executions represented three unique P1 defects. The nine-case catalog covers every approved origin, intent, destination, and completion value plus a curated set of required high-risk pairs. It does not claim exhaustive pairwise coverage. No journey is skipped.
 
-**Remediation result:** The expanded 17-journey audit passes without skips or expected-failure annotations. The audit and all 50 retained native Workbench journeys pass together: 67/67 in 3.2 minutes. The additional journey proves the collapsed-dock repair symmetrically with a singleton drop into the right dock; the canonical left-dock journey proves both cancellation and accepted commit from a grouped Widget.
+**Remediation result:** The review-hardened 19-journey audit passes without skips or expected-failure annotations: 19/19 in 25.5 seconds. The two added journeys prove deliberate coarse-touch reorder and one-motion tear-off for grouped tabs. Right-singleton and left-grouped collapsed-dock journeys move from the edge into the revealed dock before committing, proving that reveal stays latched through the natural inward path; the left journey also proves cancellation leaves the dock collapsed.
 
 | Issue | Journey | Earliest broken stage | Reproduction | Evidence | Root-cause hypothesis | Status |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -30,6 +30,9 @@
 - Mouse, pen, deliberate coarse touch, and keyboard paths reach the same public layout commands.
 - Invalid release, empty-region cancellation, collapsed-dock preview reveal, and destination reflow all clean their transient layers.
 - The grouped Widget action hit target passes after explicit hover; its initial audit failure was a setup false positive and required no production CSS change.
+- Every applicable catalog journey uses one shared active-drag oracle for a single inert proxy, exact source footprint size, zero or one destination reservation, viewport containment, and text-free overlays; the matrix wrapper enforces residue cleanup after every journey.
+- Five reviewed Windows baselines cover the lifted singleton, occupied insertion gap, grouped-tab insertion, direct grouped-tab float, and collapsed-dock reveal. Each baseline is paired with semantic and geometry assertions.
+- Gesture arbitration treats the measured tab corridor as authoritative: activated motion inside reorders, while one horizontal-dominant motion beyond the corridor transfers to tear-off. Mouse and held-touch regressions cover both paths.
 
 ## Remediation decision
 

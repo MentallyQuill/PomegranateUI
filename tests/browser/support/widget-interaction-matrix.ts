@@ -37,7 +37,10 @@ interface RequiredPair {
   readonly right: RequiredPairSide;
 }
 
-const REQUIRED_REACHABLE_PAIRS: readonly RequiredPair[] = Object.freeze([
+export const CURATED_REQUIRED_PAIRS_DESCRIPTION =
+  'Curated required pairs cover known high-risk journeys; this is not exhaustive pairwise coverage.';
+
+const CURATED_REQUIRED_PAIRS: readonly RequiredPair[] = Object.freeze([
   { left: { axis: 'origin', value: 'grouped-inactive' }, right: { axis: 'destination', value: 'open-canvas' } },
   { left: { axis: 'origin', value: 'grouped-inactive' }, right: { axis: 'intent', value: 'float' } },
   { left: { axis: 'origin', value: 'grouped-active' }, right: { axis: 'intent', value: 'reorder' } },
@@ -73,14 +76,14 @@ export const INTERACTION_CASES: readonly InteractionCase[] = Object.freeze([
   { id: 'singleton-insert-before-undo', origin: 'docked-singleton', intent: 'insert-before', destination: 'other-shelf', completion: 'undo' }
 ]);
 
-export function interactionCoverageGaps(cases: readonly InteractionCase[]): readonly string[] {
+export function curatedInteractionCoverageGaps(cases: readonly InteractionCase[]): readonly string[] {
   const gaps: string[] = [];
   for (const [axis, values] of Object.entries(AXES) as [AxisName, readonly string[]][]) {
     for (const value of values) {
       if (!cases.some((entry) => entry[axis] === value)) gaps.push(`${axis}:${value}`);
     }
   }
-  for (const required of REQUIRED_REACHABLE_PAIRS) {
+  for (const required of CURATED_REQUIRED_PAIRS) {
     if (!cases.some((entry) => (
       entry[required.left.axis] === required.left.value
       && entry[required.right.axis] === required.right.value

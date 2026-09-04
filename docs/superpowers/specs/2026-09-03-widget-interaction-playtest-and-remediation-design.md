@@ -82,7 +82,7 @@ The suite derives cases from four axes rather than maintaining one enormous hand
 - **Destination:** same shelf, another shelf, occupied Widget, existing group, empty region, open canvas, collapsed dock, invalid space.
 - **Completion:** commit, Escape, pointer cancellation, blur, unmount, undo, save/reload.
 
-Pairwise coverage exercises combinations economically. A smaller set of canonical multi-step journeys covers stateful sequences, including group -> direct float -> dock -> group, resize -> move -> collapse -> reveal -> commit, and commit -> undo -> reload. Deterministic seeded exploratory journeys may be added after the canonical suite is stable; they must print a replayable seed and minimized action sequence.
+The catalog validates a curated set of required high-risk pairs; it does not claim exhaustive pairwise coverage of every reachable combination. A smaller set of canonical multi-step journeys covers stateful sequences, including group -> direct float -> dock -> group, resize -> move -> collapse -> reveal -> commit, and commit -> undo -> reload. Deterministic seeded exploratory journeys may be added after the canonical suite is stable; they must print a replayable seed and minimized action sequence.
 
 ## Assertions and visual gates
 
@@ -141,7 +141,7 @@ If the audit instead finds isolated failures, the implementation will make local
 
 1. Add the fixture builder, semantic journey driver, evidence recorder, and two golden reproductions for the reported overlay and grouped-tab-to-Scene failures.
 2. Run the audit against the unchanged implementation and preserve the expected failing evidence.
-3. Expand to the pairwise matrix and canonical stateful journeys, distinguishing product failures from test-driver or environment failures.
+3. Expand to the curated required-pair catalog and canonical stateful journeys, distinguishing product failures from test-driver or environment failures.
 4. Reduce and classify failures, then choose localized repairs or the contingent interaction host based on evidence.
 5. Implement one root-cause repair tranche at a time with focused unit and Playwright tests.
 6. Rerun the complete matrix after every tranche and inspect canonical screenshots in all themes.
@@ -167,7 +167,7 @@ The suite establishes port ownership before starting the preview and never termi
 Work is complete only when:
 
 1. The original screenshot failure and grouped-tab direct-to-Scene failure are reliable golden journeys and pass after evidence-backed repair.
-2. The coverage matrix includes every origin, intent, destination, and completion value, with pairwise coverage documented and canonical stateful journeys passing.
+2. The coverage matrix includes every origin, intent, destination, and completion value, with its deliberately curated required pairs documented and canonical stateful journeys passing.
 3. Canonical screenshot assertions prove the compact proxy, exact vacant origin, one destination gap, tab-strip insertion, and absence of overlapping text-bearing layers.
 4. Commit, cancellation, pointer cancellation, blur, unmount, undo, and save/reload preserve exact command and topology invariants.
 5. Resizing, collapsing, expanding, responsive layouts, all themes, and accessibility preference modes preserve the same interaction semantics.
