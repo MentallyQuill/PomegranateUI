@@ -13,6 +13,7 @@ import {
   activateWidgetGroup,
   clearPanel,
   createInitialWorkbenchState,
+  createAndGroupWidget,
   createPanel,
   createSubPanel,
   createPanelTemplateRegistry,
@@ -153,6 +154,8 @@ function eventFor(command: WorkbenchCommand, revision: number): WorkbenchEvent {
       return { type: 'shelf.resized', revision, panelId: command.panelId, shelfId: command.shelfId };
     case 'widget.create':
       return { type: 'widget.created', revision, instanceId: command.instance.id };
+    case 'widget.create-and-group':
+      return { type: 'widget.grouped', revision, instanceId: command.instance.id };
     case 'widget.place':
       return { type: 'widget.placed', revision, instanceId: command.instanceId };
     case 'widget.group':
@@ -273,12 +276,17 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
         if (!parsed.success) return malformedCommand(before);
         const command = parsed.data as WorkbenchCommand;
 
-        if (command.type === 'widget.create' && !registry.has(command.instance.type)) {
+        const createdInstance = command.type === 'widget.create' || command.type === 'widget.create-and-group'
+          ? command.instance
+          : command.type === 'shelf.create-and-place'
+            ? command.instance
+            : undefined;
+        if (createdInstance && !registry.has(createdInstance.type)) {
           return rejected(before, {
             code: 'UNKNOWN_WIDGET_TYPE',
-            message: `Widget type '${command.instance.type}' is not registered.`,
+            message: `Widget type '${createdInstance.type}' is not registered.`,
             recoverable: true,
-            details: { widgetType: command.instance.type }
+            details: { widgetType: createdInstance.type }
           });
         }
 
@@ -395,7 +403,8 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
               command.shelf,
               command.instanceId,
               command.placement,
-              placementContext
+              placementContext,
+              command.instance
             );
             break;
           case 'shelf.resize':
@@ -403,6 +412,16 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
             break;
           case 'widget.create':
             transition = createWidget(before, command.instance, command.placement, placementContext);
+            break;
+          case 'widget.create-and-group':
+            transition = createAndGroupWidget(
+              before,
+              command.instance,
+              command.placement,
+              command.targetInstanceId,
+              command.groupId,
+              placementContext
+            );
             break;
           case 'widget.place':
             transition = placeWidget(before, command.instanceId, command.placement, placementContext);

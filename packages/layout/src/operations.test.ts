@@ -15,6 +15,7 @@ import {
 import {
   activatePanel,
   activateWidgetGroup,
+  createAndGroupWidget,
   createInitialWorkbenchState,
   createPanel,
   createPanelTemplateRegistry,
@@ -242,6 +243,34 @@ describe('atomic layout operations', () => {
     expect(reordered.state.placements[summaryId]).toMatchObject({ group: { order: 1 } });
   });
 
+  it('creates and groups a new Widget as one atomic revision', () => {
+    const before = populatedState();
+    const catalogId = asWidgetInstanceId('catalog-library');
+    const catalogInstance = instance(catalogId, 'story.summary');
+    const placement = dock(sceneId, 'left', 1) as DockedPlacement;
+    const context = { templates: createPanelTemplateRegistry(), manifestFor: () => undefined };
+
+    const result = createAndGroupWidget(before, catalogInstance, placement, summaryId, 'catalog-group', context);
+
+    expect(result.ok).toBe(true);
+    expect(result.state.revision).toBe(before.revision + 1);
+    expect(result.state.widgets[catalogId]).toEqual(catalogInstance);
+    expect(result.state.placements[summaryId]).toMatchObject({ group: { id: 'catalog-group', active: false } });
+    expect(result.state.placements[catalogId]).toMatchObject({ group: { id: 'catalog-group', active: true } });
+
+    const rejected = createAndGroupWidget(
+      before,
+      catalogInstance,
+      placement,
+      asWidgetInstanceId('missing'),
+      'catalog-group',
+      context
+    );
+    expect(rejected.ok).toBe(false);
+    expect(rejected.state).toBe(before);
+    expect(rejected.state.widgets[catalogId]).toBeUndefined();
+  });
+
   it('rejects invalid grouping without changing state identity', () => {
     const before = populatedState();
     const crossPanel = placeWidget(before, notesId, dock(libraryId, 'right', 0));
@@ -349,6 +378,23 @@ describe('atomic layout operations', () => {
     expect(rejected.ok).toBe(false);
     expect(rejected.state).toBe(before);
     expect(rejected.state.shelves.some((candidate) => candidate.id === shelf.id)).toBe(false);
+  });
+
+  it('creates a new Widget with its new Shelf as one atomic revision', () => {
+    const before = populatedState();
+    const catalogId = asWidgetInstanceId('catalog-library');
+    const catalogInstance = instance(catalogId, 'story.summary');
+    const shelf = { id: 'catalog-shelf', panelId: sceneId, regionId: 'left', order: 1, weight: 0.5 };
+    const placement = dock(sceneId, 'left', 0, shelf.id) as DockedPlacement;
+    const context = { templates: createPanelTemplateRegistry(), manifestFor: () => undefined };
+
+    const result = createShelfWithWidget(before, shelf, catalogId, placement, context, catalogInstance);
+
+    expect(result.ok).toBe(true);
+    expect(result.state.revision).toBe(1);
+    expect(result.state.widgets[catalogId]).toEqual(catalogInstance);
+    expect(result.state.shelves).toContainEqual(expect.objectContaining({ id: shelf.id, panelId: sceneId }));
+    expect(result.state.placements[catalogId]).toMatchObject({ shelfId: shelf.id, order: 0 });
   });
 
   it('shelves a Widget without deleting it and restores its exact origin', () => {

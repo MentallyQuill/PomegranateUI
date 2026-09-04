@@ -956,4 +956,59 @@ describe('CatalogPlacementController', () => {
     expect(controller.consumeClick()).toBe(true);
     controller.destroy();
   });
+
+  it('lifts against logically compatible collapsed-only docks, then reveals and restores one', () => {
+    const { root, origin, target } = placementSurface();
+    const themeRoot = document.body.appendChild(document.createElement('main'));
+    themeRoot.dataset.pomThemeRoot = '';
+    themeRoot.classList.add('left-collapsed', 'right-collapsed');
+    themeRoot.append(root);
+    target.dataset.pomegranateRegionSurface = 'left';
+    target.dataset.pomegranateRegionRole = 'left-instruments';
+    Object.defineProperty(root, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(0, 40, 1000, 700)
+    });
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => themeRoot.hasAttribute('data-drag-reveal-left'),
+      isPotentialDockTarget: () => true,
+      onCommit: vi.fn(),
+      onDockCommit: vi.fn()
+    });
+
+    controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+    expect(controller.getState().phase).toBe('lifted');
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 4, clientY: 240 }));
+
+    expect(themeRoot).toHaveAttribute('data-drag-reveal-left', 'true');
+    controller.cancel();
+    expect(themeRoot).not.toHaveAttribute('data-drag-reveal-left');
+    controller.destroy();
+  });
+
+  it('falls back to restorable coarse targets when the target root is not an element', () => {
+    const { origin, target } = placementSurface();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => document,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit: vi.fn(),
+      onDockCommit: vi.fn()
+    });
+
+    controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+
+    expect(controller.getState().phase).toBe('lifted');
+    expect(target).toHaveClass('is-catalog-placement-target');
+    controller.cancel();
+    expect(target).not.toHaveClass('is-catalog-placement-target');
+    expect(target).not.toHaveAttribute('data-catalog-placement-target');
+    controller.destroy();
+  });
 });

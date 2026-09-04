@@ -2,7 +2,6 @@ import { asPanelId, asWidgetInstanceId } from '@pomegranate-ui/contracts';
 import type { WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core';
 
 import {
-  buildShelfRails,
   clampHeldRect,
   dockRevealSide,
   resolveDockIntent,
@@ -12,6 +11,7 @@ import {
   type DockRect,
   type DockTarget
 } from './widget-docking.js';
+import { collectDockTargets } from './widget-docking-dom.js';
 import { dragActivationDecision, tabDragDecision } from './tab-reorder.js';
 
 interface DragCandidate {
@@ -61,7 +61,7 @@ interface WidgetDragControllerOptions {
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 const panelHoverDelayMs = 350;
 
-function rectOf(rect: DOMRect): DockRect {
+function rectOf(rect: DOMRectReadOnly): DockRect {
   return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 }
 
@@ -265,73 +265,26 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
   }
 
   function collectTargets(current: DragCandidate): DockTarget[] {
-    const targets: DockTarget[] = [];
-    const sourceId = options.getFrame().instanceId;
     const surface = activeSurface(current);
-    if (!surface) return targets;
-    for (const region of surface.querySelectorAll<HTMLElement>('[data-pomegranate-region-surface]')) {
-      const owner = activeOwner(current, region);
-      if (!owner.regionId) continue;
-      const regionRect = rectOf(region.getBoundingClientRect());
-      if (regionRect.width <= 0 || regionRect.height <= 0) continue;
-      const shelves = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')].map((shelf, index) => ({
-        id: shelf.dataset.pomegranateShelf ?? `shelf-${index}`,
-        order: Number(shelf.dataset.pomegranateShelfOrder ?? index),
-        rect: rectOf(shelf.getBoundingClientRect())
-      }));
-      targets.push(...buildShelfRails(regionRect, shelves, owner));
-
-      let otherWidgets = 0;
-      for (const wrapper of region.querySelectorAll<HTMLElement>('[data-widget-type]')) {
-        const article = wrapper.querySelector<HTMLElement>('[data-pomegranate-widget]');
-        const targetId = article?.dataset.pomegranateWidget;
-        if (!article || !targetId || targetId === sourceId || wrapper === current.visualRoot) continue;
-        otherWidgets += 1;
-        const articleRect = rectOf(article.getBoundingClientRect());
-        const header = article.querySelector<HTMLElement>(':scope > header[data-widget-drag-surface]');
-        const content = article.querySelector<HTMLElement>(':scope > [data-pom-part="widget.content"]');
-        const group = wrapper.closest<HTMLElement>('[data-widget-group]');
-        const target: DockTarget = {
-          ...owner,
-          id: `widget:${targetId}`,
-          kind: 'widget',
-          rect: articleRect,
-          ...(header ? { headerRect: rectOf(header.getBoundingClientRect()) } : {}),
-          ...(content ? { bodyRect: rectOf(content.getBoundingClientRect()) } : {}),
-          ...(wrapper.dataset.pomegranateShelf === undefined ? {} : { shelfId: wrapper.dataset.pomegranateShelf }),
-          order: Number(wrapper.dataset.pomegranateOrder ?? 0),
-          targetInstanceId: targetId,
-          ...(group?.dataset.widgetGroupId === undefined ? {} : { groupId: group.dataset.widgetGroupId }),
-          label: article.getAttribute('aria-label') ?? targetId
-        };
-        targets.push(target);
-        if (group) {
-          const tabs = group.querySelector<HTMLElement>(':scope > .widget-group-tabs');
-          if (tabs) targets.push({
-            ...target,
-            id: `group:${group.dataset.widgetGroupId ?? targetId}`,
-            kind: 'group-header',
-            rect: rectOf(tabs.getBoundingClientRect())
-          });
-        }
-      }
-      if (otherWidgets === 0) targets.push({
-        ...owner,
-        id: `region:${owner.regionId}`,
-        kind: 'region',
-        rect: regionRect,
-        empty: true,
-        label: `Dock in ${region.getAttribute('aria-label') ?? owner.regionId}`
-      });
-    }
-    return targets;
+    if (!surface) return [];
+    return [...collectDockTargets(surface, {
+      sourceInstanceId: options.getFrame().instanceId,
+      sourceElement: current.visualRoot,
+      ownerForRegion: (region) => activeOwner(current, region)
+    })];
   }
 
   function regionForIntent(current: DragCandidate, intent: DockIntent) {
     const surface = activeSurface(current);
     if (!surface || surface.dataset.pomegranatePanel !== intent.panelId) return null;
     return [...surface.querySelectorAll<HTMLElement>('[data-pomegranate-region-surface]')]
-      .find((region) => region.dataset.pomegranateRegionSurface === intent.regionId) ?? null;
+      .find((region) => {
+        const owner = activeOwner(current, region);
+        return owner.panelId === intent.panelId
+          && owner.subPanelId === intent.subPanelId
+          && owner.lane === intent.lane
+          && owner.regionId === intent.regionId;
+      }) ?? null;
   }
 
   function shelfForTarget(region: HTMLElement, intent: DockIntent) {

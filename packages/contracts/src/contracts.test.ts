@@ -646,6 +646,38 @@ describe('public contracts', () => {
       ...parsed,
       placement: { ...parsed.placement, shelfId: 'another-shelf' }
     }).success).toBe(false);
+
+    const catalogInstance = state.widgets[widgetId]!;
+    const catalogPlacement = WorkbenchCommandSchema.parse({
+      ...parsed,
+      instance: catalogInstance
+    });
+    expect(catalogPlacement).toMatchObject({
+      type: 'shelf.create-and-place',
+      instanceId: widgetId,
+      instance: catalogInstance
+    });
+  });
+
+  it('parses atomic Catalog Widget creation and grouping', () => {
+    const catalogInstance = {
+      ...state.widgets[widgetId]!,
+      id: asWidgetInstanceId('catalog-widget')
+    };
+    const parsed = WorkbenchCommandSchema.parse({
+      type: 'widget.create-and-group',
+      instance: catalogInstance,
+      placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'primary', order: 1 },
+      targetInstanceId: widgetId,
+      groupId: 'catalog-group'
+    });
+
+    expect(parsed).toMatchObject({
+      type: 'widget.create-and-group',
+      instance: catalogInstance,
+      targetInstanceId: widgetId,
+      groupId: 'catalog-group'
+    });
   });
 
   it('parses every command in the first-slice protocol', () => {
@@ -655,6 +687,7 @@ describe('public contracts', () => {
       { type: 'panel.reorder', panelId, toIndex: 0 },
       { type: 'panel.resize-dock', panelId, edge: 'left', width: 320 },
       { type: 'widget.create', instance: state.widgets[widgetId]!, placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'primary', order: 0 } },
+      { type: 'widget.create-and-group', instance: { ...state.widgets[widgetId]!, id: asWidgetInstanceId('catalog-widget') }, placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'primary', order: 1 }, targetInstanceId: widgetId, groupId: 'catalog-group' },
       { type: 'shelf.create-and-place', shelf: { id: 'secondary', panelId, regionId: 'left', order: 1, weight: 0.5 }, instanceId: widgetId, placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'secondary', order: 0 } },
       { type: 'widget.place', instanceId: widgetId, placement: { kind: 'docked', panelId, regionId: 'left', shelfId: 'primary', order: 0 } },
       { type: 'widget.group', instanceId: widgetId, targetInstanceId: widgetId, groupId: 'reading-stack' },
@@ -670,6 +703,7 @@ describe('public contracts', () => {
       'panel.reorder',
       'panel.resize-dock',
       'widget.create',
+      'widget.create-and-group',
       'shelf.create-and-place',
       'widget.place',
       'widget.group',

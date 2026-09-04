@@ -89,10 +89,18 @@ export type WorkbenchCommand =
       readonly type: 'shelf.create-and-place';
       readonly shelf: ShelfState;
       readonly instanceId: WidgetInstanceId;
+      readonly instance?: WidgetInstance;
       readonly placement: DockedPlacement;
     }
   | { readonly type: 'shelf.resize'; readonly panelId: PanelId; readonly regionId: string; readonly shelfId: string; readonly weight: number }
   | { readonly type: 'widget.create'; readonly instance: WidgetInstance; readonly placement: VisibleWidgetPlacement }
+  | {
+      readonly type: 'widget.create-and-group';
+      readonly instance: WidgetInstance;
+      readonly placement: DockedPlacement;
+      readonly targetInstanceId: WidgetInstanceId;
+      readonly groupId: string;
+    }
   | { readonly type: 'widget.place'; readonly instanceId: WidgetInstanceId; readonly placement: VisibleWidgetPlacement }
   | { readonly type: 'widget.shelve'; readonly instanceId: WidgetInstanceId }
   | { readonly type: 'widget.restore'; readonly instanceId: WidgetInstanceId }
@@ -211,12 +219,16 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     type: z.literal('shelf.create-and-place'),
     shelf: ShelfStateSchema,
     instanceId: WidgetInstanceIdSchema,
+    instance: WidgetInstanceSchema.optional(),
     placement: DockedPlacementSchema
   }).strict().refine(
     ({ shelf, placement }) => shelf.panelId === placement.panelId
       && shelf.regionId === placement.regionId
       && shelf.id === placement.shelfId,
     { path: ['placement'], message: 'Placement must target the Shelf created by this command.' }
+  ).refine(
+    ({ instance, instanceId }) => instance === undefined || instance.id === instanceId,
+    { path: ['instance'], message: 'Created Widget identity must match the placed instance.' }
   ),
   z.object({
     type: z.literal('shelf.resize'),
@@ -229,6 +241,13 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     type: z.literal('widget.create'),
     instance: WidgetInstanceSchema,
     placement: VisibleWidgetPlacementSchema
+  }).strict(),
+  z.object({
+    type: z.literal('widget.create-and-group'),
+    instance: WidgetInstanceSchema,
+    placement: DockedPlacementSchema,
+    targetInstanceId: WidgetInstanceIdSchema,
+    groupId: z.string().min(1).refine((value) => value.trim() === value)
   }).strict(),
   z.object({
     type: z.literal('widget.place'),

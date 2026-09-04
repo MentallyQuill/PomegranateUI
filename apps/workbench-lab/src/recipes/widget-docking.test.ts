@@ -24,6 +24,15 @@ const widget: DockTarget = {
 };
 
 describe('Atmospheric docking intent', () => {
+  it('keeps rail target identities unique when owner ids contain separators', () => {
+    const region = { x: 0, y: 0, width: 300, height: 500 };
+    const shelves = [{ id: 'primary', order: 0, rect: { x: 0, y: 0, width: 300, height: 500 } }];
+    const first = buildShelfRails(region, shelves, { panelId: 'panel:scope', subPanelId: 'a', regionId: 'b' });
+    const second = buildShelfRails(region, shelves, { panelId: 'panel', subPanelId: 'scope:a', regionId: 'b' });
+
+    expect(first[0]?.id).not.toBe(second[0]?.id);
+  });
+
   it('uses a hard header target and 25/50/25 body zones', () => {
     expect(resolveDockIntent({ x: 120, y: 52 }, [widget])?.kind).toBe('tab');
     expect(resolveDockIntent({ x: 120, y: 90 }, [widget])?.kind).toBe('insert-before');
@@ -94,6 +103,8 @@ describe('Atmospheric docking intent', () => {
       targetId: widget.id,
       targetRect: widget.bodyRect!,
       previewRect: { x: 20, y: 72, width: 280, height: 52 },
+      regionRect: { x: 0, y: 0, width: 320, height: 320 },
+      regionDepth: 0,
       panelId: 'scene',
       regionId: 'left',
       shelfId: 'primary',

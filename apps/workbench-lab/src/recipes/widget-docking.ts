@@ -10,7 +10,7 @@ export interface DockRect {
   readonly height: number;
 }
 
-interface DockOwner {
+export interface DockOwner {
   readonly panelId: string;
   readonly subPanelId?: string;
   readonly lane?: number;
@@ -23,6 +23,8 @@ export type DockTarget = DockOwner & {
   readonly id: string;
   readonly kind: 'widget' | 'group-header' | 'rail' | 'region';
   readonly rect: DockRect;
+  readonly regionRect?: DockRect;
+  readonly regionDepth?: number;
   readonly previewRect?: DockRect;
   readonly headerRect?: DockRect;
   readonly bodyRect?: DockRect;
@@ -44,6 +46,8 @@ export interface DockIntent extends DockOwner {
   readonly targetId: string;
   readonly targetRect: DockRect;
   readonly previewRect: DockRect;
+  readonly regionRect?: DockRect;
+  readonly regionDepth?: number;
   readonly shelfId?: string;
   readonly order?: number;
   readonly targetInstanceId?: string;
@@ -57,6 +61,21 @@ export interface ShelfGeometry {
   readonly id: string;
   readonly order: number;
   readonly rect: DockRect;
+}
+
+export function dockTargetKey(
+  owner: DockOwner,
+  kind: DockTarget['kind'],
+  ...identifiers: readonly (string | number)[]
+): string {
+  return JSON.stringify([
+    kind,
+    owner.panelId,
+    owner.subPanelId ?? null,
+    owner.lane ?? null,
+    owner.regionId,
+    ...identifiers
+  ]);
 }
 
 const minimumRailSize = 12;
@@ -88,6 +107,8 @@ function intentFromTarget(point: DockPoint, target: DockTarget): DockIntent | nu
     ...(target.lane === undefined ? {} : { lane: target.lane }),
     regionId: target.regionId,
     targetId: target.id,
+    ...(target.regionRect === undefined ? {} : { regionRect: target.regionRect }),
+    ...(target.regionDepth === undefined ? {} : { regionDepth: target.regionDepth }),
     ...(target.shelfId === undefined ? {} : { shelfId: target.shelfId }),
     ...(target.order === undefined ? {} : { order: target.order }),
     ...(target.targetInstanceId === undefined ? {} : { targetInstanceId: target.targetInstanceId }),
@@ -188,7 +209,16 @@ const targetPriority: Readonly<Record<DockTarget['kind'], number>> = Object.free
 });
 
 export function resolveDockIntent(point: DockPoint, targets: readonly DockTarget[]): DockIntent | null {
-  const ordered = [...targets].sort((left, right) => targetPriority[left.kind] - targetPriority[right.kind]);
+  const containingRegions = targets.filter((target) => (
+    target.regionRect !== undefined && contains(target.regionRect, point)
+  ));
+  const deepestRegion = containingRegions.length > 0
+    ? Math.max(...containingRegions.map((target) => target.regionDepth ?? 0))
+    : null;
+  const scopedTargets = deepestRegion === null
+    ? targets
+    : containingRegions.filter((target) => (target.regionDepth ?? 0) === deepestRegion);
+  const ordered = [...scopedTargets].sort((left, right) => targetPriority[left.kind] - targetPriority[right.kind]);
   for (const target of ordered) {
     const intent = intentFromTarget(point, target);
     if (intent) return intent;
@@ -203,6 +233,12 @@ export function stabilizeDockIntent(
   hysteresis = 10
 ): DockIntent | null {
   if (!previous || next?.key === previous.key) return next;
+  if (next && (
+    previous.panelId !== next.panelId
+    || previous.subPanelId !== next.subPanelId
+    || previous.lane !== next.lane
+    || previous.regionId !== next.regionId
+  )) return next;
   return contains(previous.targetRect, point, hysteresis) ? previous : next;
 }
 
@@ -248,7 +284,7 @@ export function buildShelfRails(
   const first = ordered[0]!;
   targets.push({
     ...owner,
-    id: `rail:${owner.regionId}:before:${first.id}`,
+    id: dockTargetKey(owner, 'rail', 'before', first.id),
     kind: 'rail',
     rect: railRect(region, first.rect.y - 6),
     previewRect: railPreviewRect(region, first.rect.y),
@@ -261,7 +297,7 @@ export function buildShelfRails(
     const next = ordered[index]!;
     targets.push({
       ...owner,
-      id: `rail:${owner.regionId}:between:${previous.id}:${next.id}`,
+      id: dockTargetKey(owner, 'rail', 'between', previous.id, next.id),
       kind: 'rail',
       rect: railRect(region, (previous.rect.y + previous.rect.height + next.rect.y) / 2),
       previewRect: railPreviewRect(region, (previous.rect.y + previous.rect.height + next.rect.y) / 2),
@@ -273,7 +309,7 @@ export function buildShelfRails(
   const last = ordered.at(-1)!;
   targets.push({
     ...owner,
-    id: `rail:${owner.regionId}:after:${last.id}`,
+    id: dockTargetKey(owner, 'rail', 'after', last.id),
     kind: 'rail',
     rect: railRect(region, Math.min(last.rect.y + last.rect.height + 6, region.y + region.height - 28)),
     previewRect: railPreviewRect(region, last.rect.y + last.rect.height),
@@ -283,7 +319,7 @@ export function buildShelfRails(
   });
   targets.push({
     ...owner,
-    id: `rail:${owner.regionId}:append`,
+    id: dockTargetKey(owner, 'rail', 'append'),
     kind: 'rail',
     rect: railRect(region, region.y + region.height - 8, 16),
     previewRect: railPreviewRect(region, region.y + region.height),
