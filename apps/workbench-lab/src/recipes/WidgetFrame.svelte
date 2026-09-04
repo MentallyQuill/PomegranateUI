@@ -4,7 +4,11 @@
   import type { WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core';
   import type { WidgetRendererRegistry } from '@pomegranate-ui/svelte';
   import { createWidgetDragController } from './WidgetDragController.js';
-  import { getWidgetActionMenuContext, type WidgetActionRequestSource } from './WidgetActionMenuController.js';
+  import {
+    createSecondaryWidgetContextController,
+    getWidgetActionMenuContext,
+    type WidgetActionRequestSource
+  } from './WidgetActionMenuController.js';
 
   let {
     frame,
@@ -38,13 +42,17 @@
   let actionsOpen = $state(false);
   let lastTouchPointerAt = Number.NEGATIVE_INFINITY;
   const requestWidgetActions = getWidgetActionMenuContext();
+  const secondaryContext = createSecondaryWidgetContextController();
   const drag = createWidgetDragController({
     getFrame: () => frame,
     getStore: () => store,
     setDragging: (next) => { dragging = next; },
     onExpandDock: (edge) => onexpanddock?.(edge)
   });
-  onDestroy(drag.destroy);
+  onDestroy(() => {
+    drag.destroy();
+    secondaryContext.destroy();
+  });
 
   const isInteractiveTarget = (target: EventTarget | null) => (
     target instanceof Element
@@ -52,12 +60,9 @@
   );
   const dragSurfacePointerDown = (event: PointerEvent) => {
     if (event.pointerType === 'touch') lastTouchPointerAt = event.timeStamp;
-    if (event.button === 2) {
-      if (!grouped && event.pointerType !== 'touch') {
-        event.preventDefault();
-        openActions(event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
-      }
-      return;
+    if (!grouped) {
+      const anchor = event.currentTarget as HTMLElement;
+      if (secondaryContext.pointerDown(event, frame.instanceId, (point) => openActions(anchor, 'pointer', point))) return;
     }
     if (event.button !== 0) return;
     if (isInteractiveTarget(event.target)) return;
@@ -75,10 +80,21 @@
   };
   const handleContextMenu = (event: MouseEvent) => {
     if (grouped) return;
-    event.preventDefault();
     const pointerType = (event as MouseEvent & { pointerType?: string }).pointerType;
-    if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) return;
-    openActions(event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
+    if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) {
+      event.preventDefault();
+      return;
+    }
+    const anchor = event.currentTarget as HTMLElement;
+    secondaryContext.contextMenu(event, frame.instanceId, (point) => openActions(anchor, 'pointer', point));
+  };
+  const dragSurfacePointerUp = (event: PointerEvent) => {
+    if (secondaryContext.pointerUp(event)) return;
+    drag.pointerUp(event);
+  };
+  const dragSurfacePointerCancel = (event: PointerEvent) => {
+    secondaryContext.pointerCancel(event);
+    drag.pointerCancel(event);
   };
   const handleHeaderKey = (event: KeyboardEvent) => {
     if (grouped) return;
@@ -110,8 +126,8 @@
     onkeydown={handleHeaderKey}
     onpointerdown={dragSurfacePointerDown}
     onpointermove={drag.pointerMove}
-    onpointerup={drag.pointerUp}
-    onpointercancel={drag.pointerCancel}
+    onpointerup={dragSurfacePointerUp}
+    onpointercancel={dragSurfacePointerCancel}
   >
     <div class="widget-frame-heading" data-widget-touch-drag-grip>
       <h2>{displayTitle}</h2>

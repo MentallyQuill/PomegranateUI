@@ -523,21 +523,52 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByRole('article', { name: 'Room Ambience' })).toHaveAttribute('data-pomegranate-placement', 'floating');
   });
 
-  it('opens desktop Widget actions on secondary pointer down before the native context menu event', async () => {
-    render(App);
+  it('defers secondary-pointer Widget actions until release on standalone and grouped headers', async () => {
+    const { container } = render(App);
+    const widgetActions = container.querySelector<HTMLElement>('.widget-actions-menu');
+    if (!widgetActions) throw new Error('Expected the shared Widget action surface.');
+
     const worldStateHeader = within(screen.getByRole('article', { name: 'World State' }))
       .getByRole('toolbar', { name: 'World State draggable Widget header' });
-
     await fireEvent.pointerDown(worldStateHeader, {
       button: 2,
-      pointerType: 'mouse',
-      clientX: 32,
-      clientY: 48
+      clientX: 20,
+      clientY: 20,
+      pointerId: 91,
+      pointerType: 'mouse'
     });
+    await fireEvent.contextMenu(worldStateHeader, { clientX: 20, clientY: 20 });
+    expect(widgetActions).not.toHaveAttribute('data-fallback-open');
+    await fireEvent.pointerUp(worldStateHeader, {
+      button: 2,
+      clientX: 20,
+      clientY: 20,
+      pointerId: 91,
+      pointerType: 'mouse'
+    });
+    await waitFor(() => expect(widgetActions).toHaveAttribute('aria-label', 'World State Widget actions'));
+    expect(widgetActions).toHaveAttribute('data-fallback-open');
 
-    const widgetActions = document.querySelector<HTMLElement>('.widget-actions-menu');
-    if (!widgetActions) throw new Error('Expected the shared Widget action surface.');
-    expect(widgetActions).toHaveAttribute('aria-label', 'World State Widget actions');
+    await fireEvent.keyDown(window, { key: 'Escape' });
+    await waitFor(() => expect(widgetActions).not.toHaveAttribute('data-fallback-open'));
+    const promiseLedger = screen.getByRole('tab', { name: 'Promise Ledger' });
+    await fireEvent.pointerDown(promiseLedger, {
+      button: 2,
+      clientX: 24,
+      clientY: 24,
+      pointerId: 92,
+      pointerType: 'mouse'
+    });
+    await fireEvent.contextMenu(promiseLedger, { clientX: 24, clientY: 24 });
+    expect(widgetActions).not.toHaveAttribute('data-fallback-open');
+    await fireEvent.pointerUp(promiseLedger, {
+      button: 2,
+      clientX: 24,
+      clientY: 24,
+      pointerId: 92,
+      pointerType: 'mouse'
+    });
+    await waitFor(() => expect(widgetActions).toHaveAttribute('aria-label', 'Promise Ledger Widget actions'));
     expect(widgetActions).toHaveAttribute('data-fallback-open');
   });
 

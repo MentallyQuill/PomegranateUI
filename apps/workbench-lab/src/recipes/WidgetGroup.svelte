@@ -8,7 +8,11 @@
     nextWidgetGroupGestureOwner,
     type WidgetGroupGestureOwner
   } from './widget-group-gesture.js';
-  import { getWidgetActionMenuContext, type WidgetActionRequestSource } from './WidgetActionMenuController.js';
+  import {
+    createSecondaryWidgetContextController,
+    getWidgetActionMenuContext,
+    type WidgetActionRequestSource
+  } from './WidgetActionMenuController.js';
 
   let {
     frames,
@@ -42,6 +46,7 @@
   let actionsOpen = $state(false);
   let lastTouchPointerAt = Number.NEGATIVE_INFINITY;
   const requestWidgetActions = getWidgetActionMenuContext();
+  const secondaryContext = createSecondaryWidgetContextController();
   let groupGesture: {
     pointerId: number;
     pointerType: string;
@@ -60,7 +65,10 @@
     onExpandDock: (edge) => onexpanddock?.(edge),
     activation: 'manual'
   });
-  onDestroy(drag.destroy);
+  onDestroy(() => {
+    drag.destroy();
+    secondaryContext.destroy();
+  });
 
   const reorderDrag = createTabReorderController({
     getItems: () => ordered.flatMap((frame) => {
@@ -77,13 +85,8 @@
 
   function dragPointerDown(event: PointerEvent, frame: WidgetFrameProjection) {
     if (event.pointerType === 'touch') lastTouchPointerAt = event.timeStamp;
-    if (event.button === 2) {
-      if (event.pointerType !== 'touch') {
-        event.preventDefault();
-        openActions(frame, event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
-      }
-      return;
-    }
+    const anchor = event.currentTarget as HTMLElement;
+    if (secondaryContext.pointerDown(event, frame.instanceId, (point) => openActions(frame, anchor, 'pointer', point))) return;
     if (event.button !== 0) return;
     dragFrame = frame;
     groupGesture = {
@@ -140,6 +143,7 @@
   }
 
   function dragPointerUp(event: PointerEvent) {
+    if (secondaryContext.pointerUp(event)) return;
     if (!groupGesture || groupGesture.pointerId !== event.pointerId) return;
     const owner = groupGesture.owner;
     groupGesture = null;
@@ -155,6 +159,7 @@
   }
 
   function dragPointerCancel(event: PointerEvent) {
+    secondaryContext.pointerCancel(event);
     if (!groupGesture || groupGesture.pointerId !== event.pointerId) return;
     groupGesture = null;
     reorderDrag.pointerCancel(event);
@@ -212,10 +217,13 @@
   }
 
   function tabContextMenu(event: MouseEvent, frame: WidgetFrameProjection) {
-    event.preventDefault();
     const pointerType = (event as MouseEvent & { pointerType?: string }).pointerType;
-    if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) return;
-    openActions(frame, event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
+    if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) {
+      event.preventDefault();
+      return;
+    }
+    const anchor = event.currentTarget as HTMLElement;
+    secondaryContext.contextMenu(event, frame.instanceId, (point) => openActions(frame, anchor, 'pointer', point));
   }
 </script>
 

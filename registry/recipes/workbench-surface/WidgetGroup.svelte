@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import type { Snippet } from 'svelte';
   import type { WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core';
   let { frames, store, renderWidget, titleFor, onrequestactions }: {
@@ -17,11 +18,53 @@
   const ordered = $derived([...frames].sort((left, right) => (left.placement.kind === 'docked' ? left.placement.group?.order ?? 0 : 0) - (right.placement.kind === 'docked' ? right.placement.group?.order ?? 0 : 0)));
   const active = $derived(ordered.find((frame) => frame.placement.kind === 'docked' && frame.placement.group?.active) ?? ordered[0]);
   const rowHeight = $derived(active?.placement.kind === 'docked' ? active.placement.height : undefined);
-  let lastSecondaryPointer: { anchor: HTMLElement; frameId: string; x: number; y: number; at: number } | undefined;
   let lastTouchPointerAt = Number.NEGATIVE_INFINITY;
+  let secondaryPointer: {
+    pointerId: number;
+    frame: WidgetFrameProjection;
+    anchor: HTMLElement;
+    releaseQueued: boolean;
+  } | undefined;
+  let secondaryDuplicate: { frameId: string; anchor: HTMLElement; until: number } | undefined;
 
   function requestActions(frame: WidgetFrameProjection, anchor: HTMLElement, source: 'pointer' | 'keyboard' | 'touch', point?: { x: number; y: number }) {
     onrequestactions?.({ frame, title: titleFor?.(frame) ?? frame.title, anchor, source, ...(point ? { point } : {}) });
+  }
+
+  function clearSecondaryPointer(current = secondaryPointer) {
+    if (!current || secondaryPointer !== current) return;
+    secondaryPointer = undefined;
+    window.removeEventListener('pointerup', finishSecondaryPointer);
+    window.removeEventListener('pointercancel', cancelSecondaryPointer);
+    window.removeEventListener('blur', cancelSecondaryOnBlur);
+  }
+
+  function cancelSecondaryOnBlur() {
+    clearSecondaryPointer();
+  }
+
+  function finishSecondaryPointer(event: PointerEvent) {
+    const current = secondaryPointer;
+    if (!current || current.pointerId !== event.pointerId) return false;
+    event.preventDefault();
+    if (current.releaseQueued) return true;
+    current.releaseQueued = true;
+    const point = { x: event.clientX, y: event.clientY };
+    secondaryDuplicate = {
+      frameId: current.frame.instanceId,
+      anchor: current.anchor,
+      until: performance.now() + 1_000
+    };
+    queueMicrotask(() => {
+      if (secondaryPointer !== current) return;
+      clearSecondaryPointer(current);
+      requestActions(current.frame, current.anchor, 'pointer', point);
+    });
+    return true;
+  }
+
+  function cancelSecondaryPointer(event: PointerEvent) {
+    if (secondaryPointer?.pointerId === event.pointerId) clearSecondaryPointer();
   }
 
   function handleContextMenu(event: MouseEvent, frame: WidgetFrameProjection) {
@@ -30,15 +73,12 @@
     const pointerType = (event as MouseEvent & { pointerType?: string }).pointerType;
     if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) return;
     const anchor = event.currentTarget as HTMLElement;
-    const previous = lastSecondaryPointer;
-    lastSecondaryPointer = undefined;
-    if (
-      previous?.anchor === anchor
-      && previous.frameId === frame.instanceId
-      && previous.x === event.clientX
-      && previous.y === event.clientY
-      && event.timeStamp - previous.at < 1_000
-    ) return;
+    if (secondaryDuplicate && performance.now() > secondaryDuplicate.until) secondaryDuplicate = undefined;
+    if (secondaryDuplicate?.anchor === anchor && secondaryDuplicate.frameId === frame.instanceId) {
+      secondaryDuplicate = undefined;
+      return;
+    }
+    if (secondaryPointer?.anchor === anchor && secondaryPointer.frame.instanceId === frame.instanceId) return;
     requestActions(frame, anchor, 'pointer', { x: event.clientX, y: event.clientY });
   }
 
@@ -51,9 +91,17 @@
     if (event.button !== 2) return;
     event.preventDefault();
     const anchor = event.currentTarget as HTMLElement;
-    lastSecondaryPointer = { anchor, frameId: frame.instanceId, x: event.clientX, y: event.clientY, at: event.timeStamp };
-    requestActions(frame, anchor, 'pointer', { x: event.clientX, y: event.clientY });
+    clearSecondaryPointer();
+    secondaryPointer = { pointerId: event.pointerId, frame, anchor, releaseQueued: false };
+    window.addEventListener('pointerup', finishSecondaryPointer);
+    window.addEventListener('pointercancel', cancelSecondaryPointer);
+    window.addEventListener('blur', cancelSecondaryOnBlur);
   }
+
+  onDestroy(() => {
+    clearSecondaryPointer();
+    secondaryDuplicate = undefined;
+  });
 
   function handleKey(event: KeyboardEvent, frame: WidgetFrameProjection) {
     if (!onrequestactions || !(event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey))) return;
@@ -67,7 +115,7 @@
     <div class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets">
       {#each ordered as frame (frame.instanceId)}
         {@const title = titleFor?.(frame) ?? frame.title}
-        <button type="button" data-pom-part="button.surface" role="tab" aria-selected={frame.instanceId === active?.instanceId} aria-keyshortcuts="Shift+F10" tabindex={frame.instanceId === active?.instanceId ? 0 : -1} onclick={() => store.dispatch({ type: 'widget.group.activate', instanceId: frame.instanceId })} onpointerdown={(event) => handleSecondaryPointerDown(event, frame)} oncontextmenu={(event) => handleContextMenu(event, frame)} onkeydown={(event) => handleKey(event, frame)}>{title}</button>
+        <button type="button" data-pom-part="button.surface" role="tab" aria-selected={frame.instanceId === active?.instanceId} aria-keyshortcuts="Shift+F10" tabindex={frame.instanceId === active?.instanceId ? 0 : -1} onclick={() => store.dispatch({ type: 'widget.group.activate', instanceId: frame.instanceId })} onpointerdown={(event) => handleSecondaryPointerDown(event, frame)} onpointerup={(event) => { finishSecondaryPointer(event); }} onpointercancel={cancelSecondaryPointer} oncontextmenu={(event) => handleContextMenu(event, frame)} onkeydown={(event) => handleKey(event, frame)}>{title}</button>
       {/each}
     </div>
     {#if active && onrequestactions}

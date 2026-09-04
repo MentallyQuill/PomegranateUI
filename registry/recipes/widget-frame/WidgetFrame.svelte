@@ -1,4 +1,5 @@
 <script lang="ts" generics="THostContext">
+  import { onDestroy } from 'svelte';
   import type { WorkbenchCommand } from '@pomegranate-ui/contracts';
   import {
     createWidgetActions,
@@ -42,11 +43,48 @@
   const displayTitle = $derived(title ?? frame.title);
   const Renderer = $derived(rendererRegistry.get(frame.instance.type));
   const dispatch = (command: WorkbenchCommand) => store.dispatch(command);
-  let lastSecondaryPointer: { anchor: HTMLElement; x: number; y: number; at: number } | undefined;
   let lastTouchPointerAt = Number.NEGATIVE_INFINITY;
+  let secondaryPointer: {
+    pointerId: number;
+    anchor: HTMLElement;
+    releaseQueued: boolean;
+  } | undefined;
+  let secondaryDuplicate: { anchor: HTMLElement; until: number } | undefined;
 
   function requestActions(anchor: HTMLElement, source: 'pointer' | 'keyboard' | 'touch', point?: { x: number; y: number }) {
     onrequestactions?.({ frame, title: displayTitle, anchor, source, ...(point ? { point } : {}) });
+  }
+
+  function clearSecondaryPointer(current = secondaryPointer) {
+    if (!current || secondaryPointer !== current) return;
+    secondaryPointer = undefined;
+    window.removeEventListener('pointerup', finishSecondaryPointer);
+    window.removeEventListener('pointercancel', cancelSecondaryPointer);
+    window.removeEventListener('blur', cancelSecondaryOnBlur);
+  }
+
+  function cancelSecondaryOnBlur() {
+    clearSecondaryPointer();
+  }
+
+  function finishSecondaryPointer(event: PointerEvent) {
+    const current = secondaryPointer;
+    if (!current || current.pointerId !== event.pointerId) return false;
+    event.preventDefault();
+    if (current.releaseQueued) return true;
+    current.releaseQueued = true;
+    const point = { x: event.clientX, y: event.clientY };
+    secondaryDuplicate = { anchor: current.anchor, until: performance.now() + 1_000 };
+    queueMicrotask(() => {
+      if (secondaryPointer !== current) return;
+      clearSecondaryPointer(current);
+      requestActions(current.anchor, 'pointer', point);
+    });
+    return true;
+  }
+
+  function cancelSecondaryPointer(event: PointerEvent) {
+    if (secondaryPointer?.pointerId === event.pointerId) clearSecondaryPointer();
   }
 
   function handleContextMenu(event: MouseEvent) {
@@ -55,14 +93,12 @@
     const pointerType = (event as MouseEvent & { pointerType?: string }).pointerType;
     if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) return;
     const anchor = event.currentTarget as HTMLElement;
-    const previous = lastSecondaryPointer;
-    lastSecondaryPointer = undefined;
-    if (
-      previous?.anchor === anchor
-      && previous.x === event.clientX
-      && previous.y === event.clientY
-      && event.timeStamp - previous.at < 1_000
-    ) return;
+    if (secondaryDuplicate && performance.now() > secondaryDuplicate.until) secondaryDuplicate = undefined;
+    if (secondaryDuplicate?.anchor === anchor) {
+      secondaryDuplicate = undefined;
+      return;
+    }
+    if (secondaryPointer?.anchor === anchor) return;
     requestActions(anchor, 'pointer', { x: event.clientX, y: event.clientY });
   }
 
@@ -75,9 +111,17 @@
     if (event.button !== 2) return;
     event.preventDefault();
     const anchor = event.currentTarget as HTMLElement;
-    lastSecondaryPointer = { anchor, x: event.clientX, y: event.clientY, at: event.timeStamp };
-    requestActions(anchor, 'pointer', { x: event.clientX, y: event.clientY });
+    clearSecondaryPointer();
+    secondaryPointer = { pointerId: event.pointerId, anchor, releaseQueued: false };
+    window.addEventListener('pointerup', finishSecondaryPointer);
+    window.addEventListener('pointercancel', cancelSecondaryPointer);
+    window.addEventListener('blur', cancelSecondaryOnBlur);
   }
+
+  onDestroy(() => {
+    clearSecondaryPointer();
+    secondaryDuplicate = undefined;
+  });
 
   function handleHeaderKey(event: KeyboardEvent) {
     if (!onrequestactions || grouped || !(event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey))) return;
@@ -100,6 +144,8 @@
     aria-keyshortcuts={onrequestactions && !grouped ? 'Shift+F10' : undefined}
     tabindex={onrequestactions && !grouped ? 0 : undefined}
     onpointerdown={handleSecondaryPointerDown}
+    onpointerup={(event) => { finishSecondaryPointer(event); }}
+    onpointercancel={cancelSecondaryPointer}
     oncontextmenu={handleContextMenu}
     onkeydown={handleHeaderKey}
   >
