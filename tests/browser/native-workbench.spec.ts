@@ -17,8 +17,6 @@ import {
 
 const labOrigin = `http://127.0.0.1:${process.env.POM_PLAYWRIGHT_PORT ?? '4174'}`;
 
-const labOrigin = process.env.POM_LAB_ORIGIN ?? 'http://127.0.0.1:4174';
-
 async function openDeveloperTools(page: import('@playwright/test').Page) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
   if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
