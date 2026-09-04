@@ -1,7 +1,7 @@
 # Story Measure and Toolbar Columns Design
 
 **Date:** 2026-09-04
-**Status:** Approved in chat, written specification pending review
+**Status:** Approved
 **Repository:** `MentallyQuill/PomegranateUI`
 
 ## Outcome
@@ -55,14 +55,14 @@ On coarse-pointer layouts where Story toolbars still render, the interactive edg
 Each Story Panel stores, independently for the left and right toolbar:
 
 - its requested total width;
-- an ordered collection of stable column identifiers;
-- each docked Widget's column assignment.
+- a column count whose zero-based indices are stable because columns are only appended and removed at the inner edge;
+- each shelf's column assignment, through which its docked Widgets inherit that assignment.
 
-The public model represents this with an optional typed `storyLayout` value on `PanelState`. It contains `preferredMeasure` and a `left` and `right` toolbar value; each toolbar value contains `requestedWidth` and its ordered column IDs. `DockedPlacement` gains an optional `dockColumnId`. An omitted `storyLayout` or `dockColumnId` has legacy meaning and resolves to the authored default measure and matching outer toolbar column.
+The public model represents this with an optional typed `storyLayout` value on `PanelState`. It contains `preferredMeasure` and the left and right toolbar column counts. Existing `configuration.dockWidths` remains the requested-width owner. `ShelfState` gains an optional zero-based `dockColumn`; an omitted value has legacy meaning and resolves to outer column zero.
 
-Column IDs are non-empty, unique within their toolbar edge, and scoped to their Panel. A `dockColumnId` is valid only for a docked placement in a Story Panel's left- or right-instruments region and must reference a column on that same edge. The contracts schema encodes these structural requirements; layout validates cross-record references against current Panel state.
+`dockColumn` is valid only for a shelf in a Story Panel's left- or right-instruments region and must be lower than that edge's current column count. The contracts schema encodes the structural bounds; layout validates the cross-record reference against current Panel state.
 
-The outer column is the first entry and cannot be removed. Added columns are appended inward. Existing columns keep their identifiers and assignments because only the innermost entry may be removed.
+The outer column is index zero and cannot be removed. Added columns receive the next index inward. Existing columns keep their indices and assignments because only the highest, innermost index may be removed.
 
 Columns divide the rendered toolbar width evenly. Adding a column expands the toolbar to provide the new lane with the normal authored Widget width when the viewport permits. Manual toolbar resizing remains available, but the rendered width is constrained by:
 
@@ -100,7 +100,7 @@ The dialog:
 - after confirmation, returns focus to the remaining `−` control when it is enabled, or to `+` when only the permanent column remains;
 - uses the application's established dialog and destructive-action styling.
 
-Confirmation atomically removes the column, its Widget instances, and their placements from the active Panel. It does not unregister Widget types from the Catalog and does not affect Widgets in another Panel. The existing layout Undo operation restores the column, its width context, every Widget instance, tab grouping, ordering, and placement.
+Confirmation atomically removes the column, its shelves, its visible Widget instances, and their placements from the active Panel. A shelved Widget is not actively in the column; if its remembered placement references a removed shelf, that remembered placement moves to the outer column's primary shelf so the Widget remains restorable. Column removal does not unregister Widget types from the Catalog and does not affect Widgets in another Panel. The existing layout Undo operation restores the column, its width context, every removed Widget instance, tab grouping, ordering, shelf, and placement.
 
 The confirmation records the exact Widget instance IDs shown to the user. On confirmation, the layout operation compares that set with the column's current contents. If they differ, it rejects the stale request without removing anything, refreshes the dialog, and requires a new confirmation. This prevents an unlisted Widget from being removed if the layout changes while the dialog is open.
 
@@ -111,8 +111,8 @@ Escape, dialog dismissal, and `Cancel` leave state unchanged.
 The contracts layer adds typed commands and matching events for:
 
 - setting the preferred Story measure;
-- adding an identified column to a Story toolbar edge;
-- removing an identified column with the expected Widget-instance set;
+- adding the next innermost column to a Story toolbar edge;
+- removing the current innermost column with the expected visible Widget-instance set;
 - the resulting column-added, column-removed, and Story-measure-changed outcomes.
 
 The existing dock-resize command remains the owner of requested toolbar width, but its validation and layout operation must support multi-column bounds instead of the current fixed one-column maximum.
@@ -127,13 +127,12 @@ The new fields are optional so existing layout-v3 snapshots continue to parse. A
 
 During hydration:
 
-- duplicate or malformed column identifiers normalize away deterministically;
-- an empty column collection becomes one outer column;
+- an invalid column count returns to one outer column;
 - an invalid preferred measure returns to the default;
-- a Widget whose column identifier is missing or invalid moves to the matching toolbar's outer column without being removed;
+- a shelf whose column index is missing or invalid moves to the matching toolbar's outer column without removing its Widgets;
 - a requested toolbar width is preserved when valid and otherwise returns to its authored default.
 
-Encoding remains deterministic. Panel duplication preserves the same visible layout while keeping column identifiers scoped to the duplicated Panel.
+Encoding remains deterministic. Panel duplication preserves the same visible layout and zero-based column assignments.
 
 ## Responsive behavior
 
