@@ -1230,6 +1230,39 @@ test('compact Story Stage side toolbars ease off canvas without collapsing their
   }
 });
 
+test('closing the desktop left toolbar keeps the open right toolbar flush beneath the top shelf', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const main = page.locator('main[data-pom-theme-root]');
+  const shelf = page.locator('.top-shelf');
+  const leftToolbar = page.locator('[data-conformance-region="left"]');
+  const rightToolbar = page.locator('[data-conformance-region="right"]');
+  await expect(main).toHaveAttribute('data-pom-shell-presentation', 'instrumented');
+  await expect(leftToolbar).toBeVisible();
+  await expect(rightToolbar).toBeVisible();
+
+  const shelfGap = async () => {
+    const [shelfBox, rightBox] = await Promise.all([shelf.boundingBox(), rightToolbar.boundingBox()]);
+    if (!shelfBox || !rightBox) return Number.POSITIVE_INFINITY;
+    return rightBox.y - (shelfBox.y + shelfBox.height);
+  };
+
+  await expect.poll(shelfGap).toBeLessThan(1);
+  const expandedRightBox = await rightToolbar.boundingBox();
+  if (!expandedRightBox) throw new Error('Expected open right-toolbar geometry.');
+
+  await page.getByRole('button', { name: 'Close left toolbar' }).click();
+  await expect(main).toHaveClass(/left-collapsed/);
+  await expect(leftToolbar).toBeHidden();
+  await expect(rightToolbar).toBeVisible();
+  await expect.poll(shelfGap).toBeLessThan(1);
+
+  const collapsedLeftRightBox = await rightToolbar.boundingBox();
+  if (!collapsedLeftRightBox) throw new Error('Expected right-toolbar geometry after closing the left toolbar.');
+  expect(collapsedLeftRightBox.y).toBeCloseTo(expandedRightBox.y, 0);
+  expect(collapsedLeftRightBox.height).toBeCloseTo(expandedRightBox.height, 0);
+});
+
 test('reduced motion makes Story Stage toolbar state changes immediate and transition-free', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
