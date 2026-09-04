@@ -1458,6 +1458,49 @@ test('Deep Current edge controls collapse and restore both toolbars without hidi
   await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
 });
 
+test('non-instrumented toolbar toggles inherit the active theme button material', async ({ page }) => {
+  await openDeveloperTools(page);
+  const themes = page.getByRole('group', { name: 'Visual target' });
+  const left = page.getByRole('button', { name: 'Close left toolbar' });
+
+  for (const theme of ['PomOS', 'Bunny', 'Ash & Amber']) {
+    await themes.getByRole('button', { name: theme, exact: true }).click();
+    await expect(left).toHaveAttribute('data-pom-part', 'button.surface');
+
+    const material = await left.evaluate((node) => {
+      const root = node.closest('main[data-pom-theme-root]');
+      if (!(root instanceof HTMLElement)) throw new Error('Expected toolbar toggle theme root.');
+      const probe = document.createElement('button');
+      probe.type = 'button';
+      probe.dataset.pomPart = 'button.surface';
+      probe.textContent = 'Theme button probe';
+      probe.style.position = 'fixed';
+      probe.style.inset = 'auto 0 0 auto';
+      root.append(probe);
+      const properties = (element: Element) => {
+        const style = getComputedStyle(element);
+        return {
+          color: style.color,
+          backgroundColor: style.backgroundColor,
+          borderColor: style.borderColor,
+          borderRadius: style.borderRadius,
+          boxShadow: style.boxShadow,
+          fontFamily: style.fontFamily,
+          fontWeight: style.fontWeight
+        };
+      };
+      const evidence = {
+        toggle: properties(node),
+        button: properties(probe)
+      };
+      probe.remove();
+      return evidence;
+    });
+
+    expect(material.toggle, theme).toEqual(material.button);
+  }
+});
+
 test('collapsed Story Stage toolbars never create a horizontal Workbench scroll range', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 

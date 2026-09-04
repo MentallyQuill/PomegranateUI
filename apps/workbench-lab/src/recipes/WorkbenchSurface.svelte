@@ -94,6 +94,7 @@
   <button
     type="button"
     class="toolbar-edge-toggle toolbar-edge-toggle-left"
+    data-pom-part="button.surface"
     aria-label={leftToggleLabel}
     aria-pressed={leftCollapsed}
     data-toolbar-toggle-presentation={toolbarTogglePresentation}
@@ -102,6 +103,7 @@
   <button
     type="button"
     class="toolbar-edge-toggle toolbar-edge-toggle-right"
+    data-pom-part="button.surface"
     aria-label={rightToggleLabel}
     aria-pressed={rightCollapsed}
     data-toolbar-toggle-presentation={toolbarTogglePresentation}

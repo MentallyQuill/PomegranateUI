@@ -903,13 +903,21 @@ main {
 .right-collapsed .toolbar-resize-handle[data-dock-resizer="right"] { display: none; }
 .toolbar-edge-toggle {
   position: absolute;
-  z-index: 13;
   top: 50%;
   width: 30px;
   height: 116px;
   min-width: 30px;
   min-height: 116px;
   padding: 0;
+  font-size: var(--pom-type-xs, 11px);
+  line-height: var(--pom-font-ui-line-height, 1.4);
+  letter-spacing: var(--pom-font-ui-tracking, .04em);
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: translateY(-50%);
+}
+main .workbench-surface .toolbar-edge-toggle { z-index: 13; }
+main[data-pom-shell-presentation="instrumented"] .toolbar-edge-toggle {
   border: 1px solid rgb(222 239 232 / 6%);
   border-radius: 0;
   color: rgb(222 239 232 / 20%);
@@ -917,12 +925,12 @@ main {
   box-shadow: none;
   font: 400 8px/10px var(--pom-font-technical, monospace);
   letter-spacing: .04em;
-  text-transform: uppercase;
-  writing-mode: vertical-rl;
-  transform: translateY(-50%);
 }
-.toolbar-edge-toggle:hover,
-.toolbar-edge-toggle:focus-visible { color: rgb(222 239 232 / 72%); background: rgb(4 7 8 / 72%); }
+main[data-pom-shell-presentation="instrumented"] .toolbar-edge-toggle:hover,
+main[data-pom-shell-presentation="instrumented"] .toolbar-edge-toggle:focus-visible {
+  color: rgb(222 239 232 / 72%);
+  background: rgb(4 7 8 / 72%);
+}
 .toolbar-edge-toggle-left { left: var(--pom-left-width, var(--pom-side-width)); }
 .toolbar-edge-toggle-right { right: var(--pom-right-width, var(--pom-side-width)); transform: translateY(-50%) rotate(180deg); }
 .toolbar-edge-toggle[data-toolbar-toggle-presentation="bottom-chevrons"] {
@@ -4719,15 +4727,11 @@ main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="st
   }
   main[data-pom-theme-root] .toolbar-edge-toggle-left:not([data-toolbar-toggle-presentation="bottom-chevrons"]) {
     transition:
-      left var(--pom-story-toolbar-motion-duration, 220ms) var(--pom-story-toolbar-motion-easing, cubic-bezier(.16, 1, .3, 1)),
-      color 120ms ease,
-      background-color 120ms ease;
+      left var(--pom-story-toolbar-motion-duration, 220ms) var(--pom-story-toolbar-motion-easing, cubic-bezier(.16, 1, .3, 1));
   }
   main[data-pom-theme-root] .toolbar-edge-toggle-right:not([data-toolbar-toggle-presentation="bottom-chevrons"]) {
     transition:
-      right var(--pom-story-toolbar-motion-duration, 220ms) var(--pom-story-toolbar-motion-easing, cubic-bezier(.16, 1, .3, 1)),
-      color 120ms ease,
-      background-color 120ms ease;
+      right var(--pom-story-toolbar-motion-duration, 220ms) var(--pom-story-toolbar-motion-easing, cubic-bezier(.16, 1, .3, 1));
   }
 }
 
