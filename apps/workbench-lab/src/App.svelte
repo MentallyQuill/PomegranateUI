@@ -422,6 +422,7 @@
         const targetShelf = intent.shelfId
           ? workbench.shelves.find((shelf) => shelf.panelId === panelId
             && shelf.regionId === intent.regionId
+            && (shelf.dockColumn ?? 0) === (intent.dockColumn ?? 0)
             && shelf.id === intent.shelfId)
           : undefined;
         const shelfOrder = intent.kind === 'shelf'
@@ -431,7 +432,14 @@
         const shelfId = `${intent.regionId}-shelf-${workbench.revision + 1}`;
         const result = store.dispatch({
           type: 'shelf.create-and-place',
-          shelf: { id: shelfId, panelId, regionId: intent.regionId, order: shelfOrder, weight: 1 },
+          shelf: {
+            id: shelfId,
+            panelId,
+            regionId: intent.regionId,
+            ...(intent.dockColumn === undefined ? {} : { dockColumn: intent.dockColumn }),
+            order: shelfOrder,
+            weight: 1
+          },
           instanceId: id,
           instance,
           placement: { kind: 'docked', ...owner, shelfId, order: 0 }
@@ -441,13 +449,22 @@
       }
 
       const shelf = workbench.shelves
-        .filter((candidate) => candidate.panelId === panelId && candidate.regionId === intent.regionId)
+        .filter((candidate) => candidate.panelId === panelId
+          && candidate.regionId === intent.regionId
+          && (candidate.dockColumn ?? 0) === (intent.dockColumn ?? 0))
         .sort((left, right) => left.order - right.order)[0];
       if (!shelf) {
         const shelfId = 'primary';
         const result = store.dispatch({
           type: 'shelf.create-and-place',
-          shelf: { id: shelfId, panelId, regionId: intent.regionId, order: 0, weight: 1 },
+          shelf: {
+            id: shelfId,
+            panelId,
+            regionId: intent.regionId,
+            ...(intent.dockColumn === undefined ? {} : { dockColumn: intent.dockColumn }),
+            order: 0,
+            weight: 1
+          },
           instanceId: id,
           instance,
           placement: { kind: 'docked', ...owner, shelfId, order: 0 }
@@ -485,20 +502,43 @@
       ? target.identity.subPanelId ? asSubPanelId(target.identity.subPanelId) : undefined
       : activeSubPanel?.id;
     const targetLane = target?.identity.lane ?? (targetSubPanelId ? 0 : undefined);
-    const shelfId = target?.identity.shelfId
+    const preferredShelfId = target?.identity.shelfId
       ?? (manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.shelfId : 'primary');
-    const result = store.dispatch({
-      type: 'widget.create',
-      instance,
-      placement: {
-        kind: 'docked',
-        panelId,
-        ...(targetSubPanelId ? { subPanelId: targetSubPanelId, lane: targetLane ?? 0 } : {}),
-        regionId,
-        shelfId,
-        order: Number.MAX_SAFE_INTEGER
-      }
-    });
+    const targetDockColumn = target?.identity.dockColumn;
+    const existingShelf = workbench.shelves.find((shelf) => (
+      shelf.panelId === panelId
+      && shelf.regionId === regionId
+      && (shelf.dockColumn ?? 0) === (targetDockColumn ?? 0)
+      && shelf.id === preferredShelfId
+    )) ?? workbench.shelves.find((shelf) => (
+      shelf.panelId === panelId
+      && shelf.regionId === regionId
+      && (shelf.dockColumn ?? 0) === (targetDockColumn ?? 0)
+    ));
+    const placement = {
+      kind: 'docked' as const,
+      panelId,
+      ...(targetSubPanelId ? { subPanelId: targetSubPanelId, lane: targetLane ?? 0 } : {}),
+      regionId,
+      shelfId: existingShelf?.id ?? preferredShelfId,
+      order: Number.MAX_SAFE_INTEGER
+    };
+    const result = existingShelf
+      ? store.dispatch({ type: 'widget.create', instance, placement })
+      : store.dispatch({
+          type: 'shelf.create-and-place',
+          shelf: {
+            id: preferredShelfId,
+            panelId,
+            regionId,
+            ...(targetDockColumn === undefined ? {} : { dockColumn: targetDockColumn }),
+            order: 0,
+            weight: 1
+          },
+          instanceId: id,
+          instance,
+          placement: { ...placement, order: 0 }
+        });
     status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
   }
 

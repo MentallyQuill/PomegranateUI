@@ -115,6 +115,28 @@ describe('CatalogPlacementController', () => {
     vi.restoreAllMocks();
   });
 
+  it('preserves toolbar column identity in keyboard placement targets', () => {
+    const { root, origin, target } = placementSurface();
+    target.dataset.dockColumn = '1';
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit: vi.fn()
+    });
+
+    controller.keyDown(new KeyboardEvent('keydown', { key: ' ', cancelable: true }), manifest, origin);
+
+    expect(controller.getState().targets[0]?.identity).toMatchObject({
+      panelId: 'panel-story',
+      regionId: 'stage',
+      dockColumn: 1
+    });
+    controller.destroy();
+  });
+
+
   it('keeps duplicate semantic regions in separate lanes uniquely addressable', () => {
     const { root, origin, target: first } = placementSurface();
     const second = appendTarget(root, 'stage', 'stage', 'Second stage lane');

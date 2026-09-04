@@ -26,6 +26,7 @@ export interface CatalogPlacementTargetIdentity {
   readonly shelfId: string;
   readonly subPanelId?: string;
   readonly lane?: number;
+  readonly dockColumn?: number;
 }
 
 export interface CatalogPlacementTarget {
@@ -119,15 +120,28 @@ function targetIdentity(element: HTMLElement, manifest: WidgetManifest): Catalog
   const subPanel = element.closest<HTMLElement>('[data-sub-panel]')?.dataset.subPanel;
   const rawLane = element.dataset.subPanelLane;
   const lane = rawLane === undefined ? undefined : Number(rawLane);
+  const rawDockColumn = element.dataset.dockColumn;
+  const dockColumn = rawDockColumn === undefined ? undefined : Number(rawDockColumn);
   const shelfId = manifest.defaultPlacement.kind === 'docked' ? manifest.defaultPlacement.shelfId : 'primary';
   const validLane = typeof lane === 'number' && Number.isInteger(lane) && lane >= 0 ? lane : undefined;
+  const validDockColumn = typeof dockColumn === 'number' && Number.isInteger(dockColumn) && dockColumn >= 0
+    ? dockColumn
+    : undefined;
   const identity = {
-    id: JSON.stringify([panelId, subPanel ?? null, regionId, validLane ?? null, shelfId]),
+    id: JSON.stringify([
+      panelId,
+      subPanel ?? null,
+      regionId,
+      validLane ?? null,
+      ...(validDockColumn === undefined ? [] : [validDockColumn]),
+      shelfId
+    ]),
     panelId,
     regionId,
     regionRole,
     shelfId,
-    ...(subPanel ? { subPanelId: subPanel } : {})
+    ...(subPanel ? { subPanelId: subPanel } : {}),
+    ...(validDockColumn === undefined ? {} : { dockColumn: validDockColumn })
   };
   return validLane !== undefined
     ? Object.freeze({ ...identity, lane: validLane })
@@ -322,6 +336,7 @@ export function createCatalogPlacementController(
           panelId: identity.panelId,
           ...(identity.subPanelId === undefined ? {} : { subPanelId: identity.subPanelId }),
           ...(identity.lane === undefined ? {} : { lane: identity.lane }),
+          ...(identity.dockColumn === undefined ? {} : { dockColumn: identity.dockColumn }),
           regionId: identity.regionId
         } : null;
       }

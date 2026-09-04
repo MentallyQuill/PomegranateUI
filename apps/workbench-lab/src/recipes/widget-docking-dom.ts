@@ -123,7 +123,10 @@ function ownerMatches(region: HTMLElement, intent: DockIntent): boolean {
   if (subPanelId !== intent.subPanelId) return false;
   const laneText = region.dataset.subPanelLane;
   const lane = laneText === undefined ? undefined : Number(laneText);
-  return lane === intent.lane;
+  if (lane !== intent.lane) return false;
+  const columnText = region.dataset.dockColumn;
+  const dockColumn = columnText === undefined ? undefined : Number(columnText);
+  return dockColumn === intent.dockColumn;
 }
 
 export function createDockPreviewController(surface: HTMLElement): DockPreviewController {

@@ -14,6 +14,7 @@ export interface DockOwner {
   readonly panelId: string;
   readonly subPanelId?: string;
   readonly lane?: number;
+  readonly dockColumn?: number;
   readonly regionId: string;
 }
 
@@ -73,6 +74,7 @@ export function dockTargetKey(
     owner.panelId,
     owner.subPanelId ?? null,
     owner.lane ?? null,
+    owner.dockColumn ?? null,
     owner.regionId,
     ...identifiers
   ]);
@@ -105,6 +107,7 @@ function intentFromTarget(point: DockPoint, target: DockTarget): DockIntent | nu
     panelId: target.panelId,
     ...(target.subPanelId === undefined ? {} : { subPanelId: target.subPanelId }),
     ...(target.lane === undefined ? {} : { lane: target.lane }),
+    ...(target.dockColumn === undefined ? {} : { dockColumn: target.dockColumn }),
     regionId: target.regionId,
     targetId: target.id,
     ...(target.regionRect === undefined ? {} : { regionRect: target.regionRect }),
@@ -237,6 +240,7 @@ export function stabilizeDockIntent(
     previous.panelId !== next.panelId
     || previous.subPanelId !== next.subPanelId
     || previous.lane !== next.lane
+    || previous.dockColumn !== next.dockColumn
     || previous.regionId !== next.regionId
   )) return next;
   return contains(previous.targetRect, point, hysteresis) ? previous : next;

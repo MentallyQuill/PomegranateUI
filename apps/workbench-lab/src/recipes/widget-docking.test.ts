@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildShelfRails,
   clampHeldRect,
+  dockTargetKey,
   dockRevealSide,
   resolveDockIntent,
   stabilizeDockIntent,
@@ -24,6 +25,35 @@ const widget: DockTarget = {
 };
 
 describe('Atmospheric docking intent', () => {
+  it('keeps same-region toolbar columns uniquely addressable', () => {
+    const outer = { panelId: 'scene', regionId: 'left', dockColumn: 0 };
+    const inner = { panelId: 'scene', regionId: 'left', dockColumn: 1 };
+
+    expect(dockTargetKey(outer, 'region')).not.toBe(dockTargetKey(inner, 'region'));
+
+    const previous: DockIntent = {
+      key: dockTargetKey(outer, 'region'),
+      kind: 'region',
+      targetId: 'outer',
+      panelId: 'scene',
+      regionId: 'left',
+      dockColumn: 0,
+      targetRect: { x: 0, y: 0, width: 200, height: 400 },
+      previewRect: { x: 0, y: 0, width: 200, height: 400 },
+      label: 'Outer left column'
+    };
+    const next: DockIntent = {
+      ...previous,
+      key: dockTargetKey(inner, 'region'),
+      targetId: 'inner',
+      dockColumn: 1,
+      targetRect: { x: 200, y: 0, width: 200, height: 400 },
+      previewRect: { x: 200, y: 0, width: 200, height: 400 },
+      label: 'Inner left column'
+    };
+    expect(stabilizeDockIntent({ x: 220, y: 100 }, previous, next, 10)).toBe(next);
+  });
+
   it('keeps rail target identities unique when owner ids contain separators', () => {
     const region = { x: 0, y: 0, width: 300, height: 500 };
     const shelves = [{ id: 'primary', order: 0, rect: { x: 0, y: 0, width: 300, height: 500 } }];

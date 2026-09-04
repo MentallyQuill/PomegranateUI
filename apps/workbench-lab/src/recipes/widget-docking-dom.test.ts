@@ -25,6 +25,38 @@ function addWidget(region: HTMLElement, instanceId: string) {
 }
 
 describe('docking DOM targets', () => {
+  it('collects and previews duplicate toolbar regions by exact column owner', () => {
+    const panel = document.body.appendChild(document.createElement('div'));
+    panel.dataset.pomegranatePanel = 'scene';
+    const outer = panel.appendChild(document.createElement('section'));
+    outer.dataset.pomegranateRegionSurface = 'left';
+    outer.dataset.dockColumn = '0';
+    Object.defineProperty(outer, 'getBoundingClientRect', { configurable: true, value: rect(0, 0, 200, 400) });
+    const inner = panel.appendChild(document.createElement('section'));
+    inner.dataset.pomegranateRegionSurface = 'left';
+    inner.dataset.dockColumn = '1';
+    Object.defineProperty(inner, 'getBoundingClientRect', { configurable: true, value: rect(200, 0, 200, 400) });
+
+    const targets = collectDockTargets(panel, {
+      ownerForRegion: (region) => ({
+        panelId: 'scene',
+        regionId: 'left',
+        dockColumn: Number(region.dataset.dockColumn)
+      })
+    });
+    const columnTargets = targets.filter((target) => target.kind === 'region');
+    expect(columnTargets.map(({ dockColumn }) => dockColumn)).toEqual([0, 1]);
+    expect(new Set(columnTargets.map(({ id }) => id)).size).toBe(2);
+
+    const preview = createDockPreviewController(panel);
+    const target = columnTargets[1]!;
+    const intent = resolveDockIntent({ x: 250, y: 200 }, [target]);
+    preview.sync(columnTargets, intent);
+    expect(inner.querySelector('[data-pom-part="widget.dock-slot"]')).not.toBeNull();
+    expect(outer.querySelector('[data-pom-part="widget.dock-slot"]')).toBeNull();
+    preview.destroy();
+  });
+
   it('keeps populated nested-region Widgets scoped to their exact owner', () => {
     const root = document.createElement('div');
     const outer = document.createElement('section');

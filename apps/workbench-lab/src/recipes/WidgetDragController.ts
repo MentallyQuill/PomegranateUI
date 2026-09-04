@@ -244,10 +244,13 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     const panel = state.panels.find((entry) => entry.id === panelId);
     const laneText = region.dataset.subPanelLane;
     const lane = laneText === undefined ? undefined : Number(laneText);
+    const columnText = region.dataset.dockColumn;
+    const dockColumn = columnText === undefined ? undefined : Number(columnText);
     return {
       panelId: panel?.id ?? state.activePanelId ?? options.getFrame().placement.panelId,
       ...(panel?.activeSubPanelId === undefined ? {} : { subPanelId: panel.activeSubPanelId }),
       ...(lane === undefined || !Number.isInteger(lane) ? {} : { lane }),
+      ...(dockColumn === undefined || !Number.isInteger(dockColumn) ? {} : { dockColumn }),
       regionId: region.dataset.pomegranateRegionSurface ?? ''
     };
   }
@@ -271,6 +274,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         return owner.panelId === intent.panelId
           && owner.subPanelId === intent.subPanelId
           && owner.lane === intent.lane
+          && owner.dockColumn === intent.dockColumn
           && owner.regionId === intent.regionId;
       }) ?? null;
   }
@@ -634,6 +638,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         id: shelfId,
         panelId: asPanelId(intent.panelId),
         regionId: intent.regionId,
+        ...(intent.dockColumn === undefined ? {} : { dockColumn: intent.dockColumn }),
         order,
         weight: 1
       },
@@ -687,6 +692,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       const targetShelf = state.shelves.find((shelf) => (
         shelf.panelId === intent.panelId
         && shelf.regionId === intent.regionId
+        && (shelf.dockColumn ?? 0) === (intent.dockColumn ?? 0)
         && shelf.id === intent.shelfId
       ));
       if (!targetShelf) return false;
@@ -699,13 +705,22 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
 
     const state = store.getState();
     let shelf = state.shelves
-      .filter((entry) => entry.panelId === intent.panelId && entry.regionId === intent.regionId)
+      .filter((entry) => entry.panelId === intent.panelId
+        && entry.regionId === intent.regionId
+        && (entry.dockColumn ?? 0) === (intent.dockColumn ?? 0))
       .sort((left, right) => left.order - right.order)[0];
     if (!shelf) {
       const shelfId = 'primary';
       return store.dispatch({
         type: 'shelf.create-and-place',
-        shelf: { id: shelfId, panelId: asPanelId(intent.panelId), regionId: intent.regionId, order: 0, weight: 1 },
+        shelf: {
+          id: shelfId,
+          panelId: asPanelId(intent.panelId),
+          regionId: intent.regionId,
+          ...(intent.dockColumn === undefined ? {} : { dockColumn: intent.dockColumn }),
+          order: 0,
+          weight: 1
+        },
         instanceId: frame.instanceId,
         placement: {
           kind: 'docked',
