@@ -1610,6 +1610,31 @@ test('desktop grouped Widget tabs open actions for an inactive Widget without ac
   await expect(menu).toBeVisible();
 });
 
+test('right-clicking the open grouped Widget menu never reaches the native browser menu', async ({ page }) => {
+  const tab = page.getByRole('tab', { name: 'Room Ambience' });
+  const box = await tab.boundingBox();
+  if (!box) throw new Error('Expected grouped Widget tab geometry.');
+  const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+
+  await page.evaluate(() => {
+    const prevented: boolean[] = [];
+    Reflect.set(window, '__widgetContextPrevented', prevented);
+    document.addEventListener('contextmenu', (event) => prevented.push(event.defaultPrevented));
+  });
+
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
+  const menu = page.getByRole('menu', { name: 'Room Ambience Widget actions' });
+  await expect(menu).toBeVisible();
+
+  await menu.getByRole('separator').click({ button: 'right' });
+
+  await expect.poll(() => page.evaluate(() => Reflect.get(window, '__widgetContextPrevented')))
+    .toEqual([true, true]);
+  await expect(menu).toBeVisible();
+});
+
 test.describe('coarse-pointer Widget actions', () => {
   test.use({ hasTouch: true, viewport: { width: 1440, height: 900 } });
 
