@@ -40,7 +40,7 @@ function contract(overrides = {}) {
       left: { x: 0, y: 40, width: 286, height: 1240 },
       stage: { x: 286, y: 40, width: 1348, height: 1240 },
       right: { x: 1634, y: 40, width: 286, height: 1240 },
-      story: { x: 620, y: 1038.109375, width: 680, height: 139.890625 },
+      story: { x: 620, y: 1072.109375, width: 680, height: 105.890625 },
       composer: { x: 620, y: 1206, width: 680, height: 56 }
     },
     masks: [],

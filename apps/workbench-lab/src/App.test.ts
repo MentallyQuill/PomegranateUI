@@ -201,12 +201,23 @@ describe('Svelte Workbench Lab mockup', () => {
     expect([...stage?.querySelectorAll<HTMLElement>('*') ?? []].some((node) => node.style.backgroundImage !== '')).toBe(false);
   });
 
+  it('keeps the story title and current scene in the reading stage instead of the Panel shelf', () => {
+    const { container } = render(App);
+    const shelf = container.querySelector('.top-shelf') as HTMLElement;
+    const storyStage = screen.getByRole('region', { name: 'Story reading stage' });
+
+    expect(within(shelf).queryByText('The Water Remembers')).toBeNull();
+    expect(within(shelf).queryByText('STORY / 7E-19')).toBeNull();
+    const storyTitle = within(storyStage).getByRole('heading', { level: 1, name: 'The Water Remembers' });
+    const currentScene = storyStage.querySelector('.story-context-heading p') as HTMLElement;
+    expect(currentScene).toHaveTextContent('Current scene: FIG. 07 / LIMINAL RESERVOIR');
+    expect(storyTitle.compareDocumentPosition(currentScene) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: 'The Water Remembers' })).toHaveLength(1);
+  });
+
   it('renders the atmospheric shell and the exact recording-visible Scene stack', () => {
     const { container } = render(App);
     expect(screen.getByText('PomegranateUI')).toBeVisible();
-    expect(screen.getAllByText('The Water Remembers').length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('Active story identity')).toHaveTextContent('STORY / 7E-19');
-    expect(screen.getByText('FIG. 07 / LIMINAL RESERVOIR')).toBeVisible();
     expect(within(screen.getByRole('tablist', { name: 'Panels' })).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Scene', 'Library', 'Settings']);
     for (const title of ['Characters (Story)', 'Theme Materials', 'Transcript', 'Composer', 'World State', 'Room Ambience']) {
       expect(screen.getByRole('article', { name: title })).toBeVisible();

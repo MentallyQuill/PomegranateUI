@@ -87,7 +87,7 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
         return display !== 'none' && display !== 'contents';
       })
       .map((element, index) => rect(element, `shelf child ${index}`));
-    const visibleShelfInternals = [...document.querySelectorAll('.top-shelf :is([role="tab"], .story-lockup > *, .shelf-actions > *)')]
+    const visibleShelfInternals = [...document.querySelectorAll('.top-shelf :is([role="tab"], .shelf-actions > *)')]
       .filter((element): element is HTMLElement => {
         if (!(element instanceof HTMLElement)) return false;
         const bounds = element.getBoundingClientRect();
@@ -291,6 +291,55 @@ test('PomOS grouped controls keep one translucent material owner and transparent
   expect(evidence.rowBackdrop).toBe('none');
 });
 
+test('story title context keeps readable computed contrast across maintained themes', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber'] as const) {
+    if (theme !== 'Deep Current') await selectTheme(page, theme);
+    const evidence = await page.locator('.story-context-heading').evaluate((heading) => {
+      const channels = (value: string) => {
+        const values = value.match(/[\d.]+/g)?.map(Number) ?? [];
+        if (values.length < 3) throw new Error(`Could not parse color: ${value}`);
+        const scale = value.startsWith('color(srgb') ? 255 : 1;
+        return { red: values[0]! * scale, green: values[1]! * scale, blue: values[2]! * scale, alpha: values[3] ?? 1 };
+      };
+      const luminance = ({ red, green, blue }: { red: number; green: number; blue: number }) => {
+        const linear = [red, green, blue].map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!;
+      };
+      return [...heading.querySelectorAll<HTMLElement>('h1, p')].map((element) => {
+        const style = getComputedStyle(element);
+        const foreground = channels(style.color);
+        const background = channels(style.backgroundColor);
+        const composite = {
+          red: foreground.red * foreground.alpha + background.red * (1 - foreground.alpha),
+          green: foreground.green * foreground.alpha + background.green * (1 - foreground.alpha),
+          blue: foreground.blue * foreground.alpha + background.blue * (1 - foreground.alpha)
+        };
+        const foregroundLuminance = luminance(composite);
+        const backgroundLuminance = luminance(background);
+        return {
+          role: element.tagName === 'H1' ? 'story title' : 'current scene',
+          backgroundAlpha: background.alpha,
+          contrast: (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+            / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05),
+          textShadow: style.textShadow
+        };
+      });
+    });
+
+    expect(evidence).toHaveLength(2);
+    for (const sample of evidence) {
+      expect(sample.backgroundAlpha, `${theme} ${sample.role} backing opacity`).toBe(1);
+      expect(sample.contrast, `${theme} ${sample.role} contrast`).toBeGreaterThanOrEqual(4.5);
+      expect(sample.textShadow, `${theme} ${sample.role} protective shadow`).not.toBe('none');
+    }
+  }
+});
+
 test('PomOS metadata remains legible and the compact composer retains its complete status line', async ({ page }) => {
   await openFresh(page, 1440, 900);
   await activatePomOS(page);
@@ -303,8 +352,8 @@ test('PomOS metadata remains legible and the compact composer retains its comple
     };
     return {
       wordmark: fontSize('.wordmark small'),
-      storyLabel: fontSize('.story-lockup span'),
-      storyMeta: fontSize('.story-lockup small'),
+      storyTitle: fontSize('.story-context-heading h1'),
+      currentScene: fontSize('.story-context-heading p'),
       transcriptKicker: fontSize('.transcript .widget-kicker'),
       themeControls: fontSize('[data-theme-authoring-element="materials"]'),
       characterName: fontSize('.recording-character-copy strong'),
@@ -412,7 +461,9 @@ test('native workbench keeps literal relationships and keyboard navigation witho
   await expect(tabs).toHaveText(order);
   await page.getByRole('tab', { name: 'Settings' }).press('Home');
   await expect(scene).toBeFocused();
-  await expect(page.getByLabel('Active story identity')).toContainText('STORY / 7E-19');
+  const storyStage = page.getByRole('region', { name: 'Story reading stage' });
+  await expect(storyStage.getByRole('heading', { level: 1, name: 'The Water Remembers' })).toBeVisible();
+  await expect(storyStage.locator('.story-context-heading p')).toHaveText('Current scene: FIG. 07 / LIMINAL RESERVOIR');
 });
 
 test('non-compact Panel tabs keep secondary actions out of their visible spacing', async ({ page }) => {

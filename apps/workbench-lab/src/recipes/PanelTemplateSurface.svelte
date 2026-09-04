@@ -6,12 +6,14 @@
   import StoryComposer from './StoryComposer.svelte';
   import StoryStage from './StoryStage.svelte';
 
-  let { surface, store, renderWidget, titleFor, onexpanddock, toolbarControls }: {
+  let { surface, store, renderWidget, titleFor, onexpanddock, storyTitle, currentScene, toolbarControls }: {
     surface: PanelSurfaceProjection;
     store: WorkbenchStore;
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
     onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
+    storyTitle: string;
+    currentScene: string;
     toolbarControls?: Snippet | undefined;
   } = $props();
 </script>
@@ -22,12 +24,9 @@
   data-sub-panel-layout={surface.activeSubPanelLayoutId ?? undefined}
   style={`--pom-template-columns:${surface.regions.length};--pom-sub-panel-columns:${surface.columnWeights.map((weight) => `${weight}fr`).join(' ')}`}
 >
-  {#if surface.templateFamily === 'story-stage'}
-    <p class="story-scene-chrome" aria-hidden="true">FIG. 07 / LIMINAL RESERVOIR</p>
-  {/if}
   {#each surface.regions as region (region.region.id)}
     {#if surface.templateFamily === 'story-stage' && region.region.role === 'stage'}
-      <StoryStage><DockRegion projection={region} {store} {renderWidget} {titleFor} {onexpanddock} surfacePart={null} rowResizable={false} /></StoryStage>
+      <StoryStage {storyTitle} {currentScene}><DockRegion projection={region} {store} {renderWidget} {titleFor} {onexpanddock} surfacePart={null} rowResizable={false} /></StoryStage>
     {:else if surface.templateFamily === 'story-stage' && region.region.role === 'composer'}
       <StoryComposer><DockRegion projection={region} {store} {renderWidget} {titleFor} {onexpanddock} surfacePart={null} rowResizable={false} /></StoryComposer>
     {:else}

@@ -115,12 +115,16 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => document.fonts.ready);
 });
 
-test('native workbench POM-PANEL-07856BFE9A POM-PANEL-DF4EC7C581 activates a Panel without changing story identity', async ({ page }) => {
-  const story = page.getByLabel('Active story identity');
-  await expect(story).toContainText('STORY / 7E-19');
+test('native workbench POM-PANEL-07856BFE9A POM-PANEL-DF4EC7C581 keeps story context inside the Scene stage', async ({ page }) => {
+  const shelf = page.locator('.top-shelf');
+  const storyStage = page.getByRole('region', { name: 'Story reading stage' });
+  await expect(shelf).not.toContainText('The Water Remembers');
+  await expect(storyStage.getByRole('heading', { level: 1, name: 'The Water Remembers' })).toBeVisible();
+  await expect(storyStage.locator('.story-context-heading p')).toHaveText('Current scene: FIG. 07 / LIMINAL RESERVOIR');
   await page.getByRole('tab', { name: 'Library' }).click();
   await expect(page.getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
-  await expect(story).toContainText('STORY / 7E-19');
+  await expect(shelf).not.toContainText('The Water Remembers');
+  await expect(page.getByRole('region', { name: 'Story reading stage' })).toHaveCount(0);
   await expect(page.getByRole('alert', { name: 'Character Card renderer failed' })).toBeVisible();
   await expect(page.locator('[data-surface-type="library.workspace"]')).toBeVisible();
 });
@@ -398,22 +402,20 @@ test('Create Panel follows the last Panel tab while the rail has room', async ({
   const lastTab = page.getByRole('tablist', { name: 'Panels' }).getByRole('tab').last();
   const addPanel = page.getByRole('button', { name: 'Create Panel' });
   const widgets = page.getByRole('button', { name: 'Open Widget Catalog' });
-  const storyId = page.locator('.story-lockup > span');
-  const geometry = await Promise.all([lastTab.boundingBox(), addPanel.boundingBox(), widgets.boundingBox(), storyId.boundingBox()]);
+  const geometry = await Promise.all([lastTab.boundingBox(), addPanel.boundingBox(), widgets.boundingBox()]);
   if (geometry.some((box) => !box)) throw new Error('Expected visible Panel chrome geometry.');
-  const [tabBox, addBox, widgetBox, storyIdBox] = geometry as [
+  const [tabBox, addBox, widgetBox] = geometry as [
     NonNullable<typeof geometry[0]>,
     NonNullable<typeof geometry[1]>,
-    NonNullable<typeof geometry[2]>,
-    NonNullable<typeof geometry[3]>
+    NonNullable<typeof geometry[2]>
   ];
 
   expect(Math.abs(addBox.x - (tabBox.x + tabBox.width))).toBeLessThanOrEqual(1);
   expect(widgetBox.x - (addBox.x + addBox.width)).toBeGreaterThan(40);
-  expect(storyIdBox.x).toBe(589);
+  await expect(page.locator('.top-shelf')).not.toContainText('The Water Remembers');
 });
 
-test('four short Panel tabs keep the story lockup while Create Panel follows the rail', async ({ page }) => {
+test('four short Panel tabs keep story context in the stage while Create Panel follows the rail', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1280 });
   await openDeveloperTools(page);
   await page.getByRole('button', { name: 'Create Panel' }).click();
@@ -429,8 +431,8 @@ test('four short Panel tabs keep the story lockup while Create Panel follows the
   const [tabBox, addBox] = geometry as [NonNullable<typeof geometry[0]>, NonNullable<typeof geometry[1]>];
 
   expect(Math.abs(addBox.x - (tabBox.x + tabBox.width))).toBeLessThanOrEqual(1);
-  await expect(page.locator('.panel-chrome-flow')).toHaveAttribute('data-story-obscured', 'false');
-  await expect(page.locator('.story-lockup')).toBeVisible();
+  await expect(page.locator('.top-shelf')).not.toContainText('The Water Remembers');
+  await expect(page.getByRole('region', { name: 'Story reading stage' })).toHaveCount(0);
 });
 
 test('Create Panel pins immediately before Widgets when the wide Panel rail overflows', async ({ page }) => {
@@ -464,9 +466,8 @@ test('Create Panel pins immediately before Widgets when the wide Panel rail over
   expect(railSize.scrollWidth).toBeGreaterThan(railSize.clientWidth);
   expect(Math.abs(addBox.x - (railBox.x + railBox.width))).toBeLessThanOrEqual(1);
   expect(Math.abs(widgetBox.x - (addBox.x + addBox.width))).toBeLessThanOrEqual(1);
-  const storyIdentity = page.getByLabel('Active story identity');
-  await expect(storyIdentity).toHaveAccessibleName('Active story identity');
-  expect(await storyIdentity.ariaSnapshot()).toContain('STORY / 7E-19');
+  await expect(page.locator('.top-shelf')).not.toContainText('The Water Remembers');
+  await expect(page.getByRole('region', { name: 'Story reading stage' })).toHaveCount(0);
 });
 
 test('Panel tab drag pans an overflowing rail without activation or reorder', async ({ page }) => {

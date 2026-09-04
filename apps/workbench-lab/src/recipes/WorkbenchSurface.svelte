@@ -16,6 +16,8 @@
     renderWidget,
     titleFor,
     onexpanddock,
+    storyTitle,
+    currentScene,
     leftCollapsed = false,
     rightCollapsed = false,
     showDockResizers = false,
@@ -28,6 +30,8 @@
     renderWidget: Snippet<[WidgetFrameProjection]>;
     titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
     onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
+    storyTitle: string;
+    currentScene: string;
     leftCollapsed?: boolean;
     rightCollapsed?: boolean;
     showDockResizers?: boolean;
@@ -109,6 +113,8 @@
           {renderWidget}
           {titleFor}
           {onexpanddock}
+          {storyTitle}
+          {currentScene}
         />
       {/if}
       {#if surface.templateFamily === 'story-stage' || showDockResizers}

@@ -15,7 +15,7 @@
     "left": { "x": 0, "y": 40, "width": 286, "height": 1240 },
     "stage": { "x": 286, "y": 40, "width": 1348, "height": 1240 },
     "right": { "x": 1634, "y": 40, "width": 286, "height": 1240 },
-    "story": { "x": 620, "y": 1038.109375, "width": 680, "height": 139.890625 },
+    "story": { "x": 620, "y": 1072.109375, "width": 680, "height": 105.890625 },
     "composer": { "x": 620, "y": 1206, "width": 680, "height": 56 }
   },
   "thresholds": {
@@ -71,9 +71,11 @@
     { "id": "left-frost-label", "textBoundId": "left-copy", "x": 7, "y": 787, "width": 270, "height": 20, "kind": "glyph-only" },
 
     { "id": "stage-scene-label", "textBoundId": "stage-copy", "x": 302, "y": 50, "width": 180, "height": 24, "kind": "glyph-only" },
+    { "id": "stage-current-scene", "textBoundId": "stage-copy", "x": 302, "y": 78, "width": 220, "height": 24, "kind": "glyph-only" },
     { "id": "stage-left-edge-copy", "textBoundId": "stage-copy", "x": 288, "y": 606, "width": 26, "height": 108, "kind": "glyph-only" },
     { "id": "stage-right-edge-copy", "textBoundId": "stage-copy", "x": 1606, "y": 606, "width": 26, "height": 108, "kind": "glyph-only" },
     { "id": "story-kicker-shadow", "textBoundId": "stage-copy", "x": 602, "y": 1021, "width": 248, "height": 46, "kind": "glyph-only" },
+    { "id": "story-kicker-relocated", "textBoundId": "stage-copy", "x": 602, "y": 1068, "width": 248, "height": 22, "kind": "glyph-only" },
     { "id": "story-title-shadow", "textBoundId": "stage-copy", "x": 602, "y": 1043, "width": 168, "height": 49, "kind": "glyph-only" },
     { "id": "story-prose-line-one-shadow", "textBoundId": "stage-copy", "x": 602, "y": 1079, "width": 684, "height": 53, "kind": "glyph-only" },
     { "id": "story-prose-line-two-shadow", "textBoundId": "stage-copy", "x": 602, "y": 1103, "width": 369, "height": 53, "kind": "glyph-only" },
