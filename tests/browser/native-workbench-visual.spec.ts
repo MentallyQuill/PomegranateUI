@@ -448,7 +448,10 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
   await shot(page, 'compact-settings.png');
 
   await fresh(page, 1440, 900);
-  await invokeWidgetAction(page, page.getByRole('article', { name: 'Room Ambience' }), 'Float');
+  await invokeWidgetAction(page, page.getByRole('article', { name: 'Room Ambience' }), 'Move…');
+  await page.getByRole('menu', { name: 'Room Ambience Widget move' })
+    .getByRole('menuitem', { name: 'Float' })
+    .press('Enter');
   await shot(page, 'floating-widget.png');
   await page.getByRole('tab', { name: 'Library' }).click();
   await shot(page, 'renderer-error.png');
@@ -519,8 +522,8 @@ test('Theme Settings freezes the focused wide and compact authoring surfaces', a
 
   await fresh(page, 390, 844);
   await openAppearanceSettings(page);
-  await invokeWidgetAction(page, page.locator('[data-widget-type="settings.theme-colors"]'), 'Focus Widget');
-  await expect(page.getByRole('dialog', { name: 'Focused Theme Colors' })).toBeVisible();
+  await invokeWidgetAction(page, page.locator('[data-widget-type="settings.theme-colors"]'), 'Focus');
+  await expect(page.getByRole('dialog', { name: 'Theme Colors focus' })).toBeVisible();
   await shot(page, 'compact-theme-settings.png');
 });
 

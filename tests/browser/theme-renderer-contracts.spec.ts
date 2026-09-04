@@ -1017,17 +1017,20 @@ test('focused and floating compositions retain exactly one elevated material own
   await selectTheme(page, TARGETS[1]);
   const world = page.getByRole('article', { name: 'Room Ambience' });
 
-  await invokeWidgetAction(world, 'Focus Widget');
+  await invokeWidgetAction(world, 'Focus');
   const dialog = await material(page, '.focused-widget-dialog');
   expect(blurPx(dialog.backdrop)).toBeGreaterThan(0);
   const focusedFrame = page.locator('.focused-widget-dialog .widget-frame');
   await expect(focusedFrame).not.toHaveAttribute('data-pom-part');
   expect(blurPx((await material(page, '.focused-widget-dialog .widget-frame')).backdrop)).toBe(0);
-  await page.getByRole('button', { name: 'Back to Workbench' }).click();
+  await page.getByRole('button', { name: 'Exit focus' }).click();
   await expect(page.locator('.focused-widget-dialog')).toHaveCount(0);
   await expect(world).toBeVisible();
 
-  await invokeWidgetAction(world, 'Float');
+  await invokeWidgetAction(world, 'Move…');
+  await page.getByRole('menu', { name: 'Room Ambience Widget move' })
+    .getByRole('menuitem', { name: 'Float' })
+    .click();
   const floatingWrapper = page.locator('.widget-float');
   await expect(floatingWrapper).not.toHaveAttribute('data-pom-part');
   const floatingFrame = floatingWrapper.locator('.widget-frame');

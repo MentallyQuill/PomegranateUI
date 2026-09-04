@@ -18,6 +18,7 @@
     onexpanddock,
     surfacePart = 'widget.surface',
     contentPart = 'widget.content',
+    onexitfocus,
     title,
     meta,
     class: className = ''
@@ -29,6 +30,7 @@
     onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
     surfacePart?: 'widget.surface' | 'widget.content' | 'floating.surface' | null;
     contentPart?: 'widget.content' | null;
+    onexitfocus?: (() => void) | undefined;
     title?: string;
     meta?: string | undefined;
     class?: string;
@@ -115,25 +117,27 @@
 >
   <header
     role="toolbar"
-    aria-label={`${displayTitle} draggable Widget header`}
+    aria-label={onexitfocus ? `${displayTitle} focus header` : `${displayTitle} draggable Widget header`}
     class:is-dragging={dragging}
     data-pom-part="widget.header"
     data-focus-widget-for={grouped ? undefined : frame.instanceId}
-    data-widget-drag-surface
-    tabindex={grouped ? undefined : 0}
-    aria-keyshortcuts={grouped ? undefined : 'Shift+F10'}
-    oncontextmenu={handleContextMenu}
-    onkeydown={handleHeaderKey}
-    onpointerdown={dragSurfacePointerDown}
-    onpointermove={drag.pointerMove}
-    onpointerup={dragSurfacePointerUp}
-    onpointercancel={dragSurfacePointerCancel}
+    data-widget-drag-surface={onexitfocus ? undefined : ''}
+    tabindex={onexitfocus || grouped ? undefined : 0}
+    aria-keyshortcuts={onexitfocus || grouped ? undefined : 'Shift+F10'}
+    oncontextmenu={onexitfocus ? undefined : handleContextMenu}
+    onkeydown={onexitfocus ? undefined : handleHeaderKey}
+    onpointerdown={onexitfocus ? undefined : dragSurfacePointerDown}
+    onpointermove={onexitfocus ? undefined : drag.pointerMove}
+    onpointerup={onexitfocus ? undefined : dragSurfacePointerUp}
+    onpointercancel={onexitfocus ? undefined : dragSurfacePointerCancel}
   >
     <div class="widget-frame-heading" data-widget-touch-drag-grip>
       <h2>{displayTitle}</h2>
       {#if meta}<span class="widget-frame-meta">{meta}</span>{/if}
     </div>
-    {#if !grouped}<nav aria-label={`${displayTitle} actions`} data-pom-part="widget.actions">
+    {#if onexitfocus}<nav class="focused-widget-actions" aria-label={`${displayTitle} focus actions`} data-pom-part="widget.actions">
+      <button class="action-exit-focus" data-pom-part="button.surface" type="button" onclick={onexitfocus}>Exit focus</button>
+    </nav>{:else if !grouped}<nav aria-label={`${displayTitle} actions`} data-pom-part="widget.actions">
       <button
         class="action-menu widget-actions-trigger"
         data-pom-part="button.icon"
