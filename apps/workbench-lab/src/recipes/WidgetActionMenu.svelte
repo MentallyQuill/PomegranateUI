@@ -218,8 +218,10 @@
   data-context-source={request?.source}
   popover="auto"
   role="menu"
+  tabindex="-1"
   aria-label={request ? `${request.title} Widget ${view}` : 'Widget actions'}
   ontoggle={handleToggle}
+  oncontextmenu={(event) => event.preventDefault()}
 >
   {#if actions}
     {#if view === 'actions'}
