@@ -17,6 +17,8 @@ import {
 
 const labOrigin = `http://127.0.0.1:${process.env.POM_PLAYWRIGHT_PORT ?? '4174'}`;
 
+const labOrigin = process.env.POM_LAB_ORIGIN ?? 'http://127.0.0.1:4174';
+
 async function openDeveloperTools(page: import('@playwright/test').Page) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
   if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
@@ -1149,6 +1151,55 @@ test('desktop Widget headers replace the ellipsis with context and keyboard acti
 
   await header.press('Shift+F10');
   await expect(menu).toBeVisible();
+  const items = menu.getByRole('menuitem');
+  await expect(items.first()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(items.nth(1)).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(items.last()).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(items.first()).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect(items.last()).toBeFocused();
+});
+
+test('narrow fine-pointer Widgets keep context menus and no touch ellipsis', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${labOrigin}/?surface=settings.theme-materials`);
+  await page.evaluate(() => document.fonts.ready);
+  await expect.poll(() => page.evaluate(() => matchMedia('(pointer: fine)').matches)).toBe(true);
+
+  const header = widgetDragSurface(page.getByRole('article', { name: 'Theme Materials' }));
+  await expect(header.getByRole('button', { name: 'Widget actions' })).toBeHidden();
+  await header.click({ button: 'right' });
+  const menu = page.getByRole('menu', { name: 'Theme Materials Widget actions' });
+  const box = await menu.boundingBox();
+  if (!box) throw new Error('Expected a narrow fine-pointer Widget menu.');
+  expect(box.width).toBeLessThan(390);
+  expect(box.x).toBeGreaterThan(0);
+});
+
+test('outside Widget menu activation keeps focus on the activated control', async ({ page }) => {
+  const header = widgetDragSurface(page.getByRole('article', { name: 'World State' }));
+  await header.click({ button: 'right' });
+  const menu = page.getByRole('menu', { name: 'World State Widget actions' });
+  await expect(menu).toBeVisible();
+
+  const library = page.getByRole('tab', { name: 'Library' });
+  await library.click();
+  await expect(menu).toBeHidden();
+  await expect(library).toHaveAttribute('aria-selected', 'true');
+  await expect(library).toBeFocused();
+});
+
+test('Widget placement actions restore focus to the moved Widget header', async ({ page }) => {
+  const worldState = page.getByRole('article', { name: 'World State' });
+  await widgetDragSurface(worldState).click({ button: 'right' });
+  await page.getByRole('menu', { name: 'World State Widget actions' })
+    .getByRole('menuitem', { name: 'Dock left' })
+    .click();
+
+  await expect(widgetDragSurface(page.getByRole('article', { name: 'World State' }))).toBeFocused();
 });
 
 test('desktop grouped Widget tabs open actions for an inactive Widget without activating it', async ({ page }) => {
@@ -1232,6 +1283,24 @@ test.describe('coarse-pointer Widget actions', () => {
     expect(before.height).toBeGreaterThanOrEqual(44);
     expect(before.x + before.width).toBeLessThanOrEqual(headerBox.x + headerBox.width + 1);
     expect(before.y + before.height).toBeLessThanOrEqual(headerBox.y + headerBox.height + 1);
+
+    const containment = await group.evaluate((element) => {
+      const header = element.querySelector<HTMLElement>('[data-widget-group-header]');
+      const content = element.querySelector<HTMLElement>(':scope > [data-widget-type]');
+      if (!header || !content) throw new Error('Expected grouped Widget content geometry.');
+      const groupBox = element.getBoundingClientRect();
+      const headerBox = header.getBoundingClientRect();
+      const contentBox = content.getBoundingClientRect();
+      return {
+        groupBottom: groupBox.bottom,
+        groupHeight: groupBox.height,
+        headerHeight: headerBox.height,
+        contentHeight: contentBox.height,
+        contentBottom: contentBox.bottom
+      };
+    });
+    expect(containment.contentBottom).toBeLessThanOrEqual(containment.groupBottom + 1);
+    expect(containment.contentHeight).toBeCloseTo(containment.groupHeight - containment.headerHeight, 0);
 
     await trigger.click();
     expect(await trigger.boundingBox()).toEqual(before);

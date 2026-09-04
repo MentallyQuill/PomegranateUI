@@ -1059,7 +1059,7 @@ test('all themes keep story prose inside the visible reading stage', async ({ pa
   }
 });
 
-test('reduced motion removes themed Widget action-rail transitions', async ({ page }) => {
+test('reduced motion removes transitions from hidden desktop Widget action hosts', async ({ page }) => {
   const session = await page.context().newCDPSession(page);
   await session.send('Emulation.setEmulatedMedia', {
     features: [{ name: 'prefers-reduced-motion', value: 'reduce' }]
@@ -1074,7 +1074,7 @@ test('reduced motion removes themed Widget action-rail transitions', async ({ pa
     await page.getByText('Developer tools', { exact: true }).click();
 
     const transition = await page.locator('[data-widget-type="story.characters"]')
-      .getByRole('navigation')
+      .locator('.widget-frame > header nav')
       .evaluate((nav) => {
         const style = getComputedStyle(nav);
         return { duration: style.transitionDuration, property: style.transitionProperty };

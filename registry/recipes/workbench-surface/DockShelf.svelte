@@ -4,7 +4,15 @@
   import ShelfResizeHandle from './ShelfResizeHandle.svelte';
   import WidgetRowResizeHandle from './WidgetRowResizeHandle.svelte';
   import WidgetGroup from './WidgetGroup.svelte';
-  let { projection, store, renderWidget, titleFor, resizable = false, rowResizable = true }: { projection: PanelShelfProjection; store: WorkbenchStore; renderWidget: Snippet<[WidgetFrameProjection]>; titleFor?: ((frame: WidgetFrameProjection) => string) | undefined; resizable?: boolean; rowResizable?: boolean } = $props();
+  let { projection, store, renderWidget, titleFor, onrequestactions, resizable = false, rowResizable = true }: {
+    projection: PanelShelfProjection;
+    store: WorkbenchStore;
+    renderWidget: Snippet<[WidgetFrameProjection]>;
+    titleFor?: ((frame: WidgetFrameProjection) => string) | undefined;
+    onrequestactions?: ((request: { frame: WidgetFrameProjection; title: string; anchor: HTMLElement; source: 'pointer' | 'keyboard' | 'touch'; point?: { x: number; y: number } }) => void) | undefined;
+    resizable?: boolean;
+    rowResizable?: boolean;
+  } = $props();
   type ShelfItem = { readonly kind: 'widget'; readonly id: string; readonly frames: readonly [WidgetFrameProjection] }
     | { readonly kind: 'group'; readonly id: string; readonly frames: readonly WidgetFrameProjection[] };
   const items = $derived.by(() => {
@@ -31,7 +39,7 @@
     {@const rowFrame = frameFor(item)}
     <div class="dock-row" data-pomegranate-row-height={rowFrame.placement.kind === 'docked' ? rowFrame.placement.height : undefined}
       style={rowFrame.placement.kind === 'docked' && rowFrame.placement.height !== undefined ? `height:${rowFrame.placement.height}px;min-height:${rowFrame.placement.height}px;overflow:hidden` : undefined}>
-      {#if item.kind === 'group'}<WidgetGroup frames={item.frames} {store} {renderWidget} {titleFor} />{:else}{@render renderWidget(rowFrame)}{/if}
+      {#if item.kind === 'group'}<WidgetGroup frames={item.frames} {store} {renderWidget} {titleFor} {onrequestactions} />{:else}{@render renderWidget(rowFrame)}{/if}
     </div>
     {#if rowResizable}<WidgetRowResizeHandle instanceId={rowFrame.instanceId} label={titleFor?.(rowFrame) ?? rowFrame.title}
       height={rowFrame.placement.kind === 'docked' ? rowFrame.placement.height : undefined}

@@ -360,7 +360,7 @@ async function invokeWidgetAction(page: Page, widget: ReturnType<Page['locator']
   const group = widget.locator('xpath=ancestor::section[@data-widget-group][1]');
   const surface = await group.count()
     ? group.getByRole('tab', { selected: true })
-    : widget.locator(':scope > header[data-widget-drag-surface]').first();
+    : widget.locator(':scope > header[data-widget-drag-surface], :scope > .widget-frame > header[data-widget-drag-surface]').first();
   await surface.click({ button: 'right' });
   await page.getByRole('menu').getByRole('menuitem', { name }).press('Enter');
 }

@@ -111,8 +111,22 @@
 
   function handleWindowKey(event: KeyboardEvent) {
     if (!isMenuOpen()) return;
+    const focusable = [...menu?.querySelectorAll<HTMLButtonElement>('button:not([disabled])') ?? []];
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      if (!focusable.length) return;
+      event.preventDefault();
+      const current = focusable.indexOf(document.activeElement as HTMLButtonElement);
+      const next = event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? focusable.length - 1
+          : event.key === 'ArrowDown'
+            ? (current + 1 + focusable.length) % focusable.length
+            : (current - 1 + focusable.length) % focusable.length;
+      focusable[next]?.focus();
+      return;
+    }
     if (event.key === 'Tab') {
-      const focusable = [...menu?.querySelectorAll<HTMLButtonElement>('button:not([disabled])') ?? []];
       const first = focusable[0];
       const last = focusable.at(-1);
       if (!first || !last) return;
@@ -130,13 +144,20 @@
     closeMenu(true);
   }
 
+  function handleWindowPointerDown(event: PointerEvent) {
+    if (!isMenuOpen() || !(event.target instanceof Node)) return;
+    if (menu?.contains(event.target) || request?.anchor.contains(event.target)) return;
+    restoreTargetAfterClose = false;
+    if (typeof menu?.hidePopover !== 'function') closeMenu(false);
+  }
+
   function opened() {
     positionMenu();
     menu?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus({ preventScroll: true });
   }
 </script>
 
-<svelte:window onkeydown={handleWindowKey} />
+<svelte:window onkeydown={handleWindowKey} onpointerdown={handleWindowPointerDown} />
 
 <div
   bind:this={menu}

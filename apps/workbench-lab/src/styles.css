@@ -78,7 +78,7 @@ main[data-pom-shell-presentation="instrumented"] .panel-create-action:not([hidde
 .widget-frame-heading h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .widget-frame-meta { flex: 0 0 auto; color: var(--faint); font: var(--pom-expression-widget-header-font-size, 9px) var(--pom-font-technical, monospace); letter-spacing: .04em; }
 .widget-frame h2 { margin: 0; font-size: .77rem; font-weight: 650; letter-spacing: .02em; }
-.widget-frame nav { position: relative; display: flex; gap: .15rem; }
+.widget-frame nav { position: relative; display: none; width: 0; min-width: 0; flex: 0 0 0; gap: 0; }
 .widget-frame nav button { width: 1.75rem; min-height: 1.75rem; overflow: hidden; padding: 0; border: var(--pom-border-width, 1px) solid transparent; border-radius: var(--pom-radius-small, .3rem); background-color: transparent; background-position: center; background-repeat: no-repeat; background-size: .82rem; color: transparent; font-size: 0; filter: var(--pom-icon-filter, invert(.72)); }
 .widget-actions-trigger {
   display: none;
@@ -772,8 +772,8 @@ main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .to
 .toolbar-resize-handle[data-dock-resizer="right"] { right: var(--pom-right-width, var(--pom-side-width)); transform: translateX(50%); }
 .toolbar-resize-handle span { position: absolute; top: 42%; bottom: 42%; left: 5px; width: 1px; background: var(--line-strong); opacity: .35; }
 .toolbar-resize-handle:is(:hover, :focus-visible, .is-dragging) span { top: 34%; bottom: 34%; opacity: .9; }
-.widget-group { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
-.widget-group-header { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; min-height: 30px; }
+.widget-group { --pom-widget-group-header-height: 30px; position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+.widget-group-header { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; min-height: var(--pom-widget-group-header-height); }
 .widget-group-tabs { display: flex; min-width: 0; min-height: 30px; overflow-x: auto; border-bottom: 1px solid var(--line); background: rgb(3 6 7 / 62%); }
 .widget-group-tabs > span { position: relative; display: flex; min-width: 0; }
 .widget-group-tabs [role="tab"] { min-height: 29px; padding: 0 10px; border: 0; border-right: 1px solid var(--line); border-radius: 0; color: var(--muted); background: transparent; font-size: 10px; white-space: nowrap; }
@@ -824,7 +824,7 @@ main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .to
   pointer-events: none;
   will-change: transform;
 }
-.widget-group > [data-widget-type] { height: calc(100% - 30px); }
+.widget-group > [data-widget-type] { height: calc(100% - var(--pom-widget-group-header-height)); }
 .widget-group > [data-widget-type] .widget-frame { height: 100%; }
 .focused-widget-placeholder { display: grid; place-items: center; min-height: 100%; padding: 18px; color: var(--muted); font-size: 11px; text-align: center; }
 .focused-widget-dialog {
@@ -4030,8 +4030,8 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
   }
 }
 
-/* Compact and coarse action surfaces use the existing command DOM as opaque sheets. */
-@media (max-width: 520px), (pointer: coarse) {
+/* Widget ellipses and Widget sheets are coarse-pointer controls only. */
+@media (pointer: coarse) {
   main[data-pom-theme-root] .widget-frame > header {
     height: 46px;
     min-height: 46px;
@@ -4039,11 +4039,17 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
   }
   main[data-pom-theme-root] .widget-frame > header > nav {
     position: static;
+    display: flex;
+    width: 44px;
+    min-width: 44px;
     flex: 0 0 44px;
     align-self: stretch;
     opacity: 1;
     translate: none;
     transform: none;
+  }
+  main[data-pom-theme-root] .widget-group {
+    --pom-widget-group-header-height: 44px;
   }
   main[data-pom-theme-root] .widget-group-header {
     grid-template-columns: minmax(0, 1fr) 44px;
@@ -4075,7 +4081,7 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
     font-size: 0;
     filter: var(--pom-icon-filter, invert(.72));
   }
-  main[data-pom-theme-root] .panel-menu-surface {
+  main[data-pom-theme-root] .widget-actions-menu {
     position: fixed !important;
     inset: auto 0 0 !important;
     box-sizing: border-box;
@@ -4093,13 +4099,49 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
-  main[data-pom-theme-root] .panel-menu-surface::backdrop,
+  main[data-pom-theme-root] .widget-actions-menu::backdrop {
+    background: color-mix(in srgb, var(--pom-color-shadow, #050406) 72%, transparent);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+  main[data-pom-theme-root] .widget-actions-menu button {
+    min-width: 44px;
+    min-height: 44px;
+    border: var(--pom-border-width, 1px) solid var(--pom-material-button-border, var(--line));
+    border-radius: var(--pom-radius-small, .45rem);
+    color: var(--pom-color-text, var(--ink));
+    background: var(--pom-material-button, rgb(255 255 255 / 4%));
+    box-shadow: var(--pom-material-button-inset, none);
+  }
+}
+
+/* Compact Panel surfaces and coarse-pointer Panel surfaces use opaque sheets. */
+@media (max-width: 520px), (pointer: coarse) {
+  main[data-pom-theme-root] .panel-menu-surface:not(.widget-actions-menu) {
+    position: fixed !important;
+    inset: auto 0 0 !important;
+    box-sizing: border-box;
+    width: 100vw !important;
+    max-width: none;
+    max-height: min(80dvh, 42rem);
+    margin: 0 !important;
+    padding: 10px 10px max(10px, env(safe-area-inset-bottom));
+    overflow: auto !important;
+    overscroll-behavior: contain;
+    border-radius: var(--pom-radius-large, .75rem) var(--pom-radius-large, .75rem) 0 0;
+    background-color: var(--pom-color-canvas, #101418);
+    background-image: linear-gradient(var(--pom-material-opaque, transparent), var(--pom-material-opaque, transparent));
+    box-shadow: var(--pom-material-dialog-shadow, 0 -18px 64px rgb(0 0 0 / 58%));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  main[data-pom-theme-root] .panel-menu-surface:not(.widget-actions-menu)::backdrop,
   main[data-pom-theme-root] dialog.tab-order-dialog::backdrop {
     background: color-mix(in srgb, var(--pom-color-shadow, #050406) 72%, transparent);
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
   }
-  main[data-pom-theme-root] .panel-menu-surface button {
+  main[data-pom-theme-root] .panel-menu-surface:not(.widget-actions-menu) button {
     min-width: 44px;
     min-height: 44px;
     border: var(--pom-border-width, 1px) solid var(--pom-material-button-border, var(--line));
