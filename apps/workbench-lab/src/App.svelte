@@ -703,7 +703,6 @@
               {store}
               {rendererRegistry}
               {hostContext}
-              onfocuswidget={focusWidget}
               onexpanddock={expandDock}
               surfacePart={frameSurfacePart(frame)}
               title={frameTitle(frame)}

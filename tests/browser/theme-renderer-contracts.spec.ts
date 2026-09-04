@@ -98,10 +98,19 @@ function blurPx(filter: string): number {
 }
 
 async function invokeWidgetAction(widget: import('@playwright/test').Locator, name: string) {
-  const trigger = widget.getByRole('button', { name: 'Widget actions' });
-  await trigger.focus();
-  await trigger.press('Enter');
-  await widget.getByRole('menuitem', { name }).press('Enter');
+  const group = widget.locator('xpath=ancestor::section[@data-widget-group][1]');
+  const surface = await group.count()
+    ? group.getByRole('tab', { selected: true })
+    : widget.locator(':scope > header[data-widget-drag-surface], :scope > .widget-frame > header[data-widget-drag-surface]').first();
+  await expect(surface).toBeVisible();
+  const box = await surface.boundingBox();
+  if (!box) throw new Error('Expected Widget action surface geometry.');
+  await surface.dispatchEvent('contextmenu', {
+    button: 2,
+    clientX: box.x + box.width / 2,
+    clientY: box.y + box.height / 2
+  });
+  await widget.page().getByRole('menu').getByRole('menuitem', { name }).press('Enter');
 }
 
 function technicalRailPresentation(page: Page) {
@@ -251,8 +260,9 @@ test('composition metadata and icon art survive data-only theme compilation', as
     await expect(root).toHaveAttribute('data-pom-widget-grouping', /^(individual|unified)$/);
     await expect(root).toHaveAttribute('data-pom-chrome-presentation', /^(compact|overlay|full)$/);
     await expect(root).toHaveAttribute('data-pom-action-presentation', /^(compact|hover-focus|full|always)$/);
-    const image = await page.getByRole('article', { name: 'Characters' })
-      .getByRole('button', { name: 'Widget actions' })
+    await expect(page.locator('.widget-actions-trigger:visible')).toHaveCount(0);
+    const image = await page.getByRole('article', { name: 'World State' })
+      .locator('button.widget-actions-trigger')
       .evaluate((button) => getComputedStyle(button).backgroundImage);
     expect(image, `${target.label} icon image`).toContain('url(');
     const pseudoContent = await page.getByRole('article', { name: 'Characters' })
@@ -984,6 +994,8 @@ test('focused and floating compositions retain exactly one elevated material own
   await expect(focusedFrame).not.toHaveAttribute('data-pom-part');
   expect(blurPx((await material(page, '.focused-widget-dialog .widget-frame')).backdrop)).toBe(0);
   await page.getByRole('button', { name: 'Back to Workbench' }).click();
+  await expect(page.locator('.focused-widget-dialog')).toHaveCount(0);
+  await expect(world).toBeVisible();
 
   await invokeWidgetAction(world, 'Float');
   const floatingWrapper = page.locator('.widget-float');

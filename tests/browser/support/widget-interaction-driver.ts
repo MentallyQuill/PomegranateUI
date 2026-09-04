@@ -263,6 +263,14 @@ export async function capturePlacementSnapshot(widget: Locator): Promise<Placeme
 }
 
 export async function invokeWidgetAction(widget: Locator, name: string): Promise<void> {
-  await widget.getByRole('button', { name: 'Widget actions' }).click();
-  await widget.getByRole('menuitem', { name }).click();
+  const surface = widgetDragSurface(widget);
+  await expect(surface).toBeVisible();
+  const box = await surface.boundingBox();
+  if (!box) throw new Error('Expected Widget action surface geometry.');
+  await surface.dispatchEvent('contextmenu', {
+    button: 2,
+    clientX: box.x + box.width / 2,
+    clientY: box.y + box.height / 2
+  });
+  await widget.page().getByRole('menu').getByRole('menuitem', { name }).click();
 }

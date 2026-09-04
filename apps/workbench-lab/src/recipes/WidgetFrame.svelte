@@ -11,7 +11,6 @@
     store,
     rendererRegistry,
     hostContext,
-    onfocuswidget,
     onexpanddock,
     surfacePart = 'widget.surface',
     contentPart = 'widget.content',
@@ -23,7 +22,6 @@
     store: WorkbenchStore;
     rendererRegistry: WidgetRendererRegistry<THostContext>;
     hostContext: THostContext;
-    onfocuswidget?: (frame: WidgetFrameProjection) => void;
     onexpanddock?: ((edge: 'left' | 'right') => void) | undefined;
     surfacePart?: 'widget.surface' | 'widget.content' | 'floating.surface' | null;
     contentPart?: 'widget.content' | null;

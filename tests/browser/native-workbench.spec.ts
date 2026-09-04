@@ -17,8 +17,6 @@ import {
 
 const labOrigin = `http://127.0.0.1:${process.env.POM_PLAYWRIGHT_PORT ?? '4174'}`;
 
-const labOrigin = process.env.POM_LAB_ORIGIN ?? 'http://127.0.0.1:4174';
-
 async function openDeveloperTools(page: import('@playwright/test').Page) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
   if (await drawer.getAttribute('open') === null) await page.getByText('Developer tools', { exact: true }).click();
@@ -135,7 +133,7 @@ test('Panel context actions target an inactive tab without activating it and res
   const scene = page.getByRole('tab', { name: 'Scene' });
   const library = page.getByRole('tab', { name: 'Library' });
   await expect(page.getByRole('button', { name: /^Manage / })).toHaveCount(0);
-  await expect(page.locator('.panel-menu-surface')).toHaveCount(1);
+  await expect(page.locator('.panel-menu-surface:not(.widget-actions-menu)')).toHaveCount(1);
   await library.click({ button: 'right' });
   const menu = page.getByRole('dialog', { name: 'Library Panel actions' });
   await expect(menu).toBeVisible();
@@ -825,7 +823,7 @@ test('native workbench POM-PANEL-0C32491298 POM-PANEL-E6D6A0E64B appends menu do
   const leftDock = page.locator('[data-pomegranate-dock="left"]');
   await expect(leftDock.getByRole('article')).toHaveCount(2);
   const worldState = page.getByRole('article', { name: 'World State' });
-  await invokeWidgetAction(page, worldState, 'Dock left');
+  await invokeWidgetAction(worldState, 'Dock left');
   await expect(leftDock.getByRole('article')).toHaveCount(3);
   await expect(leftDock.getByRole('article').nth(0)).toHaveAttribute('aria-label', 'Characters (Story)');
   await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Theme Materials');
@@ -1016,7 +1014,7 @@ test('dragging an inactive grouped Widget holds that Widget rather than the acti
 
 test('Deep Current Focus and Back keep one Widget identity and restore invoking focus', async ({ page }) => {
   const worldState = page.getByRole('article', { name: 'World State' });
-  await invokeWidgetAction(page, worldState, 'Focus Widget');
+  await invokeWidgetAction(worldState, 'Focus Widget');
 
   const dialog = page.getByRole('dialog', { name: 'Focused World State' });
   await expect(dialog).toBeVisible();
@@ -1706,7 +1704,7 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   const sceneLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
   await sceneLeft.focus();
   await sceneLeft.press('End');
-  await invokeWidgetAction(page, page.getByRole('article', { name: 'Characters (Story)' }), 'Float');
+  await invokeWidgetAction(page.getByRole('article', { name: 'Characters (Story)' }), 'Float');
   await dragToShelfRail(page, widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' })), 'left');
 
   await page.getByRole('tab', { name: 'Library' }).click();
@@ -1941,7 +1939,13 @@ test('all 98 reviewed Widget surfaces expose exact ready, state, focus, and resp
         unnamedButtons: elements.filter((node) => node instanceof HTMLButtonElement && !(node.getAttribute('aria-label') ?? node.textContent ?? '').trim()).length
       };
     });
-    expect(containment.horizontalOverflow, `${surface.type} horizontal overflow`).toBeLessThanOrEqual(1);
+    const initialOverflow = containment.horizontalOverflow > 1
+      ? await horizontalOverflowEvidence(article)
+      : null;
+    expect(
+      containment.horizontalOverflow,
+      `${surface.type} horizontal overflow: ${initialOverflow?.descendants.join('; ') ?? 'none'}`
+    ).toBeLessThanOrEqual(1);
     expect(containment.scrollOwners, `${surface.type} scroll owners`).toBeLessThanOrEqual(1);
     expect(containment.unnamedButtons, `${surface.type} unnamed buttons`).toBe(0);
 
@@ -1974,7 +1978,7 @@ test('all 98 reviewed Widget surfaces expose exact ready, state, focus, and resp
       expect(wideOverflow.amount, `${surface.type} wide overflow: ${wideOverflow.descendants.join('; ')}`).toBeLessThanOrEqual(1);
     }
 
-    await invokeWidgetAction(page, article, 'Focus Widget');
+    await invokeWidgetAction(article, 'Focus Widget');
     const dialog = page.getByRole('dialog', { name: `Focused ${expectedPresentationTitle}` });
     await expect(dialog.locator(`[data-surface-type="${surface.type}"]`)).toHaveCount(1);
     await dialog.getByRole('button', { name: 'Back to Workbench' }).click();
