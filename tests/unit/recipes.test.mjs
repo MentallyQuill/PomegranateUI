@@ -36,7 +36,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
     'workbench-surface'
   ]);
   for (const entry of manifest.recipes) {
-    const revised = { 'theme-settings': 4, 'workbench-surface': 2 };
+    const revised = { 'theme-settings': 5, 'workbench-surface': 2 };
     assert.equal(entry.revision, revised[entry.id] ?? 1);
     assert.equal(entry.compatiblePomegranateRange, '>=0.1.0-private.0 <0.2.0');
     assert.ok(entry.dependencies.includes('svelte'));
@@ -68,7 +68,7 @@ test('theme authoring recipe exposes five focused elements through one shared po
     assert.match(combined, new RegExp(`data-theme-authoring-element="${element}"`));
   }
   assert.match(combined, /toolbarTogglePresentation/);
-  assert.match(combined, /Bottom chevrons/);
+  assert.match(combined, /Bottom-edge chevrons/);
   assert.doesNotMatch(combined, /presentation\s*[=:]|compact-theme|theme-settings-owner/);
 });
 

@@ -761,37 +761,28 @@ main {
 .toolbar-edge-toggle-left { left: var(--pom-left-width, var(--pom-side-width)); }
 .toolbar-edge-toggle-right { right: var(--pom-right-width, var(--pom-side-width)); transform: translateY(-50%) rotate(180deg); }
 .toolbar-edge-toggle[data-toolbar-toggle-presentation="bottom-chevrons"] {
-  position: relative;
+  position: fixed;
   top: auto;
-  right: auto;
-  bottom: auto;
-  left: auto;
+  bottom: 0;
   display: grid;
   place-items: center;
-  align-self: end;
-  justify-self: center;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  border-color: rgb(222 239 232 / 12%);
-  color: rgb(222 239 232 / 60%);
-  background: rgb(4 7 8 / 52%);
   letter-spacing: 0;
   text-transform: none;
   writing-mode: horizontal-tb;
   transform: none;
 }
 .toolbar-edge-toggle-left[data-toolbar-toggle-presentation="bottom-chevrons"] {
-  grid-column: 1;
-  grid-row: 1 / 3;
+  left: calc(var(--pom-workbench-edge-inset, 0px) + var(--pom-left-width, var(--pom-side-width)) + 7px);
 }
 .toolbar-edge-toggle-right[data-toolbar-toggle-presentation="bottom-chevrons"] {
-  grid-column: 3;
-  grid-row: 1 / 3;
+  right: calc(var(--pom-workbench-edge-inset, 0px) + var(--pom-right-width, var(--pom-side-width)) + 7px);
 }
-.left-collapsed .toolbar-edge-toggle-left[data-toolbar-toggle-presentation="bottom-chevrons"] { justify-self: start; }
-.right-collapsed .toolbar-edge-toggle-right[data-toolbar-toggle-presentation="bottom-chevrons"] { justify-self: end; }
+main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].left-collapsed .toolbar-edge-toggle-left {
+  left: 0;
+}
+main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .toolbar-edge-toggle-right {
+  right: 0;
+}
 .toolbar-toggle-chevron {
   display: block;
   font: 400 27px/1 var(--pom-font-technical, monospace);
@@ -2675,7 +2666,7 @@ main[data-pom-theme-root].left-collapsed .workbench-surface {
   main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="focus-support"],
   main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="columns"] { grid-template-columns: minmax(0, 1fr); }
   main[data-pom-theme-root] .toolbar-edge-toggle[data-toolbar-toggle-presentation="bottom-chevrons"] {
-    position: absolute;
+    position: fixed;
     bottom: 0;
   }
   main[data-pom-theme-root] .toolbar-edge-toggle-left[data-toolbar-toggle-presentation="bottom-chevrons"] { left: 0; }
@@ -3748,18 +3739,24 @@ main[data-pom-theme-root].right-collapsed [data-conformance-region="right"] {
   main[data-pom-shell-presentation="instrumented"] .toolbar-edge-toggle-right { right: 14px; }
   main[data-pom-shell-presentation="instrumented"] .toolbar-edge-toggle-right::before { content: "R"; }
   main[data-pom-shell-presentation="instrumented"] .toolbar-edge-toggle[data-toolbar-toggle-presentation="bottom-chevrons"] {
-    position: absolute;
+    position: fixed;
     top: auto;
     bottom: 0;
-    grid-row: 1;
+    width: 30px;
+    height: 116px;
+    min-width: 30px;
+    min-height: 116px;
+    border-color: rgb(222 239 232 / 6%);
+    color: rgb(222 239 232 / 20%);
+    background: rgb(4 7 8 / 28%);
     font-size: inherit;
     line-height: inherit;
   }
   main[data-pom-shell-presentation="instrumented"] .toolbar-edge-toggle-left[data-toolbar-toggle-presentation="bottom-chevrons"] {
-    left: calc((min(320px, calc(100% - 56px)) - 44px) / 2);
+    left: min(320px, calc(100% - 56px));
   }
   main[data-pom-shell-presentation="instrumented"] .toolbar-edge-toggle-right[data-toolbar-toggle-presentation="bottom-chevrons"] {
-    right: calc((min(320px, calc(100% - 56px)) - 44px) / 2);
+    right: min(320px, calc(100% - 56px));
   }
   main[data-pom-shell-presentation="instrumented"].left-collapsed .toolbar-edge-toggle-left[data-toolbar-toggle-presentation="bottom-chevrons"] { left: 0; }
   main[data-pom-shell-presentation="instrumented"].right-collapsed .toolbar-edge-toggle-right[data-toolbar-toggle-presentation="bottom-chevrons"] { right: 0; }

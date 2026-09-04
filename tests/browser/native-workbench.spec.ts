@@ -1077,7 +1077,7 @@ test('Deep Current edge controls collapse and restore both toolbars without hidi
   await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
 });
 
-test('Theme Library bottom chevrons sit at each toolbar bottom and flip with collapsed state', async ({ page }) => {
+test('Theme Library bottom-edge chevrons reuse edge tabs outside each toolbar and flip with collapsed state', async ({ page }) => {
   await page.getByRole('tab', { name: 'Settings' }).click();
   await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
   await page.getByRole('article', { name: 'Theme Library' }).getByRole('button', { name: /^PomOS/ }).click();
@@ -1088,19 +1088,20 @@ test('Theme Library bottom chevrons sit at each toolbar bottom and flip with col
   const right = page.locator('.toolbar-edge-toggle-right');
   const leftRegion = page.locator('[data-conformance-region="left"]');
   const rightRegion = page.locator('[data-conformance-region="right"]');
+  const viewport = page.viewportSize();
   const [leftBox, rightBox, leftRegionBox, rightRegionBox] = await Promise.all([
     left.boundingBox(), right.boundingBox(), leftRegion.boundingBox(), rightRegion.boundingBox()
   ]);
-  if (!leftBox || !rightBox || !leftRegionBox || !rightRegionBox) throw new Error('Expected toolbar toggle and dock geometry.');
+  if (!viewport || !leftBox || !rightBox || !leftRegionBox || !rightRegionBox) throw new Error('Expected toolbar toggle, dock, and viewport geometry.');
 
-  expect(leftBox.width).toBe(44);
-  expect(leftBox.height).toBe(44);
-  expect(rightBox.width).toBe(44);
-  expect(rightBox.height).toBe(44);
-  expect(Math.abs(leftBox.x + leftBox.width / 2 - (leftRegionBox.x + leftRegionBox.width / 2))).toBeLessThan(2);
-  expect(Math.abs(rightBox.x + rightBox.width / 2 - (rightRegionBox.x + rightRegionBox.width / 2))).toBeLessThan(2);
-  expect(Math.abs(leftBox.y + leftBox.height - (leftRegionBox.y + leftRegionBox.height))).toBeLessThan(2);
-  expect(Math.abs(rightBox.y + rightBox.height - (rightRegionBox.y + rightRegionBox.height))).toBeLessThan(2);
+  expect(leftBox.width).toBe(30);
+  expect(leftBox.height).toBe(116);
+  expect(rightBox.width).toBe(30);
+  expect(rightBox.height).toBe(116);
+  expect(Math.abs(leftBox.x - (leftRegionBox.x + leftRegionBox.width))).toBeLessThan(2);
+  expect(Math.abs(leftBox.y + leftBox.height - viewport.height)).toBeLessThan(2);
+  expect(Math.abs(rightBox.x + rightBox.width - rightRegionBox.x)).toBeLessThan(2);
+  expect(Math.abs(rightBox.y + rightBox.height - viewport.height)).toBeLessThan(2);
   await expect(left).toHaveText('‹');
   await expect(right).toHaveText('›');
 
@@ -1112,6 +1113,12 @@ test('Theme Library bottom chevrons sit at each toolbar bottom and flip with col
   await expect(right).toHaveText('‹');
   await expect(left).toBeVisible();
   await expect(right).toBeVisible();
+  const [collapsedLeftBox, collapsedRightBox] = await Promise.all([left.boundingBox(), right.boundingBox()]);
+  if (!collapsedLeftBox || !collapsedRightBox) throw new Error('Expected collapsed toolbar toggle geometry.');
+  expect(Math.abs(collapsedLeftBox.x)).toBeLessThan(2);
+  expect(Math.abs(collapsedLeftBox.y + collapsedLeftBox.height - viewport.height)).toBeLessThan(2);
+  expect(Math.abs(collapsedRightBox.x + collapsedRightBox.width - viewport.width)).toBeLessThan(2);
+  expect(Math.abs(collapsedRightBox.y + collapsedRightBox.height - viewport.height)).toBeLessThan(2);
 });
 
 test('Deep Current narrow dock keeps the complete contextual Widget Actions menu', async ({ page }) => {

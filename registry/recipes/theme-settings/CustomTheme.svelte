@@ -31,7 +31,7 @@
   <fieldset class="theme-authoring-toolbar-controls">
     <legend>Toolbar controls</legend>
     <label><input type="radio" name="toolbar-toggle-presentation" value="edge-labels" checked={(draft.draft.toolbarTogglePresentation ?? 'edge-labels') === 'edge-labels'} onclick={() => setToolbarTogglePresentation('edge-labels')} /><span>Edge labels</span></label>
-    <label><input type="radio" name="toolbar-toggle-presentation" value="bottom-chevrons" checked={draft.draft.toolbarTogglePresentation === 'bottom-chevrons'} onclick={() => setToolbarTogglePresentation('bottom-chevrons')} /><span>Bottom chevrons</span></label>
+    <label><input type="radio" name="toolbar-toggle-presentation" value="bottom-chevrons" checked={draft.draft.toolbarTogglePresentation === 'bottom-chevrons'} onclick={() => setToolbarTogglePresentation('bottom-chevrons')} /><span>Bottom-edge chevrons</span></label>
   </fieldset>
   {#if theme.authoring.diagnostics.length}<ul class="theme-authoring-diagnostics" aria-label="Theme diagnostics">{#each theme.authoring.diagnostics as diagnostic}<li>{diagnostic.message}</li>{/each}</ul>{/if}
   <p class="theme-authoring-status" role="status" aria-live="polite">{status}</p>

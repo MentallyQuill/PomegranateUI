@@ -109,16 +109,13 @@
           {renderWidget}
           {titleFor}
           {onexpanddock}
-          toolbarControls={surface.templateFamily === 'story-stage' && toolbarTogglePresentation === 'bottom-chevrons'
-            ? toolbarControls
-            : undefined}
         />
       {/if}
       {#if surface.templateFamily === 'story-stage' || showDockResizers}
         <ToolbarResizeHandle edge="left" panelId={surface.panelId} width={leftWidth} {store} />
         <ToolbarResizeHandle edge="right" panelId={surface.panelId} width={rightWidth} {store} />
       {/if}
-      {#if surface.templateFamily === 'story-stage' && toolbarTogglePresentation !== 'bottom-chevrons'}
+      {#if surface.templateFamily === 'story-stage'}
         {@render toolbarControls()}
       {/if}
       <div data-pomegranate-floating-layer>

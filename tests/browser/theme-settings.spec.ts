@@ -110,7 +110,7 @@ test('Toolbar controls author, persist, and reset the live toggle presentation',
   let controls = settings.overview.getByRole('group', { name: 'Toolbar controls' });
 
   await expect(controls.getByRole('radio', { name: 'Edge labels' })).toBeChecked();
-  await controls.getByRole('radio', { name: 'Bottom chevrons' }).click();
+  await controls.getByRole('radio', { name: 'Bottom-edge chevrons' }).click();
   await expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
 
   await page.getByRole('tab', { name: 'Scene' }).click();
@@ -130,7 +130,7 @@ test('Toolbar controls author, persist, and reset the live toggle presentation',
 
   settings = await openAppearance(page);
   controls = settings.overview.getByRole('group', { name: 'Toolbar controls' });
-  await expect(controls.getByRole('radio', { name: 'Bottom chevrons' })).toBeChecked();
+  await expect(controls.getByRole('radio', { name: 'Bottom-edge chevrons' })).toBeChecked();
   await settings.overview.getByRole('button', { name: 'Reset' }).click();
   await expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'edge-labels');
   await expect(controls.getByRole('radio', { name: 'Edge labels' })).toBeChecked();

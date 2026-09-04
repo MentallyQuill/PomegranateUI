@@ -608,7 +608,7 @@ describe('Svelte Workbench Lab mockup', () => {
     const controls = within(customTheme).getByRole('group', { name: 'Toolbar controls' });
 
     expect(within(controls).getByRole('radio', { name: 'Edge labels' })).toBeChecked();
-    await user.click(within(controls).getByRole('radio', { name: 'Bottom chevrons' }));
+    await user.click(within(controls).getByRole('radio', { name: 'Bottom-edge chevrons' }));
     expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
     await user.click(screen.getByRole('tab', { name: 'Scene' }));
     expect(screen.getByRole('button', { name: 'Close left toolbar' })).toHaveTextContent('‹');
@@ -625,6 +625,6 @@ describe('Svelte Workbench Lab mockup', () => {
     const library = screen.getByRole('article', { name: 'Theme Library' });
     await user.click(within(library).getByRole('button', { name: /^PomOS/ }));
     expect(root).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
-    expect(within(resetControls).getByRole('radio', { name: 'Bottom chevrons' })).toBeChecked();
+    expect(within(resetControls).getByRole('radio', { name: 'Bottom-edge chevrons' })).toBeChecked();
   });
 });

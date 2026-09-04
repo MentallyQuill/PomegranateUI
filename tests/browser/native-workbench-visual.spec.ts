@@ -487,6 +487,19 @@ test('Deep Current freezes reviewed phone and mobile desktop-site compositions',
   }
 });
 
+test('Deep Current freezes the authored bottom-edge toolbar controls', async ({ page }) => {
+  await fresh(page, 408, 844);
+  await openAppearanceSettings(page);
+  await page.getByRole('group', { name: 'Toolbar controls' })
+    .getByRole('radio', { name: 'Bottom-edge chevrons' })
+    .click();
+  await page.getByRole('tab', { name: 'Scene' }).click();
+  const leftDock = page.locator('[data-conformance-region="left"]');
+  if (!await leftDock.isVisible()) await page.locator('.toolbar-edge-toggle-left').click();
+  await expect(leftDock).toBeVisible();
+  await shot(page, 'deep-mobile-bottom-edge-chevrons.png');
+});
+
 test('Theme Settings freezes the focused wide and compact authoring surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);
   await openAppearanceSettings(page);

@@ -181,6 +181,60 @@ test.describe('Deep Atmospheric responsive phone presentation', () => {
     expect(evidence.after).toBeGreaterThan(evidence.before);
     await expect(page.getByRole('article', { name: 'Custom Theme' })).toBeVisible();
   });
+
+});
+
+test.describe('Responsive bottom-edge controls', () => {
+  test.use({ viewport: { width: 408, height: 844 }, hasTouch: false, isMobile: false });
+
+  test('anchors its chevron edge tab outside the open narrow toolbar at the browser bottom', async ({ page }) => {
+    await fresh(page);
+    await openAppearanceSettings(page);
+    await page.getByRole('group', { name: 'Toolbar controls' })
+      .getByRole('radio', { name: 'Bottom-edge chevrons' })
+      .click();
+    await expect(page.locator('main')).toHaveAttribute('data-pom-toolbar-toggle-presentation', 'bottom-chevrons');
+    await page.getByRole('tab', { name: 'Scene' }).click();
+
+    const left = page.locator('.toolbar-edge-toggle-left');
+    const leftDock = page.locator('[data-conformance-region="left"]');
+    if (!await leftDock.isVisible()) {
+      await left.click();
+    }
+    await expect(left).toHaveAccessibleName('Close left toolbar');
+    await expect(leftDock).toBeVisible();
+    const [openButtonBox, openDockBox] = await Promise.all([left.boundingBox(), leftDock.boundingBox()]);
+    if (!openButtonBox || !openDockBox) throw new Error('Expected open mobile toolbar geometry.');
+    expect(openButtonBox.width).toBe(30);
+    expect(openButtonBox.height).toBe(116);
+    expect(Math.abs(openButtonBox.x - (openDockBox.x + openDockBox.width))).toBeLessThan(2);
+    expect(Math.abs(openButtonBox.y + openButtonBox.height - 844)).toBeLessThan(2);
+
+    await left.click();
+    await expect(left).toHaveAccessibleName('Open left toolbar');
+    const collapsedButtonBox = await left.boundingBox();
+    if (!collapsedButtonBox) throw new Error('Expected collapsed mobile toolbar toggle geometry.');
+    expect(Math.abs(collapsedButtonBox.x)).toBeLessThan(2);
+    expect(Math.abs(collapsedButtonBox.y + collapsedButtonBox.height - 844)).toBeLessThan(2);
+    await expect(left).toHaveText('›');
+  });
+
+  test('keeps preset chevron tabs attached to the browser edge when narrow docks are hidden', async ({ page }) => {
+    await fresh(page);
+    await openAppearanceSettings(page);
+    await page.getByRole('article', { name: 'Theme Library' }).getByRole('button', { name: /^PomOS/ }).click();
+    await page.getByRole('tab', { name: 'Scene' }).click();
+
+    const leftBox = await page.locator('.toolbar-edge-toggle-left').boundingBox();
+    const rightBox = await page.locator('.toolbar-edge-toggle-right').boundingBox();
+    if (!leftBox || !rightBox) throw new Error('Expected preset toolbar toggle geometry.');
+    expect(leftBox.width).toBe(30);
+    expect(leftBox.height).toBe(116);
+    expect(Math.abs(leftBox.x)).toBeLessThan(2);
+    expect(Math.abs(leftBox.y + leftBox.height - 844)).toBeLessThan(2);
+    expect(Math.abs(rightBox.x + rightBox.width - 408)).toBeLessThan(2);
+    expect(Math.abs(rightBox.y + rightBox.height - 844)).toBeLessThan(2);
+  });
 });
 
 test.describe('Deep Atmospheric mobile desktop-site presentation', () => {
