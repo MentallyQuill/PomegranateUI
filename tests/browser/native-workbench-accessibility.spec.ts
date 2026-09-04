@@ -1413,8 +1413,15 @@ test('Story measure controls expose focus, motion, forced-color, and responsive 
   await left.evaluate((node) => {
     if (!(node instanceof HTMLElement)) throw new Error('Expected an HTML Story resize control.');
     const focusable = [...document.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
-      .filter((candidate) => !candidate.hasAttribute('disabled'));
-    focusable[Math.max(0, focusable.indexOf(node) - 1)]?.focus();
+      .filter((candidate) =>
+        candidate.tabIndex >= 0 &&
+        !candidate.matches(':disabled') &&
+        !candidate.closest('[inert]') &&
+        candidate.checkVisibility()
+      );
+    const index = focusable.indexOf(node);
+    if (index <= 0) throw new Error('Expected a tabbable control before the Story resize control.');
+    focusable[index - 1]?.focus();
   });
   await page.keyboard.press('Tab');
   await expect(left).toBeFocused();
