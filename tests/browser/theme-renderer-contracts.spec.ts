@@ -9,6 +9,10 @@ const TARGETS = [
   { id: 'bunny', label: 'Bunny' }
 ] as const;
 const ASH_TARGET = { id: 'ash-amber', label: 'Ash & Amber' } as const;
+// At its 27px rendered size, the approved mark's body/pit center sits 2px below its square image box center.
+const POMEGRANATE_BODY_CENTER_OFFSET_PX = 2;
+const WORDMARK_COPY_GAP_PX = 2;
+const WORDMARK_GEOMETRY_TOLERANCE_PX = 0.5;
 
 function normalizedThemeBranch(value: string): string {
   return value.toLocaleLowerCase().replace(/[^a-z0-9]/g, '');
@@ -139,6 +143,44 @@ function technicalRailPresentation(page: Page) {
     };
   });
 }
+
+test('the PomegranateUI label aligns with the mark body instead of its image box', async ({ page }) => {
+  await fresh(page);
+  const geometry: Array<{ label: string; centerDelta: number; copyGap: number | null }> = [];
+
+  for (const target of [...TARGETS, ASH_TARGET]) {
+    await selectTheme(page, target);
+    const targetGeometry = await page.locator('.wordmark').evaluate((wordmark) => {
+      const mark = wordmark.querySelector<HTMLElement>('.wordmark-mark')!;
+      const label = wordmark.querySelector<HTMLElement>('strong')!;
+      const subtitle = wordmark.querySelector<HTMLElement>('small')!;
+      const markBounds = mark.getBoundingClientRect();
+      const labelBounds = label.getBoundingClientRect();
+      const subtitleBounds = subtitle.getBoundingClientRect();
+      const subtitleStyle = getComputedStyle(subtitle);
+      return {
+        centerDelta: (labelBounds.top + labelBounds.height / 2) - (markBounds.top + markBounds.height / 2),
+        copyGap: subtitleStyle.clip === 'auto' && subtitleBounds.height > 0
+          ? subtitleBounds.top - labelBounds.bottom
+          : null
+      };
+    });
+    geometry.push({ label: target.label, ...targetGeometry });
+  }
+
+  for (const target of geometry) {
+    expect(target.centerDelta, `${target.label} label optical offset`)
+      .toBeGreaterThanOrEqual(POMEGRANATE_BODY_CENTER_OFFSET_PX - WORDMARK_GEOMETRY_TOLERANCE_PX);
+    expect(target.centerDelta, `${target.label} label optical offset`)
+      .toBeLessThanOrEqual(POMEGRANATE_BODY_CENTER_OFFSET_PX + WORDMARK_GEOMETRY_TOLERANCE_PX);
+    if (target.copyGap !== null) {
+      expect(target.copyGap, `${target.label} wordmark copy gap`)
+        .toBeGreaterThanOrEqual(WORDMARK_COPY_GAP_PX - WORDMARK_GEOMETRY_TOLERANCE_PX);
+      expect(target.copyGap, `${target.label} wordmark copy gap`)
+        .toBeLessThanOrEqual(WORDMARK_COPY_GAP_PX + WORDMARK_GEOMETRY_TOLERANCE_PX);
+    }
+  }
+});
 
 test('the canvas remains behind every interactive Workbench surface', async ({ page }) => {
   await fresh(page);
