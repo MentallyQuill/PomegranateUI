@@ -84,7 +84,9 @@ export function collectDockTargets(
       };
       targets.push(target);
       if (group) {
-        const tabs = group.querySelector<HTMLElement>(':scope > .widget-group-tabs');
+        const tabs = group.querySelector<HTMLElement>(
+          ':scope > .widget-group-tabs, :scope > [data-widget-group-header] > .widget-group-tabs'
+        );
         if (tabs) targets.push({
           ...target,
           id: dockTargetKey(owner, 'group-header', group.dataset.widgetGroupId ?? targetId),

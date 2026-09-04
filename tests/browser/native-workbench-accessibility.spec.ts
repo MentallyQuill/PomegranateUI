@@ -955,7 +955,8 @@ test('shared Widget headers retain one-line titles without reserving hidden acti
       const evidence = await article.evaluate((node) => {
         const heading = node.querySelector('.widget-frame-heading h2');
         const actions = node.querySelector('.widget-frame > header nav');
-        if (!(heading instanceof HTMLElement) || !(actions instanceof HTMLElement)) {
+        const trigger = actions?.querySelector('.widget-actions-trigger');
+        if (!(heading instanceof HTMLElement) || !(actions instanceof HTMLElement) || !(trigger instanceof HTMLElement)) {
           throw new Error('Missing Widget header geometry.');
         }
         const style = getComputedStyle(heading);
@@ -965,7 +966,8 @@ test('shared Widget headers retain one-line titles without reserving hidden acti
           headingScrollWidth: heading.scrollWidth,
           headingClientWidth: heading.clientWidth,
           lineHeight,
-          actionPosition: getComputedStyle(actions).position
+          actionWidth: actions.getBoundingClientRect().width,
+          triggerDisplay: getComputedStyle(trigger).display
         };
       });
       expect(evidence.headingHeight, `${theme} ${title} title height`).toBeLessThanOrEqual(evidence.lineHeight + 1);
@@ -973,8 +975,8 @@ test('shared Widget headers retain one-line titles without reserving hidden acti
       if (theme === 'Ash & Amber') {
         expect(evidence.headingScrollWidth, `${theme} ${title} title width`).toBeLessThanOrEqual(evidence.headingClientWidth + 1);
       }
-      expect(evidence.actionPosition, `${theme} ${title} action presentation`)
-        .toBe(theme === 'Bunny' ? 'relative' : 'absolute');
+      expect(evidence.triggerDisplay, `${theme} ${title} desktop trigger`).toBe('none');
+      expect(evidence.actionWidth, `${theme} ${title} hidden action space`).toBe(0);
     }
   }
 });

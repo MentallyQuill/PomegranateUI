@@ -36,7 +36,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
     'workbench-surface'
   ]);
   for (const entry of manifest.recipes) {
-    const revised = { 'theme-settings': 5, 'workbench-surface': 2 };
+    const revised = { 'theme-settings': 5, 'widget-frame': 2, 'workbench-surface': 3 };
     assert.equal(entry.revision, revised[entry.id] ?? 1);
     assert.equal(entry.compatiblePomegranateRange, '>=0.1.0-private.0 <0.2.0');
     assert.ok(entry.dependencies.includes('svelte'));
@@ -108,6 +108,10 @@ test('copy-owned Workbench recipes carry optional host title and metadata presen
   assert.match(widgetFrame, /title\?: string/);
   assert.match(widgetFrame, /meta\?: string/);
   assert.match(widgetFrame, /class="widget-frame-meta"/);
+  assert.match(widgetFrame, /onrequestactions\?:/);
+  assert.match(widgetFrame, /aria-keyshortcuts="Shift\+F10"/);
+  assert.match(widgetFrame, /oncontextmenu=/);
+  assert.match(widgetFrame, /class="widget-actions-trigger"/);
 
   for (const file of ['WorkbenchSurface.svelte', 'PanelTemplateSurface.svelte', 'DockRegion.svelte', 'DockShelf.svelte', 'WidgetGroup.svelte']) {
     const source = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', file), 'utf8');
@@ -115,6 +119,10 @@ test('copy-owned Workbench recipes carry optional host title and metadata presen
   }
   const group = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'WidgetGroup.svelte'), 'utf8');
   assert.match(group, /titleFor\?\.\(frame\) \?\? frame\.title/);
+  assert.match(group, /onrequestactions\?:/);
+  assert.match(group, /data-widget-group-header/);
+  assert.match(group, /aria-keyshortcuts="Shift\+F10"/);
+  assert.match(group, /class="widget-actions-trigger"/);
   const columnResize = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'ColumnResizeHandle.svelte'), 'utf8');
   const rowResize = await readFile(path.join(root, 'registry', 'recipes', 'workbench-surface', 'WidgetRowResizeHandle.svelte'), 'utf8');
   assert.match(columnResize, /sub-panel\.resize-columns/);

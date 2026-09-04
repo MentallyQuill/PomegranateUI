@@ -1,13 +1,10 @@
 <script lang="ts" generics="THostContext">
   import { onDestroy } from 'svelte';
   import type { WorkbenchCommand } from '@pomegranate-ui/contracts';
-  import {
-    createWidgetActions,
-    type WidgetFrameProjection,
-    type WorkbenchStore
-  } from '@pomegranate-ui/core';
+  import type { WidgetFrameProjection, WorkbenchStore } from '@pomegranate-ui/core';
   import type { WidgetRendererRegistry } from '@pomegranate-ui/svelte';
   import { createWidgetDragController } from './WidgetDragController.js';
+  import { getWidgetActionMenuContext, type WidgetActionRequestSource } from './WidgetActionMenuController.js';
 
   let {
     frame,
@@ -35,12 +32,13 @@
     class?: string;
   } = $props();
 
-  const actions = $derived(createWidgetActions(store, frame.instanceId));
   const displayTitle = $derived(title ?? frame.title);
+  const grouped = $derived(frame.placement.kind === 'docked' && Boolean(frame.placement.group));
   const Renderer = $derived(rendererRegistry.get(frame.instance.type));
   const dispatch = (command: WorkbenchCommand) => store.dispatch(command);
   let dragging = $state(false);
   let actionsOpen = $state(false);
+  const requestWidgetActions = getWidgetActionMenuContext();
   const drag = createWidgetDragController({
     getFrame: () => frame,
     getStore: () => store,
@@ -54,13 +52,30 @@
     && Boolean(target.closest('button, a, input, textarea, select, summary, [role="menu"]'))
   );
   const dragSurfacePointerDown = (event: PointerEvent) => {
+    if (event.button !== 0) return;
     if (isInteractiveTarget(event.target)) return;
-    actionsOpen = false;
     drag.pointerDown(event);
   };
-  const runAction = (action: () => void) => {
-    actionsOpen = false;
-    action();
+  const openActions = (anchor: HTMLElement, source: WidgetActionRequestSource, point?: { x: number; y: number }) => {
+    requestWidgetActions?.({
+      frame,
+      title: displayTitle,
+      anchor,
+      source,
+      ...(point ? { point } : {}),
+      onopenchange: (open) => { actionsOpen = open; }
+    });
+  };
+  const handleContextMenu = (event: MouseEvent) => {
+    if (grouped) return;
+    event.preventDefault();
+    openActions(event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
+  };
+  const handleHeaderKey = (event: KeyboardEvent) => {
+    if (grouped) return;
+    if (!(event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey))) return;
+    event.preventDefault();
+    openActions(event.currentTarget as HTMLElement, 'keyboard');
   };
 </script>
 
@@ -74,11 +89,16 @@
   data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
 >
   <header
-    role="group"
+    role="toolbar"
     aria-label={`${displayTitle} draggable Widget header`}
     class:is-dragging={dragging}
     data-pom-part="widget.header"
+    data-focus-widget-for={grouped ? undefined : frame.instanceId}
     data-widget-drag-surface
+    tabindex={grouped ? undefined : 0}
+    aria-keyshortcuts={grouped ? undefined : 'Shift+F10'}
+    oncontextmenu={handleContextMenu}
+    onkeydown={handleHeaderKey}
     onpointerdown={dragSurfacePointerDown}
     onpointermove={drag.pointerMove}
     onpointerup={drag.pointerUp}
@@ -88,37 +108,17 @@
       <h2>{displayTitle}</h2>
       {#if meta}<span class="widget-frame-meta">{meta}</span>{/if}
     </div>
-    <nav aria-label={`${displayTitle} actions`} data-pom-part="widget.actions">
+    {#if !grouped}<nav aria-label={`${displayTitle} actions`} data-pom-part="widget.actions">
       <button
-        class="action-menu"
+        class="action-menu widget-actions-trigger"
         data-pom-part="button.icon"
         type="button"
         aria-label="Widget actions"
         aria-haspopup="menu"
         aria-expanded={actionsOpen}
-        data-focus-widget-for={frame.instanceId}
-        onclick={() => { actionsOpen = !actionsOpen; }}
+        onclick={(event) => openActions(event.currentTarget, 'touch')}
       >Widget actions</button>
-      {#if actionsOpen}
-        <div class="widget-actions-menu" role="menu">
-          <button class="action-dock-left" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.dock('left'))}>Dock left</button>
-          <button class="action-dock-main" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.dock('main'))}>Dock main</button>
-          <button class="action-dock-right" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.dock('right'))}>Dock right</button>
-          <button class="action-float" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.float())}>Float</button>
-          <button class="action-group" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.groupWithPrevious())}>Group with previous Widget</button>
-          {#if onfocuswidget}
-            <button
-              class="action-focus"
-              role="menuitem"
-              data-pom-part="button.icon"
-              type="button"
-              onclick={() => runAction(() => onfocuswidget?.(frame))}
-            >Focus Widget</button>
-          {/if}
-          <button class="action-remove" role="menuitem" data-pom-part="button.icon" type="button" onclick={() => runAction(() => actions.shelve())}>Move to Widget Shelf</button>
-        </div>
-      {/if}
-    </nav>
+    </nav>{/if}
   </header>
   <div data-pom-part={contentPart ?? undefined}>
     {#if Renderer}

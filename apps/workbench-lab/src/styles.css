@@ -79,13 +79,12 @@ main[data-pom-shell-presentation="instrumented"] .panel-create-action:not([hidde
 .widget-frame-meta { flex: 0 0 auto; color: var(--faint); font: var(--pom-expression-widget-header-font-size, 9px) var(--pom-font-technical, monospace); letter-spacing: .04em; }
 .widget-frame h2 { margin: 0; font-size: .77rem; font-weight: 650; letter-spacing: .02em; }
 .widget-frame nav { position: relative; display: flex; gap: .15rem; }
-.widget-frame:has(.widget-actions-menu) { position: relative; z-index: 100; overflow: visible; }
-[data-pomegranate-placement]:has(.widget-actions-menu) { position: relative; z-index: 100; overflow: visible; }
-.widget-frame > header:has(.widget-actions-menu),
-.widget-frame > header:has(.widget-actions-menu) nav { z-index: 100; }
 .widget-frame nav button { width: 1.75rem; min-height: 1.75rem; overflow: hidden; padding: 0; border: var(--pom-border-width, 1px) solid transparent; border-radius: var(--pom-radius-small, .3rem); background-color: transparent; background-position: center; background-repeat: no-repeat; background-size: .82rem; color: transparent; font-size: 0; filter: var(--pom-icon-filter, invert(.72)); }
-.widget-frame nav .action-menu {
+.widget-actions-trigger {
+  display: none;
   background-image: url("./assets/icons/more.svg");
+  background-position: center;
+  background-repeat: no-repeat;
 }
 .widget-frame nav .action-dock-left { background-image: url("./assets/icons/dock-left.svg"); }
 .widget-frame nav .action-dock-main { background-image: url("./assets/icons/grid.svg"); }
@@ -95,30 +94,6 @@ main[data-pom-shell-presentation="instrumented"] .panel-create-action:not([hidde
 .widget-frame nav .action-focus { background-image: url("./assets/icons/move.svg"); }
 .widget-frame nav .action-remove { background-image: url("./assets/icons/remove.svg"); }
 .widget-frame nav button:hover { border-color: var(--line); background-color: color-mix(in srgb, var(--ink) 5%, transparent); filter: var(--pom-icon-filter-hover, invert(.9)); }
-.widget-frame nav .widget-actions-menu {
-  position: absolute;
-  z-index: 200;
-  top: calc(100% + 4px);
-  right: 0;
-  display: grid;
-  min-width: 11rem;
-  padding: 4px;
-  border: var(--pom-border-width, 1px) solid var(--line-strong);
-  border-radius: var(--pom-radius-small, .3rem);
-  background: var(--pom-color-chrome, #0a0e0f);
-  box-shadow: 0 12px 28px rgb(0 0 0 / 45%);
-}
-.widget-frame nav .widget-actions-menu button {
-  width: auto;
-  min-height: 30px;
-  padding: 4px 8px;
-  border-radius: 2px;
-  background-image: none;
-  color: var(--ink);
-  font: 10px/1.2 var(--pom-font-ui, sans-serif);
-  text-align: left;
-  filter: none;
-}
 .widget-frame [role="status"], .widget-frame [role="alert"] { margin: .65rem; padding: .65rem; border: var(--pom-border-width, 1px) dashed var(--line-strong); border-radius: var(--pom-radius-small, .4rem); color: var(--muted); font-size: .78rem; }
 .widget-frame [role="alert"] { color: var(--pom-color-danger, #f0b0a2); }
 .widget-content { padding: .72rem; color: var(--muted); font-size: .78rem; }
@@ -798,7 +773,8 @@ main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .to
 .toolbar-resize-handle span { position: absolute; top: 42%; bottom: 42%; left: 5px; width: 1px; background: var(--line-strong); opacity: .35; }
 .toolbar-resize-handle:is(:hover, :focus-visible, .is-dragging) span { top: 34%; bottom: 34%; opacity: .9; }
 .widget-group { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
-.widget-group-tabs { display: flex; min-height: 30px; overflow-x: auto; border-bottom: 1px solid var(--line); background: rgb(3 6 7 / 62%); }
+.widget-group-header { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; min-height: 30px; }
+.widget-group-tabs { display: flex; min-width: 0; min-height: 30px; overflow-x: auto; border-bottom: 1px solid var(--line); background: rgb(3 6 7 / 62%); }
 .widget-group-tabs > span { position: relative; display: flex; min-width: 0; }
 .widget-group-tabs [role="tab"] { min-height: 29px; padding: 0 10px; border: 0; border-right: 1px solid var(--line); border-radius: 0; color: var(--muted); background: transparent; font-size: 10px; white-space: nowrap; }
 .widget-group-tabs [role="tab"][aria-selected="true"] { color: var(--ink); background: color-mix(in srgb, var(--pom-color-selection) 12%, transparent); }
@@ -3365,7 +3341,7 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
     box-sizing: border-box;
     height: 30px;
     min-height: 30px;
-    padding-right: 26px;
+    padding-right: 0;
     overflow: hidden;
   }
   main[data-pom-shell-presentation="instrumented"] .widget-group-tabs > span {
@@ -3450,28 +3426,6 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
 }
 
 main[data-pom-shell-presentation="instrumented"] .developer-create-panel { display: none; }
-
-/* Widget actions are an intentional overlay, not content inside the next Widget. */
-main[data-pom-theme-root] :is(.dock-region, .dock-shelf, .panel-template-surface):has(.widget-actions-menu),
-main[data-pom-theme-root] [data-pomegranate-placement]:has(.widget-actions-menu),
-main[data-pom-theme-root] .widget-frame:has(.widget-actions-menu) {
-  position: relative;
-  z-index: 100;
-  overflow: visible;
-}
-main[data-pom-theme-root] .widget-frame > header:has(.widget-actions-menu),
-main[data-pom-theme-root] .widget-frame > header:has(.widget-actions-menu) nav {
-  z-index: 100;
-}
-main[data-pom-theme-root] .widget-frame nav .widget-actions-menu {
-  width: max-content;
-  min-width: 11rem;
-}
-main[data-pom-theme-root] .widget-frame nav .widget-actions-menu button {
-  width: 100%;
-  min-height: 30px;
-  padding: 4px 8px;
-}
 
 main[data-pom-theme-root].left-collapsed [data-conformance-region="left"],
 main[data-pom-theme-root].right-collapsed [data-conformance-region="right"] {
@@ -4078,6 +4032,49 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
 
 /* Compact and coarse action surfaces use the existing command DOM as opaque sheets. */
 @media (max-width: 520px), (pointer: coarse) {
+  main[data-pom-theme-root] .widget-frame > header {
+    height: 46px;
+    min-height: 46px;
+    padding-right: 0;
+  }
+  main[data-pom-theme-root] .widget-frame > header > nav {
+    position: static;
+    flex: 0 0 44px;
+    align-self: stretch;
+    opacity: 1;
+    translate: none;
+    transform: none;
+  }
+  main[data-pom-theme-root] .widget-group-header {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    min-height: 44px;
+  }
+  main[data-pom-theme-root] .widget-group-tabs {
+    height: 44px;
+    min-height: 44px;
+  }
+  main[data-pom-theme-root] .widget-group-tabs [role="tab"] {
+    min-height: 44px;
+  }
+  main[data-pom-theme-root] .widget-actions-trigger {
+    display: block;
+    box-sizing: border-box;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-left: var(--pom-border-width, 1px) solid var(--line);
+    border-radius: 0;
+    color: transparent;
+    background-color: var(--pom-part-widget-header-material-fill, transparent);
+    background-size: 12px;
+    box-shadow: none;
+    font-size: 0;
+    filter: var(--pom-icon-filter, invert(.72));
+  }
   main[data-pom-theme-root] .panel-menu-surface {
     position: fixed !important;
     inset: auto 0 0 !important;

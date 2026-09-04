@@ -143,7 +143,7 @@
     },
     {
       "id": "widget-frame",
-      "revision": 1,
+      "revision": 2,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
       "files": [
         "WidgetFrame.svelte"
@@ -160,12 +160,12 @@
         "POM-RENDER-A4B0DF2967"
       ],
       "sha256": {
-        "WidgetFrame.svelte": "C00B1003707ECDDFBAAD0282316F0A6F2D9E02E77C7ED31743BAE8FD41A402FE"
+        "WidgetFrame.svelte": "8A6AF539D57EE0431BDAD98AB8A2B4BB93BDB2A9537F549C494A847DB5CB9F57"
       }
     },
     {
       "id": "workbench-surface",
-      "revision": 2,
+      "revision": 3,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
       "files": [
         "ColumnResizeHandle.svelte",
@@ -199,7 +199,7 @@
         "StoryComposer.svelte": "BACB8A8113A1BEA855621AA36863E98F7DFF0ECA79342B86EA23B10E39FC4A84",
         "StoryStage.svelte": "4DA0799EB7223BB6E5DBC5E70549EE087E5C2850A1374C7148B4C1618EF5D5FD",
         "UnavailableTemplate.svelte": "D37B9C22B03942229BFBAF7469E5C3631E5775ABB809D9AFB2171AF3D581875B",
-        "WidgetGroup.svelte": "6DB2D1221DB82277F5615963962DAA4E9F93E0D71FFA9246B11FB7502DB01F85",
+        "WidgetGroup.svelte": "24DA7B15AE9102BE179101EB6E08F0408F4C7001BA2D603684EDBE174DD2EF54",
         "WidgetRowResizeHandle.svelte": "C306328DF3E3A0C67772E4248D3219E51C05B0683F6453CC215D441940989720",
         "WorkbenchSurface.svelte": "9C8C5E036AF8D1ADC332638A48A6A5C4438349E07456019E0D06462233F06D97"
       }

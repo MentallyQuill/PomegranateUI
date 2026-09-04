@@ -823,7 +823,7 @@ test('native workbench POM-PANEL-0C32491298 POM-PANEL-E6D6A0E64B appends menu do
   const leftDock = page.locator('[data-pomegranate-dock="left"]');
   await expect(leftDock.getByRole('article')).toHaveCount(2);
   const worldState = page.getByRole('article', { name: 'World State' });
-  await invokeWidgetAction(worldState, 'Dock left');
+  await invokeWidgetAction(page, worldState, 'Dock left');
   await expect(leftDock.getByRole('article')).toHaveCount(3);
   await expect(leftDock.getByRole('article').nth(0)).toHaveAttribute('aria-label', 'Characters (Story)');
   await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Theme Materials');
@@ -1014,7 +1014,7 @@ test('dragging an inactive grouped Widget holds that Widget rather than the acti
 
 test('Deep Current Focus and Back keep one Widget identity and restore invoking focus', async ({ page }) => {
   const worldState = page.getByRole('article', { name: 'World State' });
-  await invokeWidgetAction(worldState, 'Focus Widget');
+  await invokeWidgetAction(page, worldState, 'Focus Widget');
 
   const dialog = page.getByRole('dialog', { name: 'Focused World State' });
   await expect(dialog).toBeVisible();
@@ -1024,7 +1024,7 @@ test('Deep Current Focus and Back keep one Widget identity and restore invoking 
 
   await dialog.getByRole('button', { name: 'Back to Workbench' }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole('article', { name: 'World State' }).getByRole('button', { name: 'Widget actions' })).toBeFocused();
+  await expect(widgetDragSurface(page.getByRole('article', { name: 'World State' }))).toBeFocused();
 });
 
 test('Deep Current pointer drag floats and subsequently moves a Widget within the canvas', async ({ page }) => {
@@ -1122,16 +1122,19 @@ test('Theme Library bottom-edge chevrons reuse edge tabs outside each toolbar an
   expect(Math.abs(collapsedRightBox.y + collapsedRightBox.height - viewport.height)).toBeLessThan(2);
 });
 
-test('Deep Current narrow dock keeps the complete contextual Widget Actions menu', async ({ page }) => {
+test('desktop Widget headers replace the ellipsis with context and keyboard actions', async ({ page }) => {
   const worldState = page.getByRole('article', { name: 'World State' });
   const header = widgetDragSurface(worldState);
+  const trigger = header.getByRole('button', { name: 'Widget actions' });
 
-  await header.hover();
-  await expect(page.getByRole('menu')).toHaveCount(0);
-  await expect(header.getByRole('button')).toHaveCount(1);
+  await expect(trigger).toBeHidden();
+  await expect(header).toHaveAttribute('tabindex', '0');
+  await expect(header).toHaveAttribute('aria-keyshortcuts', 'Shift+F10');
 
-  await header.getByRole('button', { name: 'Widget actions' }).click();
-  await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText([
+  await header.click({ button: 'right' });
+  const menu = page.getByRole('menu', { name: 'World State Widget actions' });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('menuitem')).toHaveText([
     'Dock left',
     'Dock main',
     'Float',
@@ -1139,6 +1142,106 @@ test('Deep Current narrow dock keeps the complete contextual Widget Actions menu
     'Focus Widget',
     'Move to Widget Shelf'
   ]);
+
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(header).toBeFocused();
+
+  await header.press('Shift+F10');
+  await expect(menu).toBeVisible();
+});
+
+test('desktop grouped Widget tabs open actions for an inactive Widget without activating it', async ({ page }) => {
+  const group = page.getByRole('group', { name: 'Widget group' }).filter({
+    has: page.getByRole('tab', { name: 'Promise Ledger' })
+  });
+  const active = group.getByRole('tab', { name: 'Room Ambience' });
+  const inactive = group.getByRole('tab', { name: 'Promise Ledger' });
+
+  await expect(active).toHaveAttribute('aria-selected', 'true');
+  await expect(inactive).toHaveAttribute('aria-selected', 'false');
+  await inactive.click({ button: 'right' });
+
+  const menu = page.getByRole('menu', { name: 'Promise Ledger Widget actions' });
+  await expect(menu).toBeVisible();
+  await expect(active).toHaveAttribute('aria-selected', 'true');
+  await expect(inactive).toHaveAttribute('aria-selected', 'false');
+
+  await page.keyboard.press('Escape');
+  await expect(inactive).toBeFocused();
+  await inactive.press('Shift+F10');
+  await expect(menu).toBeVisible();
+});
+
+test.describe('coarse-pointer Widget actions', () => {
+  test.use({ hasTouch: true, viewport: { width: 1440, height: 900 } });
+
+  test('standalone trigger is a stable 44px header cell that opens a bottom sheet', async ({ page }) => {
+    const article = page.getByRole('article', { name: 'Theme Materials' });
+    const header = widgetDragSurface(article);
+    const trigger = header.getByRole('button', { name: 'Widget actions' });
+    const geometry = () => header.evaluate((element) => {
+      const action = element.querySelector<HTMLElement>('.widget-actions-trigger');
+      if (!action) throw new Error('Expected standalone Widget action trigger.');
+      const headerBox = element.getBoundingClientRect();
+      const triggerBox = action.getBoundingClientRect();
+      return {
+        header: { x: headerBox.x, y: headerBox.y, width: headerBox.width, height: headerBox.height },
+        trigger: { x: triggerBox.x, y: triggerBox.y, width: triggerBox.width, height: triggerBox.height }
+      };
+    });
+    const before = await geometry();
+
+    expect(before.trigger.width).toBeGreaterThanOrEqual(44);
+    expect(before.trigger.height).toBeGreaterThanOrEqual(44);
+    expect(before.trigger.x).toBeGreaterThanOrEqual(before.header.x - 1);
+    expect(before.trigger.x + before.trigger.width).toBeLessThanOrEqual(before.header.x + before.header.width + 1);
+    expect(before.trigger.y).toBeGreaterThanOrEqual(before.header.y - 1);
+    expect(before.trigger.y + before.trigger.height).toBeLessThanOrEqual(before.header.y + before.header.height + 1);
+
+    await trigger.click();
+    const after = await geometry();
+    expect(after.trigger.width).toBe(before.trigger.width);
+    expect(after.trigger.height).toBe(before.trigger.height);
+    expect(after.trigger.x - after.header.x).toBeCloseTo(before.trigger.x - before.header.x, 5);
+    expect(after.trigger.y - after.header.y).toBeCloseTo(before.trigger.y - before.header.y, 5);
+
+    const menu = page.getByRole('menu', { name: 'Theme Materials Widget actions' });
+    const menuBox = await menu.boundingBox();
+    if (!menuBox) throw new Error('Expected standalone Widget action sheet geometry.');
+    expect(Math.abs(menuBox.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(menuBox.width - 1440)).toBeLessThanOrEqual(1);
+    expect(Math.abs(menuBox.y + menuBox.height - 900)).toBeLessThanOrEqual(1);
+
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+
+  test('grouped trigger reserves the tab-row corner and follows the active Widget', async ({ page }) => {
+    const group = page.getByRole('group', { name: 'Widget group' }).filter({
+      has: page.getByRole('tab', { name: 'Promise Ledger' })
+    });
+    const groupHeader = group.locator('[data-widget-group-header]');
+    const trigger = groupHeader.getByRole('button', { name: 'Widget actions' });
+    const headerBox = await groupHeader.boundingBox();
+    const before = await trigger.boundingBox();
+    if (!headerBox || !before) throw new Error('Expected grouped Widget action geometry.');
+
+    expect(before.width).toBeGreaterThanOrEqual(44);
+    expect(before.height).toBeGreaterThanOrEqual(44);
+    expect(before.x + before.width).toBeLessThanOrEqual(headerBox.x + headerBox.width + 1);
+    expect(before.y + before.height).toBeLessThanOrEqual(headerBox.y + headerBox.height + 1);
+
+    await trigger.click();
+    expect(await trigger.boundingBox()).toEqual(before);
+    await expect(page.getByRole('menu', { name: 'Room Ambience Widget actions' })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await group.getByRole('tab', { name: 'Promise Ledger' }).click();
+    await trigger.click();
+    await expect(page.getByRole('menu', { name: 'Promise Ledger Widget actions' })).toBeVisible();
+  });
 });
 
 test('Deep Current held Widget exposes one compact identity, rails, and tab preview', async ({ page }) => {
@@ -1534,7 +1637,7 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   const sceneLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
   await sceneLeft.focus();
   await sceneLeft.press('End');
-  await invokeWidgetAction(page.getByRole('article', { name: 'Characters (Story)' }), 'Float');
+  await invokeWidgetAction(page, page.getByRole('article', { name: 'Characters (Story)' }), 'Float');
   await dragToShelfRail(page, widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' })), 'left');
 
   await page.getByRole('tab', { name: 'Library' }).click();
@@ -1802,11 +1905,11 @@ test('all 98 reviewed Widget surfaces expose exact ready, state, focus, and resp
       expect(wideOverflow.amount, `${surface.type} wide overflow: ${wideOverflow.descendants.join('; ')}`).toBeLessThanOrEqual(1);
     }
 
-    await invokeWidgetAction(article, 'Focus Widget');
+    await invokeWidgetAction(page, article, 'Focus Widget');
     const dialog = page.getByRole('dialog', { name: `Focused ${expectedPresentationTitle}` });
     await expect(dialog.locator(`[data-surface-type="${surface.type}"]`)).toHaveCount(1);
     await dialog.getByRole('button', { name: 'Back to Workbench' }).click();
-    await expect(article.getByRole('button', { name: 'Widget actions' })).toBeFocused();
+    await expect(widgetDragSurface(article)).toBeFocused();
   }
 });
 
