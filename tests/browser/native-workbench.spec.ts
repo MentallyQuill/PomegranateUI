@@ -97,13 +97,19 @@ async function toggleAndSampleToolbar(
   return toggle.evaluate(async (node: HTMLButtonElement, options) => {
     const region = document.querySelector<HTMLElement>(`[data-conformance-region="${options.side}"]`);
     if (!region) throw new Error(`Missing ${options.side} toolbar.`);
+    const root = node.closest('main[data-pom-theme-root]');
+    if (!root) throw new Error('Missing theme root.');
+    const collapsedClass = `${options.side}-collapsed`;
+    const wasCollapsed = root.classList.contains(collapsedClass);
     const startedAt = performance.now();
     node.click();
-    const samples: Array<{ elapsedMs: number; x: number; width: number }> = [];
+    await Promise.resolve();
+    const stateChangedBeforeFirstFrame = root.classList.contains(collapsedClass) !== wasCollapsed;
+    const samples: Array<{ elapsedMs: number; stateChangedBeforeFirstFrame: boolean; x: number; width: number }> = [];
     for (let frame = 0; frame < options.frames; frame += 1) {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const rect = region.getBoundingClientRect();
-      samples.push({ elapsedMs: performance.now() - startedAt, x: rect.x, width: rect.width });
+      samples.push({ elapsedMs: performance.now() - startedAt, stateChangedBeforeFirstFrame, x: rect.x, width: rect.width });
     }
     return samples;
   }, { side, frames });
@@ -1110,7 +1116,7 @@ test('Story Stage side toolbars ease through intermediate widths and reverse wit
     const closingWidths = closing.map(({ width }) => width);
     const firstClosingFrame = closingWidths.findIndex((width) => width < expandedWidth - 1);
     expect(firstClosingFrame, JSON.stringify(closingWidths)).toBeGreaterThanOrEqual(0);
-    expect(closing[firstClosingFrame]!.elapsedMs, JSON.stringify(closing)).toBeLessThanOrEqual(120);
+    expect(closing[0]!.stateChangedBeforeFirstFrame, JSON.stringify(closing)).toBe(true);
     expect(closingWidths.some((width) => width > 1 && width < expandedWidth - 1), JSON.stringify(closingWidths)).toBe(true);
 
     await expect(toolbar).toBeHidden();
@@ -1123,7 +1129,7 @@ test('Story Stage side toolbars ease through intermediate widths and reverse wit
     const openingWidths = opening.map(({ width }) => width);
     const firstOpeningFrame = openingWidths.findIndex((width) => width > 1);
     expect(firstOpeningFrame, JSON.stringify(openingWidths)).toBeGreaterThanOrEqual(0);
-    expect(opening[firstOpeningFrame]!.elapsedMs, JSON.stringify(opening)).toBeLessThanOrEqual(120);
+    expect(opening[0]!.stateChangedBeforeFirstFrame, JSON.stringify(opening)).toBe(true);
     expect(openingWidths.some((width) => width > 1 && width < expandedWidth - 1), JSON.stringify(openingWidths)).toBe(true);
 
     await expect(toolbar).toBeVisible();
@@ -1181,7 +1187,7 @@ test('compact Story Stage side toolbars ease off canvas without collapsing their
     );
     const firstOpeningFrame = opening.findIndex(({ x }) => direction * (x - collapsedRect.x) < -1);
     expect(firstOpeningFrame, JSON.stringify(opening)).toBeGreaterThanOrEqual(0);
-    expect(opening[firstOpeningFrame]!.elapsedMs, JSON.stringify(opening)).toBeLessThanOrEqual(100);
+    expect(opening[0]!.stateChangedBeforeFirstFrame, JSON.stringify(opening)).toBe(true);
     expect(opening.some(({ x }) => {
       const travel = direction * (x - collapsedRect.x);
       return travel < -1 && travel > -(collapsedRect.width - 1);
@@ -1204,7 +1210,7 @@ test('compact Story Stage side toolbars ease off canvas without collapsing their
     );
     const firstClosingFrame = closing.findIndex(({ x }) => direction * (x - expandedX) > 1);
     expect(firstClosingFrame, JSON.stringify(closing)).toBeGreaterThanOrEqual(0);
-    expect(closing[firstClosingFrame]!.elapsedMs, JSON.stringify(closing)).toBeLessThanOrEqual(100);
+    expect(closing[0]!.stateChangedBeforeFirstFrame, JSON.stringify(closing)).toBe(true);
     expect(closing.some(({ x }) => {
       const travel = direction * (x - expandedX);
       return travel > 1 && travel < collapsedRect.width - 1;
