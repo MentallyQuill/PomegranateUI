@@ -355,8 +355,8 @@ Render a Story Panel and assert:
 - exactly one separator has `data-story-measure-resizer="left"`, semantic part `story.measure-resizer`, and accessible name `Resize Story width from left edge`;
 - the right equivalent uses the exact approved strings;
 - computed/control state exposes the rendered pixel value;
-- click without drag sends no command;
-- spatial Arrow keys, Home, End, and double-click send one final command;
+- click, double-click, and tap without drag send no command;
+- spatial Arrow keys, Home, and End send one final command;
 - pointer cancellation restores the starting CSS value and sends no command;
 - pointer release after multiple moves sends exactly one command.
 
@@ -424,7 +424,7 @@ git commit -m "feat: add story layout controls"
 
 - [ ] **Step 1: Add failing cross-theme browser cases**
 
-Cover all shipped themes through the same selectors. At 1920 by 1080, assert the two separators exist, computed cursor is `col-resize`, an outward drag grows both composer and transcript by at least 40 pixels, and both horizontal centers stay within 2 pixels. Add click-no-op, keyboard, double-click, pointer-cancel, and preferred-value restoration after viewport clamping.
+Cover all shipped themes through the same selectors. At 1920 by 1080, assert the two separators exist, computed cursor is `col-resize`, an outward drag grows both composer and transcript by at least 40 pixels, and both horizontal centers stay within 2 pixels. Add click/double-click/tap no-op, keyboard, pointer-cancel, and preferred-value restoration after viewport clamping.
 
 - [ ] **Step 2: Add failing toolbar-column browser cases**
 

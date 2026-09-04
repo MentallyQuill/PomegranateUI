@@ -43,8 +43,7 @@ Dragging either edge changes the shared measure symmetrically around the Story s
 - Pulling an edge inward contracts them.
 - The horizontal center does not move.
 - Pointer cancellation restores the measure from the start of the drag.
-- Double-click restores the authored 800-pixel default.
-- A click or tap without a resize gesture does not collapse, expand, or otherwise mutate the Story surface.
+- A click, double-click, or tap without a resize gesture does not collapse, expand, reset, or otherwise mutate the Story surface.
 
 Each edge is a focusable vertical separator. The accessible names are `Resize Story width from left edge` and `Resize Story width from right edge`, and each value exposes the current rendered width in pixels. Arrow keys move the focused edge spatially, Home selects the minimum, and End selects the largest width currently available.
 
@@ -174,7 +173,7 @@ Browser coverage proves:
 - the semantic left/right resizer selectors exist in Deep Current and every other shipped theme through the same recipe;
 - fine-pointer hover reports `cursor: col-resize`, while a click or tap without dragging has no collapse action;
 - dragging either edge changes transcript and composer width symmetrically without moving their center;
-- pointer cancellation and double-click reset;
+- pointer cancellation and click/double-click/tap no-op behavior;
 - spatial keyboard behavior and separator semantics;
 - exact transcript/composer containment and theme-authored inner gutters;
 - `+` and `−` geometry and styling relative to existing toolbar controls;
