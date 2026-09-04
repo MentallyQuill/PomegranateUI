@@ -111,6 +111,17 @@ describe('theme compiler', () => {
     expect(compileSliderProgress(5, 5, 5)).toBe('0%');
   });
 
+  it('compiles joined control topology and content-tile geometry without theme selectors', () => {
+    const css = compileThemeStyleSheet(RESOLVED_THEME);
+
+    expect(css).toContain('[data-pom-control-segment="middle"]');
+    expect(css).toMatch(/data-pom-control-segment="start"[^}]*border-start-end-radius:\s*0/s);
+    expect(css).toMatch(/data-pom-control-segment="end"[^}]*border-inline-start-width:\s*0/s);
+    expect(css).toMatch(/data-pom-control-segment="middle"[^}]*border-radius:\s*0/s);
+    expect(css).toMatch(/data-pom-control-shape="content-tile"[^}]*var\(--pom-part-widget-surface-radius\)/s);
+    expect(css).not.toContain('[data-pom-theme="');
+  });
+
   it('compiles content tone, chamfer angle, joined edges, spacing, separators, and textures', () => {
     const variant = structuredClone(RESOLVED_THEME) as any;
     variant.assets['texture.grain'] = { kind: 'texture', source: '/assets/grain.webp' };

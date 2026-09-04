@@ -267,6 +267,30 @@ ${selector}:disabled, ${selector}[aria-disabled="true"] { opacity: var(${prefix}
 
 export const POM_SEMANTIC_PART_STYLE_SHEET = `${THEME_PART_IDS.map(partRule).join('\n\n')}
 
+[data-pom-theme-root] [data-pom-control-segment] {
+  position: relative;
+}
+[data-pom-theme-root] [data-pom-control-segment]:focus-visible {
+  z-index: 1;
+}
+[data-pom-theme-root] [data-pom-control-segment="start"] {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+[data-pom-theme-root] [data-pom-control-segment="middle"] {
+  border-radius: 0;
+  border-inline-start-width: 0;
+}
+[data-pom-theme-root] [data-pom-control-segment="end"] {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-inline-start-width: 0;
+}
+[data-pom-theme-root] [data-pom-control-shape="content-tile"] {
+  border-radius: var(--pom-part-widget-surface-radius);
+  clip-path: var(--pom-part-widget-surface-clip-path);
+}
+
 [data-pom-theme-root] [data-pom-part="slider.input"] {
   appearance: none;
   -webkit-appearance: none;
