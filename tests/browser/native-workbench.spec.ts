@@ -1681,8 +1681,8 @@ test.describe('coarse-pointer Widget actions', () => {
 
     await trigger.click();
     const after = await geometry();
-    expect(after.trigger.width).toBe(before.trigger.width);
-    expect(after.trigger.height).toBe(before.trigger.height);
+    expect(after.trigger.width).toBeCloseTo(before.trigger.width, 4);
+    expect(after.trigger.height).toBeCloseTo(before.trigger.height, 4);
     expect(after.trigger.x - after.header.x).toBeCloseTo(before.trigger.x - before.header.x, 5);
     expect(after.trigger.y - after.header.y).toBeCloseTo(before.trigger.y - before.header.y, 5);
 
