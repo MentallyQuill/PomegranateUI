@@ -28,7 +28,14 @@
   export function open(next: WidgetActionRequest) {
     if (!menu) return;
     if (isMenuOpen() && request?.frame.instanceId === next.frame.instanceId && request.anchor === next.anchor) {
-      closeMenu();
+      if (next.source === 'touch') closeMenu();
+      else {
+        request?.onopenchange?.(false);
+        request = next;
+        restoreTargetAfterClose = true;
+        next.onopenchange?.(true);
+        requestAnimationFrame(opened);
+      }
       return;
     }
     request?.onopenchange?.(false);
@@ -40,7 +47,11 @@
       requestAnimationFrame(opened);
       return;
     }
-    if (!isMenuOpen()) menu.showPopover();
+    if (!isMenuOpen()) {
+      try { menu.showPopover(); }
+      catch { menu.setAttribute('data-fallback-open', ''); }
+      if (!isMenuOpen()) menu.setAttribute('data-fallback-open', '');
+    }
     requestAnimationFrame(opened);
   }
 

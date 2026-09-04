@@ -75,6 +75,13 @@
   onDestroy(reorderDrag.destroy);
 
   function dragPointerDown(event: PointerEvent, frame: WidgetFrameProjection) {
+    if (event.button === 2) {
+      if (event.pointerType !== 'touch') {
+        event.preventDefault();
+        openActions(frame, event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
+      }
+      return;
+    }
     if (event.button !== 0) return;
     dragFrame = frame;
     groupGesture = {
@@ -204,6 +211,12 @@
 
   function tabContextMenu(event: MouseEvent, frame: WidgetFrameProjection) {
     event.preventDefault();
+    if (
+      ('pointerType' in event && event.pointerType === 'touch')
+      || (typeof window.matchMedia === 'function'
+        && window.matchMedia('(pointer: coarse)').matches
+        && !window.matchMedia('(any-pointer: fine)').matches)
+    ) return;
     openActions(frame, event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
   }
 </script>

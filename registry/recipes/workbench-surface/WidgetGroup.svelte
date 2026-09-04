@@ -17,6 +17,7 @@
   const ordered = $derived([...frames].sort((left, right) => (left.placement.kind === 'docked' ? left.placement.group?.order ?? 0 : 0) - (right.placement.kind === 'docked' ? right.placement.group?.order ?? 0 : 0)));
   const active = $derived(ordered.find((frame) => frame.placement.kind === 'docked' && frame.placement.group?.active) ?? ordered[0]);
   const rowHeight = $derived(active?.placement.kind === 'docked' ? active.placement.height : undefined);
+  let lastSecondaryPointer: { anchor: HTMLElement; frameId: string; x: number; y: number; at: number } | undefined;
 
   function requestActions(frame: WidgetFrameProjection, anchor: HTMLElement, source: 'pointer' | 'keyboard' | 'touch', point?: { x: number; y: number }) {
     onrequestactions?.({ frame, title: titleFor?.(frame) ?? frame.title, anchor, source, ...(point ? { point } : {}) });
@@ -25,7 +26,31 @@
   function handleContextMenu(event: MouseEvent, frame: WidgetFrameProjection) {
     if (!onrequestactions) return;
     event.preventDefault();
-    requestActions(frame, event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
+    if (
+      ('pointerType' in event && event.pointerType === 'touch')
+      || (typeof window.matchMedia === 'function'
+        && window.matchMedia('(pointer: coarse)').matches
+        && !window.matchMedia('(any-pointer: fine)').matches)
+    ) return;
+    const anchor = event.currentTarget as HTMLElement;
+    const previous = lastSecondaryPointer;
+    lastSecondaryPointer = undefined;
+    if (
+      previous?.anchor === anchor
+      && previous.frameId === frame.instanceId
+      && previous.x === event.clientX
+      && previous.y === event.clientY
+      && event.timeStamp - previous.at < 1_000
+    ) return;
+    requestActions(frame, anchor, 'pointer', { x: event.clientX, y: event.clientY });
+  }
+
+  function handleSecondaryPointerDown(event: PointerEvent, frame: WidgetFrameProjection) {
+    if (!onrequestactions || event.button !== 2 || event.pointerType === 'touch') return;
+    event.preventDefault();
+    const anchor = event.currentTarget as HTMLElement;
+    lastSecondaryPointer = { anchor, frameId: frame.instanceId, x: event.clientX, y: event.clientY, at: event.timeStamp };
+    requestActions(frame, anchor, 'pointer', { x: event.clientX, y: event.clientY });
   }
 
   function handleKey(event: KeyboardEvent, frame: WidgetFrameProjection) {
@@ -40,7 +65,7 @@
     <div class="widget-group-tabs" role="tablist" aria-label="Grouped Widgets">
       {#each ordered as frame (frame.instanceId)}
         {@const title = titleFor?.(frame) ?? frame.title}
-        <button type="button" data-pom-part="button.surface" role="tab" aria-selected={frame.instanceId === active?.instanceId} aria-keyshortcuts="Shift+F10" tabindex={frame.instanceId === active?.instanceId ? 0 : -1} onclick={() => store.dispatch({ type: 'widget.group.activate', instanceId: frame.instanceId })} oncontextmenu={(event) => handleContextMenu(event, frame)} onkeydown={(event) => handleKey(event, frame)}>{title}</button>
+        <button type="button" data-pom-part="button.surface" role="tab" aria-selected={frame.instanceId === active?.instanceId} aria-keyshortcuts="Shift+F10" tabindex={frame.instanceId === active?.instanceId ? 0 : -1} onclick={() => store.dispatch({ type: 'widget.group.activate', instanceId: frame.instanceId })} onpointerdown={(event) => handleSecondaryPointerDown(event, frame)} oncontextmenu={(event) => handleContextMenu(event, frame)} onkeydown={(event) => handleKey(event, frame)}>{title}</button>
       {/each}
     </div>
     {#if active && onrequestactions}

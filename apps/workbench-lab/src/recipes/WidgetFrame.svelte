@@ -50,6 +50,13 @@
     && Boolean(target.closest('button, a, input, textarea, select, summary, [role="menu"]'))
   );
   const dragSurfacePointerDown = (event: PointerEvent) => {
+    if (event.button === 2) {
+      if (!grouped && event.pointerType !== 'touch') {
+        event.preventDefault();
+        openActions(event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
+      }
+      return;
+    }
     if (event.button !== 0) return;
     if (isInteractiveTarget(event.target)) return;
     drag.pointerDown(event);
@@ -67,6 +74,12 @@
   const handleContextMenu = (event: MouseEvent) => {
     if (grouped) return;
     event.preventDefault();
+    if (
+      ('pointerType' in event && event.pointerType === 'touch')
+      || (typeof window.matchMedia === 'function'
+        && window.matchMedia('(pointer: coarse)').matches
+        && !window.matchMedia('(any-pointer: fine)').matches)
+    ) return;
     openActions(event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
   };
   const handleHeaderKey = (event: KeyboardEvent) => {

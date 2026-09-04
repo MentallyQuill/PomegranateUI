@@ -42,6 +42,7 @@
   const displayTitle = $derived(title ?? frame.title);
   const Renderer = $derived(rendererRegistry.get(frame.instance.type));
   const dispatch = (command: WorkbenchCommand) => store.dispatch(command);
+  let lastSecondaryPointer: { anchor: HTMLElement; x: number; y: number; at: number } | undefined;
 
   function requestActions(anchor: HTMLElement, source: 'pointer' | 'keyboard' | 'touch', point?: { x: number; y: number }) {
     onrequestactions?.({ frame, title: displayTitle, anchor, source, ...(point ? { point } : {}) });
@@ -50,7 +51,30 @@
   function handleContextMenu(event: MouseEvent) {
     if (!onrequestactions || grouped) return;
     event.preventDefault();
-    requestActions(event.currentTarget as HTMLElement, 'pointer', { x: event.clientX, y: event.clientY });
+    if (
+      ('pointerType' in event && event.pointerType === 'touch')
+      || (typeof window.matchMedia === 'function'
+        && window.matchMedia('(pointer: coarse)').matches
+        && !window.matchMedia('(any-pointer: fine)').matches)
+    ) return;
+    const anchor = event.currentTarget as HTMLElement;
+    const previous = lastSecondaryPointer;
+    lastSecondaryPointer = undefined;
+    if (
+      previous?.anchor === anchor
+      && previous.x === event.clientX
+      && previous.y === event.clientY
+      && event.timeStamp - previous.at < 1_000
+    ) return;
+    requestActions(anchor, 'pointer', { x: event.clientX, y: event.clientY });
+  }
+
+  function handleSecondaryPointerDown(event: PointerEvent) {
+    if (!onrequestactions || grouped || event.button !== 2 || event.pointerType === 'touch') return;
+    event.preventDefault();
+    const anchor = event.currentTarget as HTMLElement;
+    lastSecondaryPointer = { anchor, x: event.clientX, y: event.clientY, at: event.timeStamp };
+    requestActions(anchor, 'pointer', { x: event.clientX, y: event.clientY });
   }
 
   function handleHeaderKey(event: KeyboardEvent) {
@@ -73,6 +97,7 @@
     aria-label={`${displayTitle} Widget header`}
     aria-keyshortcuts={onrequestactions && !grouped ? 'Shift+F10' : undefined}
     tabindex={onrequestactions && !grouped ? 0 : undefined}
+    onpointerdown={handleSecondaryPointerDown}
     oncontextmenu={handleContextMenu}
     onkeydown={handleHeaderKey}
   >

@@ -516,6 +516,24 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByRole('article', { name: 'Room Ambience' })).toHaveAttribute('data-pomegranate-placement', 'floating');
   });
 
+  it('opens desktop Widget actions on secondary pointer down before the native context menu event', async () => {
+    render(App);
+    const worldStateHeader = within(screen.getByRole('article', { name: 'World State' }))
+      .getByRole('toolbar', { name: 'World State draggable Widget header' });
+
+    await fireEvent.pointerDown(worldStateHeader, {
+      button: 2,
+      pointerType: 'mouse',
+      clientX: 32,
+      clientY: 48
+    });
+
+    const widgetActions = document.querySelector<HTMLElement>('.widget-actions-menu');
+    if (!widgetActions) throw new Error('Expected the shared Widget action surface.');
+    expect(widgetActions).toHaveAttribute('aria-label', 'World State Widget actions');
+    expect(widgetActions).toHaveAttribute('data-fallback-open');
+  });
+
   it('keeps host presentation titles through Focus', async () => {
     const user = userEvent.setup();
     render(App);
