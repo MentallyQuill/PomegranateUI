@@ -848,7 +848,10 @@ test('native workbench POM-PANEL-0C32491298 POM-PANEL-E6D6A0E64B appends menu do
   const leftDock = page.locator('[data-pomegranate-dock="left"]');
   await expect(leftDock.getByRole('article')).toHaveCount(2);
   const worldState = page.getByRole('article', { name: 'World State' });
-  await invokeWidgetAction(worldState, 'Dock left');
+  await invokeWidgetAction(worldState, 'Move…');
+  await page.getByRole('menu', { name: 'World State Widget move' })
+    .getByRole('menuitem', { name: 'Dock left' })
+    .click();
   await expect(leftDock.getByRole('article')).toHaveCount(3);
   await expect(leftDock.getByRole('article').nth(0)).toHaveAttribute('aria-label', 'Characters (Story)');
   await expect(leftDock.getByRole('article').nth(1)).toHaveAttribute('aria-label', 'Theme Materials');
@@ -1037,19 +1040,49 @@ test('dragging an inactive grouped Widget holds that Widget rather than the acti
   await expect(group.getByRole('tab', { name: 'Characters (Story)' })).toHaveAttribute('aria-selected', 'true');
 });
 
-test('Deep Current Focus and Back keep one Widget identity and restore invoking focus', async ({ page }) => {
+test('desktop Focus is centered, theme-typographic, singular, and restores invoking focus', async ({ page }) => {
   const worldState = page.getByRole('article', { name: 'World State' });
-  await invokeWidgetAction(worldState, 'Focus Widget');
+  const sourceTypography = await widgetDragSurface(worldState).getByRole('heading', { level: 2, name: 'World State' })
+    .evaluate((heading) => {
+      const style = getComputedStyle(heading);
+      return { fontFamily: style.fontFamily, fontSize: style.fontSize, fontWeight: style.fontWeight };
+    });
+  await invokeWidgetAction(worldState, 'Focus');
 
-  const dialog = page.getByRole('dialog', { name: 'Focused World State' });
+  const dialog = page.getByRole('dialog', { name: 'World State focus' });
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { level: 2 })).toHaveText(['World State']);
+  expect(await dialog.getByRole('heading', { level: 2, name: 'World State' }).evaluate((heading) => {
+    const style = getComputedStyle(heading);
+    return { fontFamily: style.fontFamily, fontSize: style.fontSize, fontWeight: style.fontWeight };
+  })).toEqual(sourceTypography);
   await expect(dialog.locator('[data-pomegranate-widget="scene-world"]')).toHaveCount(1);
   await expect(page.locator('[data-focused-widget-placeholder="scene-world"]')).toBeVisible();
   await expect(page.locator('[data-pomegranate-widget="scene-world"]')).toHaveCount(1);
+  const box = await dialog.boundingBox();
+  const viewport = page.viewportSize();
+  if (!box || !viewport) throw new Error('Expected desktop Focus geometry.');
+  expect(Math.abs(box.x + box.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
+  expect(Math.abs(box.y + box.height / 2 - viewport.height / 2)).toBeLessThanOrEqual(1);
 
-  await dialog.getByRole('button', { name: 'Back to Workbench' }).click();
+  await dialog.getByRole('button', { name: 'Exit focus' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(widgetDragSurface(page.getByRole('article', { name: 'World State' }))).toBeFocused();
+});
+
+test('mobile Focus fills the dynamic viewport and keeps its exit action visible', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const worldState = page.getByRole('article', { name: 'World State' });
+  await invokeWidgetAction(worldState, 'Focus');
+
+  const dialog = page.getByRole('dialog', { name: 'World State focus' });
+  const box = await dialog.boundingBox();
+  if (!box) throw new Error('Expected mobile Focus geometry.');
+  expect(Math.abs(box.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(box.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(box.width - 390)).toBeLessThanOrEqual(1);
+  expect(Math.abs(box.height - 844)).toBeLessThanOrEqual(1);
+  await expect(dialog.getByRole('button', { name: 'Exit focus' })).toBeVisible();
 });
 
 test('Deep Current pointer drag floats and subsequently moves a Widget within the canvas', async ({ page }) => {
@@ -1352,16 +1385,17 @@ test('desktop Widget headers replace the ellipsis with context and keyboard acti
   const menu = page.getByRole('menu', { name: 'World State Widget actions' });
   await expect(menu).toBeVisible();
   await expect(menu.getByRole('menuitem')).toHaveText([
-    'Dock left',
-    'Dock main',
-    'Float',
-    'Group with previous Widget',
-    'Focus Widget',
-    'Move to Widget Shelf'
+    'Focus',
+    'Move…',
+    'Remove'
   ]);
+  await menu.getByRole('menuitem', { name: 'Move…' }).click();
+  const moveMenu = page.getByRole('menu', { name: 'World State Widget move' });
+  await expect(moveMenu.getByRole('menuitem', { name: 'Group with Room Ambience' })).toBeVisible();
+  await expect(moveMenu.getByRole('menuitem', { name: 'Group with previous Widget' })).toHaveCount(0);
 
   await page.keyboard.press('Escape');
-  await expect(menu).toBeHidden();
+  await expect(moveMenu).toBeHidden();
   await expect(header).toBeFocused();
 
   await header.press('Shift+F10');
@@ -1376,6 +1410,12 @@ test('desktop Widget headers replace the ellipsis with context and keyboard acti
   await expect(items.first()).toBeFocused();
   await page.keyboard.press('ArrowUp');
   await expect(items.last()).toBeFocused();
+
+  await menu.getByRole('menuitem', { name: 'Move…' }).click();
+  await moveMenu.getByRole('menuitem', { name: 'Group with Room Ambience' }).click();
+  const namedGroup = page.getByRole('group', { name: 'Widget group' })
+    .filter({ has: page.getByRole('tab', { name: 'World State' }) });
+  await expect(namedGroup.getByRole('tab')).toHaveText(['Room Ambience', 'Promise Ledger', 'World State']);
 });
 
 test('narrow fine-pointer Widgets keep context menus and no touch ellipsis', async ({ page }) => {
@@ -1411,6 +1451,9 @@ test('Widget placement actions restore focus to the moved Widget header', async 
   const worldState = page.getByRole('article', { name: 'World State' });
   await widgetDragSurface(worldState).click({ button: 'right' });
   await page.getByRole('menu', { name: 'World State Widget actions' })
+    .getByRole('menuitem', { name: 'Move…' })
+    .click();
+  await page.getByRole('menu', { name: 'World State Widget move' })
     .getByRole('menuitem', { name: 'Dock left' })
     .click();
 
@@ -1921,7 +1964,10 @@ test('Scene, Library, and Settings retain independent interaction layouts after 
   const sceneLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
   await sceneLeft.focus();
   await sceneLeft.press('End');
-  await invokeWidgetAction(page.getByRole('article', { name: 'Characters (Story)' }), 'Float');
+  await invokeWidgetAction(page.getByRole('article', { name: 'Characters (Story)' }), 'Move…');
+  await page.getByRole('menu', { name: 'Characters (Story) Widget move' })
+    .getByRole('menuitem', { name: 'Float' })
+    .click();
   await dragToShelfRail(page, widgetDragSurface(page.getByRole('article', { name: 'Room Ambience' })), 'left');
 
   await page.getByRole('tab', { name: 'Library' }).click();
@@ -2195,10 +2241,10 @@ test('all 98 reviewed Widget surfaces expose exact ready, state, focus, and resp
       expect(wideOverflow.amount, `${surface.type} wide overflow: ${wideOverflow.descendants.join('; ')}`).toBeLessThanOrEqual(1);
     }
 
-    await invokeWidgetAction(article, 'Focus Widget');
-    const dialog = page.getByRole('dialog', { name: `Focused ${expectedPresentationTitle}` });
+    await invokeWidgetAction(article, 'Focus');
+    const dialog = page.getByRole('dialog', { name: `${expectedPresentationTitle} focus` });
     await expect(dialog.locator(`[data-surface-type="${surface.type}"]`)).toHaveCount(1);
-    await dialog.getByRole('button', { name: 'Back to Workbench' }).click();
+    await dialog.getByRole('button', { name: 'Exit focus' }).click();
     await expect(widgetDragSurface(article)).toBeFocused();
   }
 });

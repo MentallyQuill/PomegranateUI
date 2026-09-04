@@ -24,11 +24,10 @@
   } = $props();
 
   let dialog: HTMLDialogElement;
-  let backButton: HTMLButtonElement;
 
   onMount(() => {
     dialog.showModal();
-    backButton.focus();
+    dialog.querySelector<HTMLButtonElement>('.action-exit-focus')?.focus();
   });
 </script>
 
@@ -36,17 +35,18 @@
   bind:this={dialog}
   class="focused-widget-dialog"
   data-pom-part="dialog.surface"
-  aria-labelledby={`focused-widget-title-${frame.instanceId}`}
+  aria-label={`${title} focus`}
   onclose={onreturn}
 >
-  <header data-pom-part="widget.header">
-    <div>
-      <span>Focused Widget</span>
-      <h2 id={`focused-widget-title-${frame.instanceId}`}>Focused {title}</h2>
-    </div>
-    <button bind:this={backButton} type="button" data-pom-part="button.surface" onclick={() => dialog.close()}>Back to Workbench</button>
-  </header>
-  <div class="focused-widget-surface" data-pom-part="widget.content">
-    <WidgetFrame {frame} {title} {meta} {store} {rendererRegistry} {hostContext} surfacePart={null} class="widget-frame" />
-  </div>
+  <WidgetFrame
+    {frame}
+    {title}
+    {meta}
+    {store}
+    {rendererRegistry}
+    {hostContext}
+    onexitfocus={() => dialog.close()}
+    surfacePart={null}
+    class="widget-frame focused-widget-frame"
+  />
 </dialog>

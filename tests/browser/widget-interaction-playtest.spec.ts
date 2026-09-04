@@ -311,7 +311,10 @@ test('AUDIT-P2-COLLAPSED-DOCK-SYMMETRY accepted right-dock drop expands its dest
 });
 
 interactionTest('floating-invalid-cancel', async ({ page, expectActiveDrag }) => {
-  await invokeWidgetAction(page.getByRole('article', { name: 'World State' }), 'Float');
+  await invokeWidgetAction(page.getByRole('article', { name: 'World State' }), 'Move…');
+  await page.getByRole('menu', { name: 'World State Widget move' })
+    .getByRole('menuitem', { name: 'Float' })
+    .click();
   const source = page.locator('[data-widget-type="systems.world-state"][data-pomegranate-placement="floating"]');
   const before = await capturePlacementSnapshot(source);
   const originRect = await source.boundingBox();
@@ -328,8 +331,14 @@ interactionTest('floating-invalid-cancel', async ({ page, expectActiveDrag }) =>
 });
 
 interactionTest('floating-to-empty-pointercancel', async ({ page, expectActiveDrag }) => {
-  await invokeWidgetAction(page.getByRole('article', { name: 'Characters (Story)' }), 'Dock right');
-  await invokeWidgetAction(page.getByRole('article', { name: 'Theme Materials' }), 'Dock right');
+  await invokeWidgetAction(page.getByRole('article', { name: 'Characters (Story)' }), 'Move…');
+  await page.getByRole('menu', { name: 'Characters (Story) Widget move' })
+    .getByRole('menuitem', { name: 'Dock right' })
+    .click();
+  await invokeWidgetAction(page.getByRole('article', { name: 'Theme Materials' }), 'Move…');
+  await page.getByRole('menu', { name: 'Theme Materials Widget move' })
+    .getByRole('menuitem', { name: 'Dock right' })
+    .click();
   const emptyRegion = page.locator('[data-pomegranate-region-surface="left"]');
   await expect(emptyRegion.locator('[data-widget-type]')).toHaveCount(0);
   const source = page.locator('[data-widget-type="systems.world-state"]');

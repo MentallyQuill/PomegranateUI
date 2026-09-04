@@ -478,7 +478,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByText('Drowned Observatory · entry tree')).toBeVisible();
   });
 
-  it('routes Panel reorder, docking, and floating through the public store', async () => {
+  it('keeps Widget placement choices behind one explicit Move action', async () => {
     const user = userEvent.setup();
     render(App);
     const panelTablist = screen.getByRole('tablist', { name: 'Panels' });
@@ -515,10 +515,21 @@ describe('Svelte Workbench Lab mockup', () => {
     if (!widgetActions) throw new Error('Expected the shared Widget action surface.');
     expect(widgetActions).toHaveAttribute('aria-label', 'Room Ambience Widget actions');
     expect(widgetActions).toHaveAttribute('data-fallback-open');
+    expect(within(widgetActions).getAllByRole('menuitem', { hidden: true }).map((item) => item.textContent?.trim())).toEqual([
+      'Focus',
+      'Move…',
+      'Remove'
+    ]);
+    expect(within(widgetActions).queryByRole('menuitem', { name: 'Group with previous Widget', hidden: true })).toBeNull();
+    await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Move…', hidden: true }));
+    expect(widgetActions).toHaveAttribute('aria-label', 'Room Ambience Widget move');
+    expect(within(widgetActions).getByRole('menuitem', { name: 'Group with World State', hidden: true })).toBeInTheDocument();
+    expect(within(widgetActions).queryByRole('menuitem', { name: 'Group with Promise Ledger', hidden: true })).toBeNull();
     await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Dock left', hidden: true }));
     const dockedAmbience = screen.getByRole('article', { name: 'Room Ambience' });
     expect(dockedAmbience.closest('[data-pomegranate-dock]')).toHaveAttribute('data-pomegranate-dock', 'left');
     await user.click(within(dockedAmbience).getByRole('button', { name: 'Widget actions' }));
+    await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Move…', hidden: true }));
     await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Float', hidden: true }));
     expect(screen.getByRole('article', { name: 'Room Ambience' })).toHaveAttribute('data-pomegranate-placement', 'floating');
   });
@@ -632,7 +643,7 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(widgetActions).not.toHaveAttribute('data-fallback-open');
   });
 
-  it('keeps host presentation titles through Focus', async () => {
+  it('keeps one host-presented title and one themed exit action through Focus', async () => {
     const user = userEvent.setup();
     render(App);
     await fireEvent.contextMenu(screen.getByRole('tab', { name: 'Room Ambience' }), { clientX: 20, clientY: 20 });
@@ -640,10 +651,12 @@ describe('Svelte Workbench Lab mockup', () => {
     if (!widgetActions) throw new Error('Expected the shared Widget action surface.');
     expect(widgetActions).toHaveAttribute('aria-label', 'Room Ambience Widget actions');
     expect(widgetActions).toHaveAttribute('data-fallback-open');
-    await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Focus Widget', hidden: true }));
-    const dialog = screen.getByRole('dialog', { name: 'Focused Room Ambience' });
+    await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Focus', hidden: true }));
+    const dialog = screen.getByRole('dialog', { name: 'Room Ambience focus' });
     expect(dialog).toBeVisible();
-    await user.click(within(dialog).getByRole('button', { name: 'Back to Workbench' }));
+    expect(within(dialog).getAllByRole('heading', { level: 2 })).toHaveLength(1);
+    expect(within(dialog).getByRole('heading', { level: 2, name: 'Room Ambience' })).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Exit focus' }));
   });
 
   it('exposes persistence, focus, dock, and Panel creation controls without credential-shaped fixture text', () => {
@@ -703,7 +716,7 @@ describe('Svelte Workbench Lab mockup', () => {
     if (!widgetActions) throw new Error('Expected the shared Widget action surface.');
     expect(widgetActions).toHaveAttribute('aria-label', 'Transcript Widget actions');
     expect(widgetActions).toHaveAttribute('data-fallback-open');
-    await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Move to Widget Shelf', hidden: true }));
+    await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Remove', hidden: true }));
     expect(screen.queryByRole('article', { name: 'Transcript' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Undo layout' })).not.toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Undo layout' }));

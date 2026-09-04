@@ -1,19 +1,25 @@
 <script lang="ts">
-  import { createWidgetActions, type WidgetFrameProjection, type WorkbenchStore } from '@pomegranate-ui/core';
+  import type { WorkbenchState } from '@pomegranate-ui/contracts';
+  import { createWidgetActions, selectPanelSurface, type WidgetFrameProjection, type WorkbenchStore } from '@pomegranate-ui/core';
   import type { WidgetActionRequest } from './WidgetActionMenuController.js';
 
   let {
     store,
-    onfocuswidget
+    onfocuswidget,
+    titlefor = (frame: WidgetFrameProjection) => frame.title
   }: {
     store: WorkbenchStore;
     onfocuswidget?: (frame: WidgetFrameProjection, returnTarget: HTMLElement) => void;
+    titlefor?: (frame: WidgetFrameProjection) => string;
   } = $props();
 
   let request = $state.raw<WidgetActionRequest>();
   let menu = $state<HTMLElement>();
+  let snapshot = $state<WorkbenchState>();
+  let view = $state<'actions' | 'move'>('actions');
   let restoreTargetAfterClose = false;
   const actions = $derived(request ? createWidgetActions(store, request.frame.instanceId) : undefined);
+  const surface = $derived(snapshot ? selectPanelSurface(snapshot, store.registry, store.templates) : null);
   const currentEdge = $derived.by(() => {
     const placement = request?.frame.placement;
     if (!placement) return undefined;
@@ -24,6 +30,23 @@
     if (placement.regionId === 'support' || placement.regionId === 'right') return 'right';
     return undefined;
   });
+  const groupTargets = $derived.by(() => {
+    const current = request?.frame.placement;
+    if (!surface || current?.kind !== 'docked') return [];
+    const currentGroupId = current.group?.id;
+    return [...surface.docks.left, ...surface.docks.main, ...surface.docks.right]
+      .filter((frame) => frame.instanceId !== request?.frame.instanceId
+        && frame.placement.kind === 'docked'
+        && frame.placement.panelId === current.panelId
+        && frame.placement.subPanelId === current.subPanelId
+        && (!currentGroupId || frame.placement.group?.id !== currentGroupId))
+      .map((frame) => ({ frame, title: titlefor(frame) }));
+  });
+
+  $effect(() => {
+    snapshot = store.getState();
+    return store.subscribe((next) => { snapshot = next; });
+  });
 
   export function open(next: WidgetActionRequest) {
     if (!menu) return;
@@ -32,6 +55,7 @@
       else {
         request?.onopenchange?.(false);
         request = next;
+        view = 'actions';
         restoreTargetAfterClose = true;
         next.onopenchange?.(true);
         requestAnimationFrame(opened);
@@ -40,6 +64,7 @@
     }
     request?.onopenchange?.(false);
     request = next;
+    view = 'actions';
     restoreTargetAfterClose = true;
     next.onopenchange?.(true);
     if (typeof menu.showPopover !== 'function') {
@@ -103,6 +128,22 @@
   function run(action: () => void) {
     action();
     closeMenu();
+  }
+
+  function show(next: 'actions' | 'move') {
+    view = next;
+    requestAnimationFrame(opened);
+  }
+
+  function groupWith(target: WidgetFrameProjection) {
+    const placement = target.placement;
+    if (!request || placement.kind !== 'docked') return;
+    run(() => store.dispatch({
+      type: 'widget.group',
+      instanceId: request!.frame.instanceId,
+      targetInstanceId: target.instanceId,
+      groupId: placement.group?.id ?? `group-${target.instanceId}`
+    }));
   }
 
   function focus() {
@@ -177,16 +218,25 @@
   data-context-source={request?.source}
   popover="auto"
   role="menu"
-  aria-label={request ? `${request.title} Widget actions` : 'Widget actions'}
+  aria-label={request ? `${request.title} Widget ${view}` : 'Widget actions'}
   ontoggle={handleToggle}
 >
   {#if actions}
-    {#if currentEdge !== 'left'}<button class="action-dock-left" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.dock('left'))}>Dock left</button>{/if}
-    {#if currentEdge !== 'main'}<button class="action-dock-main" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.dock('main'))}>Dock main</button>{/if}
-    {#if currentEdge !== 'right'}<button class="action-dock-right" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.dock('right'))}>Dock right</button>{/if}
-    {#if currentEdge !== 'floating'}<button class="action-float" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.float())}>Float</button>{/if}
-    <button class="action-group" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.groupWithPrevious())}>Group with previous Widget</button>
-    {#if onfocuswidget}<button class="action-focus" role="menuitem" data-pom-part="button.surface" type="button" onclick={focus}>Focus Widget</button>{/if}
-    <button class="action-remove" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.shelve())}>Move to Widget Shelf</button>
+    {#if view === 'actions'}
+      {#if onfocuswidget}<button class="action-focus" role="menuitem" data-pom-part="button.surface" type="button" onclick={focus}>Focus</button>{/if}
+      <button class="action-move" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => show('move')}>Move…</button>
+      <hr />
+      <button class="action-remove" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.shelve())}>Remove</button>
+    {:else}
+      <button class="action-back" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => show('actions')}>Back to Widget actions</button>
+      <hr />
+      {#if currentEdge !== 'left'}<button class="action-dock-left" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.dock('left'))}>Dock left</button>{/if}
+      {#if currentEdge !== 'main'}<button class="action-dock-main" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.dock('main'))}>Dock main</button>{/if}
+      {#if currentEdge !== 'right'}<button class="action-dock-right" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.dock('right'))}>Dock right</button>{/if}
+      {#if currentEdge !== 'floating'}<button class="action-float" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.float())}>Float</button>{/if}
+      {#each groupTargets as target (target.frame.instanceId)}
+        <button class="action-group" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => groupWith(target.frame)}>Group with {target.title}</button>
+      {/each}
+    {/if}
   {/if}
 </div>

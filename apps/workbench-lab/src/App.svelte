@@ -775,7 +775,7 @@
     </WorkbenchSurface>
   </section>
 
-  <WidgetActionMenu bind:this={widgetActionMenu} {store} onfocuswidget={focusWidget} />
+  <WidgetActionMenu bind:this={widgetActionMenu} {store} onfocuswidget={focusWidget} titlefor={frameTitle} />
 
   <WidgetCatalog
     {catalog}
