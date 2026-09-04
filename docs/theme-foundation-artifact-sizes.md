@@ -47,6 +47,11 @@ hashes, and redistribution evidence are recorded in
 
 The 2026-08-30 showcase-media follow-up adds three theme-specific character
 atlases and an independent Ash & Amber canvas, totaling 801,120 bytes. The
-current static build emits 1,034,730 raw image bytes across all six runtime
-images. No new runtime dependency was added; detailed prompts, source sizes,
-dimensions, digests, and review evidence remain in the asset record above.
+then-current static build emitted 1,034,730 raw image bytes across six runtime
+images.
+
+The 2026-09-03 PomOS Tahoe follow-up adds one 255,198-byte runtime WebP. The
+current static build therefore emits 1,289,928 raw image bytes across seven
+runtime images. No new runtime dependency was added; detailed prompts, source
+sizes, dimensions, digests, and review evidence remain in the asset record
+above.

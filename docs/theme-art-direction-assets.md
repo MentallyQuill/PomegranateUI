@@ -16,6 +16,20 @@ This ledger records local image assets shipped by the Workbench Lab theme showca
 | Third-party source material | None supplied in the prompt or as a reference image |
 | Human review | Accepted after wide and compact browser review on 2026-08-29 |
 
+## PomOS Tahoe canvas
+
+| Field | Record |
+| --- | --- |
+| Repository path | `apps/workbench-lab/src/assets/pomos-tahoe-canvas.webp` |
+| Purpose | Crisp local alpine-water canvas for the PomOS adaptive-glass target |
+| Created | 2026-09-03 through OpenAI image generation |
+| Reference inputs | None; generated from a text-only prompt |
+| Prompt summary | Original wide blue alpine lake and cyan atmosphere with large translucent glass ribbons, a quiet center for readable glass UI, crisp detail, and no fog, blur, text, logos, interface chrome, or Apple-owned artwork |
+| Repository encoding | WebP, quality 86, 1,672 by 941 pixels, 255,198 bytes |
+| SHA-256 | `c3b2d4927a3683fd2f65895e5355ad8d4c95097c33972276450e4bd7cf1beb9e` |
+| Third-party source material | None supplied in the prompt or as a reference image |
+| Human review | Accepted after original-resolution inspection and wide, compact, short, and zoomed browser review on 2026-09-03 |
+
 ## Theme showcase character and Ash canvas assets
 
 The following assets were generated specifically for the Workbench Lab on 2026-08-30 through OpenAI image generation. No reference images, third-party artwork, named franchise characters, logos, or living-person likenesses were supplied.

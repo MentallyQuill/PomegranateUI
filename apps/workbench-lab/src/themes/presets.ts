@@ -13,6 +13,7 @@ import { BUNNY_TARGET } from './bunny.js';
 import { BUNNY_SURFACE_EXPRESSION } from './bunny-expression.js';
 import { DEEP_CURRENT_TARGET } from './deep-current.js';
 import { POM_NEUTRAL_TARGET } from './pom-neutral.js';
+import { POMOS_SURFACE_EXPRESSION } from './pomos-expression.js';
 import { POMOS_PRESENTATION_PROFILE } from './pomos-presentation.js';
 
 const DEEP_ATMOSPHERIC_TARGET = ThemeTargetBundleSchema.parse({
@@ -170,7 +171,8 @@ export const LAB_THEME_PRESETS: readonly LabThemePreset[] = Object.freeze([
     id: 'pom-neutral',
     target: targetWithAuthoredCanvas(POM_NEUTRAL_TARGET, POM_CANVAS_AUTHORING),
     canvasAuthoring: POM_CANVAS_AUTHORING,
-    presentation: POMOS_PRESENTATION_PROFILE
+    presentation: POMOS_PRESENTATION_PROFILE,
+    surfaceExpression: POMOS_SURFACE_EXPRESSION
   },
   {
     id: 'bunny',

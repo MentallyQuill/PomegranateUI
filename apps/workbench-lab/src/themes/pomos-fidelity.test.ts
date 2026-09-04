@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
+import { contrastRatio } from '@pomegranate-ui/theme';
 import { POM_NEUTRAL_THEME } from './pom-neutral.js';
 import { POMOS_PRESENTATION_PROFILE } from './pomos-presentation.js';
+import { LAB_THEME_PRESETS } from './presets.js';
+
+function compositeOverBlack(color: string, opacity: number): string {
+  const channels = [1, 3, 5].map((offset) => (
+    Math.round(Number.parseInt(color.slice(offset, offset + 2), 16) * opacity)
+      .toString(16)
+      .padStart(2, '0')
+  ));
+  return `#${channels.join('')}`;
+}
 
 describe('PomOS fidelity data', () => {
   it('uses a crisp local Tahoe-inspired image without procedural fog or canvas blur', () => {
@@ -48,6 +59,22 @@ describe('PomOS fidelity data', () => {
     expect(POM_NEUTRAL_THEME.materials.fill).toMatchObject({ base: 'surfaceElevated' });
     expect(POM_NEUTRAL_THEME.materials.thumb).toMatchObject({ base: 'surfaceElevated' });
     expect(POM_NEUTRAL_THEME.recipes.parts['group.surface']).toMatchObject({ material: 'pane', overflow: 'clip', elevation: 2 });
+  });
+
+  it('keeps the transparent story reader legible over the darkest possible image region', () => {
+    const preset = LAB_THEME_PRESETS.find(({ id }) => id === 'pom-neutral');
+    const stops = preset?.surfaceExpression?.materials.content?.fill.stops;
+
+    expect(stops).toEqual([
+      { colorRole: 'surfaceElevated', opacity: 0.64, position: 0 },
+      { colorRole: 'surface', opacity: 0.58, position: 1 }
+    ]);
+    for (const stop of stops ?? []) {
+      expect(contrastRatio(
+        POM_NEUTRAL_THEME.colors.text,
+        compositeOverBlack(POM_NEUTRAL_THEME.colors[stop.colorRole], stop.opacity)
+      )).toBeGreaterThanOrEqual(POM_NEUTRAL_THEME.accessibility.minimumContrast);
+    }
   });
 
   it('uses one continuous rounded geometry family for grouped controls', () => {
