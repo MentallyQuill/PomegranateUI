@@ -36,7 +36,7 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
     'workbench-surface'
   ]);
   for (const entry of manifest.recipes) {
-    const revised = { 'theme-settings': 3, 'workbench-surface': 2 };
+    const revised = { 'theme-settings': 4, 'workbench-surface': 2 };
     assert.equal(entry.revision, revised[entry.id] ?? 1);
     assert.equal(entry.compatiblePomegranateRange, '>=0.1.0-private.0 <0.2.0');
     assert.ok(entry.dependencies.includes('svelte'));
@@ -56,15 +56,15 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
 test('recipe check mode validates actual source hashes', () => {
   const result = run(['--check']);
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /Recipe registry verified: 8 recipes, 27 files\./);
+  assert.match(result.stdout, /Recipe registry verified: 8 recipes, 28 files\./);
 });
 
-test('theme authoring recipe exposes five focused elements through one shared port', async () => {
+test('theme authoring recipe exposes six focused elements through one shared port', async () => {
   const recipeRoot = path.join(root, 'registry', 'recipes', 'theme-settings');
-  const expected = ['AmbientLight.svelte', 'AmbientPosition.svelte', 'ColorPlane.svelte', 'CustomTheme.svelte', 'HueControl.svelte', 'ThemeAuthoringTypes.ts', 'ThemeCanvasSettings.svelte', 'ThemeColors.svelte', 'ThemeMaterials.svelte'];
+  const expected = ['AmbientLight.svelte', 'AmbientPosition.svelte', 'ColorPlane.svelte', 'CustomTheme.svelte', 'HueControl.svelte', 'ThemeAuthoringTypes.ts', 'ThemeCanvasSettings.svelte', 'ThemeColors.svelte', 'ThemeMaterials.svelte', 'ThemeTypography.svelte'];
   assert.deepEqual((await readdir(recipeRoot)).sort(), expected);
   const combined = (await Promise.all(expected.map((file) => readFile(path.join(recipeRoot, file), 'utf8')))).join('\n');
-  for (const element of ['overview', 'colors', 'materials', 'canvas', 'ambient']) {
+  for (const element of ['overview', 'colors', 'materials', 'canvas', 'ambient', 'typography']) {
     assert.match(combined, new RegExp(`data-theme-authoring-element="${element}"`));
   }
   assert.match(combined, /toolbarTogglePresentation/);

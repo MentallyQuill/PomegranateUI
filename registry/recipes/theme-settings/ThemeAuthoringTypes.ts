@@ -1,4 +1,13 @@
-import { PersistedThemeDraftSchema, type PersistedThemeDraft, type ThemeDraftColorRole } from '@pomegranate-ui/contracts';
+import { PersistedThemeDraftSchema, type PersistedThemeDraft, type ThemeDraftColorRole, type ThemeTypography, type ThemeTypographyRole } from '@pomegranate-ui/contracts';
+
+export type ThemeTypographyRoleId = 'ui' | 'prose' | 'display' | 'technical';
+export type ThemeTypographyScaleId = keyof ThemeTypography['scale'];
+
+export interface BundledFontChoice {
+  readonly family: string;
+  readonly label: string;
+  readonly fallbacks: ThemeTypographyRole['fallbacks'];
+}
 
 export interface ThemeAuthoringDiagnostic {
   readonly message: string;
@@ -8,7 +17,7 @@ export interface ThemeAuthoringDiagnostic {
 export interface ThemeAuthoringSnapshot {
   readonly editable: unknown;
   readonly lastValidEditable: PersistedThemeDraft;
-  readonly applied: { readonly resolved: { readonly theme: { readonly label: string } } };
+  readonly applied: { readonly resolved: { readonly theme: { readonly label: string; readonly typography: ThemeTypography } } };
   readonly diagnostics: readonly ThemeAuthoringDiagnostic[];
   readonly canvasAvailability: { readonly image: boolean; readonly overlay: boolean; readonly gradient: boolean; readonly vignette: boolean };
   readonly colorInputs: {
@@ -27,9 +36,13 @@ export interface ThemeAuthoringResult {
 
 export interface ThemeAuthoringPort {
   readonly authoring: ThemeAuthoringSnapshot;
+  readonly fontChoices: Readonly<Record<ThemeTypographyRoleId, readonly BundledFontChoice[]>>;
   readonly editDraft: (next: unknown) => ThemeAuthoringResult;
   readonly editColorHex: (role: ThemeDraftColorRole, value: string) => ThemeAuthoringResult;
   readonly editColorRgb: (role: ThemeDraftColorRole, channel: 0 | 1 | 2, value: string) => ThemeAuthoringResult;
+  readonly editTypographyRole: (role: ThemeTypographyRoleId, patch: Partial<ThemeTypographyRole>) => ThemeAuthoringResult;
+  readonly editTypographyScale: (step: ThemeTypographyScaleId, value: number) => ThemeAuthoringResult;
+  readonly resetTypography: () => ThemeAuthoringResult;
   readonly resetDraft: () => ThemeAuthoringResult;
   readonly saveDraft: () => Promise<ThemeAuthoringResult>;
 }

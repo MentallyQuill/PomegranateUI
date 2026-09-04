@@ -6,7 +6,9 @@ import {
   type PresentationProfileDefinition,
   type ThemeDraftStorage,
   type ThemeTargetBundle,
-  type ThemeDraftColorRole
+  type ThemeDraftColorRole,
+  type ThemeTypography,
+  type ThemeTypographyRole
 } from '@pomegranate-ui/contracts';
 import {
   compilePresentationProfile,
@@ -37,13 +39,19 @@ import {
   type LabMaterialControlId,
   type LabMaterialControls
 } from './material-controls.js';
+import { BUNDLED_FONT_CHOICES, bundledFontChoice } from './bundled-fonts.js';
 import {
   LAB_THEME_PRESETS,
   isLabThemeId,
   type LabThemeId,
   type LabThemePresetInput
 } from './presets.js';
-import { loadPersistedThemeDraft, savePersistedThemeDraft } from './draft-storage.js';
+import {
+  LAB_THEME_DRAFT_KEY,
+  loadPersistedThemeDraft,
+  savePersistedThemeDraft,
+  themeDraftStorageKey
+} from './draft-storage.js';
 
 export interface ThemePreferenceAdapter {
   read(): string | null;
@@ -100,10 +108,16 @@ export interface LabThemeController {
   editDraft(next: unknown): ThemeDraftEditResult;
   editColorHex(role: ThemeDraftColorRole, value: string): ThemeDraftEditResult;
   editColorRgb(role: ThemeDraftColorRole, channel: 0 | 1 | 2, value: string): ThemeDraftEditResult;
+  editTypographyRole(role: ThemeTypographyRoleId, patch: Partial<ThemeTypographyRole>): ThemeDraftEditResult;
+  editTypographyScale(step: ThemeTypographyScaleId, value: number): ThemeDraftEditResult;
+  resetTypography(): ThemeDraftEditResult;
   resetDraft(): ThemeDraftEditResult;
   saveDraft(): Promise<ThemeDraftSaveResult>;
   loadDraft(): Promise<ThemeDraftEditResult>;
 }
+
+export type ThemeTypographyRoleId = 'ui' | 'prose' | 'display' | 'technical';
+export type ThemeTypographyScaleId = keyof ThemeTypography['scale'];
 
 function diagnostic(code: ThemeDiagnostic['code'], path: readonly (string | number)[], message: string): readonly ThemeDiagnostic[] {
   return Object.freeze([Object.freeze({ code, path: Object.freeze([...path]), message })]);
@@ -119,6 +133,34 @@ function schemaDiagnostics(issues: readonly { readonly path: readonly PropertyKe
     path: Object.freeze(issue.path.map((part) => typeof part === 'number' ? part : String(part))),
     message: issue.message
   })));
+}
+
+function bundledTypographyDiagnostics(persisted: PersistedThemeDraft): readonly ThemeDiagnostic[] {
+  const typography = persisted.draft.typography;
+  if (!typography) return Object.freeze([]);
+  const roles: readonly ThemeTypographyRoleId[] = typography.display
+    ? ['ui', 'prose', 'display', 'technical']
+    : ['ui', 'prose', 'technical'];
+  for (const role of roles) {
+    const value = role === 'display' ? typography.display! : typography[role];
+    const choice = bundledFontChoice(role, value.family);
+    if (!choice) {
+      return diagnostic(
+        'THEME_SCHEMA_INVALID',
+        ['draft', 'typography', role, 'family'],
+        `${value.family} is not a bundled ${role} font. Choose ${BUNDLED_FONT_CHOICES[role].map(({ label }) => label).join(', ')}.`
+      );
+    }
+    if (value.fallbacks.length !== choice.fallbacks.length
+      || value.fallbacks.some((fallback, index) => fallback !== choice.fallbacks[index])) {
+      return diagnostic(
+        'THEME_SCHEMA_INVALID',
+        ['draft', 'typography', role, 'fallbacks'],
+        `${choice.label} must use its bundled fallback stack.`
+      );
+    }
+  }
+  return Object.freeze([]);
 }
 
 function registryFromIds(ids: ReadonlySet<string>): ThemeAssetRegistry {
@@ -388,6 +430,11 @@ export function createLabThemeController(options: {
       authoringDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['draft', 'baseTargetId'], 'Draft base target must match the active target.');
       return { ok: false, authoring: authoring(), diagnostics: combinedDiagnostics() };
     }
+    const typographyDiagnostics = bundledTypographyDiagnostics(parsed.data);
+    if (typographyDiagnostics.length > 0) {
+      authoringDiagnostics = typographyDiagnostics;
+      return { ok: false, authoring: authoring(), diagnostics: combinedDiagnostics() };
+    }
     const result = applyPersisted(snapshot.activeId, parsed.data);
     if (!result.ok) {
       authoringDiagnostics = result.diagnostics;
@@ -441,6 +488,14 @@ export function createLabThemeController(options: {
     return { ok: false, authoring: authoring(), diagnostics };
   };
 
+  const currentPersisted = (): PersistedThemeDraft => PersistedThemeDraftSchema.parse(
+    validDrafts.get(snapshot.activeId) ?? editable
+  );
+
+  const currentTypography = (current: PersistedThemeDraft): ThemeTypography => (
+    current.draft.typography ?? snapshot.resolved.theme.typography
+  );
+
   return Object.freeze({
     getSnapshot: () => snapshot,
     getAuthoringSnapshot: authoring,
@@ -485,6 +540,49 @@ export function createLabThemeController(options: {
     editDraft,
     editColorHex,
     editColorRgb,
+    editTypographyRole(role: ThemeTypographyRoleId, patch: Partial<ThemeTypographyRole>): ThemeDraftEditResult {
+      const current = currentPersisted();
+      const typography = currentTypography(current);
+      const existing = role === 'display'
+        ? typography.display ?? typography.ui
+        : typography[role];
+      return editDraft({
+        ...current,
+        draft: {
+          ...current.draft,
+          typography: {
+            ...typography,
+            [role]: { ...existing, ...patch }
+          }
+        }
+      });
+    },
+    editTypographyScale(step: ThemeTypographyScaleId, value: number): ThemeDraftEditResult {
+      const current = currentPersisted();
+      const typography = currentTypography(current);
+      return editDraft({
+        ...current,
+        draft: {
+          ...current.draft,
+          typography: {
+            ...typography,
+            scale: { ...typography.scale, [step]: value }
+          }
+        }
+      });
+    },
+    resetTypography(): ThemeDraftEditResult {
+      const current = currentPersisted();
+      const target = rawTarget(snapshot.activeId);
+      if (!target) {
+        const diagnostics = unknownPresetDiagnostic(snapshot.activeId);
+        return { ok: false, authoring: authoring(), diagnostics };
+      }
+      return editDraft({
+        ...current,
+        draft: { ...current.draft, typography: structuredClone(target.theme.typography) }
+      });
+    },
     resetDraft(): ThemeDraftEditResult {
       clearColorInputDiagnostics();
       authoringDiagnostics = Object.freeze([]);
@@ -518,7 +616,11 @@ export function createLabThemeController(options: {
       const savedId = snapshot.activeId;
       saving = true;
       const operation = (async (): Promise<ThemeDraftSaveResult> => {
-        const saved = await savePersistedThemeDraft(options.draftStorage!, parsed.data);
+        const saved = await savePersistedThemeDraft(
+          options.draftStorage!,
+          parsed.data,
+          themeDraftStorageKey(savedId)
+        );
         if (!saved.ok) {
           const storageDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['storage'], saved.message);
           authoringDiagnostics = editRevision === savedRevision && snapshot.activeId === savedId
@@ -547,15 +649,36 @@ export function createLabThemeController(options: {
         authoringDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['storage'], 'Theme draft storage is unavailable.');
         return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
       }
-      const loaded = await loadPersistedThemeDraft(
+      const activeId = snapshot.activeId;
+      const canvasDefaults = byId.get(activeId)?.canvasAuthoring?.defaults;
+      let loaded = await loadPersistedThemeDraft(
         options.draftStorage,
-        byId.get(snapshot.activeId)?.canvasAuthoring?.defaults
+        canvasDefaults,
+        themeDraftStorageKey(activeId)
       );
       if (!loaded.ok) {
         authoringDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['storage'], loaded.message);
         return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
       }
-      if (loaded.value === null || loaded.value.draft.baseTargetId !== snapshot.activeId) {
+      if (loaded.value === null) {
+        const legacy = await loadPersistedThemeDraft(options.draftStorage, canvasDefaults, LAB_THEME_DRAFT_KEY);
+        if (!legacy.ok) {
+          authoringDiagnostics = diagnostic('THEME_SCHEMA_INVALID', ['storage'], legacy.message);
+          return { ok: false, authoring: authoring(), diagnostics: authoringDiagnostics };
+        }
+        if (legacy.value?.draft.baseTargetId === activeId) {
+          loaded = legacy;
+          const migrated = await savePersistedThemeDraft(
+            options.draftStorage,
+            legacy.value,
+            themeDraftStorageKey(activeId)
+          );
+          if (migrated.ok) {
+            try { await options.draftStorage.remove?.(LAB_THEME_DRAFT_KEY); } catch { /* The migrated per-theme copy remains usable. */ }
+          }
+        }
+      }
+      if (snapshot.activeId !== activeId || loaded.value === null || loaded.value.draft.baseTargetId !== activeId) {
         return { ok: true, authoring: authoring() };
       }
       clearColorInputDiagnostics();

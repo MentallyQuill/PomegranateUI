@@ -8,6 +8,11 @@ import {
 } from '@pomegranate-ui/contracts';
 
 export const LAB_THEME_DRAFT_KEY = 'pomegranate-ui.workbench-lab.theme-draft.v1' as const;
+export const LAB_THEME_DRAFT_KEY_PREFIX = 'pomegranate-ui.workbench-lab.theme-draft.v2.' as const;
+
+export function themeDraftStorageKey(baseTargetId: string): string {
+  return `${LAB_THEME_DRAFT_KEY_PREFIX}${encodeURIComponent(baseTargetId)}`;
+}
 
 export type ThemeDraftCodecResult<T> =
   | { readonly ok: true; readonly value: T }
@@ -59,7 +64,7 @@ export function decodePersistedThemeDraft(
 export async function loadPersistedThemeDraft(
   storage: ThemeDraftStorage,
   canvasDefaults?: ThemeCanvasDraft,
-  key = LAB_THEME_DRAFT_KEY
+  key: string = LAB_THEME_DRAFT_KEY
 ): Promise<ThemeDraftCodecResult<PersistedThemeDraft | null>> {
   try {
     const raw = await storage.load(key);
@@ -73,7 +78,7 @@ export async function loadPersistedThemeDraft(
 export async function savePersistedThemeDraft(
   storage: ThemeDraftStorage,
   draft: unknown,
-  key = LAB_THEME_DRAFT_KEY
+  key: string = LAB_THEME_DRAFT_KEY
 ): Promise<ThemeDraftCodecResult<null>> {
   const encoded = encodePersistedThemeDraft(draft);
   if (!encoded.ok) return encoded;

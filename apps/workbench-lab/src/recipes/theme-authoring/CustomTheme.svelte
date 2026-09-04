@@ -26,7 +26,7 @@
 </script>
 
 <div class="theme-authoring-element theme-authoring-overview" data-theme-authoring-element="overview">
-  <p class="theme-authoring-meta">This device · one shared recoverable draft</p>
+  <p class="theme-authoring-meta">This theme · recoverable device draft</p>
   <dl class="theme-authoring-summary">
     <div><dt>Preset</dt><dd>{theme.authoring.applied.resolved.theme.label}</dd></div>
     <div><dt>State</dt><dd>{theme.authoring.dirty ? 'Unsaved changes' : 'Ready'}</dd></div>

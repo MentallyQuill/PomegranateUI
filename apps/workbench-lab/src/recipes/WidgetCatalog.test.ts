@@ -10,6 +10,7 @@ import { createCatalogController, createWidgetRegistry, type CatalogController, 
 import { createLabHostContext, type LabHostContext } from '../mockup/host-context.js';
 import { createCatalogManifests } from '../mockup/catalog.js';
 import { createLabThemeController } from '../themes/controller.js';
+import { BUNDLED_FONT_CHOICES } from '../themes/bundled-fonts.js';
 import { createLabRuntime } from '../mockup/widgets.js';
 import CatalogWidgetPreview from './CatalogWidgetPreview.svelte';
 import type { CatalogPlacementTarget } from './CatalogPlacementController.js';
@@ -69,6 +70,7 @@ function previewHostContext(): LabHostContext {
     },
     materialControls: snapshot.materialControls,
     authoring: controller.getAuthoringSnapshot(),
+    fontChoices: BUNDLED_FONT_CHOICES,
     activate: () => undefined,
     setMaterialControl: () => undefined,
     resetMaterialControls: () => undefined,
@@ -76,6 +78,9 @@ function previewHostContext(): LabHostContext {
     editDraft: (next) => controller.editDraft(next),
     editColorHex: (role, value) => controller.editColorHex(role, value),
     editColorRgb: (role, channel, value) => controller.editColorRgb(role, channel, value),
+    editTypographyRole: (role, patch) => controller.editTypographyRole(role, patch),
+    editTypographyScale: (step, value) => controller.editTypographyScale(step, value),
+    resetTypography: () => controller.resetTypography(),
     resetDraft: () => controller.resetDraft(),
     saveDraft: () => controller.saveDraft()
   });

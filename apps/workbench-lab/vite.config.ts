@@ -10,7 +10,13 @@ const legalArtifacts = [
   ['LICENSE', 'LICENSE.txt'],
   ['THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_NOTICES.md'],
   ['apps/workbench-lab/src/assets/fonts/LICENSE-Geist.txt', 'licenses/Geist-OFL.txt'],
-  ['apps/workbench-lab/src/assets/fonts/LICENSE-Newsreader.txt', 'licenses/Newsreader-OFL.txt']
+  ['apps/workbench-lab/src/assets/fonts/LICENSE-Newsreader.txt', 'licenses/Newsreader-OFL.txt'],
+  ['apps/workbench-lab/src/assets/fonts/LICENSE-Inter.txt', 'licenses/Inter-OFL.txt'],
+  ['apps/workbench-lab/src/assets/fonts/LICENSE-RobotoMono.txt', 'licenses/RobotoMono-OFL.txt'],
+  ['apps/workbench-lab/src/assets/fonts/LICENSE-Nunito.txt', 'licenses/Nunito-OFL.txt'],
+  ['apps/workbench-lab/src/assets/fonts/LICENSE-Fraunces.txt', 'licenses/Fraunces-OFL.txt'],
+  ['apps/workbench-lab/src/assets/fonts/LICENSE-SourceSans3.txt', 'licenses/SourceSans3-OFL.txt'],
+  ['apps/workbench-lab/src/assets/fonts/LICENSE-Alegreya.txt', 'licenses/Alegreya-OFL.txt']
 ] as const;
 
 function copyLegalArtifacts(): Plugin {

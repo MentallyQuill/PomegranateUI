@@ -10,6 +10,7 @@ import { createLabHostContext } from '../host-context.js';
 import { IMPLEMENTED_SURFACE_TYPES } from '../implemented-surfaces.js';
 import { resolveLabShowcaseMediaProfile } from '../showcase-media.js';
 import { createLabThemeController } from '../../themes/controller.js';
+import { BUNDLED_FONT_CHOICES } from '../../themes/bundled-fonts.js';
 import ImplementedWidget from './ImplementedWidget.svelte';
 
 afterEach(cleanup);
@@ -29,6 +30,7 @@ function recordingHostContext(activeId: 'deep-current' | 'pom-neutral' | 'bunny'
     },
     materialControls: snapshot.materialControls,
     authoring: controller.getAuthoringSnapshot(),
+    fontChoices: BUNDLED_FONT_CHOICES,
     activate: () => undefined,
     setMaterialControl: () => undefined,
     resetMaterialControls: () => undefined,
@@ -36,6 +38,9 @@ function recordingHostContext(activeId: 'deep-current' | 'pom-neutral' | 'bunny'
     editDraft: (next) => controller.editDraft(next),
     editColorHex: (role, value) => controller.editColorHex(role, value),
     editColorRgb: (role, channel, value) => controller.editColorRgb(role, channel, value),
+    editTypographyRole: (role, patch) => controller.editTypographyRole(role, patch),
+    editTypographyScale: (step, value) => controller.editTypographyScale(step, value),
+    resetTypography: () => controller.resetTypography(),
     resetDraft: () => controller.resetDraft(),
     saveDraft: () => controller.saveDraft()
   }, 'ready', resolveLabShowcaseMediaProfile(activeId));

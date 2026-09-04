@@ -87,7 +87,7 @@
     },
     {
       "id": "theme-settings",
-      "revision": 3,
+      "revision": 4,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
       "files": [
         "AmbientLight.svelte",
@@ -98,7 +98,8 @@
         "ThemeAuthoringTypes.ts",
         "ThemeCanvasSettings.svelte",
         "ThemeColors.svelte",
-        "ThemeMaterials.svelte"
+        "ThemeMaterials.svelte",
+        "ThemeTypography.svelte"
       ],
       "dependencies": [
         "@pomegranate-ui/contracts",
@@ -114,11 +115,12 @@
         "AmbientPosition.svelte": "C3B6C929BDB704E606F184D961C70D10414AA4BC381C8CB855C7F133D3BAF3AF",
         "ColorPlane.svelte": "C68F0A836D3A4F5A70E7DA83DC5E9EBFBE1E5561F9492F5F14B955AB13213A60",
         "HueControl.svelte": "0804D5BDBE0AA7B29FD8260E900DEE0855079F3926F7DF6F51CC7EE6A548E6E3",
-        "CustomTheme.svelte": "B71DB121A1A8224B1EE2EF6AED9A3C792A58CD90731C6CA861CD553F3D56184E",
-        "ThemeAuthoringTypes.ts": "F2726BDDCC825FFB04E718A984611BE20206D24FDF10E3125717865B75C4929F",
+        "CustomTheme.svelte": "F2CFA527EB5C88597232364AE5ABBD9178B399FF80A6812EE329A7E31010F90C",
+        "ThemeAuthoringTypes.ts": "6A657C42606CA106F92EA6C582047FD26A2B2A437DC480308EC1DECC16C75907",
         "ThemeCanvasSettings.svelte": "3A8123A670E3E2834FE04D4A00077BE307E00E611C51A84F27B6C5A60A481A58",
         "ThemeColors.svelte": "1E6AC7EC2AB38077907197F4C6D0BAF22055156014BF58FA4259BD2E1494000E",
-        "ThemeMaterials.svelte": "B125B12E499346C786745641A7B27217FA7426ECA79422022F5E42A2F493E9B6"
+        "ThemeMaterials.svelte": "B125B12E499346C786745641A7B27217FA7426ECA79422022F5E42A2F493E9B6",
+        "ThemeTypography.svelte": "B63AE0CA9930BC010B11ED5157B1E83B07574881C94D2BBD36BBC6BA729479EB"
       }
     },
     {

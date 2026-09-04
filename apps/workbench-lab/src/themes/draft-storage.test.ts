@@ -8,7 +8,8 @@ import {
   encodePersistedThemeDraft,
   loadPersistedThemeDraft,
   migratePersistedThemeDraft,
-  savePersistedThemeDraft
+  savePersistedThemeDraft,
+  themeDraftStorageKey
 } from './draft-storage.js';
 
 const canvasDefaults: ThemeCanvasDraft = {
@@ -37,6 +38,11 @@ const fixture = (): PersistedThemeDraft => ({
 });
 
 describe('Theme draft storage', () => {
+  it('derives a stable device-storage key for each theme target', () => {
+    expect(themeDraftStorageKey('deep-current')).toBe('pomegranate-ui.workbench-lab.theme-draft.v2.deep-current');
+    expect(themeDraftStorageKey('ash & amber')).toBe('pomegranate-ui.workbench-lab.theme-draft.v2.ash%20%26%20amber');
+  });
+
   it('encodes canonical schema order and decodes one exact record', () => {
     const encoded = encodePersistedThemeDraft(fixture());
     expect(encoded.ok).toBe(true);

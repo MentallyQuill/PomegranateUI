@@ -52,7 +52,6 @@ export type LabThemeId = (typeof LAB_THEME_IDS)[number];
 export interface LabThemePreset {
   readonly id: LabThemeId;
   readonly target: ThemeTargetBundle;
-  readonly swatchStyle: string;
   readonly canvasAuthoring: ThemeCanvasAuthoringProfile;
   readonly presentation?: PresentationProfileDefinition;
   readonly surfaceExpression?: SurfaceExpressionProfile;
@@ -177,28 +176,24 @@ export const LAB_THEME_PRESETS: readonly LabThemePreset[] = Object.freeze([
   {
     id: 'deep-current',
     target: targetWithAuthoredCanvas(DEEP_ATMOSPHERIC_TARGET, DEEP_CANVAS_AUTHORING),
-    canvasAuthoring: DEEP_CANVAS_AUTHORING,
-    swatchStyle: 'background: linear-gradient(145deg, #071416 0 48%, #8fd8ce 49% 53%, #111a1c 54%);'
+    canvasAuthoring: DEEP_CANVAS_AUTHORING
   },
   {
     id: 'pom-neutral',
     target: targetWithAuthoredCanvas(POM_NEUTRAL_TARGET, POM_CANVAS_AUTHORING),
     canvasAuthoring: POM_CANVAS_AUTHORING,
-    swatchStyle: 'background: linear-gradient(145deg, #f8fafc 0 48%, #3979ec 49% 53%, #d8dde4 54%);',
     presentation: POMOS_PRESENTATION_PROFILE
   },
   {
     id: 'bunny',
     target: targetWithAuthoredCanvas(BUNNY_TARGET, BUNNY_CANVAS_AUTHORING),
     canvasAuthoring: BUNNY_CANVAS_AUTHORING,
-    swatchStyle: 'background: linear-gradient(145deg, #fff1f7 0 48%, #ef80b8 49% 53%, #d8cdf0 54%);',
     surfaceExpression: BUNNY_SURFACE_EXPRESSION
   },
   {
     id: 'ash-amber',
     target: targetWithAuthoredCanvas(ASH_AMBER_TARGET, ASH_CANVAS_AUTHORING),
     canvasAuthoring: ASH_CANVAS_AUTHORING,
-    swatchStyle: 'background: linear-gradient(145deg, #071416 0 48%, #8fd8ce 49% 53%, #111a1c 54%);',
     surfaceExpression: ASH_AMBER_SURFACE_EXPRESSION
   }
 ]);

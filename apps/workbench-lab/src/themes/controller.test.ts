@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { PersistedThemeDraft, ThemeDraftStorage } from '@pomegranate-ui/contracts';
 import { createLabThemeController } from './controller.js';
-import { decodePersistedThemeDraft, LAB_THEME_DRAFT_KEY } from './draft-storage.js';
+import { decodePersistedThemeDraft, LAB_THEME_DRAFT_KEY, themeDraftStorageKey } from './draft-storage.js';
 
 function memoryStorage() {
   const values = new Map<string, string>();
@@ -19,6 +19,81 @@ function editable(controller: ReturnType<typeof createLabThemeController>): Pers
 }
 
 describe('Lab Theme authoring controller', () => {
+  it('applies typography roles and scale edits live through compiled bindings', () => {
+    const controller = createLabThemeController({ initialId: 'bunny' });
+
+    expect(controller.editTypographyRole('prose', {
+      family: 'Alegreya',
+      fallbacks: ['ui-serif', 'serif'],
+      lineHeight: 1.7,
+      trackingEm: 0.02
+    }).ok).toBe(true);
+    expect(controller.editTypographyScale('lg', 19).ok).toBe(true);
+
+    expect(controller.getSnapshot().compiled.bindings).toMatchObject({
+      '--pom-font-prose': '"Alegreya", ui-serif, serif',
+      '--pom-font-prose-line-height': '1.7',
+      '--pom-font-prose-tracking': '0.02em',
+      '--pom-type-lg': '19px'
+    });
+  });
+
+  it('keeps typography choices independent while switching themes', () => {
+    const controller = createLabThemeController({ initialId: 'bunny' });
+    expect(controller.editTypographyRole('prose', {
+      family: 'Pomegranate Serif',
+      fallbacks: ['ui-serif', 'serif']
+    }).ok).toBe(true);
+
+    expect(controller.activate('pom-neutral').ok).toBe(true);
+    expect(controller.getSnapshot().resolved.theme.typography.prose.family).toBe('Inter');
+    expect(controller.activate('bunny').ok).toBe(true);
+    expect(controller.getSnapshot().resolved.theme.typography.prose.family).toBe('Pomegranate Serif');
+  });
+
+  it('resets only typography while preserving sibling theme edits', () => {
+    const controller = createLabThemeController({ initialId: 'ash-amber' });
+    expect(controller.editColorHex('source', '#ccb477').ok).toBe(true);
+    expect(controller.editTypographyRole('prose', {
+      family: 'Fraunces',
+      fallbacks: ['ui-serif', 'serif']
+    }).ok).toBe(true);
+
+    expect(controller.resetTypography().ok).toBe(true);
+    const restored = controller.getAuthoringSnapshot().lastValidEditable;
+    expect(restored.draft.colors.source).toBe('#ccb477');
+    expect(restored.draft.typography).toEqual(
+      createLabThemeController({ initialId: 'ash-amber' }).getSnapshot().resolved.theme.typography
+    );
+  });
+
+  it('rejects non-bundled font families and fallbacks at the Lab boundary', () => {
+    const controller = createLabThemeController({ initialId: 'bunny' });
+    const before = controller.getSnapshot();
+    const family = controller.editTypographyRole('ui', {
+      family: 'Arial',
+      fallbacks: ['ui-sans-serif', 'sans-serif']
+    });
+    expect(family.ok).toBe(false);
+    if (family.ok) return;
+    expect(family.diagnostics[0]).toMatchObject({
+      code: 'THEME_SCHEMA_INVALID',
+      path: ['draft', 'typography', 'ui', 'family']
+    });
+    expect(controller.getSnapshot()).toBe(before);
+
+    const fallback = controller.editTypographyRole('ui', {
+      family: 'Nunito',
+      fallbacks: ['Arial', 'sans-serif']
+    });
+    expect(fallback.ok).toBe(false);
+    if (fallback.ok) return;
+    expect(fallback.diagnostics[0]).toMatchObject({
+      code: 'THEME_SCHEMA_INVALID',
+      path: ['draft', 'typography', 'ui', 'fallbacks']
+    });
+  });
+
   it('switches toolbar toggle presentation with the active Theme Library target', () => {
     const controller = createLabThemeController({ initialId: 'deep-current' });
 
@@ -128,7 +203,7 @@ describe('Lab Theme authoring controller', () => {
     ash.draft.toolbarTogglePresentation = 'bottom-chevrons';
     expect(controller.editDraft(ash).ok).toBe(true);
     expect((await controller.saveDraft()).ok).toBe(true);
-    const raw = values.get(LAB_THEME_DRAFT_KEY);
+    const raw = values.get(themeDraftStorageKey('ash-amber'));
     expect(raw).toBeTruthy();
     expect(decodePersistedThemeDraft(raw!).ok).toBe(true);
 
@@ -138,6 +213,65 @@ describe('Lab Theme authoring controller', () => {
     expect((restored.getAuthoringSnapshot().editable as PersistedThemeDraft).draft.toolbarTogglePresentation).toBe('bottom-chevrons');
     expect(restored.getSnapshot().compiled.theme.recipes.toolbarTogglePresentation).toBe('bottom-chevrons');
     expect(restored.getSnapshot().compiled.bindings['--pom-ambient-power']).toBe('0.72');
+  });
+
+  it('saves and reloads independent typography drafts for two themes', async () => {
+    const { values, storage } = memoryStorage();
+    const controller = createLabThemeController({ initialId: 'bunny', draftStorage: storage });
+    expect(controller.editTypographyRole('prose', {
+      family: 'Pomegranate Serif',
+      fallbacks: ['ui-serif', 'serif']
+    }).ok).toBe(true);
+    expect((await controller.saveDraft()).ok).toBe(true);
+
+    expect(controller.activate('pom-neutral').ok).toBe(true);
+    expect(controller.editTypographyRole('technical', {
+      family: 'Pomegranate Mono',
+      fallbacks: ['ui-monospace', 'monospace']
+    }).ok).toBe(true);
+    expect((await controller.saveDraft()).ok).toBe(true);
+
+    expect(values.has(themeDraftStorageKey('bunny'))).toBe(true);
+    expect(values.has(themeDraftStorageKey('pom-neutral'))).toBe(true);
+    expect(values.has(LAB_THEME_DRAFT_KEY)).toBe(false);
+
+    const restored = createLabThemeController({ initialId: 'bunny', draftStorage: storage });
+    expect((await restored.loadDraft()).ok).toBe(true);
+    expect(restored.getSnapshot().resolved.theme.typography.prose.family).toBe('Pomegranate Serif');
+    expect(restored.activate('pom-neutral').ok).toBe(true);
+    expect((await restored.loadDraft()).ok).toBe(true);
+    expect(restored.getSnapshot().resolved.theme.typography.technical.family).toBe('Pomegranate Mono');
+  });
+
+  it('migrates a matching legacy singleton and rejects stored non-bundled typography', async () => {
+    const { values, storage } = memoryStorage();
+    const legacyController = createLabThemeController({ initialId: 'ash-amber' });
+    const legacy = editable(legacyController);
+    legacy.draft.colors.source = '#ccb477';
+    values.set(LAB_THEME_DRAFT_KEY, JSON.stringify(legacy));
+
+    const migrated = createLabThemeController({ initialId: 'ash-amber', draftStorage: storage });
+    expect((await migrated.loadDraft()).ok).toBe(true);
+    expect((migrated.getAuthoringSnapshot().editable as PersistedThemeDraft).draft.colors.source).toBe('#ccb477');
+    expect(values.has(themeDraftStorageKey('ash-amber'))).toBe(true);
+    expect(values.has(LAB_THEME_DRAFT_KEY)).toBe(false);
+
+    const tampered = editable(createLabThemeController({ initialId: 'bunny' }));
+    tampered.draft.typography!.ui = {
+      ...tampered.draft.typography!.ui,
+      family: 'Arial',
+      fallbacks: ['ui-sans-serif', 'sans-serif']
+    };
+    values.set(themeDraftStorageKey('bunny'), JSON.stringify(tampered));
+    const rejected = createLabThemeController({ initialId: 'bunny', draftStorage: storage });
+    const result = await rejected.loadDraft();
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics[0]).toMatchObject({
+      code: 'THEME_SCHEMA_INVALID',
+      path: ['draft', 'typography', 'ui', 'family']
+    });
+    expect(rejected.getSnapshot().resolved.theme.typography.ui.family).toBe('Nunito');
   });
 
   it('does not mark a concurrent edit saved when an older storage write completes', async () => {

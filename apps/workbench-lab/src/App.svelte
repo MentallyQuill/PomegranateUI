@@ -35,8 +35,11 @@
   import WorkbenchDeveloperDrawer from './recipes/WorkbenchDeveloperDrawer.svelte';
   import { createLocalLayoutStorage, LAB_LAYOUT_KEY } from './storage.js';
   import { createLabThemeController } from './themes/controller.js';
+  import type { ThemeTypographyRoleId, ThemeTypographyScaleId } from './themes/controller.js';
+  import { BUNDLED_FONT_CHOICES } from './themes/bundled-fonts.js';
   import { materialControlPresentationStyle, type LabMaterialControlId } from './themes/material-controls.js';
   import { LAB_THEME_PRESETS } from './themes/presets.js';
+  import { themePreviewStyle } from './themes/preview.js';
   import { createLocalThemePreference } from './themes/theme-storage.js';
   import { createLocalThemeDraftStorage } from './themes/draft-storage.js';
 
@@ -105,6 +108,7 @@
     }
   });
   const initialThemeSnapshot = themeController.getSnapshot();
+  const hydratedThemeIds = new Set<string>();
   let themeSnapshot = $state(initialThemeSnapshot);
 
   function themeInspector(): LabThemeInspector {
@@ -127,9 +131,22 @@
     if (result.ok) {
       applyThemeSnapshot(result.snapshot);
       status = `${result.snapshot.resolved.theme.label} applied without changing Workbench state.`;
+      void hydrateThemeDraft(result.snapshot.activeId);
     } else {
       status = result.diagnostics[0]?.message ?? 'Theme activation failed.';
     }
+  }
+
+  async function hydrateThemeDraft(id: string) {
+    if (hydratedThemeIds.has(id)) return;
+    hydratedThemeIds.add(id);
+    const loaded = await themeController.loadDraft();
+    if (themeController.getSnapshot().activeId !== id) {
+      hydratedThemeIds.delete(id);
+      return;
+    }
+    hostContext.theme.authoring = loaded.authoring;
+    if (loaded.ok) applyThemeSnapshot(themeController.getSnapshot());
   }
 
   function applyThemeSnapshot(snapshot: typeof initialThemeSnapshot) {
@@ -139,6 +156,8 @@
     hostContext.theme.materialControls = snapshot.materialControls;
     hostContext.theme.inspector = themeInspector();
     hostContext.theme.authoring = themeController.getAuthoringSnapshot();
+    const preview = hostContext.theme.presets.find(({ id }) => id === snapshot.activeId);
+    if (preview) preview.swatchStyle = themePreviewStyle(snapshot.resolved.theme);
   }
 
   function setMaterialControl(id: LabMaterialControlId, value: number) {
@@ -185,6 +204,30 @@
     return result;
   }
 
+  function editThemeTypographyRole(
+    role: ThemeTypographyRoleId,
+    patch: Partial<import('@pomegranate-ui/contracts').ThemeTypographyRole>
+  ) {
+    const result = themeController.editTypographyRole(role, patch);
+    hostContext.theme.authoring = result.authoring;
+    if (result.ok) applyThemeSnapshot(themeController.getSnapshot());
+    return result;
+  }
+
+  function editThemeTypographyScale(step: ThemeTypographyScaleId, value: number) {
+    const result = themeController.editTypographyScale(step, value);
+    hostContext.theme.authoring = result.authoring;
+    if (result.ok) applyThemeSnapshot(themeController.getSnapshot());
+    return result;
+  }
+
+  function resetThemeTypography() {
+    const result = themeController.resetTypography();
+    hostContext.theme.authoring = result.authoring;
+    if (result.ok) applyThemeSnapshot(themeController.getSnapshot());
+    return result;
+  }
+
   function resetThemeDraft() {
     const result = themeController.resetDraft();
     hostContext.theme.authoring = result.authoring;
@@ -204,24 +247,43 @@
     return result;
   }
 
+  async function openCustomTheme() {
+    store.dispatch({ type: 'panel.activate', panelId: LAB_PANEL_IDS.settings });
+    store.dispatch({
+      type: 'sub-panel.activate',
+      panelId: LAB_PANEL_IDS.settings,
+      subPanelId: asSubPanelId('settings-appearance-accessibility'),
+      currentScrollTop: 0
+    });
+    await tick();
+    const target = document.querySelector<HTMLElement>('[data-widget-type="settings.custom-theme"]');
+    target?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    target?.querySelector<HTMLButtonElement>('[data-theme-authoring-element="overview"] button')?.focus();
+    status = target ? 'Custom Theme opened.' : 'Custom Theme is unavailable in this layout.';
+  }
+
   let hostContext = $state(createLabHostContext({
     activeId: initialThemeSnapshot.activeId,
-    presets: LAB_THEME_PRESETS.map(({ id, target, swatchStyle }) => ({
+    presets: LAB_THEME_PRESETS.map(({ id, target }) => ({
       id,
       label: target.theme.label,
       description: target.theme.description ?? target.theme.label,
-      swatchStyle
+      swatchStyle: themePreviewStyle(target.theme)
     })),
     inspector: themeInspector(),
     materialControls: initialThemeSnapshot.materialControls,
     authoring: themeController.getAuthoringSnapshot(),
+    fontChoices: BUNDLED_FONT_CHOICES,
     activate: activateTheme,
     setMaterialControl,
     resetMaterialControls,
-    openSettings: () => { store.dispatch({ type: 'panel.activate', panelId: LAB_PANEL_IDS.settings }); },
+    openSettings: openCustomTheme,
     editDraft: editThemeDraft,
     editColorHex: editThemeColorHex,
     editColorRgb: editThemeColorRgb,
+    editTypographyRole: editThemeTypographyRole,
+    editTypographyScale: editThemeTypographyScale,
+    resetTypography: resetThemeTypography,
     resetDraft: resetThemeDraft,
     saveDraft: saveThemeDraft
   }, initialSurfaceState, resolveLabShowcaseMediaProfile(initialThemeSnapshot.activeId)));
@@ -305,11 +367,7 @@
     let current = true;
     const collapseCompactDocks = (event: MediaQueryListEvent) => syncCompactDockDefaults(event.matches);
     compactWorkbenchMedia?.addEventListener('change', collapseCompactDocks);
-    void themeController.loadDraft().then((loaded) => {
-      if (!current) return;
-      hostContext.theme.authoring = loaded.authoring;
-      if (loaded.ok) applyThemeSnapshot(themeController.getSnapshot());
-    });
+    void hydrateThemeDraft(initialThemeSnapshot.activeId);
     void loadLayout(storage, LAB_LAYOUT_KEY, store.getState()).then((loaded) => {
       if (current && loaded.ok) {
         store.dispatch({ type: 'layout.hydrate', state: upgradeLabWorkbenchState(loaded.state) });

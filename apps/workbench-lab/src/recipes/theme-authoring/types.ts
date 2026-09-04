@@ -1,16 +1,23 @@
-import { PersistedThemeDraftSchema, type PersistedThemeDraft, type ThemeDraftColorRole } from '@pomegranate-ui/contracts';
+import { PersistedThemeDraftSchema, type PersistedThemeDraft, type ThemeDraftColorRole, type ThemeTypographyRole } from '@pomegranate-ui/contracts';
 
 import type {
   LabThemeAuthoringSnapshot,
   ThemeDraftEditResult,
-  ThemeDraftSaveResult
+  ThemeDraftSaveResult,
+  ThemeTypographyRoleId,
+  ThemeTypographyScaleId
 } from '../../themes/controller.js';
+import type { BundledFontChoice } from '../../themes/bundled-fonts.js';
 
 export interface ThemeAuthoringPort {
   readonly authoring: LabThemeAuthoringSnapshot;
+  readonly fontChoices: Readonly<Record<ThemeTypographyRoleId, readonly BundledFontChoice[]>>;
   readonly editDraft: (next: unknown) => ThemeDraftEditResult;
   readonly editColorHex: (role: ThemeDraftColorRole, value: string) => ThemeDraftEditResult;
   readonly editColorRgb: (role: ThemeDraftColorRole, channel: 0 | 1 | 2, value: string) => ThemeDraftEditResult;
+  readonly editTypographyRole: (role: ThemeTypographyRoleId, patch: Partial<ThemeTypographyRole>) => ThemeDraftEditResult;
+  readonly editTypographyScale: (step: ThemeTypographyScaleId, value: number) => ThemeDraftEditResult;
+  readonly resetTypography: () => ThemeDraftEditResult;
   readonly resetDraft: () => ThemeDraftEditResult;
   readonly saveDraft: () => Promise<ThemeDraftSaveResult>;
 }

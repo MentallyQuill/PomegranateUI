@@ -60,8 +60,50 @@ describe('Theme draft projection', () => {
       },
       materials: { glassDensity: 20, barOpacity: 60, selectedStrength: 6, frostLevel: 50 },
       canvas: { imageStrength: 100, overlayStrength: 100, gradientAngle: 0, vignetteStrength: 100 },
-      toolbarTogglePresentation: 'edge-labels'
+      toolbarTogglePresentation: 'edge-labels',
+      typography: ASH_AMBER_TARGET.theme.typography
     });
+  });
+
+  it('projects authored typography without mutating its base target', () => {
+    const before = structuredClone(DEEP_CURRENT_TARGET);
+    const draft = createThemeDraft(DEEP_CURRENT_TARGET);
+    const typography = draft.typography!;
+    const edited = {
+      ...draft,
+      typography: {
+        ...typography,
+        prose: {
+          ...typography.prose,
+          family: 'Fraunces',
+          fallbacks: ['ui-serif', 'serif'],
+          lineHeight: 1.72,
+          trackingEm: 0.012
+        },
+        scale: { ...typography.scale, lg: 20 }
+      }
+    };
+    const result = projectThemeDraft(DEEP_CURRENT_TARGET, edited, DEEP_CURRENT_TARGET.ambient);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.target.theme.typography.prose).toMatchObject({
+      family: 'Fraunces',
+      lineHeight: 1.72,
+      trackingEm: 0.012
+    });
+    expect(result.target.theme.typography.scale.lg).toBe(20);
+    expect(DEEP_CURRENT_TARGET).toEqual(before);
+  });
+
+  it('accepts a stored version 2 draft from before typography authoring', () => {
+    const legacyDraft = structuredClone(createThemeDraft(DEEP_CURRENT_TARGET));
+    delete (legacyDraft as { typography?: unknown }).typography;
+    const result = projectThemeDraft(DEEP_CURRENT_TARGET, legacyDraft, DEEP_CURRENT_TARGET.ambient);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.target.theme.typography).toEqual(DEEP_CURRENT_TARGET.theme.typography);
   });
 
   it('projects an authored toolbar toggle presentation without mutating its base target', () => {

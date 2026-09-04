@@ -1,6 +1,12 @@
 @font-face { font-family: "Pomegranate Sans"; src: url("./assets/fonts/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Pomegranate Serif"; src: url("./assets/fonts/Newsreader-Variable.ttf") format("truetype"); font-weight: 200 800; font-display: swap; }
 @font-face { font-family: "Pomegranate Mono"; src: url("./assets/fonts/GeistMono-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("./assets/fonts/Inter-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Roboto Mono"; src: url("./assets/fonts/RobotoMono-Variable.ttf") format("truetype"); font-weight: 100 700; font-display: swap; }
+@font-face { font-family: "Nunito"; src: url("./assets/fonts/Nunito-Variable.ttf") format("truetype"); font-weight: 200 1000; font-display: swap; }
+@font-face { font-family: "Fraunces"; src: url("./assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Source Sans 3"; src: url("./assets/fonts/SourceSans3-Variable.ttf") format("truetype"); font-weight: 200 900; font-display: swap; }
+@font-face { font-family: "Alegreya"; src: url("./assets/fonts/Alegreya-Variable.ttf") format("truetype"); font-weight: 400 900; font-display: swap; }
 
 :root {
   color: #eee8de; background: #111014; font-family: "Pomegranate Sans", ui-sans-serif, system-ui, sans-serif; font-synthesis: none;
@@ -1936,6 +1942,42 @@ main[data-pom-action-content="icon"] .widget-shelf > summary {
 .theme-authoring-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .theme-authoring-actions button { min-height: 30px; padding: 4px 8px; }
 .theme-authoring-ambient > .ambient-position + output { color: var(--pom-color-text-muted); font: 450 9px/12px var(--pom-font-technical); }
+.theme-typography { gap: 10px; }
+.theme-typography-intro { display: grid; gap: 4px; }
+.theme-typography-intro p { margin: 0; color: var(--pom-color-text-muted); }
+.theme-typography-intro strong { color: var(--pom-color-text); }
+.theme-typography-specimen {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--pom-color-border);
+  border-radius: var(--pom-shape-field-radius, 5px);
+  background: var(--pom-material-content, color-mix(in srgb, var(--pom-color-surface) 70%, transparent));
+}
+.theme-typography-specimen small { color: var(--pom-color-text-faint); font: var(--pom-font-technical-weight) var(--pom-type-xs)/var(--pom-font-technical-line-height) var(--pom-font-technical); letter-spacing: var(--pom-font-technical-tracking); }
+.theme-typography-specimen h3 { margin: 0; font: var(--pom-font-display-weight) var(--pom-type-xl)/var(--pom-font-display-line-height) var(--pom-font-display); letter-spacing: var(--pom-font-display-tracking); }
+.theme-typography-specimen p { margin: 0; color: var(--pom-color-text-muted); font: var(--pom-font-prose-weight) var(--pom-type-lg)/var(--pom-font-prose-line-height) var(--pom-font-prose); letter-spacing: var(--pom-font-prose-tracking); }
+.theme-typography-specimen code { color: var(--pom-color-text-faint); font: var(--pom-font-technical-weight) var(--pom-type-sm)/var(--pom-font-technical-line-height) var(--pom-font-technical); letter-spacing: var(--pom-font-technical-tracking); }
+.theme-typography fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.theme-typography legend { margin-bottom: 5px; padding: 0; color: var(--pom-color-text-muted); font: 600 9px/12px var(--pom-font-ui); }
+.theme-typography-families > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.theme-typography-families label { display: grid; gap: 3px; min-width: 0; color: var(--pom-color-text-muted); }
+.theme-typography-families select { width: 100%; min-width: 0; min-height: 32px; padding: 4px 7px; color: var(--pom-color-text); }
+.theme-typography-scale > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; }
+.theme-typography-scale label,
+.theme-typography-spacing label { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 6px; align-items: center; min-width: 0; color: var(--pom-color-text-muted); }
+.theme-typography-scale input,
+.theme-typography-spacing input { grid-column: 1 / -1; width: 100%; min-height: 38px; margin-block: -7px; }
+.theme-typography :is(output) { color: var(--pom-color-text-faint); font-family: var(--pom-font-technical); }
+.theme-typography-spacing > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.theme-typography-spacing section { display: grid; gap: 2px; min-width: 0; padding: 6px; border: 1px solid var(--pom-color-border); border-radius: var(--pom-shape-field-radius, 5px); }
+.theme-typography-spacing section > strong { font-size: 9px; }
+
+@media (max-width: 720px) {
+  .theme-typography-families > div,
+  .theme-typography-scale > div,
+  .theme-typography-spacing > div { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* Recording-visible surface anatomy. These are shared semantic presentations:
    their color, shape, density, and elevation continue to come from the active target. */

@@ -28,6 +28,29 @@ async function assertContained(page: Page) {
   expect(evidence.surfaceRight).toBeLessThanOrEqual(evidence.viewport + 1);
 }
 
+async function assertBundledFonts(
+  page: Page,
+  fonts: readonly { readonly family: string; readonly asset: string }[]
+) {
+  const results = await page.evaluate(async (entries) => {
+    return Promise.all(entries.map(async ({ family, asset }) => {
+      const faces = await document.fonts.load(`16px "${family}"`, 'Pomegranate typography proof');
+      const resources = performance.getEntriesByType('resource').map((entry) => entry.name);
+      return {
+        family,
+        faceCount: faces.length,
+        loaded: faces.every((face) => face.status === 'loaded'),
+        assetLoaded: resources.some((resource) => resource.includes(asset))
+      };
+    }));
+  }, fonts);
+  for (const result of results) {
+    expect(result.faceCount, `${result.family} should resolve to a declared FontFace`).toBeGreaterThan(0);
+    expect(result.loaded, `${result.family} should decode successfully`).toBe(true);
+    expect(result.assetLoaded, `${result.family} should load its bundled asset`).toBe(true);
+  }
+}
+
 async function dispatchHeldTouchDrag(page: Page, start: { x: number; y: number }, end: { x: number; y: number }) {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [start] });
@@ -64,6 +87,76 @@ test('all four themes expose the same exact six functional Settings sub-panels',
     await expect(page.getByRole('article', { name: 'Provider Credentials' })).toHaveCount(0);
     await expect(page.getByRole('tabpanel', { name: names[2] })).toBeVisible();
   }
+});
+
+test('Theme Typography owns bundled per-theme choices and Custom Theme navigation', async ({ page }) => {
+  await openClean(page);
+  await page.getByRole('tab', { name: names[2] }).click();
+
+  const typography = page.getByRole('article', { name: 'Theme Typography' });
+  const library = page.getByRole('article', { name: 'Theme Library' });
+  await expect(typography.locator('.surface-themes')).toHaveCount(0);
+  await expect(typography.getByLabel('Interface font')).toHaveValue('Pomegranate Sans');
+  await expect(typography.getByLabel('Prose font')).toHaveValue('Pomegranate Serif');
+  await expect(typography.getByLabel('Technical font')).toHaveValue('Pomegranate Mono');
+
+  const previewStyles = await library.locator('.surface-themes i').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('style')));
+  expect(new Set(previewStyles).size).toBe(4);
+
+  await library.getByRole('button', { name: /^Bunny/ }).click();
+  await expect(typography.getByLabel('Interface font')).toHaveValue('Nunito');
+  await expect(typography.getByLabel('Prose font')).toHaveValue('Fraunces');
+  await expect(typography.getByLabel('Display font')).toHaveValue('Fraunces');
+  await expect(typography.getByLabel('Technical font')).toHaveValue('Nunito');
+  await assertBundledFonts(page, [
+    { family: 'Nunito', asset: 'Nunito-Variable' },
+    { family: 'Fraunces', asset: 'Fraunces-Variable' }
+  ]);
+
+  await typography.getByLabel('Prose font').selectOption('Pomegranate Serif');
+  await expect(page.locator('main')).toHaveCSS('font-family', /Nunito/);
+  expect(await page.locator('main').evaluate((node) => (node as HTMLElement).style.getPropertyValue('--pom-font-prose'))).toContain('Pomegranate Serif');
+  await typography.getByLabel('Prose line height').fill('1.8');
+  await typography.getByLabel('Prose tracking').fill('0.05');
+  expect(await page.locator('main').evaluate((node) => ({
+    lineHeight: (node as HTMLElement).style.getPropertyValue('--pom-font-prose-line-height'),
+    tracking: (node as HTMLElement).style.getPropertyValue('--pom-font-prose-tracking')
+  }))).toEqual({ lineHeight: '1.8', tracking: '0.05em' });
+  await typography.getByRole('button', { name: 'Reset typography' }).click();
+  await expect(typography.getByLabel('Prose font')).toHaveValue('Fraunces');
+  await typography.getByLabel('Prose font').selectOption('Pomegranate Serif');
+  await typography.getByRole('button', { name: 'Save theme typography' }).click();
+  await expect(typography.locator('.theme-authoring-status')).toContainText('Bunny typography saved');
+
+  await library.getByRole('button', { name: /^PomOS/ }).click();
+  await expect(typography.getByLabel('Prose font')).toHaveValue('Inter');
+  await assertBundledFonts(page, [
+    { family: 'Inter', asset: 'Inter-Variable' },
+    { family: 'Roboto Mono', asset: 'RobotoMono-Variable' }
+  ]);
+  await typography.getByLabel('Technical font').selectOption('Pomegranate Mono');
+  await typography.getByRole('button', { name: 'Save theme typography' }).click();
+  await expect(typography.locator('.theme-authoring-status')).toContainText('PomOS typography saved');
+
+  await library.getByRole('button', { name: /^Ash & Amber/ }).click();
+  await assertBundledFonts(page, [
+    { family: 'Source Sans 3', asset: 'SourceSans3-Variable' },
+    { family: 'Alegreya', asset: 'Alegreya-Variable' }
+  ]);
+  await library.getByRole('button', { name: /^Bunny/ }).click();
+  await expect(typography.getByLabel('Prose font')).toHaveValue('Pomegranate Serif');
+
+  await page.reload();
+  await page.evaluate(() => document.fonts.ready);
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: names[2] }).click();
+  await expect(typography.getByLabel('Prose font')).toHaveValue('Pomegranate Serif');
+  await library.getByRole('button', { name: /^PomOS/ }).click();
+  await expect(typography.getByLabel('Technical font')).toHaveValue('Pomegranate Mono');
+
+  await library.getByRole('button', { name: 'Open Custom Theme' }).click();
+  await expect(page.getByRole('tab', { name: names[2] })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('article', { name: 'Custom Theme' }).getByRole('button', { name: 'Reset' })).toBeFocused();
 });
 
 test('Settings sub-panel tabs pan and navigate without reordering on the normal rail', async ({ page }) => {

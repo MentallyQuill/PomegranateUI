@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { LabThemeController, ThemeDraftEditResult, ThemeDraftSaveResult } from '../../themes/controller.js';
+  import { BUNDLED_FONT_CHOICES } from '../../themes/bundled-fonts.js';
   import CustomTheme from './CustomTheme.svelte';
   import ThemeColors from './ThemeColors.svelte';
   import type { EyeDropperPort, ThemeAuthoringPort } from './types.js';
@@ -15,9 +16,13 @@
 
   const theme: ThemeAuthoringPort = $derived({
     authoring,
+    fontChoices: BUNDLED_FONT_CHOICES,
     editDraft: (next: unknown) => use(controller.editDraft(next)),
     editColorHex: (role, value) => use(controller.editColorHex(role, value)),
     editColorRgb: (role, channel, value) => use(controller.editColorRgb(role, channel, value)),
+    editTypographyRole: (role, patch) => use(controller.editTypographyRole(role, patch)),
+    editTypographyScale: (step, value) => use(controller.editTypographyScale(step, value)),
+    resetTypography: () => use(controller.resetTypography()),
     resetDraft: () => use(controller.resetDraft()),
     saveDraft: async (): Promise<ThemeDraftSaveResult> => {
       const pending = controller.saveDraft();

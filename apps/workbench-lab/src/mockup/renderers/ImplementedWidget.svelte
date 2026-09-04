@@ -5,6 +5,7 @@
   import ThemeCanvasSettings from '../../recipes/theme-authoring/ThemeCanvasSettings.svelte';
   import ThemeColors from '../../recipes/theme-authoring/ThemeColors.svelte';
   import ThemeMaterials from '../../recipes/theme-authoring/ThemeMaterials.svelte';
+  import ThemeTypography from '../../recipes/theme-authoring/ThemeTypography.svelte';
   import WidgetAnatomy from '../../recipes/WidgetAnatomy.svelte';
   import WidgetStateSurface from '../../recipes/WidgetStateSurface.svelte';
   import { createEyeDropperAdapter } from '../../themes/eyedropper.js';
@@ -51,6 +52,8 @@
       <ThemeCanvasSettings theme={hostContext.theme} />
     {:else if instance.type === 'settings.theme-ambient' && contentVisible}
       <AmbientLight theme={hostContext.theme} />
+    {:else if instance.type === 'settings.reading-layout' && instance.configuration.surfacePreview !== true && contentVisible}
+      <ThemeTypography theme={hostContext.theme} />
     {:else if instance.type === 'story.composer' && instance.configuration.surfacePreview !== true && contentVisible}
       <ComposerWidget {hostContext} />
     {:else if instance.type === 'story.transcript' && instance.configuration.surfacePreview !== true && contentVisible}

@@ -1,7 +1,8 @@
 import type { LabThemeId } from '../themes/presets.js';
-import type { ThemeDraftColorRole } from '@pomegranate-ui/contracts';
+import type { ThemeDraftColorRole, ThemeTypographyRole } from '@pomegranate-ui/contracts';
 import type { LabMaterialControlId, LabMaterialControls } from '../themes/material-controls.js';
-import type { LabThemeAuthoringSnapshot, ThemeDraftEditResult, ThemeDraftSaveResult } from '../themes/controller.js';
+import type { LabThemeAuthoringSnapshot, ThemeDraftEditResult, ThemeDraftSaveResult, ThemeTypographyRoleId, ThemeTypographyScaleId } from '../themes/controller.js';
+import type { BundledFontChoice } from '../themes/bundled-fonts.js';
 import type { LabShowcaseMediaProfile } from './showcase-media.js';
 
 export interface LabThemeInspector {
@@ -14,22 +15,26 @@ export interface LabThemeInspector {
 
 export interface LabThemeHostContext {
   activeId: LabThemeId;
-  readonly presets: readonly {
+  presets: {
     readonly id: LabThemeId;
     readonly label: string;
     readonly description: string;
-    readonly swatchStyle: string;
+    swatchStyle: string;
   }[];
   inspector: LabThemeInspector;
   materialControls: LabMaterialControls;
   authoring: LabThemeAuthoringSnapshot;
+  readonly fontChoices: Readonly<Record<ThemeTypographyRoleId, readonly BundledFontChoice[]>>;
   readonly activate: (id: string) => void;
   readonly setMaterialControl: (id: LabMaterialControlId, value: number) => void;
   readonly resetMaterialControls: () => void;
-  readonly openSettings: () => void;
+  readonly openSettings: () => void | Promise<void>;
   readonly editDraft: (next: unknown) => ThemeDraftEditResult;
   readonly editColorHex: (role: ThemeDraftColorRole, value: string) => ThemeDraftEditResult;
   readonly editColorRgb: (role: ThemeDraftColorRole, channel: 0 | 1 | 2, value: string) => ThemeDraftEditResult;
+  readonly editTypographyRole: (role: ThemeTypographyRoleId, patch: Partial<ThemeTypographyRole>) => ThemeDraftEditResult;
+  readonly editTypographyScale: (step: ThemeTypographyScaleId, value: number) => ThemeDraftEditResult;
+  readonly resetTypography: () => ThemeDraftEditResult;
   readonly resetDraft: () => ThemeDraftEditResult;
   readonly saveDraft: () => Promise<ThemeDraftSaveResult>;
 }

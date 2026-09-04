@@ -279,9 +279,26 @@ describe('Workbench Lab theme conformance', () => {
     expect(bindings['--pom-part-widget-surface-clip-path']).toBe('none');
   });
 
-  it.each(LAB_THEME_IDS)('uses only packaged primary fonts and generic fallbacks in %s', (id) => {
+  it('pins every preset to its approved bundled, theme-owned font combination', () => {
+    expect(Object.fromEntries(LAB_THEME_PRESETS.map(({ id, target }) => [id, {
+      ui: target.theme.typography.ui.family,
+      prose: target.theme.typography.prose.family,
+      display: target.theme.typography.display?.family,
+      technical: target.theme.typography.technical.family
+    }]))).toEqual({
+      'deep-current': { ui: 'Pomegranate Sans', prose: 'Pomegranate Serif', display: 'Pomegranate Serif', technical: 'Pomegranate Mono' },
+      'pom-neutral': { ui: 'Inter', prose: 'Inter', display: 'Inter', technical: 'Roboto Mono' },
+      bunny: { ui: 'Nunito', prose: 'Fraunces', display: 'Fraunces', technical: 'Nunito' },
+      'ash-amber': { ui: 'Source Sans 3', prose: 'Alegreya', display: 'Alegreya', technical: 'Source Sans 3' }
+    });
+  });
+
+  it.each(LAB_THEME_IDS)('uses only bundled primary fonts and generic fallbacks in %s', (id) => {
     const theme = LAB_THEME_PRESETS.find((candidate) => candidate.id === id)!.target.theme;
-    const packaged = new Set(['Pomegranate Sans', 'Pomegranate Serif', 'Pomegranate Mono']);
+    const packaged = new Set([
+      'Pomegranate Sans', 'Pomegranate Serif', 'Pomegranate Mono',
+      'Inter', 'Roboto Mono', 'Nunito', 'Fraunces', 'Source Sans 3', 'Alegreya'
+    ]);
     const generic = new Set(['monospace', 'sans-serif', 'serif', 'system-ui', 'ui-monospace', 'ui-rounded', 'ui-sans-serif', 'ui-serif']);
     for (const role of [theme.typography.ui, theme.typography.prose, theme.typography.technical, theme.typography.display].filter(Boolean)) {
       expect(packaged.has(role!.family), `${id}: ${role!.family}`).toBe(true);

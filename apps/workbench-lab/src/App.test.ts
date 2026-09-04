@@ -6,6 +6,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import App from './App.svelte';
 import { CATALOG_TOTALS, createCatalogManifests } from './mockup/catalog.js';
+import { themeDraftStorageKey } from './themes/draft-storage.js';
+import { LAB_THEME_PRESETS } from './themes/presets.js';
+import { themePreviewStyle } from './themes/preview.js';
 
 afterEach(() => {
   cleanup();
@@ -120,22 +123,87 @@ describe('Svelte Workbench Lab mockup', () => {
     await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
 
     const library = screen.getByRole('article', { name: 'Theme Library' });
-    const expected = [
-      ['Deep Current', 'linear-gradient(145deg, rgb(7, 20, 22) 0 48%, rgb(143, 216, 206) 49% 53%, rgb(17, 26, 28) 54%)'],
-      ['PomOS', 'linear-gradient(145deg, rgb(248, 250, 252) 0 48%, rgb(57, 121, 236) 49% 53%, rgb(216, 221, 228) 54%)'],
-      ['Bunny', 'linear-gradient(145deg, rgb(255, 241, 247) 0 48%, rgb(239, 128, 184) 49% 53%, rgb(216, 205, 240) 54%)'],
-      ['Ash & Amber', 'linear-gradient(145deg, rgb(7, 20, 22) 0 48%, rgb(143, 216, 206) 49% 53%, rgb(17, 26, 28) 54%)']
-    ] as const;
-
     const pickerButtons = [...library.querySelectorAll<HTMLButtonElement>('.surface-themes button')];
-    for (const [label, background] of expected) {
+    for (const { target } of LAB_THEME_PRESETS) {
+      const label = target.theme.label;
       const button = pickerButtons.find((candidate) => candidate.querySelector('strong')?.textContent === label);
       const swatch = button?.querySelector<HTMLElement>('i');
+      const expected = document.createElement('i');
+      expected.setAttribute('style', themePreviewStyle(target.theme));
       expect(swatch).not.toBeNull();
       expect(swatch).not.toHaveAttribute('data-theme-swatch');
-      expect(swatch?.style.backgroundImage).toBe(background);
+      expect(swatch?.style.backgroundImage).toBe(expected.style.backgroundImage);
+      expect(swatch?.style.borderRadius).toBe(expected.style.borderRadius);
     }
     expect(library.querySelectorAll('.surface-themes i')).toHaveLength(4);
+
+    const deepSwatch = pickerButtons[0]!.querySelector<HTMLElement>('i')!;
+    const before = deepSwatch.style.backgroundImage;
+    const colors = screen.getByRole('article', { name: 'Theme Colors' });
+    await fireEvent.input(within(colors).getByRole('textbox', { name: 'Hex color' }), { target: { value: '#101820' } });
+    expect(deepSwatch.style.backgroundImage).not.toBe(before);
+    expect(deepSwatch.style.backgroundImage).toContain('rgb(16, 24, 32)');
+  });
+
+  it('authors bundled typography per theme instead of repeating the Theme Library', async () => {
+    const user = userEvent.setup();
+    const { container } = render(App);
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+    await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
+
+    const typography = screen.getByRole('article', { name: 'Theme Typography' });
+    expect(typography.querySelector('.surface-themes')).toBeNull();
+    expect(within(typography).getByRole('combobox', { name: 'Interface font' })).toHaveValue('Pomegranate Sans');
+    expect(within(typography).getByRole('combobox', { name: 'Prose font' })).toHaveValue('Pomegranate Serif');
+    expect(within(typography).getByRole('combobox', { name: 'Display font' })).toHaveValue('Pomegranate Serif');
+    expect(within(typography).getByRole('combobox', { name: 'Technical font' })).toHaveValue('Pomegranate Mono');
+    expect(within(typography).getAllByRole('slider')).toHaveLength(13);
+    expect(within(typography).getByText('A quiet page remembers every voice.')).toBeVisible();
+
+    const library = screen.getByRole('article', { name: 'Theme Library' });
+    await user.click(within(library).getByRole('button', { name: /^Bunny/ }));
+    expect(within(typography).getByRole('combobox', { name: 'Interface font' })).toHaveValue('Nunito');
+    expect(within(typography).getByRole('combobox', { name: 'Prose font' })).toHaveValue('Fraunces');
+    await user.selectOptions(within(typography).getByRole('combobox', { name: 'Prose font' }), 'Pomegranate Serif');
+    expect((container.querySelector('main') as HTMLElement).style.getPropertyValue('--pom-font-prose')).toContain('Pomegranate Serif');
+
+    await user.click(within(library).getByRole('button', { name: /^PomOS/ }));
+    expect(within(typography).getByRole('combobox', { name: 'Prose font' })).toHaveValue('Inter');
+    await user.click(within(library).getByRole('button', { name: /^Bunny/ }));
+    expect(within(typography).getByRole('combobox', { name: 'Prose font' })).toHaveValue('Pomegranate Serif');
+
+    await fireEvent.input(within(typography).getByRole('slider', { name: 'Reading size' }), { target: { value: '18' } });
+    expect((container.querySelector('main') as HTMLElement).style.getPropertyValue('--pom-type-lg')).toBe('18px');
+  });
+
+  it('restores independently saved typography when revisiting each theme', async () => {
+    const user = userEvent.setup();
+    render(App);
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+    await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
+    let typography = screen.getByRole('article', { name: 'Theme Typography' });
+    let library = screen.getByRole('article', { name: 'Theme Library' });
+
+    await user.click(within(library).getByRole('button', { name: /^Bunny/ }));
+    await user.selectOptions(within(typography).getByRole('combobox', { name: 'Prose font' }), 'Pomegranate Serif');
+    await user.click(within(typography).getByRole('button', { name: 'Save theme typography' }));
+    await waitFor(() => expect(window.localStorage.getItem(themeDraftStorageKey('bunny'))).not.toBeNull());
+
+    await user.click(within(library).getByRole('button', { name: /^PomOS/ }));
+    await user.selectOptions(within(typography).getByRole('combobox', { name: 'Technical font' }), 'Pomegranate Mono');
+    await user.click(within(typography).getByRole('button', { name: 'Save theme typography' }));
+    await waitFor(() => expect(window.localStorage.getItem(themeDraftStorageKey('pom-neutral'))).not.toBeNull());
+
+    cleanup();
+    render(App);
+    await user.click(screen.getByRole('tab', { name: 'Settings' }));
+    await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
+    typography = screen.getByRole('article', { name: 'Theme Typography' });
+    library = screen.getByRole('article', { name: 'Theme Library' });
+    await waitFor(() => expect(within(typography).getByRole('combobox', { name: 'Technical font' })).toHaveValue('Pomegranate Mono'));
+
+    await user.click(within(library).getByRole('button', { name: /^Bunny/ }));
+    await waitFor(() => expect(within(typography).getByRole('combobox', { name: 'Prose font' })).toHaveValue('Pomegranate Serif'));
   });
 
   it('uses one Atmospheric composition with integrated story surfaces and a dormant developer drawer', () => {
@@ -488,6 +556,8 @@ describe('Svelte Workbench Lab mockup', () => {
     await user.click(screen.getByRole('tab', { name: 'Appearance and Accessibility' }));
     await user.click(within(screen.getByRole('article', { name: 'Theme Library' })).getByRole('button', { name: 'Open Custom Theme' }));
     expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Appearance and Accessibility' })).toHaveAttribute('aria-selected', 'true');
+    expect(within(screen.getByRole('article', { name: 'Custom Theme' })).getByRole('button', { name: 'Reset' })).toHaveFocus();
 
     const overview = screen.getByRole('article', { name: 'Custom Theme' });
     const colors = screen.getByRole('article', { name: 'Theme Colors' });
@@ -534,7 +604,7 @@ describe('Svelte Workbench Lab mockup', () => {
     await user.click(within(screen.getByRole('article', { name: 'Custom Theme' })).getByRole('button', { name: 'Reset' }));
     expect(within(screen.getByRole('article', { name: 'Theme Colors' })).getByRole('textbox', { name: 'Hex color' })).not.toHaveValue('unsafe');
     await user.click(within(screen.getByRole('article', { name: 'Custom Theme' })).getByRole('button', { name: 'Save draft' }));
-    expect(window.localStorage.getItem('pomegranate-ui.workbench-lab.theme-draft.v1')).not.toBeNull();
+    expect(window.localStorage.getItem(themeDraftStorageKey('deep-current'))).not.toBeNull();
   }, 10_000);
 
   it('authors toolbar controls in Theme Settings and resets them to the active Theme Library target', async () => {

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { AmbientProfileSchema } from './ambient.js';
-import { ThemeIdSchema, ToolbarTogglePresentationSchema } from './theme.js';
+import { ThemeIdSchema, ThemeTypographySchema, ToolbarTogglePresentationSchema } from './theme.js';
 
 export const THEME_DRAFT_SCHEMA_VERSION_V1 = 'pomegranate.ui.theme-draft.v1' as const;
 export const PERSISTED_THEME_DRAFT_SCHEMA_VERSION_V1 = 'pomegranate.ui.persisted-theme-draft.v1' as const;
@@ -54,7 +54,8 @@ export const ThemeDraftV1Schema = z.object({
 export const ThemeDraftSchema = z.object({
   schemaVersion: z.literal(THEME_DRAFT_SCHEMA_VERSION),
   ...themeDraftFields,
-  canvas: ThemeCanvasDraftSchema
+  canvas: ThemeCanvasDraftSchema,
+  typography: ThemeTypographySchema.optional()
 }).strict();
 
 function matchingTargetIds(

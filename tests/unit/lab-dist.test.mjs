@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { LEGAL_ARTIFACTS, verifyLabDist } from '../../scripts/verify-lab-dist.mjs';
+import { FONT_ARTIFACTS, LEGAL_ARTIFACTS, verifyLabDist } from '../../scripts/verify-lab-dist.mjs';
 
 async function writeFixture(root, relativePath, contents) {
   const absolute = path.join(root, relativePath);
@@ -20,20 +20,64 @@ async function writeLegalFixtures(root) {
   }
 }
 
+async function writeFontFixtures(root) {
+  for (const source of FONT_ARTIFACTS) {
+    const contents = `font bytes for ${source}`;
+    await writeFixture(root, source, contents);
+    await writeFixture(root, `apps/workbench-lab/dist/assets/${path.basename(source)}`, contents);
+  }
+}
+
 test('Pages artifact contains byte-identical licenses and notices', async () => {
+  assert.deepEqual(LEGAL_ARTIFACTS.map(([output]) => output), [
+    'LICENSE.txt',
+    'THIRD_PARTY_NOTICES.md',
+    'licenses/Geist-OFL.txt',
+    'licenses/Newsreader-OFL.txt',
+    'licenses/Inter-OFL.txt',
+    'licenses/RobotoMono-OFL.txt',
+    'licenses/Nunito-OFL.txt',
+    'licenses/Fraunces-OFL.txt',
+    'licenses/SourceSans3-OFL.txt',
+    'licenses/Alegreya-OFL.txt'
+  ]);
   const root = await mkdtemp(path.join(tmpdir(), 'pom-lab-dist-'));
   await writeFixture(root, 'apps/workbench-lab/dist/index.html', '<!doctype html><html><head><meta name="darkreader-lock"></head></html>');
   await writeLegalFixtures(root);
+  await writeFontFixtures(root);
 
   await assert.doesNotReject(verifyLabDist({ root }));
   await writeFixture(root, 'apps/workbench-lab/dist/licenses/Geist-OFL.txt', 'drifted');
   await assert.rejects(verifyLabDist({ root }), /does not match its source/);
 });
 
+test('Pages artifact contains a byte-identical asset for every bundled font', async () => {
+  assert.deepEqual(FONT_ARTIFACTS.map((source) => path.basename(source)), [
+    'Geist-Variable.woff2',
+    'Newsreader-Variable.ttf',
+    'GeistMono-Variable.woff2',
+    'Inter-Variable.woff2',
+    'RobotoMono-Variable.ttf',
+    'Nunito-Variable.ttf',
+    'Fraunces-Variable.ttf',
+    'SourceSans3-Variable.ttf',
+    'Alegreya-Variable.ttf'
+  ]);
+  const root = await mkdtemp(path.join(tmpdir(), 'pom-lab-fonts-'));
+  await writeFixture(root, 'apps/workbench-lab/dist/index.html', '<!doctype html><html><head><meta name="darkreader-lock"></head></html>');
+  await writeLegalFixtures(root);
+  await writeFontFixtures(root);
+
+  await assert.doesNotReject(verifyLabDist({ root }));
+  await writeFixture(root, 'apps/workbench-lab/dist/assets/Nunito-Variable.ttf', 'corrupted font');
+  await assert.rejects(verifyLabDist({ root }), /Nunito-Variable\.ttf is missing a byte-identical built asset/);
+});
+
 test('Pages artifact prevents extensions from recoloring theme-authored surfaces', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'pom-lab-darkreader-'));
   await writeFixture(root, 'apps/workbench-lab/dist/index.html', '<!doctype html><html><head></head></html>');
   await writeLegalFixtures(root);
+  await writeFontFixtures(root);
 
   await assert.rejects(verifyLabDist({ root }), /missing static Dark Reader lock/);
 });
@@ -41,6 +85,7 @@ test('Pages artifact prevents extensions from recoloring theme-authored surfaces
 test('Pages artifact rejects inactive Dark Reader lock lookalikes', async (t) => {
   const root = await mkdtemp(path.join(tmpdir(), 'pom-lab-darkreader-lookalike-'));
   await writeLegalFixtures(root);
+  await writeFontFixtures(root);
   const lookalikes = [
     ['data attribute', '<!doctype html><html><head><meta data-name="darkreader-lock"></head></html>'],
     ['comment', '<!doctype html><html><head><!-- <meta name="darkreader-lock"> --></head></html>'],

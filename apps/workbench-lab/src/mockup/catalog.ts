@@ -2103,22 +2103,22 @@ const DEFINITIONS = [
   {
     "type": "settings.reading-layout",
     "multiplicity": "single",
-    "title": "Reading and Layout",
+    "title": "Theme Typography",
     "category": "settings",
-    "purpose": "Configure reading density, transcript measure, and layout preferences.",
+    "purpose": "Choose bundled font families, semantic sizes, line height, and tracking for the active theme.",
     "keywords": [
-      "Reading and Layout",
-      "reading",
-      "layout",
-      "density"
+      "Theme Typography",
+      "fonts",
+      "type scale",
+      "tracking"
     ],
     "iconKey": "category.settings",
     "shape": "medium",
     "minColumns": 1,
     "geometry": {
-      "minHeight": 240,
-      "idealHeight": 420,
-      "maxHeight": 640
+      "minHeight": 420,
+      "idealHeight": 680,
+      "maxHeight": 960
     },
     "supportedStates": [
       "ready",
@@ -2642,7 +2642,7 @@ const DEFINITIONS = [
     "multiplicity": "single",
     "title": "Custom Theme",
     "category": "settings",
-    "purpose": "Review, reset, and save the one shared recoverable device theme draft.",
+    "purpose": "Review, reset, and save the active theme's recoverable device draft.",
     "keywords": [
       "Custom Theme",
       "custom",
@@ -2678,7 +2678,7 @@ const DEFINITIONS = [
     "multiplicity": "single",
     "title": "Theme Colors",
     "category": "settings",
-    "purpose": "Author the six semantic color roles in the shared device theme draft.",
+    "purpose": "Author the six semantic color roles in the active theme's device draft.",
     "keywords": ["Theme Colors", "semantic", "palette", "eyedropper"],
     "iconKey": "theme.contrast",
     "shape": "medium",
@@ -2691,7 +2691,7 @@ const DEFINITIONS = [
     "multiplicity": "single",
     "title": "Theme Materials",
     "category": "settings",
-    "purpose": "Author glass density, bar opacity, selection strength, and frost in the shared device theme draft.",
+    "purpose": "Author glass density, bar opacity, selection strength, and frost in the active theme's device draft.",
     "keywords": ["Theme Materials", "glass", "opacity", "frost"],
     "iconKey": "theme.contrast",
     "shape": "medium",
@@ -2704,7 +2704,7 @@ const DEFINITIONS = [
     "multiplicity": "single",
     "title": "Theme Canvas",
     "category": "settings",
-    "purpose": "Author image, overlay, gradient, and vignette treatment in the shared device theme draft.",
+    "purpose": "Author image, overlay, gradient, and vignette treatment in the active theme's device draft.",
     "keywords": ["Theme Canvas", "image", "overlay", "gradient", "vignette"],
     "iconKey": "theme.contrast",
     "shape": "medium",
@@ -2717,7 +2717,7 @@ const DEFINITIONS = [
     "multiplicity": "single",
     "title": "Ambient Light",
     "category": "settings",
-    "purpose": "Author ambient position, radius, and power in the shared device theme draft.",
+    "purpose": "Author ambient position, radius, and power in the active theme's device draft.",
     "keywords": ["Ambient Light", "position", "radius", "power"],
     "iconKey": "theme.contrast",
     "shape": "medium",

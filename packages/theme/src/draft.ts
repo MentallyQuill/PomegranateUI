@@ -77,7 +77,8 @@ export function createThemeDraft(
       frostLevel: percentage((parsed.theme.materials.pane?.backdrop.blurPx ?? 20) / 40)
     },
     canvas,
-    toolbarTogglePresentation: parsed.theme.recipes.toolbarTogglePresentation ?? 'edge-labels'
+    toolbarTogglePresentation: parsed.theme.recipes.toolbarTogglePresentation ?? 'edge-labels',
+    typography: parsed.theme.typography
   });
 }
 
@@ -163,6 +164,7 @@ export function projectThemeDraft(
     theme: {
       ...parsedBase.data.theme,
       colors: projectedColors,
+      typography: parsedDraft.data.typography ?? parsedBase.data.theme.typography,
       recipes: {
         ...parsedBase.data.theme.recipes,
         toolbarTogglePresentation: parsedDraft.data.toolbarTogglePresentation

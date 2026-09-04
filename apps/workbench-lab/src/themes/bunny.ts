@@ -42,10 +42,10 @@ export const BUNNY_THEME: ThemeDefinitionV2 = {
     border: '#e8cddd', borderStrong: '#c891ae', shadow: '#765775'
   },
   typography: {
-    ui: { family: 'Pomegranate Sans', fallbacks: ['ui-rounded', 'ui-sans-serif', 'system-ui', 'sans-serif'], weight: 480, strongWeight: 700, lineHeight: 1.4, trackingEm: 0.01 },
-    prose: { family: 'Pomegranate Serif', fallbacks: ['ui-serif', 'serif'], weight: 400, strongWeight: 650, lineHeight: 1.62, trackingEm: 0.01 },
-    technical: { family: 'Pomegranate Mono', fallbacks: ['ui-monospace', 'monospace'], weight: 450, strongWeight: 650, lineHeight: 1.4, trackingEm: 0.03 },
-    display: { family: 'Pomegranate Sans', fallbacks: ['ui-rounded', 'ui-sans-serif', 'system-ui', 'sans-serif'], weight: 650, strongWeight: 750, lineHeight: 1.18, trackingEm: 0.01 },
+    ui: { family: 'Nunito', fallbacks: ['ui-rounded', 'ui-sans-serif', 'sans-serif'], weight: 480, strongWeight: 700, lineHeight: 1.4, trackingEm: 0.01 },
+    prose: { family: 'Fraunces', fallbacks: ['ui-serif', 'serif'], weight: 400, strongWeight: 650, lineHeight: 1.62, trackingEm: 0.01 },
+    technical: { family: 'Nunito', fallbacks: ['ui-rounded', 'ui-sans-serif', 'sans-serif'], weight: 450, strongWeight: 650, lineHeight: 1.4, trackingEm: 0.03 },
+    display: { family: 'Fraunces', fallbacks: ['ui-serif', 'serif'], weight: 650, strongWeight: 750, lineHeight: 1.18, trackingEm: 0.01 },
     scale: { xs: 11, sm: 12, md: 14, lg: 17, xl: 21 }
   },
   spacing: { density: 'roomy', xs: 4, sm: 6, md: 10, lg: 16, xl: 24, chromeHeight: 52 },

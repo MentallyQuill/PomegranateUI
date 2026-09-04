@@ -20,7 +20,7 @@ export type CatalogAuthorityEntry = readonly [
   iconKey: string
 ];
 
-export const CATALOG_AUTHORITY_SHA256 = '56e6be6baeaf1ae8636eaf65237baae07858b7727accc1f5e2e72eb5e9eb5fbe';
+export const CATALOG_AUTHORITY_SHA256 = '868ab3c538516ef3fc00fa48a8e6d35c6d8246a436662d0c3de0628da8746d07';
 
 const CATALOG_AUTHORITY_ENTRIES = [
   ["settings.accessibility","settings.accessibility","Accessibility","settings","single","medium","theme.contrast"],
@@ -97,7 +97,6 @@ const CATALOG_AUTHORITY_ENTRIES = [
   ["settings.provider-credentials","settings.provider-credentials","Provider Credentials","settings","single","medium","provider.connection"],
   ["settings.raw-clothing-data","settings.raw-clothing-data","Raw Clothing Data","settings","single","wide","category.settings"],
   ["settings.raw-story-data","settings.raw-story-data","Raw Story Data","settings","single","wide","category.settings"],
-  ["settings.reading-layout","settings.reading-layout","Reading and Layout","settings","single","medium","category.settings"],
   ["settings.response-limit","settings.response-limit","Response Limit","settings","single","medium","category.settings"],
   ["story.room-ambience","story.room-ambience","Room Ambience","story","single","medium","status.sound"],
   ["settings.room-ambience","settings.room-ambience","Room Ambience Settings","settings","single","medium","status.sound"],
@@ -114,6 +113,7 @@ const CATALOG_AUTHORITY_ENTRIES = [
   ["settings.theme-colors","settings.theme-colors","Theme Colors","settings","single","medium","theme.contrast"],
   ["settings.theme","settings.theme","Theme Library","settings","single","medium","theme.contrast"],
   ["settings.theme-materials","settings.theme-materials","Theme Materials","settings","single","medium","theme.contrast"],
+  ["settings.reading-layout","settings.reading-layout","Theme Typography","settings","single","medium","category.settings"],
   ["systems.paradox-fixed-points","systems.paradox-fixed-points","Time Paradox and Fixed Points","systems","single","wide","category.systems"],
   ["story.transcript","story.transcript","Transcript","story","single","medium","category.story"],
   ["story.turn-inspector","story.turn-inspector","Turn Inspector","story","single","medium","category.story"],

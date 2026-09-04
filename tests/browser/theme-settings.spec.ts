@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
-const draftKey = 'pomegranate-ui.workbench-lab.theme-draft.v1';
+const draftKey = 'pomegranate-ui.workbench-lab.theme-draft.v2.deep-current';
 
 async function fresh(page: Page, width = 1440, height = 900) {
   await page.setViewportSize({ width, height });

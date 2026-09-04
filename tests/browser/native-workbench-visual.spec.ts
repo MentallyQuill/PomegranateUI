@@ -22,6 +22,7 @@ const maintainedThemes = [
   { label: 'Ash & Amber' as const, id: 'ash-amber', slug: 'ash-amber' }
 ] as const;
 const reviewedLongSubPanelName = 'Session History: Worldbuilding Reference Notes';
+const continuityIndexName = 'Continuity Index: Cross-Scene Reference Ledger';
 
 async function selectTheme(page: Page, label: ThemeLabel) {
   const drawer = page.locator('[data-workbench-developer-drawer]');
@@ -35,7 +36,7 @@ async function selectTheme(page: Page, label: ThemeLabel) {
         : 'ash-amber';
   await expect(page.locator('main')).toHaveAttribute('data-pom-theme', themeId);
   await page.getByText('Developer tools', { exact: true }).click();
-  await page.getByRole('tab', { name: 'Scene' }).click();
+  await page.getByRole('tab', { name: 'Scene', exact: true }).click();
   await page.evaluate(async () => {
     await document.fonts.ready;
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
@@ -88,7 +89,7 @@ async function seedOverflowingSubPanels(page: Page) {
   for (const name of [
     'Research Notes: Narrative Continuity Archive',
     reviewedLongSubPanelName,
-    'Continuity Index'
+    continuityIndexName
   ]) {
     await page.getByRole('button', { name: 'Add sub-panel' }).click();
     const dialog = page.getByRole('dialog', { name: 'Create sub-panel' });
@@ -303,11 +304,11 @@ async function openSubPanelActions(page: Page) {
 
 async function proveExactContextAndReorder(page: Page) {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('tab', { name: 'Scene' }).click();
+  await page.getByRole('tab', { name: 'Scene', exact: true }).click();
   const library = page.getByRole('tab', { name: 'Library' });
   await library.click({ button: 'right' });
   await expect(page.getByRole('dialog', { name: 'Library Panel actions' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Scene' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Scene', exact: true })).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('Escape');
 
   await page.getByRole('tab', { name: 'Settings' }).click();
@@ -374,7 +375,7 @@ async function setMaterialControls(page: Page, values: readonly [number, number,
     await control.fill(String(value));
     await expect(control).toHaveValue(String(value));
   }
-  await page.getByRole('tab', { name: 'Scene' }).click();
+  await page.getByRole('tab', { name: 'Scene', exact: true }).click();
   await page.evaluate(async () => {
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     window.scrollTo(0, 0);
@@ -393,7 +394,7 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
 
   await openAppearanceSettings(page);
   await shot(page, 'wide-material-controls.png');
-  await page.getByRole('tab', { name: 'Scene' }).click();
+  await page.getByRole('tab', { name: 'Scene', exact: true }).click();
 
   await invokeCompactChromeAction(page, 'Open Widget Catalog');
   const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
@@ -418,7 +419,7 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
 
 test('Deep Current freezes the polished wide Panel action surface', async ({ page }) => {
   await fresh(page, 1440, 900);
-  await page.getByRole('tab', { name: 'Scene' }).click({ button: 'right' });
+  await page.getByRole('tab', { name: 'Scene', exact: true }).click({ button: 'right' });
   await expect(page.getByRole('dialog', { name: 'Scene Panel actions' })).toBeVisible();
   await shot(page, 'wide-panel-actions-deep-current.png');
 });
@@ -714,7 +715,7 @@ test('all maintained themes freeze phone rails, actions, ordering, and desktop o
     })).toBe(true);
     await shot(page, `order-phone-${theme.slug}.png`);
     await order.getByRole('button', { name: 'Done' }).click();
-    await subPanelRail.getByRole('tab', { name: 'Continuity Index' }).click();
+    await subPanelRail.getByRole('tab', { name: continuityIndexName }).click();
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await setRailPosition(panelRail, 'middle');
