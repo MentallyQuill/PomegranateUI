@@ -1809,6 +1809,86 @@ test('desktop Widget headers replace the ellipsis with context and keyboard acti
   await expect(namedGroup.getByRole('tab')).toHaveText(['Room Ambience', 'Promise Ledger', 'World State']);
 });
 
+test.describe('desktop Widget surface context actions', () => {
+  test('open from docked Widget content', async ({ page }) => {
+    const article = page.getByRole('article', { name: 'World State' });
+    await article.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+    await expect(page.getByRole('menu', { name: 'World State Widget actions' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(widgetDragSurface(article)).toBeFocused();
+  });
+
+  test('open from floating Widget content', async ({ page }) => {
+    const article = page.getByRole('article', { name: 'World State' });
+    await invokeWidgetAction(article, 'Move…');
+    await page.getByRole('menu', { name: 'World State Widget move' })
+      .getByRole('menuitem', { name: 'Float' })
+      .click();
+    const floating = page.locator('[data-widget-type="systems.world-state"][data-pomegranate-placement="floating"]')
+      .getByRole('article', { name: 'World State' });
+    await floating.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+    await expect(page.getByRole('menu', { name: 'World State Widget actions' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(widgetDragSurface(floating)).toBeFocused();
+  });
+
+  test('open from grouped Widget content', async ({ page }) => {
+    const article = page.getByRole('article', { name: 'Room Ambience' });
+    await article.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+    await expect(page.getByRole('menu', { name: 'Room Ambience Widget actions' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tab', { name: 'Room Ambience' })).toBeFocused();
+  });
+
+  test('open from focused Widget content and use live move and remove actions', async ({ page }) => {
+    await invokeWidgetAction(page.getByRole('article', { name: 'World State' }), 'Focus');
+    const dialog = page.getByRole('dialog', { name: 'World State focus' });
+    const focused = dialog.getByRole('article', { name: 'World State' });
+    await focused.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+    const menu = page.getByRole('menu', { name: 'World State Widget actions' });
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Focus' })).toHaveCount(0);
+    await menu.getByRole('menuitem', { name: 'Move…' }).click();
+    await page.getByRole('menu', { name: 'World State Widget move' })
+      .getByRole('menuitem', { name: 'Float' })
+      .click();
+    await expect(focused).toHaveAttribute('data-pomegranate-placement', 'floating');
+    await expect(dialog.getByRole('button', { name: 'Exit focus' })).toBeFocused();
+
+    await focused.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+    await menu.getByRole('menuitem', { name: 'Remove' }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('article', { name: 'World State' })).toHaveCount(0);
+  });
+
+  test('keeps the focused Widget menu inside its dialog without Popover support', async ({ page }) => {
+    await invokeWidgetAction(page.getByRole('article', { name: 'World State' }), 'Focus');
+    await page.evaluate(() => {
+      Object.defineProperty(HTMLElement.prototype, 'showPopover', { configurable: true, value: undefined });
+      Object.defineProperty(HTMLElement.prototype, 'hidePopover', { configurable: true, value: undefined });
+    });
+    const dialog = page.getByRole('dialog', { name: 'World State focus' });
+    const content = dialog.getByRole('article', { name: 'World State' })
+      .locator(':scope > [data-pom-part="widget.content"]');
+    const contentBox = await content.boundingBox();
+    if (!contentBox) throw new Error('Expected focused Widget content geometry.');
+    await content.click({
+      button: 'right',
+      position: { x: contentBox.width / 2, y: contentBox.height / 2 }
+    });
+
+    const menu = page.getByRole('menu', { name: 'World State Widget actions' });
+    await expect(menu).toHaveAttribute('data-fallback-open', '');
+    await expect(menu.getByRole('menuitem', { name: 'Move…' })).toBeFocused();
+    const [dialogBox, menuBox] = await Promise.all([dialog.boundingBox(), menu.boundingBox()]);
+    if (!dialogBox || !menuBox) throw new Error('Expected fallback menu geometry.');
+    expect(menuBox.x).toBeGreaterThanOrEqual(dialogBox.x + 7);
+    expect(menuBox.y).toBeGreaterThanOrEqual(dialogBox.y + 7);
+    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(dialogBox.x + dialogBox.width - 7);
+    expect(menuBox.y + menuBox.height).toBeLessThanOrEqual(dialogBox.y + dialogBox.height - 7);
+  });
+});
+
 test('narrow fine-pointer Widgets keep context menus and no touch ellipsis', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${labOrigin}/?surface=settings.theme-materials`);
@@ -3030,6 +3110,59 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
       placement: { kind: 'docked', panelId: 'scene', regionId: 'left', shelfId: 'primary', order: 3 }
     }
   ]);
+});
+
+test('Catalog pointer drop in open Story space creates one floating Widget at the grab point', async ({ page }) => {
+  const workbench = page.locator('main[data-workbench-revision]');
+  const initialRevision = Number(await workbench.getAttribute('data-workbench-revision'));
+  await openWidgetCatalog(page);
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const result = catalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
+  await result.scrollIntoViewIfNeeded();
+  const originBox = await result.boundingBox();
+  const stageBox = await page.locator('[data-pomegranate-region-surface="stage"]').boundingBox();
+  if (!originBox || !stageBox) throw new Error('Missing Catalog or open Story geometry.');
+  const drop = {
+    x: stageBox.x + stageBox.width * .72,
+    y: stageBox.y + 90
+  };
+
+  await page.mouse.move(originBox.x + 8, originBox.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(originBox.x + 14, originBox.y + 8);
+  await expect(catalog).toBeHidden();
+  await page.mouse.move(drop.x, drop.y, { steps: 6 });
+  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveCount(0);
+  const proxy = page.locator('[data-catalog-placement-proxy]');
+  const panelBox = await page.locator('[data-pomegranate-panel="scene"]').boundingBox();
+  if (!await proxy.boundingBox() || !panelBox) throw new Error('Missing Catalog proxy or Panel geometry.');
+  const proxyWidth = Math.min(280, Math.round(originBox.width));
+  const proxyScale = originBox.width > 0 ? proxyWidth / originBox.width : 1;
+  const proxyHeight = Math.min(360, Math.round(originBox.height * proxyScale));
+  const grabRatio = {
+    x: Math.round(8 * proxyScale) / proxyWidth,
+    y: Math.round(8 * proxyScale) / proxyHeight
+  };
+  expect(grabRatio.x).toBeCloseTo(8 / originBox.width, 2);
+  expect(grabRatio.y).toBeCloseTo(8 / originBox.height, 2);
+  const expectedX = Math.max(8, Math.min(panelBox.width - 360 - 8, drop.x - panelBox.x - 360 * grabRatio.x));
+  const expectedY = Math.max(8, Math.min(panelBox.height - 240 - 8, drop.y - panelBox.y - 240 * grabRatio.y));
+  await page.mouse.up();
+
+  const placed = page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])');
+  await expect(placed).toHaveCount(1);
+  await expect(placed).toHaveAttribute('data-pomegranate-placement', 'floating');
+  await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 1));
+  const placedBox = await placed.boundingBox();
+  if (!placedBox) throw new Error('Missing floating Catalog Widget geometry.');
+  expect(Math.abs(placedBox.x - (panelBox.x + expectedX))).toBeLessThanOrEqual(1);
+  expect(Math.abs(placedBox.y - (panelBox.y + expectedY))).toBeLessThanOrEqual(1);
+  expect(drop.x).toBeGreaterThanOrEqual(placedBox.x);
+  expect(drop.x).toBeLessThanOrEqual(placedBox.x + placedBox.width);
+  expect(drop.y).toBeGreaterThanOrEqual(placedBox.y);
+  expect(drop.y).toBeLessThanOrEqual(placedBox.y + placedBox.height);
+  await expect(catalog).toBeVisible();
+  await expect(proxy).toHaveCount(0);
 });
 
 test('Catalog pointer drag exposes populated dock rails and widget body docking zones before placement', async ({ page }) => {

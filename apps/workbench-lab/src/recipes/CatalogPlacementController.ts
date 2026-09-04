@@ -47,6 +47,12 @@ export interface CatalogPlacementProxyState {
   readonly offsetY: number;
 }
 
+export interface CatalogFloatingPlacementIntent {
+  readonly kind: 'floating';
+  readonly point: DockPoint;
+  readonly grabRatio: DockPoint;
+}
+
 export interface CatalogPlacementState {
   readonly phase: CatalogPlacementPhase;
   readonly input: CatalogPlacementInput | null;
@@ -69,6 +75,7 @@ export interface CatalogPlacementControllerOptions {
   readonly isPotentialDockTarget?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
   readonly onCommit: (manifest: WidgetManifest, target: CatalogPlacementTarget) => void;
   readonly onDockCommit?: (manifest: WidgetManifest, intent: DockIntent) => void;
+  readonly onFloatCommit?: (manifest: WidgetManifest, intent: CatalogFloatingPlacementIntent) => void;
   readonly onAnnounce?: (message: string) => void;
   readonly captureScrollAnchor?: () => unknown;
   readonly restoreScrollAnchor?: (anchor: unknown) => void;
@@ -439,8 +446,8 @@ export function createCatalogPlacementController(
         y: event.clientY,
         width,
         height,
-        offsetX: Math.max(0, Math.min(width, Math.round((event.clientX - originRect.left) * scale))),
-        offsetY: Math.max(0, Math.min(height, Math.round((event.clientY - originRect.top) * scale)))
+        offsetX: Math.max(0, Math.min(width, Math.round((candidate.startX - originRect.left) * scale))),
+        offsetY: Math.max(0, Math.min(height, Math.round((candidate.startY - originRect.top) * scale)))
       }),
       targets,
       selectedTargetId,
@@ -500,6 +507,7 @@ export function createCatalogPlacementController(
       suppressClickBriefly();
       if (event.type !== 'pointercancel' && dockIntent && options.onDockCommit) commitDockIntent();
       else if (event.type !== 'pointercancel' && state.selectedTargetId) commitSelectedTarget();
+      else if (event.type !== 'pointercancel' && options.onFloatCommit && pointIsInsideTargetRoot(event)) commitFloating(event);
       else cancelPlacement();
       return;
     }
@@ -617,6 +625,36 @@ export function createCatalogPlacementController(
     const activeIntent = dockIntent;
     try {
       options.onDockCommit(activeManifest, activeIntent);
+    } finally {
+      reset();
+    }
+    return true;
+  };
+
+  const pointIsInsideTargetRoot = (point: Pick<PointerEvent, 'clientX' | 'clientY'>) => {
+    const root = options.getTargetRoot();
+    if (!(root instanceof HTMLElement)) return false;
+    const rect = root.getBoundingClientRect();
+    return point.clientX >= rect.left
+      && point.clientX <= rect.right
+      && point.clientY >= rect.top
+      && point.clientY <= rect.bottom;
+  };
+
+  const commitFloating = (point: Pick<PointerEvent, 'clientX' | 'clientY'>) => {
+    if (state.phase !== 'lifted' || !state.proxy || !candidate || !options.onFloatCommit) return false;
+    const activeManifest = candidate.manifest;
+    const proxy = state.proxy;
+    const intent: CatalogFloatingPlacementIntent = Object.freeze({
+      kind: 'floating',
+      point: Object.freeze({ x: point.clientX, y: point.clientY }),
+      grabRatio: Object.freeze({
+        x: proxy.width > 0 ? proxy.offsetX / proxy.width : 0,
+        y: proxy.height > 0 ? proxy.offsetY / proxy.height : 0
+      })
+    });
+    try {
+      options.onFloatCommit(activeManifest, intent);
     } finally {
       reset();
     }

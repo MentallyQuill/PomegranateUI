@@ -145,7 +145,7 @@
     },
     {
       "id": "widget-frame",
-      "revision": 3,
+      "revision": 4,
       "compatiblePomegranateRange": ">=0.1.0-private.0 <0.2.0",
       "files": [
         "WidgetFrame.svelte"
@@ -162,7 +162,7 @@
         "POM-RENDER-A4B0DF2967"
       ],
       "sha256": {
-        "WidgetFrame.svelte": "2311B2FBE63AB42F75ED05166EA49087BFBEDD661DD3A3905C1073DF10A53862"
+        "WidgetFrame.svelte": "F4783788DE461BAB39F697A54313794C97557102BCE946CAA5A06762C8254E1D"
       }
     },
     {

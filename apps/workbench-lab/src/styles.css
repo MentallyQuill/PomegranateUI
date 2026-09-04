@@ -3278,11 +3278,12 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
   .panel-template-surface[data-panel-template-family="story-stage"] [data-pomegranate-region-role="composer"] > .dock-shelf {
     border: 0;
     background: transparent;
+    pointer-events: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
   main[data-pom-shell-presentation="instrumented"]
-  .panel-template-surface[data-panel-template-family="story-stage"] [data-pomegranate-region-role="composer"] > * {
+  .panel-template-surface[data-panel-template-family="story-stage"] [data-pomegranate-region-role="composer"] > .dock-shelf > * {
     pointer-events: auto;
   }
   main[data-pom-shell-presentation="instrumented"]
@@ -3978,8 +3979,11 @@ main[data-pom-theme-root].right-collapsed [data-conformance-region="right"] {
   main[data-pom-shell-presentation="instrumented"] .panel-template-surface[data-panel-template-family="story-stage"] [data-pomegranate-region-role="composer"] > .dock-shelf {
     border: 0;
     background: transparent;
-    pointer-events: auto;
+    pointer-events: none;
     backdrop-filter: none;
+  }
+  main[data-pom-shell-presentation="instrumented"] .panel-template-surface[data-panel-template-family="story-stage"] [data-pomegranate-region-role="composer"] > .dock-shelf > * {
+    pointer-events: auto;
   }
   main[data-pom-shell-presentation="instrumented"] .panel-template-surface[data-panel-template-family="story-stage"] :is([data-pomegranate-region-role="left-instruments"], [data-pomegranate-region-role="right-instruments"]) {
     position: absolute;

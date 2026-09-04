@@ -13,6 +13,7 @@
   import {
     createCatalogPlacementController,
     type CatalogPlacementController,
+    type CatalogFloatingPlacementIntent,
     type CatalogPlacementState,
     type CatalogPlacementTarget
   } from './CatalogPlacementController.js';
@@ -28,6 +29,7 @@
     onplace,
     ontargetplace,
     ondockplace,
+    onfloatplace,
     getPlacementTargetRoot,
     isPlacementTargetCompatible,
     isPotentialDockTarget,
@@ -42,6 +44,7 @@
     onplace?: (manifest: WidgetManifest, result: HTMLElement) => void;
     ontargetplace?: (manifest: WidgetManifest, target: CatalogPlacementTarget) => void;
     ondockplace?: (manifest: WidgetManifest, intent: DockIntent) => void;
+    onfloatplace?: (manifest: WidgetManifest, intent: CatalogFloatingPlacementIntent) => void;
     getPlacementTargetRoot?: () => ParentNode | null;
     isPlacementTargetCompatible?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
     isPotentialDockTarget?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
@@ -306,6 +309,12 @@
           onDockCommit: (manifest: WidgetManifest, intent: DockIntent) => {
             placementAnnouncement = `${manifest.title} placement committed.`;
             ondockplace(manifest, intent);
+          }
+        } : {}),
+        ...(onfloatplace ? {
+          onFloatCommit: (manifest: WidgetManifest, intent: CatalogFloatingPlacementIntent) => {
+            placementAnnouncement = `${manifest.title} placement committed.`;
+            onfloatplace(manifest, intent);
           }
         } : {}),
         onAnnounce: (message) => { placementAnnouncement = message; },

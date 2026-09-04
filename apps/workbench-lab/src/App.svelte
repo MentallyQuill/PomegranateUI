@@ -29,7 +29,7 @@
   import ThemeCanvas from './recipes/ThemeCanvas.svelte';
   import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
-  import type { CatalogPlacementTarget } from './recipes/CatalogPlacementController.js';
+  import type { CatalogFloatingPlacementIntent, CatalogPlacementTarget } from './recipes/CatalogPlacementController.js';
   import type { DockIntent } from './recipes/widget-docking.js';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
   import WidgetActionMenu from './recipes/WidgetActionMenu.svelte';
@@ -298,7 +298,22 @@
 
   let workbench: WorkbenchState = $state(store.getState());
   let focusMode = $state(false);
-  let focusedFrame = $state<WidgetFrameProjection | null>(null);
+  let focusedInstanceId = $state<WidgetFrameProjection['instanceId'] | null>(null);
+  const focusedFrame = $derived.by((): WidgetFrameProjection | null => {
+    if (!focusedInstanceId) return null;
+    const instance = workbench.widgets[focusedInstanceId];
+    const placement = workbench.placements[focusedInstanceId];
+    if (!instance || !placement || placement.kind === 'shelved') return null;
+    const manifest = store.registry.get(instance.type);
+    return Object.freeze({
+      instanceId: instance.id,
+      instanceIdAttribute: instance.id,
+      title: manifest?.title ?? instance.type,
+      instance,
+      manifest,
+      placement
+    });
+  });
   let focusReturnId: string | null = null;
   let focusReturnElement: HTMLElement | null = null;
   const compactWorkbenchMedia = typeof window.matchMedia === 'function'
@@ -379,15 +394,54 @@
       : '';
   }
 
-  function placeFromCatalog(manifest: WidgetManifest, selectedTarget?: CatalogPlacementTarget | DockIntent | HTMLElement) {
+  function placeFromCatalog(manifest: WidgetManifest, selectedTarget?: CatalogPlacementTarget | CatalogFloatingPlacementIntent | DockIntent | HTMLElement) {
     const target = selectedTarget && 'identity' in selectedTarget ? selectedTarget : undefined;
-    const intent = selectedTarget && 'kind' in selectedTarget ? selectedTarget as DockIntent : undefined;
+    const floatingIntent = selectedTarget && 'kind' in selectedTarget && selectedTarget.kind === 'floating'
+      ? selectedTarget as CatalogFloatingPlacementIntent
+      : undefined;
+    const intent = selectedTarget && 'kind' in selectedTarget && selectedTarget.kind !== 'floating'
+      ? selectedTarget as DockIntent
+      : undefined;
     const panelId = intent ? asPanelId(intent.panelId) : target ? asPanelId(target.identity.panelId) : workbench.activePanelId;
     if (!panelId) return;
     const panel = workbench.panels.find((candidate) => candidate.id === panelId);
     if (!panel) return;
     const id = asWidgetInstanceId(`catalog-${manifest.type.replace(/[^a-z0-9]+/gi, '-')}-${workbench.revision + 1}`);
     const instance = { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} };
+
+    if (floatingIntent) {
+      const surface = workbenchElement?.querySelector<HTMLElement>(`[data-pomegranate-panel="${CSS.escape(panelId)}"]`);
+      if (!surface) return;
+      const surfaceBox = surface.getBoundingClientRect();
+      const defaults = manifest.defaultPlacement.kind === 'floating'
+        ? manifest.defaultPlacement
+        : { width: 360, height: 240 };
+      const maxX = Math.max(8, surfaceBox.width - defaults.width - 8);
+      const maxY = Math.max(8, surfaceBox.height - defaults.height - 8);
+      const x = Math.max(8, Math.min(maxX,
+        floatingIntent.point.x - surfaceBox.left - defaults.width * floatingIntent.grabRatio.x));
+      const y = Math.max(8, Math.min(maxY,
+        floatingIntent.point.y - surfaceBox.top - defaults.height * floatingIntent.grabRatio.y));
+      const z = Math.max(0, ...Object.values(workbench.placements).map((placement) => (
+        placement.kind === 'floating' ? placement.z : 0
+      ))) + 1;
+      const result = store.dispatch({
+        type: 'widget.create',
+        instance,
+        placement: {
+          kind: 'floating',
+          panelId,
+          ...(panel.activeSubPanelId === undefined ? {} : { subPanelId: panel.activeSubPanelId }),
+          x,
+          y,
+          width: defaults.width,
+          height: defaults.height,
+          z
+        }
+      });
+      status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
+      return;
+    }
 
     if (intent) {
       const owner = {
@@ -631,7 +685,7 @@
   function focusWidget(frame: WidgetFrameProjection, returnElement: HTMLElement) {
     focusReturnId = frame.instanceId;
     focusReturnElement = returnElement;
-    focusedFrame = frame;
+    focusedInstanceId = frame.instanceId;
   }
 
   function expandDock(edge: 'left' | 'right') {
@@ -642,7 +696,7 @@
   async function returnFromFocusedWidget() {
     const returnId = focusReturnId;
     const returnElement = focusReturnElement;
-    focusedFrame = null;
+    focusedInstanceId = null;
     focusReturnId = null;
     focusReturnElement = null;
     await tick();
@@ -651,6 +705,10 @@
     const control = document.querySelector<HTMLElement>(selector);
     (returnElement?.isConnected ? returnElement : control)?.focus();
   }
+
+  $effect(() => {
+    if (focusedInstanceId && !focusedFrame) void returnFromFocusedWidget();
+  });
 
   function frameSurfacePart(frame: WidgetFrameProjection) {
     if (frame.placement.kind === 'floating') return 'floating.surface';
@@ -830,6 +888,7 @@
     oncreate={placeFromCatalog}
     ontargetplace={placeFromCatalog}
     ondockplace={placeFromCatalog}
+    onfloatplace={placeFromCatalog}
     getPlacementTargetRoot={() => workbenchElement ?? null}
     isPlacementTargetCompatible={isCatalogPlacementTargetCompatible}
     isPotentialDockTarget={isPotentialCatalogDockTarget}

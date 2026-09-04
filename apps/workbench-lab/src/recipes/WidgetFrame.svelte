@@ -61,11 +61,6 @@
     && Boolean(target.closest('button, a, input, textarea, select, summary, [role="menu"]'))
   );
   const dragSurfacePointerDown = (event: PointerEvent) => {
-    if (event.pointerType === 'touch') lastTouchPointerAt = event.timeStamp;
-    if (!grouped) {
-      const anchor = event.currentTarget as HTMLElement;
-      if (secondaryContext.pointerDown(event, frame.instanceId, (point) => openActions(anchor, 'pointer', point))) return;
-    }
     if (event.button !== 0) return;
     if (isInteractiveTarget(event.target)) return;
     drag.pointerDown(event);
@@ -80,22 +75,33 @@
       onopenchange: (open) => { actionsOpen = open; }
     });
   };
+  const actionAnchor = (surface: HTMLElement) => {
+    if (onexitfocus) return surface.querySelector<HTMLElement>('.action-exit-focus') ?? surface;
+    if (grouped) {
+      const activeTab = surface.closest<HTMLElement>('[data-widget-group]')
+        ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+      if (activeTab) return activeTab;
+    }
+    return surface.querySelector<HTMLElement>(':scope > [data-pom-part="widget.header"]') ?? surface;
+  };
   const handleContextMenu = (event: MouseEvent) => {
-    if (grouped) return;
     const pointerType = (event as MouseEvent & { pointerType?: string }).pointerType;
     if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) {
       event.preventDefault();
       return;
     }
-    const anchor = event.currentTarget as HTMLElement;
+    const anchor = actionAnchor(event.currentTarget as HTMLElement);
     secondaryContext.contextMenu(event, frame.instanceId, (point) => openActions(anchor, 'pointer', point));
   };
+  const widgetSurfacePointerDown = (event: PointerEvent) => {
+    if (event.pointerType === 'touch') lastTouchPointerAt = event.timeStamp;
+    const anchor = actionAnchor(event.currentTarget as HTMLElement);
+    secondaryContext.pointerDown(event, frame.instanceId, (point) => openActions(anchor, 'pointer', point));
+  };
   const dragSurfacePointerUp = (event: PointerEvent) => {
-    if (secondaryContext.pointerUp(event)) return;
     drag.pointerUp(event);
   };
   const dragSurfacePointerCancel = (event: PointerEvent) => {
-    secondaryContext.pointerCancel(event);
     drag.pointerCancel(event);
   };
   const handleHeaderKey = (event: KeyboardEvent) => {
@@ -114,6 +120,10 @@
   data-pomegranate-placement={frame.placement.kind}
   data-pomegranate-edge={frame.placement.kind === 'docked' ? frame.placement.regionId === 'stage' ? 'main' : frame.placement.regionId : 'floating'}
   data-pomegranate-region={frame.placement.kind === 'docked' ? frame.placement.regionId : undefined}
+  oncontextmenu={handleContextMenu}
+  onpointerdown={widgetSurfacePointerDown}
+  onpointerup={(event) => { secondaryContext.pointerUp(event); }}
+  onpointercancel={(event) => { secondaryContext.pointerCancel(event); }}
 >
   <header
     role="toolbar"
@@ -124,7 +134,6 @@
     data-widget-drag-surface={onexitfocus ? undefined : ''}
     tabindex={onexitfocus || grouped ? undefined : 0}
     aria-keyshortcuts={onexitfocus || grouped ? undefined : 'Shift+F10'}
-    oncontextmenu={onexitfocus ? undefined : handleContextMenu}
     onkeydown={onexitfocus ? undefined : handleHeaderKey}
     onpointerdown={onexitfocus ? undefined : dragSurfacePointerDown}
     onpointermove={onexitfocus ? undefined : drag.pointerMove}

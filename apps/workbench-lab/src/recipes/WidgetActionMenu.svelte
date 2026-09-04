@@ -18,7 +18,9 @@
   let snapshot = $state<WorkbenchState>();
   let view = $state<'actions' | 'move'>('actions');
   let restoreTargetAfterClose = false;
+  let menuHome: { parent: Node; nextSibling: ChildNode | null } | undefined;
   const actions = $derived(request ? createWidgetActions(store, request.frame.instanceId) : undefined);
+  const requestIsFocused = $derived(Boolean(request?.anchor.closest('.focused-widget-dialog')));
   const surface = $derived(snapshot ? selectPanelSurface(snapshot, store.registry, store.templates) : null);
   const currentEdge = $derived.by(() => {
     const placement = request?.frame.placement;
@@ -48,8 +50,28 @@
     return store.subscribe((next) => { snapshot = next; });
   });
 
+  function captureMenuHome() {
+    if (menuHome || !menu?.parentNode) return;
+    menuHome = { parent: menu.parentNode, nextSibling: menu.nextSibling };
+  }
+
+  function restoreMenuHome() {
+    if (!menu || !menuHome || menu.parentNode === menuHome.parent) return;
+    const before = menuHome.nextSibling?.parentNode === menuHome.parent ? menuHome.nextSibling : null;
+    menuHome.parent.insertBefore(menu, before);
+  }
+
+  function mountMenuForAnchor(anchor: HTMLElement) {
+    if (!menu) return;
+    captureMenuHome();
+    const dialog = anchor.closest<HTMLDialogElement>('dialog[open]');
+    if (dialog) dialog.append(menu);
+    else restoreMenuHome();
+  }
+
   export function open(next: WidgetActionRequest) {
     if (!menu) return;
+    mountMenuForAnchor(next.anchor);
     if (isMenuOpen() && request?.frame.instanceId === next.frame.instanceId && request.anchor === next.anchor) {
       if (next.source === 'touch') closeMenu();
       else {
@@ -89,8 +111,22 @@
   function positionMenu() {
     if (!request || !menu || !isMenuOpen()) return;
     const anchor = request.anchor.getBoundingClientRect();
-    const width = Math.min(230, window.innerWidth - 16);
+    const fallbackDialog = menu.hasAttribute('data-fallback-open')
+      ? menu.closest<HTMLDialogElement>('dialog[open]')
+      : null;
+    const dialogBounds = fallbackDialog?.getBoundingClientRect();
+    const bounds = dialogBounds ?? {
+      left: 0,
+      top: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+      width: window.innerWidth,
+      height: window.innerHeight
+    };
+    const width = Math.min(230, bounds.width - 16);
     menu.style.width = `${width}px`;
+    menu.style.maxHeight = fallbackDialog ? `${Math.max(0, bounds.height - 16)}px` : '';
+    menu.style.overflowY = fallbackDialog ? 'auto' : '';
     const height = menu.getBoundingClientRect().height;
     const requestedLeft = request.source === 'pointer' && request.point
       ? request.point.x
@@ -98,12 +134,13 @@
     const requestedTop = request.source === 'pointer' && request.point
       ? request.point.y
       : anchor.bottom + 4;
-    const left = Math.max(8, Math.min(window.innerWidth - width - 8, requestedLeft));
-    const top = requestedTop + height <= window.innerHeight - 8
+    const left = Math.max(bounds.left + 8, Math.min(bounds.right - width - 8, requestedLeft));
+    const preferredTop = requestedTop + height <= bounds.bottom - 8
       ? requestedTop
-      : Math.max(8, (request.source === 'pointer' && request.point ? request.point.y : anchor.top) - height - 4);
-    menu.style.left = `${left}px`;
-    menu.style.top = `${top}px`;
+      : (request.source === 'pointer' && request.point ? request.point.y : anchor.top) - height - 4;
+    const top = Math.max(bounds.top + 8, Math.min(bounds.bottom - height - 8, preferredTop));
+    menu.style.left = `${left - bounds.left}px`;
+    menu.style.top = `${top - bounds.top}px`;
   }
 
   function restoreFocus() {
@@ -122,7 +159,11 @@
       request?.onopenchange?.(false);
       if (restore) restoreFocus();
       restoreTargetAfterClose = false;
-    } else if (isMenuOpen()) menu?.hidePopover();
+      restoreMenuHome();
+    } else if (isMenuOpen()) {
+      menu?.hidePopover();
+      restoreMenuHome();
+    } else restoreMenuHome();
   }
 
   function run(action: () => void) {
@@ -158,6 +199,7 @@
       request?.onopenchange?.(false);
       if (restoreTargetAfterClose) restoreFocus();
       restoreTargetAfterClose = false;
+      restoreMenuHome();
     }
   }
 
@@ -225,7 +267,7 @@
 >
   {#if actions}
     {#if view === 'actions'}
-      {#if onfocuswidget}<button class="action-focus" role="menuitem" data-pom-part="button.surface" type="button" onclick={focus}>Focus</button>{/if}
+      {#if onfocuswidget && !requestIsFocused}<button class="action-focus" role="menuitem" data-pom-part="button.surface" type="button" onclick={focus}>Focus</button>{/if}
       <button class="action-move" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => show('move')}>Move…</button>
       <hr />
       <button class="action-remove" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.shelve())}>Remove</button>

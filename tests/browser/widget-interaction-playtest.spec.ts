@@ -195,6 +195,43 @@ test('AUDIT-P1-GROUP-ACTIONS desktop grouped Widget tabs expose unobstructed con
   expect(hit.tabReceivesPoint).toBe(true);
 });
 
+test('AUDIT-P1-STAGE-TOP Widget remains hittable, actionable, and draggable after docking above the Story', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const result = catalog.locator('[data-catalog-result][data-widget-type="settings.accessibility-controls"]');
+  await result.scrollIntoViewIfNeeded();
+  await result.focus();
+  await result.press('Enter');
+  await catalog.getByRole('button', { name: 'Close Widget Catalog' }).click();
+
+  const widget = page.getByRole('article', { name: 'Accessibility Controls' });
+  await dragToShelfRail(page, widgetDragSurface(widget), 'stage', 'before');
+  await expect(widget).toHaveAttribute('data-pomegranate-edge', 'main');
+
+  const header = widgetDragSurface(widget);
+  expect(await header.evaluate((node) => {
+    const box = node.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    return hit === node || Boolean(hit && node.contains(hit));
+  })).toBe(true);
+
+  await widget.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+  await expect(page.getByRole('menu', { name: 'Accessibility Controls Widget actions' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  const stageBox = await page.locator('[data-pomegranate-region-surface="stage"]').boundingBox();
+  if (!stageBox) throw new Error('Expected open Story geometry.');
+  const beforeRevision = await workbenchRevision(page);
+  await beginPointerDrag(page, header);
+  await movePointerPath(page, [{ x: stageBox.x + stageBox.width * .72, y: stageBox.y + 90 }]);
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+  await finishPointerDrag(page);
+
+  await expect(widget).toHaveAttribute('data-pomegranate-placement', 'floating');
+  expect(await workbenchRevision(page)).toBe(beforeRevision + 1);
+  await expectNoWidgetDragResidue(page);
+});
+
 const implementedCaseIds = new Set<string>();
 type PlaytestBody = (args: {
   page: Page;

@@ -1069,4 +1069,76 @@ describe('CatalogPlacementController', () => {
     expect(target).not.toHaveAttribute('data-catalog-placement-target');
     controller.destroy();
   });
+
+  it('commits a pointer drop inside the Workbench as a floating placement when no dock intent wins', () => {
+    const { root, origin } = placementSurface();
+    Object.defineProperty(root, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(0, 40, 1_000, 700)
+    });
+    const onCommit = vi.fn();
+    const onDockCommit = vi.fn();
+    const onFloatCommit = vi.fn();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit,
+      onDockCommit,
+      onFloatCommit
+    });
+
+    controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 760, clientY: 650 }));
+    document.dispatchEvent(pointerEvent('pointerup', { clientX: 760, clientY: 650 }));
+
+    expect(onFloatCommit).toHaveBeenCalledOnce();
+    expect(onFloatCommit).toHaveBeenCalledWith(manifest, {
+      kind: 'floating',
+      point: { x: 760, y: 650 },
+      grabRatio: { x: 0, y: 0 }
+    });
+    expect(onDockCommit).not.toHaveBeenCalled();
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(controller.getState().phase).toBe('idle');
+    controller.destroy();
+  });
+
+  it('does not float a pointer drop outside the Workbench or a cancelled pointer drop inside it', () => {
+    const { root, origin } = placementSurface();
+    Object.defineProperty(root, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(0, 40, 1_000, 700)
+    });
+    const onFloatCommit = vi.fn();
+    const announce = vi.fn();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => true,
+      onCommit: vi.fn(),
+      onDockCommit: vi.fn(),
+      onFloatCommit,
+      onAnnounce: announce
+    });
+
+    controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 1_040, clientY: 760 }));
+    document.dispatchEvent(pointerEvent('pointerup', { clientX: 1_040, clientY: 760 }));
+
+    controller.pointerDown(pointerEvent('pointerdown', { pointerId: 2, clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { pointerId: 2, clientX: 16, clientY: 10 }));
+    document.dispatchEvent(pointerEvent('pointermove', { pointerId: 2, clientX: 760, clientY: 650 }));
+    document.dispatchEvent(pointerEvent('pointercancel', { pointerId: 2, clientX: 760, clientY: 650 }));
+
+    expect(onFloatCommit).not.toHaveBeenCalled();
+    expect(announce).toHaveBeenCalledTimes(2);
+    expect(announce).toHaveBeenNthCalledWith(1, `${manifest.title} placement cancelled.`);
+    expect(announce).toHaveBeenNthCalledWith(2, `${manifest.title} placement cancelled.`);
+    expect(controller.getState().phase).toBe('idle');
+    controller.destroy();
+  });
 });
