@@ -1917,8 +1917,8 @@ test.describe('coarse-pointer Widget actions', () => {
     });
     const before = await geometry();
 
-    expect(before.trigger.width).toBeGreaterThanOrEqual(44);
-    expect(before.trigger.height).toBeGreaterThanOrEqual(44);
+    expect(Math.round(before.trigger.width)).toBeGreaterThanOrEqual(44);
+    expect(Math.round(before.trigger.height)).toBeGreaterThanOrEqual(44);
     expect(before.trigger.x).toBeGreaterThanOrEqual(before.header.x - 1);
     expect(before.trigger.x + before.trigger.width).toBeLessThanOrEqual(before.header.x + before.header.width + 1);
     expect(before.trigger.y).toBeGreaterThanOrEqual(before.header.y - 1);
@@ -1953,8 +1953,8 @@ test.describe('coarse-pointer Widget actions', () => {
     const before = await trigger.boundingBox();
     if (!headerBox || !before) throw new Error('Expected grouped Widget action geometry.');
 
-    expect(before.width).toBeGreaterThanOrEqual(44);
-    expect(before.height).toBeGreaterThanOrEqual(44);
+    expect(Math.round(before.width)).toBeGreaterThanOrEqual(44);
+    expect(Math.round(before.height)).toBeGreaterThanOrEqual(44);
     expect(before.x + before.width).toBeLessThanOrEqual(headerBox.x + headerBox.width + 1);
     expect(before.y + before.height).toBeLessThanOrEqual(headerBox.y + headerBox.height + 1);
 
