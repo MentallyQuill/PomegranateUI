@@ -54,6 +54,19 @@ async function closeDeveloperTools(page: Page) {
   if (await drawer.getAttribute('open') !== null) await page.getByText('Developer tools', { exact: true }).click();
 }
 
+async function openPanelCreateDialog(page: Page) {
+  await openDeveloperTools(page);
+  const launchers = page.getByRole('button', { name: 'Create Panel' });
+  for (let index = 0; index < await launchers.count(); index += 1) {
+    if (!await launchers.nth(index).isVisible()) continue;
+    await launchers.nth(index).click();
+    const drawer = page.locator('[data-workbench-developer-drawer]');
+    await drawer.evaluate((node: HTMLDetailsElement) => { node.open = false; });
+    return page.getByRole('dialog', { name: 'Create a Panel' });
+  }
+  throw new Error('Expected a visible Create Panel launcher.');
+}
+
 async function seedOverflowingPanels(page: Page) {
   await openDeveloperTools(page);
   for (const name of [
@@ -386,6 +399,28 @@ const shot = (page: Page, name: string) => expect(page).toHaveScreenshot(name, {
   caret: 'hide',
   fullPage: false
 });
+
+for (const theme of maintainedThemes) {
+  test(`${theme.label} visually composes the responsive Panel template picker`, async ({ page }) => {
+    await fresh(page, 1200, 800);
+    await selectTheme(page, theme.label);
+    let dialog = await openPanelCreateDialog(page);
+    await expect(dialog.locator('[data-panel-template-card]')).toHaveCount(3);
+    await expect(dialog).toHaveScreenshot(`create-panel-${theme.slug}.png`, {
+      animations: 'disabled',
+      caret: 'hide'
+    });
+
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await settle(page);
+    dialog = await openPanelCreateDialog(page);
+    await expect(dialog).toHaveScreenshot(`create-panel-${theme.slug}-compact.png`, {
+      animations: 'disabled',
+      caret: 'hide'
+    });
+  });
+}
 
 test('native workbench stable mockup surfaces', async ({ page }) => {
   await fresh(page, 1440, 900);

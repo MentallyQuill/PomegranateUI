@@ -1359,6 +1359,19 @@ test.describe('coarse-pointer Deep controls', () => {
       expect(Math.round((await slider.boundingBox())?.height ?? 0)).toBeGreaterThanOrEqual(44);
     }
   });
+
+  test('preserves 44px Panel column-count targets', async ({ page }) => {
+    await openFresh(page, 390, 844);
+    await page.getByText('Developer tools', { exact: true }).click();
+    await page.getByRole('button', { name: 'Create Panel' }).click();
+    const choices = page.getByRole('dialog', { name: 'Create a Panel' }).locator('[data-column-count-option]');
+    await expect(choices).toHaveCount(5);
+    for (const choice of await choices.all()) {
+      const box = await choice.boundingBox();
+      expect(Math.round(box?.width ?? 0)).toBeGreaterThanOrEqual(44);
+      expect(Math.round(box?.height ?? 0)).toBeGreaterThanOrEqual(44);
+    }
+  });
 });
 
 test('Panel creation uses the browser modal top layer and restores focus', async ({ page }) => {
@@ -1373,3 +1386,83 @@ test('Panel creation uses the browser modal top layer and restores focus', async
   await expect(dialog).toBeHidden();
   await expect(launcher).toBeFocused();
 });
+
+for (const viewport of [
+  { name: 'wide', width: 1180, height: 800, columns: 3 },
+  { name: 'compact portrait', width: 390, height: 844, columns: 1 },
+  { name: 'short landscape', width: 844, height: 390, columns: 3 },
+  { name: '200-percent zoom equivalent', width: 800, height: 450, columns: 3 }
+]) {
+  test(`Panel template picker ${viewport.name} stays contained with one clear selection`, async ({ page }) => {
+    await openFresh(page, viewport.width, viewport.height);
+    await page.getByText('Developer tools', { exact: true }).click();
+    await page.getByRole('button', { name: 'Create Panel' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create a Panel' });
+    const columnsCard = dialog.locator('[data-panel-template-card="columns"]');
+    const evidence = await dialog.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const body = element.querySelector('.panel-create-body');
+      const footer = element.querySelector('.panel-create-footer');
+      const grid = element.querySelector('.panel-template-grid');
+      const heading = element.querySelector('h2');
+      if (!(body instanceof HTMLElement) || !(footer instanceof HTMLElement) || !(grid instanceof HTMLElement) || !(heading instanceof HTMLElement)) {
+        throw new Error('Missing Panel picker composition.');
+      }
+      const footerBox = footer.getBoundingClientRect();
+      const rootStyle = getComputedStyle(document.querySelector('main')!);
+      return {
+        bounds: { top: box.top, right: box.right, bottom: box.bottom, left: box.left },
+        viewport: { width: innerWidth, height: innerHeight },
+        footer: { top: footerBox.top, bottom: footerBox.bottom },
+        bodyOverflow: getComputedStyle(body).overflowY,
+        gridColumns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        headingFont: getComputedStyle(heading).fontFamily,
+        uiFont: rootStyle.getPropertyValue('--pom-font-ui').trim(),
+        headingSize: getComputedStyle(heading).fontSize,
+        mediumSize: rootStyle.getPropertyValue('--pom-type-md').trim(),
+        selectedCards: element.querySelectorAll('[data-panel-template-card][data-pom-selected="true"]').length
+      };
+    });
+
+    expect(evidence.bounds.top).toBeGreaterThanOrEqual(0);
+    expect(evidence.bounds.left).toBeGreaterThanOrEqual(0);
+    expect(evidence.bounds.right).toBeLessThanOrEqual(evidence.viewport.width);
+    expect(evidence.bounds.bottom).toBeLessThanOrEqual(evidence.viewport.height);
+    expect(evidence.footer.top).toBeGreaterThanOrEqual(evidence.bounds.top);
+    expect(evidence.footer.bottom).toBeLessThanOrEqual(evidence.bounds.bottom + 1);
+    expect(evidence.bodyOverflow).toBe('auto');
+    expect(evidence.gridColumns).toBe(viewport.columns);
+    expect(evidence.headingFont).toBe(evidence.uiFont);
+    expect(evidence.headingSize).toBe(evidence.mediumSize);
+    expect(evidence.selectedCards).toBe(1);
+    if (viewport.name === 'short landscape') {
+      const fixedRegionsBefore = await dialog.evaluate((element) => {
+        const body = element.querySelector('.panel-create-body');
+        const header = element.querySelector('.panel-create-header');
+        const footer = element.querySelector('.panel-create-footer');
+        if (!(body instanceof HTMLElement) || !(header instanceof HTMLElement) || !(footer instanceof HTMLElement)) {
+          throw new Error('Missing Panel picker scroll regions.');
+        }
+        return {
+          bodyScrollHeight: body.scrollHeight,
+          bodyClientHeight: body.clientHeight,
+          headerTop: header.getBoundingClientRect().top,
+          footerTop: footer.getBoundingClientRect().top
+        };
+      });
+      expect(fixedRegionsBefore.bodyScrollHeight).toBeGreaterThan(fixedRegionsBefore.bodyClientHeight);
+      await dialog.locator('.panel-create-body').evaluate((body: HTMLElement) => { body.scrollTop = body.scrollHeight; });
+      const fixedRegionsAfter = await dialog.evaluate((element) => ({
+        headerTop: element.querySelector('.panel-create-header')!.getBoundingClientRect().top,
+        footerTop: element.querySelector('.panel-create-footer')!.getBoundingClientRect().top,
+        bodyScrollTop: (element.querySelector('.panel-create-body') as HTMLElement).scrollTop
+      }));
+      expect(fixedRegionsAfter.bodyScrollTop).toBeGreaterThan(0);
+      expect(fixedRegionsAfter.headerTop).toBe(fixedRegionsBefore.headerTop);
+      expect(fixedRegionsAfter.footerTop).toBe(fixedRegionsBefore.footerTop);
+    }
+    await expect(columnsCard.locator('[data-panel-preview-region="column"]')).toHaveCount(3);
+    await dialog.locator('[data-column-count-option="6"]').click();
+    await expect(columnsCard.locator('[data-panel-preview-region="column"]')).toHaveCount(6);
+  });
+}
