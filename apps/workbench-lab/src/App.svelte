@@ -46,6 +46,7 @@
   import { createLocalThemePreference } from './themes/theme-storage.js';
   import { createLocalThemeDraftStorage } from './themes/draft-storage.js';
 
+  const brandMarkUrl = './pomegranateui-mark-64.png';
   const runtime = createLabRuntime();
   const storage = createLocalLayoutStorage();
   const { store, catalog, rendererRegistry } = runtime;
@@ -650,7 +651,11 @@
 >
   <ThemeCanvas layers={themeSnapshot.compiled.canvas} />
   <header class="top-shelf" data-pom-part="chrome.shelf" data-conformance-region="shelf">
-    <a class="wordmark" href="#workbench"><span aria-hidden="true">P</span><strong>PomegranateUI</strong><small>Workbench Lab</small></a>
+    <a class="wordmark" href="#workbench" aria-label="PomegranateUI Workbench Lab">
+      <img class="wordmark-mark" src={brandMarkUrl} alt="" width="64" height="64" decoding="async" />
+      <strong>PomegranateUI</strong>
+      <small>Workbench Lab</small>
+    </a>
     <div class="panel-chrome-flow">
       <div class="panel-navigation">
         <PanelTabs

@@ -24,6 +24,15 @@ afterEach(() => {
 });
 
 describe('Svelte Workbench Lab mockup', () => {
+  it('renders the PomegranateUI mark beside an accessible Workbench Lab label', () => {
+    render(App);
+
+    const brand = screen.getByRole('link', { name: 'PomegranateUI Workbench Lab' });
+    expect(brand.querySelector('.wordmark-mark')).toHaveAttribute('src', './pomegranateui-mark-64.png');
+    expect(within(brand).getByText('PomegranateUI')).toBeVisible();
+    expect(within(brand).getByText('Workbench Lab')).toBeVisible();
+  });
+
   it('exposes one active Panel action trigger and retargets it when the active tab changes', async () => {
     const user = userEvent.setup();
     const { container } = render(App);

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { FONT_ARTIFACTS, LEGAL_ARTIFACTS, verifyLabDist } from '../../scripts/verify-lab-dist.mjs';
+import { BRAND_ARTIFACTS, FONT_ARTIFACTS, LEGAL_ARTIFACTS, verifyLabDist } from '../../scripts/verify-lab-dist.mjs';
 
 async function writeFixture(root, relativePath, contents) {
   const absolute = path.join(root, relativePath);
@@ -28,6 +28,22 @@ async function writeFontFixtures(root) {
   }
 }
 
+async function writeBrandFixtures(root) {
+  for (const file of BRAND_ARTIFACTS) {
+    const contents = `brand bytes for ${file}`;
+    await writeFixture(root, `apps/workbench-lab/public/${file}`, contents);
+    await writeFixture(root, `apps/workbench-lab/dist/${file}`, contents);
+  }
+}
+
+const verifiedIndex = `<!doctype html><html><head>
+  <meta name="darkreader-lock">
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
+  <link rel="shortcut icon" href="./favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+</head></html>`;
+
 test('Pages artifact contains byte-identical licenses and notices', async () => {
   assert.deepEqual(LEGAL_ARTIFACTS.map(([output]) => output), [
     'LICENSE.txt',
@@ -42,9 +58,10 @@ test('Pages artifact contains byte-identical licenses and notices', async () => 
     'licenses/Alegreya-OFL.txt'
   ]);
   const root = await mkdtemp(path.join(tmpdir(), 'pom-lab-dist-'));
-  await writeFixture(root, 'apps/workbench-lab/dist/index.html', '<!doctype html><html><head><meta name="darkreader-lock"></head></html>');
+  await writeFixture(root, 'apps/workbench-lab/dist/index.html', verifiedIndex);
   await writeLegalFixtures(root);
   await writeFontFixtures(root);
+  await writeBrandFixtures(root);
 
   await assert.doesNotReject(verifyLabDist({ root }));
   await writeFixture(root, 'apps/workbench-lab/dist/licenses/Geist-OFL.txt', 'drifted');
@@ -64,13 +81,32 @@ test('Pages artifact contains a byte-identical asset for every bundled font', as
     'Alegreya-Variable.ttf'
   ]);
   const root = await mkdtemp(path.join(tmpdir(), 'pom-lab-fonts-'));
-  await writeFixture(root, 'apps/workbench-lab/dist/index.html', '<!doctype html><html><head><meta name="darkreader-lock"></head></html>');
+  await writeFixture(root, 'apps/workbench-lab/dist/index.html', verifiedIndex);
   await writeLegalFixtures(root);
   await writeFontFixtures(root);
+  await writeBrandFixtures(root);
 
   await assert.doesNotReject(verifyLabDist({ root }));
   await writeFixture(root, 'apps/workbench-lab/dist/assets/Nunito-Variable.ttf', 'corrupted font');
   await assert.rejects(verifyLabDist({ root }), /Nunito-Variable\.ttf is missing a byte-identical built asset/);
+});
+
+test('Pages artifact keeps the complete favicon set and relative links', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'pom-lab-brand-'));
+  await writeFixture(root, 'apps/workbench-lab/dist/index.html', `<!doctype html><html><head>
+    <meta name="darkreader-lock">
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
+    <link rel="shortcut icon" href="./favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+  </head></html>`);
+  await writeLegalFixtures(root);
+  await writeFontFixtures(root);
+  await writeBrandFixtures(root);
+
+  await assert.doesNotReject(verifyLabDist({ root }));
+  await writeFixture(root, 'apps/workbench-lab/dist/favicon-32x32.png', 'drifted');
+  await assert.rejects(verifyLabDist({ root }), /favicon-32x32\.png does not match its public source/);
 });
 
 test('Pages artifact prevents extensions from recoloring theme-authored surfaces', async () => {

@@ -32,7 +32,7 @@ main {
 
 .top-shelf { display: grid; grid-template-columns: auto minmax(17rem, 1fr) auto; align-items: center; gap: .9rem; min-height: 4.4rem; padding: .55rem .7rem; border-radius: var(--pom-radius-large, .85rem) var(--pom-radius-large, .85rem) var(--pom-radius-small, .4rem) var(--pom-radius-small, .4rem); }
 .wordmark { display: grid; grid-template-columns: 2.4rem auto; color: inherit; text-decoration: none; line-height: 1; }
-.wordmark > span { grid-row: 1 / 3; display: grid; place-items: center; width: 2rem; height: 2rem; border: var(--pom-border-width, 1px) solid var(--line-strong); border-radius: var(--pom-radius-pill, 50%); color: var(--ember-bright); font: var(--pom-font-display-weight, 520) 1.35rem var(--pom-font-display, "Pomegranate Serif"); }
+.wordmark-mark { grid-row: 1 / 3; display: block; width: 2rem; height: 2rem; object-fit: contain; }
 .wordmark strong { letter-spacing: .025em; }
 .wordmark small { margin-top: .3rem; color: var(--faint); font-size: .68rem; letter-spacing: .13em; text-transform: uppercase; }
 .panel-tabs button { min-height: 2.2rem; border: var(--pom-border-width, 1px) solid transparent; background: transparent; color: var(--muted); }
@@ -652,8 +652,7 @@ main {
   padding: 0 10px;
   border-right: 1px solid var(--line);
 }
-.wordmark > span { grid-row: 1 / 3; width: 24px; height: 24px; border-radius: 0; font-size: 14px; transform: rotate(45deg); }
-.wordmark > span::first-letter { transform: rotate(-45deg); }
+.wordmark-mark { width: 24px; height: 24px; }
 .wordmark strong { align-self: end; overflow: hidden; font-size: 12px; letter-spacing: .1em; text-overflow: ellipsis; white-space: nowrap; }
 .wordmark small { align-self: start; margin-top: 2px; font-size: 8px; }
 .panel-tabs button { min-height: 38px; border-width: 0 1px 0 0; border-color: var(--line); border-radius: 0; font-size: 11px; }
@@ -1346,11 +1345,9 @@ main[data-pom-theme-root] .wordmark {
   padding: 0 8px 0 2px;
   border: 0;
 }
-main[data-pom-theme-root] .wordmark > span {
+main[data-pom-theme-root] .wordmark-mark {
   width: 27px;
   height: 27px;
-  border-radius: var(--pom-radius-small, 10px);
-  transform: none;
 }
 main[data-pom-theme-root] .panel-tabs button,
 main[data-pom-theme-root] .panel-tabs [role="tab"] {
