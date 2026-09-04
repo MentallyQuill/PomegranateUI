@@ -5,6 +5,7 @@
   import ColumnResizeHandle from './ColumnResizeHandle.svelte';
   import DockRegion from './DockRegion.svelte';
   import StoryComposer from './StoryComposer.svelte';
+  import StoryMeasureResizeHandle from './StoryMeasureResizeHandle.svelte';
   import StoryStage from './StoryStage.svelte';
   import StoryToolbar from './StoryToolbar.svelte';
 
@@ -33,14 +34,7 @@
     {#if surface.templateFamily === 'story-stage' && region.region.role === 'stage'}
       <StoryStage {storyTitle} {currentScene}><DockRegion projection={region} {store} {renderWidget} {titleFor} {onexpanddock} surfacePart={null} rowResizable={false} /></StoryStage>
     {:else if surface.templateFamily === 'story-stage' && region.region.role === 'composer'}
-      <StoryComposer
-        panelId={surface.panelId}
-        measure={storyGeometry?.renderedMeasure ?? surface.storyLayout?.preferredMeasure ?? 800}
-        minimum={420}
-        maximum={storyGeometry?.maximumMeasure ?? 800}
-        resizable={Boolean(storyGeometry && !storyGeometry.compact)}
-        {store}
-      ><DockRegion projection={region} {store} {renderWidget} {titleFor} {onexpanddock} surfacePart={null} rowResizable={false} /></StoryComposer>
+      <StoryComposer><DockRegion projection={region} {store} {renderWidget} {titleFor} {onexpanddock} surfacePart={null} rowResizable={false} /></StoryComposer>
     {:else if surface.templateFamily === 'story-stage' && region.region.role === 'left-instruments' && storyGeometry}
       <StoryToolbar panelId={surface.panelId} projection={region} edge="left" geometry={storyGeometry.left} collapsed={leftCollapsed ?? false} {store} {renderWidget} {titleFor} {onexpanddock} />
     {:else if surface.templateFamily === 'story-stage' && region.region.role === 'right-instruments' && storyGeometry}
@@ -49,6 +43,26 @@
       <DockRegion projection={region} {store} {renderWidget} {titleFor} {onexpanddock} rowResizable={surface.templateFamily !== 'story-stage'} />
     {/if}
   {/each}
+  {#if surface.templateFamily === 'story-stage' && storyGeometry && !storyGeometry.compact}
+    <div class="story-measure-resize-layer">
+      <StoryMeasureResizeHandle
+        edge="left"
+        panelId={surface.panelId}
+        measure={storyGeometry.renderedMeasure}
+        minimum={420}
+        maximum={storyGeometry.maximumMeasure}
+        {store}
+      />
+      <StoryMeasureResizeHandle
+        edge="right"
+        panelId={surface.panelId}
+        measure={storyGeometry.renderedMeasure}
+        minimum={420}
+        maximum={storyGeometry.maximumMeasure}
+        {store}
+      />
+    </div>
+  {/if}
   {#if surface.templateFamily === 'focus-support' || surface.templateFamily === 'columns'}
     {#each surface.regions.slice(0, -1) as region, boundary (region.region.id)}
       <ColumnResizeHandle

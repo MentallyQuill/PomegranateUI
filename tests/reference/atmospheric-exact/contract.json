@@ -4,7 +4,7 @@
   "authoritySourceSha256": "38878d2cf8a86f5e879faba4b41a214e4293f22ed755975023e02c962d61b913",
   "referenceImage": "tests/reference/atmospheric-exact/authority-1920x1280.png",
   "referenceImageSha256": "39cf71bcbabeec4e95045b9fe7d0abe55fdc254cd94b8f3b59670d37df731bec",
-  "normalization": "Hide the calibration-only rail, remove the host body margin, and size the Workbench window to the viewport without changing Workbench styles, content, state, or assets.",
+  "normalization": "Hide the calibration-only rail, remove the host body margin, size the Workbench window to the viewport, and admit only the reviewed Story-measure and toolbar-column control layout exceptions.",
   "viewport": {
     "width": 1920,
     "height": 1280,
@@ -15,8 +15,8 @@
     "left": { "x": 0, "y": 40, "width": 286, "height": 1240 },
     "stage": { "x": 286, "y": 40, "width": 1348, "height": 1240 },
     "right": { "x": 1634, "y": 40, "width": 286, "height": 1240 },
-    "story": { "x": 620, "y": 1072.109375, "width": 680, "height": 105.890625 },
-    "composer": { "x": 620, "y": 1206, "width": 680, "height": 56 }
+    "story": { "x": 560, "y": 1072.109375, "width": 800, "height": 105.890625 },
+    "composer": { "x": 560, "y": 1206, "width": 800, "height": 56 }
   },
   "thresholds": {
     "maxGeometryDeltaPx": 0.5,
@@ -42,7 +42,10 @@
   "approvedLayoutBounds": [
     { "id": "header-panel-control-adjacent", "x": 372, "y": 0, "width": 33, "height": 40 },
     { "id": "header-panel-control-previous", "x": 532, "y": 0, "width": 33, "height": 40 },
-    { "id": "left-character-roster", "x": 0, "y": 68, "width": 286, "height": 214 }
+    { "id": "left-character-roster", "x": 0, "y": 68, "width": 286, "height": 214 },
+    { "id": "story-reading-measure", "x": 540, "y": 1020, "width": 840, "height": 242 },
+    { "id": "left-toolbar-column-controls", "x": 226, "y": 1250, "width": 60, "height": 30 },
+    { "id": "right-toolbar-column-controls", "x": 1634, "y": 1250, "width": 60, "height": 30 }
   ],
   "masks": [
     { "id": "header-wordmark", "textBoundId": "header-copy", "x": 9, "y": 4, "width": 157, "height": 31, "kind": "glyph-only" },
@@ -63,6 +66,9 @@
     { "id": "left-character-three", "textBoundId": "left-copy", "x": 52, "y": 182, "width": 228, "height": 36, "kind": "glyph-only" },
     { "id": "left-character-four", "textBoundId": "left-copy", "x": 52, "y": 234, "width": 228, "height": 36, "kind": "glyph-only" },
     { "id": "left-character-roster-interactions", "layoutBoundId": "left-character-roster", "x": 0, "y": 68, "width": 286, "height": 214, "kind": "approved-layout" },
+    { "id": "story-reading-measure-layout", "layoutBoundId": "story-reading-measure", "x": 540, "y": 1020, "width": 840, "height": 242, "kind": "approved-layout" },
+    { "id": "left-toolbar-column-controls-layout", "layoutBoundId": "left-toolbar-column-controls", "x": 226, "y": 1250, "width": 60, "height": 30, "kind": "approved-layout" },
+    { "id": "right-toolbar-column-controls-layout", "layoutBoundId": "right-toolbar-column-controls", "x": 1634, "y": 1250, "width": 60, "height": 30, "kind": "approved-layout" },
     { "id": "left-add-remove", "textBoundId": "left-copy", "x": 229, "y": 548, "width": 52, "height": 29, "kind": "glyph-only" },
     { "id": "left-theme-heading", "textBoundId": "left-copy", "x": 7, "y": 590, "width": 272, "height": 25, "kind": "glyph-only" },
     { "id": "left-glass-label", "textBoundId": "left-copy", "x": 7, "y": 625, "width": 270, "height": 20, "kind": "glyph-only" },

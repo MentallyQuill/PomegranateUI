@@ -15,14 +15,17 @@ export const ATMOSPHERIC_EXACT_GEOMETRY = Object.freeze({
   left: Object.freeze({ x: 0, y: 40, width: 286, height: 1240 }),
   stage: Object.freeze({ x: 286, y: 40, width: 1348, height: 1240 }),
   right: Object.freeze({ x: 1634, y: 40, width: 286, height: 1240 }),
-  story: Object.freeze({ x: 620, y: 1072.109375, width: 680, height: 105.890625 }),
-  composer: Object.freeze({ x: 620, y: 1206, width: 680, height: 56 })
+  story: Object.freeze({ x: 560, y: 1072.109375, width: 800, height: 105.890625 }),
+  composer: Object.freeze({ x: 560, y: 1206, width: 800, height: 56 })
 });
 
 const ATMOSPHERIC_APPROVED_LAYOUT_BOUNDS = Object.freeze({
   'header-panel-control-adjacent': Object.freeze({ x: 372, y: 0, width: 33, height: 40 }),
   'header-panel-control-previous': Object.freeze({ x: 532, y: 0, width: 33, height: 40 }),
-  'left-character-roster': Object.freeze({ x: 0, y: 68, width: 286, height: 214 })
+  'left-character-roster': Object.freeze({ x: 0, y: 68, width: 286, height: 214 }),
+  'story-reading-measure': Object.freeze({ x: 540, y: 1020, width: 840, height: 242 }),
+  'left-toolbar-column-controls': Object.freeze({ x: 226, y: 1250, width: 60, height: 30 }),
+  'right-toolbar-column-controls': Object.freeze({ x: 1634, y: 1250, width: 60, height: 30 })
 });
 
 function isRecord(value) {

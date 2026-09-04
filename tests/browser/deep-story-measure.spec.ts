@@ -33,9 +33,10 @@ async function dragOutward(page: Page, handle: Locator, side: 'left' | 'right') 
   const box = await handle.boundingBox();
   if (!box) throw new Error(`Expected the ${side} Story-width boundary to have geometry.`);
   const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  await page.mouse.move(start.x, start.y);
+  await handle.hover({ timeout: 5_000 });
   await expect(handle).toHaveCSS('cursor', 'col-resize');
   await page.mouse.down();
+  await expect(handle).toHaveClass(/is-dragging/);
   await page.mouse.move(start.x + (side === 'left' ? -48 : 48), start.y, { steps: 6 });
   await page.mouse.up();
 }
@@ -53,6 +54,7 @@ for (const side of ['left', 'right'] as const) {
 
     const before = await storyGeometry(page);
     await dragOutward(page, handle, side);
+    await expect(handle).toHaveAttribute('aria-valuenow', '896');
     const after = await storyGeometry(page);
 
     const transcriptGrowth = after.transcript.width - before.transcript.width;

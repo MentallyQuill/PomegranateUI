@@ -12,7 +12,10 @@ const SOURCE_FRAGMENT_SHA256 = '38878d2cf8a86f5e879faba4b41a214e4293f22ed7559750
 const APPROVED_LAYOUT_BOUNDS = [
   { id: 'header-panel-control-adjacent', x: 372, y: 0, width: 33, height: 40 },
   { id: 'header-panel-control-previous', x: 532, y: 0, width: 33, height: 40 },
-  { id: 'left-character-roster', x: 0, y: 68, width: 286, height: 214 }
+  { id: 'left-character-roster', x: 0, y: 68, width: 286, height: 214 },
+  { id: 'story-reading-measure', x: 540, y: 1020, width: 840, height: 242 },
+  { id: 'left-toolbar-column-controls', x: 226, y: 1250, width: 60, height: 30 },
+  { id: 'right-toolbar-column-controls', x: 1634, y: 1250, width: 60, height: 30 }
 ];
 
 function png(width, height, pixels) {
@@ -40,8 +43,8 @@ function contract(overrides = {}) {
       left: { x: 0, y: 40, width: 286, height: 1240 },
       stage: { x: 286, y: 40, width: 1348, height: 1240 },
       right: { x: 1634, y: 40, width: 286, height: 1240 },
-      story: { x: 620, y: 1072.109375, width: 680, height: 105.890625 },
-      composer: { x: 620, y: 1206, width: 680, height: 56 }
+      story: { x: 560, y: 1072.109375, width: 800, height: 105.890625 },
+      composer: { x: 560, y: 1206, width: 800, height: 56 }
     },
     masks: [],
     textMaskBounds: [],
