@@ -4579,6 +4579,10 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
   initial-value: 0px;
 }
 
+main[data-pom-theme-root] .panel-template-surface[data-panel-template-family="story-stage"] {
+  overflow-x: clip;
+}
+
 @media (min-width: 861px) {
   main[data-pom-theme-root] .workbench-surface {
     --pom-story-left-track: var(--pom-left-width, var(--pom-side-width));
