@@ -2959,7 +2959,12 @@ main[data-pom-shell-presentation="instrumented"] .sub-panel-tabs [role="tab"][ar
   content: "";
   pointer-events: none;
 }
-.sub-panel-add { padding: 0; }
+.sub-panel-add {
+  flex: 0 0 32px;
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
+}
 .panel-template-surface[data-panel-template-family="columns"] {
   grid-template-columns: var(--pom-sub-panel-columns, repeat(var(--pom-template-columns), minmax(0, 1fr)));
 }
