@@ -1139,22 +1139,31 @@ test('Story Stage side toolbars ease through intermediate widths and reverse wit
       .evaluate(async (node: HTMLButtonElement, dockSide) => {
         const region = document.querySelector<HTMLElement>(`[data-conformance-region="${dockSide}"]`);
         if (!region) throw new Error(`Missing ${dockSide} toolbar.`);
+        const root = node.closest('main[data-pom-theme-root]');
+        if (!root) throw new Error('Missing theme root.');
+        const collapsedClass = `${dockSide}-collapsed`;
         node.click();
+        await Promise.resolve();
+        const closingStateChangedBeforeFirstFrame = root.classList.contains(collapsedClass);
         const closing: number[] = [];
         for (let frame = 0; frame < 4; frame += 1) {
           await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
           closing.push(region.getBoundingClientRect().width);
         }
         node.click();
+        await Promise.resolve();
+        const reopeningStateChangedBeforeFirstFrame = !root.classList.contains(collapsedClass);
         const reopening: number[] = [];
         for (let frame = 0; frame < 16; frame += 1) {
           await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
           reopening.push(region.getBoundingClientRect().width);
         }
-        return { closing, reopening };
+        return { closing, closingStateChangedBeforeFirstFrame, reopening, reopeningStateChangedBeforeFirstFrame };
       }, side);
+    expect(reversal.closingStateChangedBeforeFirstFrame, JSON.stringify(reversal)).toBe(true);
     expect(reversal.closing.at(-1), JSON.stringify(reversal)).toBeGreaterThan(1);
     expect(reversal.closing.at(-1), JSON.stringify(reversal)).toBeLessThan(expandedWidth - 1);
+    expect(reversal.reopeningStateChangedBeforeFirstFrame, JSON.stringify(reversal)).toBe(true);
     expect(reversal.reopening[0], JSON.stringify(reversal)).toBeGreaterThan(1);
     expect(reversal.reopening[0], JSON.stringify(reversal)).toBeLessThan(expandedWidth - 1);
     expect(Math.max(...reversal.reopening), JSON.stringify(reversal)).toBeGreaterThan(reversal.reopening[0]! + 1);
