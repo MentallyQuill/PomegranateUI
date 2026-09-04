@@ -34,12 +34,12 @@ main {
 .wordmark { display: grid; grid-template-columns: 2.4rem auto; color: inherit; text-decoration: none; line-height: 1; }
 .wordmark-mark { grid-row: 1 / 3; display: block; width: 2rem; height: 2rem; object-fit: contain; }
 .wordmark strong { letter-spacing: .025em; }
-.wordmark small { margin-top: .3rem; color: var(--faint); font-size: .68rem; letter-spacing: .13em; text-transform: uppercase; }
+.wordmark small { margin-top: .3rem; color: var(--ink); font-size: .68rem; letter-spacing: .13em; text-transform: uppercase; }
 .panel-tabs button { min-height: 2.2rem; border: var(--pom-border-width, 1px) solid transparent; background: transparent; color: var(--muted); }
 .panel-tabs [role="tab"] { padding: .45rem .8rem; border-radius: var(--pom-radius-small, .5rem); }
 [data-tab-touch-reorder-grip] { touch-action: none; }
 .panel-tabs [role="tab"][aria-selected="true"] { position: relative; border-color: var(--line-strong); color: var(--ink); background: color-mix(in srgb, var(--ember) 12%, transparent); box-shadow: var(--pom-material-button-inset, none); }
-.panel-tabs [role="tab"][aria-selected="true"]::after { position: absolute; right: 0; bottom: 0; left: 0; height: 2px; border-radius: 0 0 var(--pom-radius-small, .5rem) var(--pom-radius-small, .5rem); background: var(--pom-color-focus); content: ""; pointer-events: none; }
+.panel-tabs [role="tab"][aria-selected="true"]::after { content: none; }
 body.pom-widget-drag-active main[data-pom-theme-root] .panel-tabs [role="tab"][data-widget-drag-hover="true"] {
   color: var(--ink);
   background: color-mix(in srgb, var(--pom-color-focus) 18%, transparent);
@@ -82,7 +82,7 @@ main[data-pom-shell-presentation="instrumented"] .panel-create-action:not([hidde
 .widget-frame > header.is-dragging { cursor: grabbing; }
 .widget-frame-heading { display: flex; min-width: 0; flex: 1 1 auto; align-items: baseline; justify-content: space-between; gap: 8px; overflow: hidden; }
 .widget-frame-heading h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.widget-frame-meta { flex: 0 0 auto; color: var(--faint); font: var(--pom-expression-widget-header-font-size, 9px) var(--pom-font-technical, monospace); letter-spacing: .04em; }
+.widget-frame-meta { flex: 0 0 auto; color: var(--pom-part-widget-header-foreground, var(--ink)); font: var(--pom-expression-widget-header-font-size, 9px) var(--pom-font-technical, monospace); letter-spacing: .04em; }
 .widget-frame h2 { margin: 0; font-size: .77rem; font-weight: 650; letter-spacing: .02em; }
 .widget-frame nav { position: relative; display: none; width: 0; min-width: 0; flex: 0 0 0; gap: 0; }
 .widget-frame nav button { width: 1.75rem; min-height: 1.75rem; overflow: hidden; padding: 0; border: var(--pom-border-width, 1px) solid transparent; border-radius: var(--pom-radius-small, .3rem); background-color: transparent; background-position: center; background-repeat: no-repeat; background-size: .82rem; color: transparent; font-size: 0; filter: var(--pom-icon-filter, invert(.72)); }
@@ -240,9 +240,9 @@ main[data-active-panel="surface-preview"] .surface-contract-facts { display: gri
 .surface-assignments small { color: var(--faint); }
 .surface-themes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .surface-themes button { display: grid; grid-template-columns: 28px 1fr; gap: 2px 7px; text-align: left; }
-.surface-themes button[aria-pressed="true"] { border-color: var(--pom-color-focus); box-shadow: inset 0 -2px var(--pom-color-focus); }
+.surface-themes button[aria-pressed="true"] { border-color: var(--pom-color-focus); box-shadow: var(--pom-part-button-surface-material-shadow, none); }
 .surface-themes i { grid-row: 1 / 3; width: 28px; height: 36px; border: 1px solid var(--line); }
-.surface-themes small { color: var(--faint); }
+.surface-themes small { color: inherit; }
 @container (max-width: 440px) {
   .surface-themes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -1213,7 +1213,7 @@ main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .to
   overflow: hidden;
   margin: 0;
   color: color-mix(in srgb, var(--ink) 80%, black);
-  background-color: var(--pom-color-canvas);
+  background-color: transparent;
   font: var(--pom-font-display-weight, 520) 18px/1.2 var(--pom-font-display, "Pomegranate Serif");
   text-shadow: 0 1px 8px var(--pom-color-canvas, rgb(0 0 0 / 90%));
   text-overflow: ellipsis;
@@ -1223,7 +1223,7 @@ main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .to
   overflow: hidden;
   margin: 0;
   color: color-mix(in srgb, var(--ink) 80%, black);
-  background-color: var(--pom-color-canvas);
+  background-color: transparent;
   font: 10px/14px var(--pom-font-technical, monospace);
   letter-spacing: .04em;
   text-shadow: 0 1px 8px var(--pom-color-canvas, rgb(0 0 0 / 90%));
@@ -2449,10 +2449,10 @@ main[data-pom-action-content="icon"] .widget-shelf > summary {
   align-items: center;
   justify-content: flex-end;
   padding: 0 8px;
-  border-top: 1px solid var(--line);
+  border-top: 0;
 }
 .recording-characters > header > span { display: none; }
-.recording-characters > header [role="group"] { display: flex; gap: 2px; }
+.recording-characters > header [role="group"] { display: flex; gap: 0; }
 .recording-characters > header button {
   display: grid;
   place-items: center;
@@ -2478,9 +2478,10 @@ main[data-pom-action-content="icon"] .widget-shelf > summary {
   display: block;
   min-height: 0;
   padding: 0;
-  border-width: 0 0 1px;
+  border-width: 0;
   border-radius: 0;
 }
+.recording-characters li:not(:last-child) { border-bottom-width: 1px; }
 .recording-character-toggle {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
@@ -2931,7 +2932,18 @@ main[data-pom-theme-root].left-collapsed .workbench-surface {
   left: 10px;
   height: max(1px, var(--pom-border-width, 1px));
   background: var(--pom-color-focus, var(--pom-color-accent));
+  content: none;
+}
+main[data-pom-shell-presentation="instrumented"] .sub-panel-tabs [role="tab"][aria-selected="true"]::after {
+  position: absolute;
+  right: 10px;
+  bottom: 0;
+  left: 10px;
+  height: 1px;
+  border-radius: 0;
+  background: rgb(90 134 129);
   content: "";
+  pointer-events: none;
 }
 .sub-panel-add { padding: 0; }
 .panel-template-surface[data-panel-template-family="columns"] {
@@ -3064,10 +3076,15 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
     background-color: var(--pom-presentation-instrumented-selected-fill, rgb(17 28 27)) !important;
   }
   main[data-pom-shell-presentation="instrumented"] .panel-tabs [role="tab"][aria-selected="true"]::after {
+    position: absolute;
+    right: 0;
     bottom: 0;
+    left: 0;
     height: 1px;
     border-radius: 0;
     background: rgb(90 134 129);
+    content: "";
+    pointer-events: none;
   }
   main[data-pom-shell-presentation="instrumented"] .panel-create-action {
     display: grid;
@@ -3600,8 +3617,10 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
     min-height: 0;
     padding: 0;
     border: 0;
-    border-bottom: 1px solid rgb(229 245 239 / 8.5%);
     background: transparent;
+  }
+  main[data-pom-shell-presentation="instrumented"] .recording-characters li:not(:last-child) {
+    border-bottom: 1px solid rgb(229 245 239 / 8.5%);
   }
   main[data-pom-shell-presentation="instrumented"] .recording-character-toggle {
     grid-template-columns: 53px minmax(0, 1fr);
@@ -4235,7 +4254,7 @@ main[data-pom-theme-root] [data-tab-rail-shell] {
   height: 100%;
   overflow: hidden;
 }
-main[data-pom-theme-root] .sub-panel-tab-rail-shell { flex: 1 1 auto; }
+main[data-pom-theme-root] .sub-panel-tab-rail-shell { flex: 0 1 auto; }
 main[data-pom-theme-root] [data-tab-rail-scroll] {
   box-sizing: border-box;
   display: flex;
@@ -4718,6 +4737,20 @@ main[data-pom-theme-root].right-collapsed[data-drag-reveal-right="true"] [data-c
   .recording-characters ul[data-portrait-scale="1"] .recording-character-toggle {
     min-height: 44px;
   }
+}
+
+/* Rounded and icon-sized controls remain visibly nested inside public chrome.
+   The 5px inset follows the local Tahoe reference while preserving 44px targets. */
+main[data-pom-theme-root]:not([data-pom-shell-presentation="instrumented"]) .top-shelf {
+  flex-basis: max(
+    var(--pom-chrome-height, 44px),
+    calc(44px + 10px + var(--pom-border-width, 1px) + var(--pom-border-width, 1px))
+  );
+  min-height: max(
+    var(--pom-chrome-height, 44px),
+    calc(44px + 10px + var(--pom-border-width, 1px) + var(--pom-border-width, 1px))
+  );
+  padding-block: 5px;
 }
 
 /* Final Story-measure authority follows every presentation-profile override. */

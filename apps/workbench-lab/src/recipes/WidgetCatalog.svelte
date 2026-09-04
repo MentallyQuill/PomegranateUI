@@ -558,7 +558,7 @@
 
     <div class="catalog-filter-strip">
       <nav class="catalog-filters" data-pom-control-group="joined" aria-label="Widget categories">
-        <button type="button" data-pom-part="button.surface" data-pom-control-segment={categories.length === 0 ? 'only' : 'start'} aria-pressed={catalogSnapshot.category === null} onclick={() => void restack(() => catalog.setCategory(null))}>All</button>
+        <button type="button" data-pom-part="button.surface" data-pom-control-segment="start" aria-pressed={catalogSnapshot.category === null} onclick={() => void restack(() => catalog.setCategory(null))}>All</button>
         {#each categories as category, index (category[0])}
           <button type="button" data-pom-part="button.surface" data-pom-control-segment={index === categories.length - 1 ? 'end' : 'middle'} aria-pressed={catalogSnapshot.category === category[0]} onclick={() => void restack(() => catalog.setCategory(category[0]))}>{category[1]}</button>
         {/each}

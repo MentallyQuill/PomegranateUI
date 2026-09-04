@@ -298,6 +298,16 @@ test('story title context keeps readable computed contrast across maintained the
     if (theme !== 'Deep Current') await selectTheme(page, theme);
     const evidence = await page.locator('.story-context-heading').evaluate((heading) => {
       const channels = (value: string) => {
+        if (value.startsWith('#')) {
+          const hex = value.slice(1);
+          const expanded = hex.length === 3 ? [...hex].map((digit) => digit + digit).join('') : hex;
+          return {
+            red: Number.parseInt(expanded.slice(0, 2), 16),
+            green: Number.parseInt(expanded.slice(2, 4), 16),
+            blue: Number.parseInt(expanded.slice(4, 6), 16),
+            alpha: expanded.length >= 8 ? Number.parseInt(expanded.slice(6, 8), 16) / 255 : 1
+          };
+        }
         const values = value.match(/[\d.]+/g)?.map(Number) ?? [];
         if (values.length < 3) throw new Error(`Could not parse color: ${value}`);
         const scale = value.startsWith('color(srgb') ? 255 : 1;
@@ -310,10 +320,12 @@ test('story title context keeps readable computed contrast across maintained the
         });
         return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!;
       };
+      const root = heading.closest<HTMLElement>('main[data-pom-theme-root]');
+      if (!root) throw new Error('Missing theme root for story context.');
+      const background = channels(getComputedStyle(root).getPropertyValue('--pom-color-canvas'));
       return [...heading.querySelectorAll<HTMLElement>('h1, p')].map((element) => {
         const style = getComputedStyle(element);
         const foreground = channels(style.color);
-        const background = channels(style.backgroundColor);
         const composite = {
           red: foreground.red * foreground.alpha + background.red * (1 - foreground.alpha),
           green: foreground.green * foreground.alpha + background.green * (1 - foreground.alpha),
@@ -323,7 +335,7 @@ test('story title context keeps readable computed contrast across maintained the
         const backgroundLuminance = luminance(background);
         return {
           role: element.tagName === 'H1' ? 'story title' : 'current scene',
-          backgroundAlpha: background.alpha,
+          backgroundAlpha: channels(style.backgroundColor).alpha,
           contrast: (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
             / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05),
           textShadow: style.textShadow
@@ -333,10 +345,195 @@ test('story title context keeps readable computed contrast across maintained the
 
     expect(evidence).toHaveLength(2);
     for (const sample of evidence) {
-      expect(sample.backgroundAlpha, `${theme} ${sample.role} backing opacity`).toBe(1);
+      expect(sample.backgroundAlpha, `${theme} ${sample.role} must not paint a highlight`).toBe(0);
       expect(sample.contrast, `${theme} ${sample.role} contrast`).toBeGreaterThanOrEqual(4.5);
       expect(sample.textShadow, `${theme} ${sample.role} protective shadow`).not.toBe('none');
     }
+  }
+});
+
+test('only Deep uses a contained one-pixel active-tab indicator', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+
+  for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber'] as const) {
+    if (theme !== 'Deep Current') await selectTheme(page, theme);
+    const panelTab = page.getByRole('tablist', { name: 'Panels' }).getByRole('tab', { selected: true });
+    const panelIndicator = await panelTab.evaluate((element) => {
+      const style = getComputedStyle(element, '::after');
+      return { content: style.content, height: Number.parseFloat(style.height) };
+    });
+
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    const subPanelTab = page.getByRole('tablist', { name: 'Settings sub-panels' }).getByRole('tab', { selected: true });
+    const subPanelIndicator = await subPanelTab.evaluate((element) => {
+      const style = getComputedStyle(element, '::after');
+      return { content: style.content, height: Number.parseFloat(style.height) };
+    });
+
+    for (const [kind, indicator] of [['Panel', panelIndicator], ['sub-panel', subPanelIndicator]] as const) {
+      const paints = !['none', 'normal'].includes(indicator.content);
+      expect(paints, `${theme} ${kind} active indicator`).toBe(theme === 'Deep Current');
+      if (theme === 'Deep Current') expect(indicator.height, `${theme} ${kind} indicator height`).toBeLessThanOrEqual(1);
+    }
+    await page.getByRole('tab', { name: 'Scene' }).click();
+  }
+});
+
+test('rounded shelf controls retain Tahoe-like breathing room inside their bar', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+
+  for (const theme of ['PomOS', 'Bunny'] as const) {
+    await selectTheme(page, theme);
+    const clearances = await page.locator('.top-shelf').evaluate((shelf) => {
+      const owner = shelf.getBoundingClientRect();
+      return [...shelf.querySelectorAll<HTMLElement>('.panel-tabs [role="tab"], .shelf-actions > button')]
+        .filter((element) => {
+          const bounds = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return bounds.width > 0 && bounds.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+        })
+        .map((element) => {
+          const bounds = element.getBoundingClientRect();
+          return {
+            label: element.getAttribute('aria-label') ?? element.textContent?.trim() ?? 'control',
+            top: bounds.top - owner.top,
+            bottom: owner.bottom - bounds.bottom
+          };
+        });
+    });
+    expect(clearances.length, `${theme} shelf controls`).toBeGreaterThan(0);
+    for (const clearance of clearances) {
+      expect(clearance.top, `${theme} ${clearance.label} top clearance`).toBeGreaterThanOrEqual(4);
+      expect(clearance.bottom, `${theme} ${clearance.label} bottom clearance`).toBeGreaterThanOrEqual(4);
+    }
+  }
+});
+
+test('Bunny Theme Library uses pane-scale content tiles without clipping or underline shadows', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+  await selectTheme(page, 'Bunny');
+  await page.getByRole('tab', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+
+  const library = page.getByRole('article', { name: 'Theme Library' });
+  const selected = library.locator('.surface-themes button[aria-pressed="true"]');
+  const unselected = library.locator('.surface-themes button[aria-pressed="false"]').first();
+  const evidence = await selected.evaluate((button) => {
+    const bounds = button.getBoundingClientRect();
+    const style = getComputedStyle(button);
+    const root = button.closest<HTMLElement>('main[data-pom-theme-root]');
+    if (!root) throw new Error('Missing Bunny theme root.');
+    return {
+      radius: Number.parseFloat(style.borderTopLeftRadius),
+      expectedRadius: Number.parseFloat(getComputedStyle(root).getPropertyValue('--pom-part-widget-surface-radius')),
+      height: bounds.height,
+      contained: [...button.querySelectorAll<HTMLElement>('i, strong, small')].every((child) => {
+        const childBounds = child.getBoundingClientRect();
+        return childBounds.left >= bounds.left - 1
+          && childBounds.right <= bounds.right + 1
+          && childBounds.top >= bounds.top - 1
+          && childBounds.bottom <= bounds.bottom + 1;
+      }),
+      shadow: style.boxShadow
+    };
+  });
+  const unselectedShadow = await unselected.evaluate((button) => getComputedStyle(button).boxShadow);
+
+  expect(evidence.radius).toBeCloseTo(evidence.expectedRadius, 0);
+  expect(evidence.radius).toBeLessThan(evidence.height / 2);
+  expect(evidence.contained).toBe(true);
+  expect(evidence.shadow).toBe(unselectedShadow);
+});
+
+test('PomOS and Bunny essential labels keep rendered 4.5-to-1 contrast', async ({ page }) => {
+  await openFresh(page, 1440, 900);
+
+  for (const theme of ['PomOS', 'Bunny'] as const) {
+    await selectTheme(page, theme);
+    const sceneContrast = await page.evaluate(() => {
+      type Color = { red: number; green: number; blue: number; alpha: number };
+      const parse = (value: string): Color => {
+        if (value.startsWith('#')) {
+          const hex = value.slice(1);
+          const expanded = hex.length === 3 ? [...hex].map((digit) => digit + digit).join('') : hex;
+          return {
+            red: Number.parseInt(expanded.slice(0, 2), 16),
+            green: Number.parseInt(expanded.slice(2, 4), 16),
+            blue: Number.parseInt(expanded.slice(4, 6), 16),
+            alpha: expanded.length >= 8 ? Number.parseInt(expanded.slice(6, 8), 16) / 255 : 1
+          };
+        }
+        const values = value.match(/[\d.]+/g)?.map(Number) ?? [];
+        if (values.length < 3) throw new Error(`Could not parse color: ${value}`);
+        const scale = value.startsWith('color(srgb') ? 255 : 1;
+        return { red: values[0]! * scale, green: values[1]! * scale, blue: values[2]! * scale, alpha: values[3] ?? 1 };
+      };
+      const composite = (top: Color, bottom: Color): Color => {
+        const alpha = top.alpha + bottom.alpha * (1 - top.alpha);
+        return {
+          red: (top.red * top.alpha + bottom.red * bottom.alpha * (1 - top.alpha)) / alpha,
+          green: (top.green * top.alpha + bottom.green * bottom.alpha * (1 - top.alpha)) / alpha,
+          blue: (top.blue * top.alpha + bottom.blue * bottom.alpha * (1 - top.alpha)) / alpha,
+          alpha
+        };
+      };
+      const luminance = ({ red, green, blue }: Color) => {
+        const linear = [red, green, blue].map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!;
+      };
+      const contrast = (element: HTMLElement) => {
+        const root = element.closest<HTMLElement>('main[data-pom-theme-root]');
+        if (!root) throw new Error('Missing theme root for contrast sample.');
+        let background = parse(getComputedStyle(root).getPropertyValue('--pom-color-canvas'));
+        const ancestors: HTMLElement[] = [];
+        for (let node = element.parentElement; node && node !== root.parentElement; node = node.parentElement) ancestors.push(node);
+        for (const ancestor of ancestors.reverse()) background = composite(parse(getComputedStyle(ancestor).backgroundColor), background);
+        const foreground = composite(parse(getComputedStyle(element).color), background);
+        const lighter = Math.max(luminance(foreground), luminance(background));
+        const darker = Math.min(luminance(foreground), luminance(background));
+        return (lighter + 0.05) / (darker + 0.05);
+      };
+      const wordmark = document.querySelector<HTMLElement>('.wordmark small');
+      const metadata = [...document.querySelectorAll<HTMLElement>('.widget-frame-meta')]
+        .find((element) => element.getBoundingClientRect().width > 0);
+      if (!wordmark || !metadata) throw new Error('Missing essential Scene labels.');
+      return [
+        { label: 'wordmark subtitle', contrast: contrast(wordmark) },
+        { label: 'Widget header metadata', contrast: contrast(metadata) }
+      ];
+    });
+
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Appearance and Accessibility' }).click();
+    const descriptionContrast = await page.getByRole('article', { name: 'Theme Library' })
+      .locator('.surface-themes small').first().evaluate((element) => {
+        const parse = (value: string) => {
+          if (value.startsWith('#')) {
+            const hex = value.slice(1);
+            const expanded = hex.length === 3 ? [...hex].map((digit) => digit + digit).join('') : hex;
+            return [0, 2, 4].map((offset) => Number.parseInt(expanded.slice(offset, offset + 2), 16) / 255);
+          }
+          const values = value.match(/[\d.]+/g)?.map(Number) ?? [];
+          if (values.length < 3) throw new Error(`Could not parse color: ${value}`);
+          return values.slice(0, 3).map((channel) => channel / 255);
+        };
+        const luminance = (channels: number[]) => channels
+          .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+          .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index]!, 0);
+        const foreground = luminance(parse(getComputedStyle(element).color));
+        const button = element.closest<HTMLElement>('button');
+        if (!button) throw new Error('Missing Theme Library button.');
+        const background = luminance(parse(getComputedStyle(button).getPropertyValue('--pom-part-button-surface-material-fallback')));
+        return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+      });
+
+    for (const sample of [...sceneContrast, { label: 'Theme Library description', contrast: descriptionContrast }]) {
+      expect(sample.contrast, `${theme} ${sample.label}`).toBeGreaterThanOrEqual(4.5);
+    }
+    await page.getByRole('tab', { name: 'Scene' }).click();
   }
 });
 
@@ -981,7 +1178,7 @@ test('shared Widget headers retain one-line titles without reserving hidden acti
   }
 });
 
-test('every theme gives the active Panel tab a stable focus-color edge', async ({ page }) => {
+test('every theme keeps active Panel identity while only instrumented chrome paints an edge', async ({ page }) => {
   await openFresh(page, 1440, 900);
 
   for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber'] as const) {
@@ -1001,9 +1198,13 @@ test('every theme gives the active Panel tab a stable focus-color edge', async (
     });
     expect(style.selected, `${theme} active Panel identity`).toBe('true');
     expect(style.boxShadow, `${theme} zero-rim material`).toBe('none');
-    expect(style.edgeContent, `${theme} active Panel edge content`).not.toBe('none');
-    expect(style.edgeHeight, `${theme} active Panel edge height`).toBeGreaterThanOrEqual(style.shellPresentation === 'instrumented' ? 1 : 2);
-    expect(style.edgeColor, `${theme} active Panel edge color`).not.toBe('rgba(0, 0, 0, 0)');
+    if (style.shellPresentation === 'instrumented') {
+      expect(style.edgeContent, `${theme} active Panel edge content`).not.toBe('none');
+      expect(style.edgeHeight, `${theme} active Panel edge height`).toBe(1);
+      expect(style.edgeColor, `${theme} active Panel edge color`).not.toBe('rgba(0, 0, 0, 0)');
+    } else {
+      expect(style.edgeContent, `${theme} active Panel edge content`).toBe('none');
+    }
   }
 });
 

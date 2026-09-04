@@ -47,6 +47,22 @@ test('Character rows cycle through name-only, small, and large modes', async ({ 
   expect(largeRow!.height).toBeGreaterThan(smallRow!.height + 10);
 });
 
+test('Deep Characters ends with content and keeps its joined size stepper inset', async ({ page }) => {
+  await fresh(page);
+
+  const widget = page.getByRole('article', { name: 'Characters' });
+  const roster = widget.getByRole('list', { name: 'Characters roster' });
+  const finalRow = roster.getByRole('listitem').last();
+  await expect(finalRow).toHaveCSS('border-bottom-width', '0px');
+
+  const group = widget.getByRole('group', { name: 'Character portrait size' });
+  const geometry = await Promise.all([widget.boundingBox(), group.boundingBox()]);
+  if (geometry.some((box) => !box)) throw new Error('Expected Characters stepper geometry.');
+  const [widgetBox, groupBox] = geometry as [NonNullable<typeof geometry[0]>, NonNullable<typeof geometry[1]>];
+  expect(widgetBox.x + widgetBox.width - (groupBox.x + groupBox.width)).toBeGreaterThanOrEqual(4);
+  expect(widgetBox.y + widgetBox.height - (groupBox.y + groupBox.height)).toBeGreaterThanOrEqual(4);
+});
+
 test('Character rows reveal one concise viewpoint-safe synopsis at a time', async ({ page }) => {
   await fresh(page);
 

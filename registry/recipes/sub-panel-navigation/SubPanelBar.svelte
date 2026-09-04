@@ -176,7 +176,7 @@
     data-sub-panel-layout={active?.layoutId}
     aria-label={`${panel.name} sub-panel navigation`}
   >
-    <div class="sub-panel-tab-rail-shell" data-tab-rail-shell style="min-width: 0; flex: 1 1 auto; height: 100%;">
+    <div class="sub-panel-tab-rail-shell" data-tab-rail-shell style="min-width: 0; flex: 0 1 auto; height: 100%;">
       <div
         bind:this={tablist}
         class="sub-panel-tabs"

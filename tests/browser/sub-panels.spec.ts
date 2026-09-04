@@ -387,6 +387,24 @@ async function addSubPanel(page: Page, name: string) {
   await dialog.getByRole('button', { name: 'Apply' }).click();
 }
 
+test('Add sub-panel follows the final tab when the rail fits and pins to the rail edge on overflow', async ({ page }) => {
+  await openClean(page);
+
+  const rail = page.getByRole('tablist', { name: 'Settings sub-panels' });
+  const add = page.getByRole('button', { name: 'Add sub-panel' });
+  const fitted = await Promise.all([rail.getByRole('tab').last().boundingBox(), add.boundingBox()]);
+  if (fitted.some((box) => !box)) throw new Error('Expected fitted sub-panel rail geometry.');
+  expect(Math.abs(fitted[1]!.x - (fitted[0]!.x + fitted[0]!.width))).toBeLessThanOrEqual(1);
+
+  await addSubPanel(page, 'Research');
+  await addSubPanel(page, 'Notes');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => rail.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
+  const overflowing = await Promise.all([rail.boundingBox(), add.boundingBox()]);
+  if (overflowing.some((box) => !box)) throw new Error('Expected overflowing sub-panel rail geometry.');
+  expect(Math.abs(overflowing[1]!.x - (overflowing[0]!.x + overflowing[0]!.width))).toBeLessThanOrEqual(1);
+});
+
 test('phone portrait keeps an eight-sub-panel rail visible with fixed Add and no compact selector', async ({ page }) => {
   await openClean(page);
   await addSubPanel(page, 'Research');
