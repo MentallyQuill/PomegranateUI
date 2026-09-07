@@ -961,15 +961,15 @@ test('Ash readability expression leaves shared Theme authoring typography compac
   expect(deepRail).toMatchObject({
     expressionRowSize: '',
     expressionSliderSize: '',
-    sceneLabelSize: '10px',
-    authoringSize: '10px'
+    sceneLabelSize: '11px',
+    authoringSize: '11px'
   });
   await selectTheme(page, ASH_TARGET);
   expect(await technicalRailPresentation(page)).toMatchObject({
     expressionRowSize: '11px',
     expressionSliderSize: '11px',
-    sceneLabelSize: '10px',
-    authoringSize: '10px'
+    sceneLabelSize: '11px',
+    authoringSize: '11px'
   });
   await selectTheme(page, TARGETS[0]);
   expect(await technicalRailPresentation(page)).toEqual(deepRail);
@@ -1028,7 +1028,7 @@ test('an external non-preset definition renders the same live Workbench tree', a
   expect(copperRail).toMatchObject({
     expressionRowSize: '',
     expressionSliderSize: '',
-    sceneLabelSize: deepRail.sceneLabelSize,
+    sceneLabelSize: '10px',
     authoringSize: '10px'
   });
   expect(copperRail.geometry.left.x).toBeGreaterThanOrEqual(copperRail.geometry.shell.x);

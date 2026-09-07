@@ -453,7 +453,20 @@ test('native workbench stable mockup surfaces', async ({ page }) => {
     .getByRole('menuitem', { name: 'Float' })
     .press('Enter');
   await shot(page, 'floating-widget.png');
+  // The normal Library is healthy; opt into the error boundary demonstration.
+  await openDeveloperTools(page);
+  await page.getByRole('button', { name: 'Save layout', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('pomegranate-ui.workbench-lab.layout.v1'))).not.toBeNull();
+  await page.evaluate(() => {
+    const key = 'pomegranate-ui.workbench-lab.layout.v1';
+    const snapshot = JSON.parse(localStorage.getItem(key)!);
+    snapshot.widgets['library-character'].configuration.fixtureMode = 'failure';
+    localStorage.setItem(key, JSON.stringify(snapshot));
+  });
+  await page.reload();
+  await page.evaluate(() => document.fonts.ready);
   await page.getByRole('tab', { name: 'Library' }).click();
+  await expect(page.getByRole('alert', { name: 'Character Card renderer failed' })).toBeVisible();
   await shot(page, 'renderer-error.png');
 });
 

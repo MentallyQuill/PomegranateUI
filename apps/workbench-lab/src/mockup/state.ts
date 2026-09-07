@@ -92,7 +92,7 @@ export function createLabState(): WorkbenchState {
     ['scene-ambience', LAB_WIDGET_TYPES.ambience, LAB_PANEL_IDS.scene, 'right', 1, { presentation: 'atmospheric' }],
     ['scene-promises', LAB_WIDGET_TYPES.promiseLedger, LAB_PANEL_IDS.scene, 'right', 2, { presentation: 'atmospheric' }],
     ['library-main', LAB_WIDGET_TYPES.library, LAB_PANEL_IDS.library, 'focus', 0, {}],
-    ['library-character', LAB_WIDGET_TYPES.characterCard, LAB_PANEL_IDS.library, 'support', 0, { fixtureMode: 'failure' }],
+    ['library-character', LAB_WIDGET_TYPES.characterCard, LAB_PANEL_IDS.library, 'support', 0, {}],
     ['library-lore', LAB_WIDGET_TYPES.loreEntries, LAB_PANEL_IDS.library, 'support', 1, {}],
     ['settings-provider-credentials', LAB_WIDGET_TYPES.providerCredentials, LAB_PANEL_IDS.settings, 'column-1', 0, {}],
     ['settings-connections', LAB_WIDGET_TYPES.connections, LAB_PANEL_IDS.settings, 'column-2', 0, {}],

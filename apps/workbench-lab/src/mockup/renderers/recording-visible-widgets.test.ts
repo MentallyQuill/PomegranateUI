@@ -223,3 +223,38 @@ describe('recording-visible Deep Current Widget anatomy', () => {
     expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull();
   });
 });
+
+// Static examples must not imply that device settings or backend actions are live.
+describe('static fixture interaction boundary', () => {
+  it('labels accessibility as a static sample and disables its controls', () => {
+    renderSurface('settings.accessibility', {});
+    expect(screen.getByText(/Static example/)).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: /Text scale/ })).toBeDisabled();
+    for (const checkbox of screen.getAllByRole('checkbox')) expect(checkbox).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reset accessibility settings' })).toBeDisabled();
+    expect(screen.queryByText(/Changes apply immediately/)).toBeNull();
+  });
+
+  it('gives Sound and Motion its own static controls', () => {
+    renderSurface('settings.sound-motion', {});
+    expect(screen.getByRole('checkbox', { name: 'Interface sounds' })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Animation' })).toBeDisabled();
+    expect(screen.queryByRole('slider', { name: /Text scale/ })).toBeNull();
+  });
+
+  it('disables example actions and record editing', () => {
+    renderSurface('library.character-card', {});
+    for (const button of screen.getAllByRole('button')) expect(button).toBeDisabled();
+    for (const field of screen.getAllByRole('textbox')) expect(field).toHaveAttribute('readonly');
+  });
+});
+
+it('retains the explicit renderer failure fixture for boundary tests', () => {
+  expect(() => renderSurface('library.character-card', { fixtureMode: 'failure' }))
+    .toThrow('Intentional Lab renderer fixture failure.');
+});
+
+it('keeps Open Custom Theme enabled', () => {
+  renderSurface('settings.theme', {});
+  expect(screen.getByRole('button', { name: 'Open Custom Theme' })).toBeEnabled();
+});

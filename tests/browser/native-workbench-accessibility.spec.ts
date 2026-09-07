@@ -578,7 +578,7 @@ test('PomOS metadata remains legible and the compact composer retains its comple
       contained: bounds.top >= field.top - 1 && bounds.bottom <= field.bottom + 1
     };
   });
-  expect(compactStatus).toMatchObject({ fontSize: 9, whiteSpace: 'normal', textOverflow: 'clip', contained: true });
+  expect(compactStatus).toMatchObject({ fontSize: 11, whiteSpace: 'normal', textOverflow: 'clip', contained: true });
   expect(compactStatus.scrollWidth).toBeLessThanOrEqual(compactStatus.clientWidth + 1);
   expect(compactStatus.scrollHeight).toBeLessThanOrEqual(compactStatus.clientHeight + 1);
 });

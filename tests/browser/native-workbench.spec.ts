@@ -193,6 +193,23 @@ test('native workbench POM-PANEL-07856BFE9A POM-PANEL-DF4EC7C581 keeps story con
   await expect(page.getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true');
   await expect(shelf).not.toContainText('The Water Remembers');
   await expect(page.getByRole('region', { name: 'Story reading stage' })).toHaveCount(0);
+  await expect(page.getByRole('alert', { name: 'Character Card renderer failed' })).toHaveCount(0);
+  await expect(page.locator('[data-surface-type="library.character-card"]')).toBeVisible();
+  await expect(page.locator('[data-surface-type="library.workspace"]')).toBeVisible();
+});
+
+test('explicit Character Card renderer failure remains contained to its Widget', async ({ page }) => {
+  await openDeveloperTools(page);
+  await page.getByRole('button', { name: 'Save layout', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('pomegranate-ui.workbench-lab.layout.v1'))).not.toBeNull();
+  await page.evaluate(() => {
+    const key = 'pomegranate-ui.workbench-lab.layout.v1';
+    const snapshot = JSON.parse(localStorage.getItem(key)!);
+    snapshot.widgets['library-character'].configuration.fixtureMode = 'failure';
+    localStorage.setItem(key, JSON.stringify(snapshot));
+  });
+  await page.reload();
+  await page.getByRole('tab', { name: 'Library' }).click();
   await expect(page.getByRole('alert', { name: 'Character Card renderer failed' })).toBeVisible();
   await expect(page.locator('[data-surface-type="library.workspace"]')).toBeVisible();
 });
@@ -1285,8 +1302,8 @@ test('Deep Current edge controls collapse and restore both toolbars without hidi
   const left = page.locator('.toolbar-edge-toggle-left');
   const right = page.locator('.toolbar-edge-toggle-right');
 
-  await expect(left).toHaveText('CLOSE TOOLBAR LFT');
-  await expect(right).toHaveText('CLOSE TOOLBAR RGT');
+  await expect(left).toHaveText('Close left');
+  await expect(right).toHaveText('Close right');
 
   await left.focus();
   await left.press('Enter');
@@ -1294,13 +1311,13 @@ test('Deep Current edge controls collapse and restore both toolbars without hidi
   await expect(page.locator('[data-conformance-region="left"]')).toBeHidden();
   await expect(left).toBeVisible();
   await expect(left).toHaveAccessibleName('Open left toolbar');
-  await expect(left).toHaveText('OPEN TOOLBAR LFT');
+  await expect(left).toHaveText('Open left');
   await right.click();
   await expect(page.locator('main')).toHaveClass(/right-collapsed/);
   await expect(page.locator('[data-conformance-region="right"]')).toBeHidden();
   await expect(right).toBeVisible();
   await expect(right).toHaveAccessibleName('Open right toolbar');
-  await expect(right).toHaveText('OPEN TOOLBAR RGT');
+  await expect(right).toHaveText('Open right');
   await left.click();
   await right.click();
   await expect(page.locator('[data-conformance-region="left"]')).toBeVisible();

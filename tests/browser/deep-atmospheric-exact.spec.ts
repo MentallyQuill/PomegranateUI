@@ -105,7 +105,7 @@ function geometryDelta(reference: Record<string, Rectangle>, candidate: Record<s
   return { maxDeltaPx, findings };
 }
 
-test('Deep Current is indistinguishable from the Atmospheric authority', async ({ page }, testInfo) => {
+test('Deep Current preserves the Atmospheric shell with readable content and an adaptive composer', async ({ page }, testInfo) => {
   validateAtmosphericContract(contract, { referenceImageBytes: authorityBytes });
   await page.setViewportSize(contract.viewport);
   await page.addInitScript(() => window.localStorage.clear());
@@ -133,7 +133,14 @@ test('Deep Current is indistinguishable from the Atmospheric authority', async (
       composer: measure('[data-widget-type="story.composer"][data-pomegranate-placement]')
     };
   });
-  const geometry = geometryDelta(contract.geometry, candidateGeometry);
+  // The approved readability and adaptive composer changes intentionally update
+  // content geometry and pixels. Keep the frozen prototype as diagnostic evidence;
+  // enforce its unchanged shell and a separately reviewed current UX screenshot.
+  const historicalGeometry = geometryDelta(contract.geometry, candidateGeometry);
+  const shellGeometry = Object.fromEntries(
+    ['header', 'left', 'stage', 'right'].map((id) => [id, contract.geometry[id] as Rectangle])
+  );
+  const geometry = geometryDelta(shellGeometry, candidateGeometry);
 
   const candidateBytes = await workbench.screenshot({ animations: 'disabled', caret: 'hide' });
   const pixels = compareAtmosphericPixels(authorityBytes, candidateBytes, contract.masks);
@@ -178,11 +185,6 @@ test('Deep Current is indistinguishable from the Atmospheric authority', async (
   if (placementRailCount !== 0) findings.push(`Hover exposed ${placementRailCount} placement rail`);
   if (actionMenuCount !== 0) findings.push(`Expected no visible desktop Widget actions triggers, found ${actionMenuCount}`);
   if (!pixels.compatible) findings.push('Candidate screenshot dimensions differ from the authority');
-  else {
-    if (pixels.mismatchRatio > contract.thresholds.maxMismatchRatio) findings.push(`Pixel mismatch ratio is ${pixels.mismatchRatio}`);
-    if (pixels.structuralSimilarity < contract.thresholds.minimumStructuralSimilarity) findings.push(`Structural similarity is ${pixels.structuralSimilarity}`);
-    if (pixels.highContrastMismatchCount > contract.thresholds.maximumHighContrastMismatchCount) findings.push(`High-contrast mismatch count is ${pixels.highContrastMismatchCount}`);
-  }
 
   const report = {
     schemaVersion: 'pomegranate.ui.atmospheric-exact-report.v1',
@@ -191,6 +193,8 @@ test('Deep Current is indistinguishable from the Atmospheric authority', async (
     candidateImageSha256: createHash('sha256').update(candidateBytes).digest('hex'),
     viewport: contract.viewport,
     geometry,
+    historicalGeometry,
+    historicalComparisonPurpose: 'Diagnostic only: approved readability, toolbar materials, and adaptive composer changes supersede historical content geometry and pixel equality.',
     pixels,
     regions,
     assets: { stageImageCount, portraitStatus, stageBackdropFilter, composerBackdropFilter },
@@ -210,4 +214,5 @@ test('Deep Current is indistinguishable from the Atmospheric authority', async (
   ] as const) await testInfo.attach(name, { path: path.join(roundDirectory, file) });
 
   expect(findings, JSON.stringify(report, null, 2)).toEqual([]);
+  expect(candidateBytes).toMatchSnapshot('deep-current-ux-1920x1280.png', { maxDiffPixelRatio: 0.001 });
 });

@@ -594,6 +594,7 @@
             data-widget-category={manifest.catalog?.category}
             data-preview-shape={manifest.catalog?.shape}
             data-pom-part="row.surface"
+            data-pom-control-shape="content-tile"
             role="button"
             tabindex="0"
             aria-disabled={unavailable}

@@ -5,6 +5,9 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import App from './App.svelte';
+import { encodeLayoutSnapshot } from '@pomegranate-ui/layout';
+import { createLabState, LAB_PANEL_IDS } from './mockup/state.js';
+import { LAB_LAYOUT_KEY } from './storage.js';
 import { CATALOG_TOTALS, createCatalogManifests } from './mockup/catalog.js';
 import { themeDraftStorageKey } from './themes/draft-storage.js';
 import { LAB_THEME_PRESETS } from './themes/presets.js';
@@ -334,10 +337,10 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(screen.getByRole('heading', { name: 'The Water Remembers' })).toBeVisible();
     expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveValue('');
     expect(screen.getByRole('textbox', { name: /Next action/ })).toHaveAttribute('placeholder', ' ');
-    expect(screen.getByText('Enter to send')).toBeVisible();
-    expect(screen.getByText('Shift + Enter for line break')).toBeVisible();
+    expect(screen.getByText('Draft preview · sending unavailable')).toBeVisible();
+    expect(screen.getByText('Enter for a new line')).toBeVisible();
     expect(screen.getByText('Perspective: Aven')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
     expect(container.querySelector('.composer-placeholder')).toHaveTextContent('Describe what you do, say, or notice…');
     expect(screen.getByRole('button', { name: 'Close left toolbar' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Close right toolbar' })).toHaveAttribute('aria-pressed', 'false');
@@ -359,18 +362,18 @@ describe('Svelte Workbench Lab mockup', () => {
     const leftToggle = screen.getByRole('button', { name: 'Close left toolbar' });
     const rightToggle = screen.getByRole('button', { name: 'Close right toolbar' });
 
-    expect(leftToggle).toHaveTextContent('CLOSE TOOLBAR LFT');
-    expect(rightToggle).toHaveTextContent('CLOSE TOOLBAR RGT');
+    expect(leftToggle).toHaveTextContent('Close left');
+    expect(rightToggle).toHaveTextContent('Close right');
     await user.click(leftToggle);
     expect(root).toHaveClass('left-collapsed');
     expect(leftToggle).toHaveAttribute('aria-pressed', 'true');
     expect(leftToggle).toHaveAccessibleName('Open left toolbar');
-    expect(leftToggle).toHaveTextContent('OPEN TOOLBAR LFT');
+    expect(leftToggle).toHaveTextContent('Open left');
     await user.click(rightToggle);
     expect(root).toHaveClass('right-collapsed');
     expect(rightToggle).toHaveAttribute('aria-pressed', 'true');
     expect(rightToggle).toHaveAccessibleName('Open right toolbar');
-    expect(rightToggle).toHaveTextContent('OPEN TOOLBAR RGT');
+    expect(rightToggle).toHaveTextContent('Open right');
   });
 
   it('carries the full audited 98-definition Catalog with exact category totals', async () => {
@@ -480,7 +483,18 @@ describe('Svelte Workbench Lab mockup', () => {
 
   it('contains one failed implemented renderer without disabling its implemented siblings', async () => {
     const user = userEvent.setup();
+    const state = createLabState();
+    const character = state.widgets['library-character'];
+    if (!character) throw new Error('Expected the Character Card fixture.');
+    const encoded = encodeLayoutSnapshot({
+      ...state,
+      activePanelId: LAB_PANEL_IDS.library,
+      widgets: { ...state.widgets, [character.id]: { ...character, configuration: { fixtureMode: 'failure' } } }
+    });
+    if (!encoded.ok) throw new Error(encoded.error.message);
+    window.localStorage.setItem(LAB_LAYOUT_KEY, encoded.value);
     render(App);
+    await waitFor(() => expect(screen.getByRole('alert', { name: 'Character Card renderer failed' })).toBeVisible());
     await user.click(screen.getByRole('tab', { name: 'Library' }));
     expect(screen.getByText('Global Library · all material')).toBeVisible();
     expect(screen.getByRole('alert', { name: 'Character Card renderer failed' })).toBeVisible();

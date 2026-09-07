@@ -90,3 +90,8 @@ describe('implemented Deep Current surface boundary', () => {
     expect(runtime.rendererRegistry.get(asWidgetType('systems.temporal-ledger'))).toBeUndefined();
   });
 });
+
+it('starts with a healthy Character Card while allowing explicit renderer failure fixtures', () => {
+  const state = createLabState();
+  expect(state.widgets['library-character']?.configuration.fixtureMode).not.toBe('failure');
+});
