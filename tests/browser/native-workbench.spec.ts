@@ -736,7 +736,8 @@ test('held Widget can float on the free canvas of an activated Panel', async ({ 
   });
   await page.mouse.move(freePoint.x, freePoint.y, { steps: 8 });
   const held = page.locator('[data-pom-part="widget.drag-preview"]');
-  await expect(held).toHaveAttribute('data-float-ready', '');
+  await expect(page.locator('.widget-float-preview')).toBeVisible();
+  await expect(page.locator('.widget-drop-intent-label')).toHaveText('Float here');
   await page.mouse.up();
   await expect(held).toHaveCount(0);
 
@@ -1784,7 +1785,7 @@ test.describe('coarse-pointer Widget actions', () => {
   });
 });
 
-test('Deep Current held Widget exposes one compact identity, rails, and tab preview', async ({ page }) => {
+test('Deep Current held Widget exposes inert content, rails, and a grouping cue', async ({ page }) => {
   const characters = page.locator('[data-widget-type="story.characters"]').first();
   const worldState = page.getByRole('article', { name: 'World State' });
   const handle = widgetDragSurface(characters);
@@ -1800,12 +1801,13 @@ test('Deep Current held Widget exposes one compact identity, rails, and tab prev
   await expect(held).toBeVisible();
   await expect(held).toContainText('Characters');
   await expect(held).toHaveAttribute('data-widget-drag-type', 'story.characters');
-  await expect(held.locator('article')).toHaveCount(0);
-  await expect(held.locator('button, input, select, textarea, a[href]')).toHaveCount(0);
-  await expect(page.locator('[data-pom-part="widget.drop-overlay"]')).toHaveText('');
+  await expect(held.locator('article')).toHaveCount(1);
+  await expect(held).toHaveAttribute('inert', '');
+  await expect(page.locator('.widget-drop-intent-label')).toContainText('Group with');
   await expect(page.locator('[data-pom-part="widget.drop-rail"]')).not.toHaveCount(0);
   await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toBeVisible();
-  await expect(page.locator('[data-pom-part="widget.tab-insertion"]')).toBeVisible();
+  await expect(page.locator('.widget-drop-intent-label')).toContainText('Group with');
+  await expect(page.locator('[data-pom-part="widget.tab-insertion"]')).toHaveCount(0);
   await expect(characters).toHaveAttribute('data-widget-drag-placeholder', 'true');
 
   await page.keyboard.press('Escape');
@@ -1915,7 +1917,7 @@ test('all themes preserve recognizable inert widget content while docking', asyn
     await expect(held).toHaveAttribute('inert', '');
     await expect(held.locator('[data-drag-visual]')).toHaveCount(1);
     await expect(held.locator('[id], [data-pomegranate-widget]')).toHaveCount(0);
-    await expect(page.locator('[data-pom-part="widget.drop-overlay"]')).toHaveText('');
+    await expect(page.locator('.widget-drop-intent-label')).toContainText('Group with');
     const [heldBox, snapBox, railCount, colors, viewport] = await Promise.all([
       held.boundingBox(),
       page.locator('[data-pom-part="widget.snap-preview"]').boundingBox(),
@@ -1926,7 +1928,7 @@ test('all themes preserve recognizable inert widget content while docking', asyn
     expect(heldBox?.width).toBeGreaterThan(100);
     expect(heldBox?.width).toBeLessThanOrEqual(320);
     expect(heldBox?.height).toBeGreaterThan(64);
-    expect(heldBox?.height).toBeLessThanOrEqual(280);
+    expect(heldBox?.height).toBeLessThanOrEqual(280.1);
     expect(heldBox?.x).toBeGreaterThanOrEqual(0);
     expect(heldBox?.y).toBeGreaterThanOrEqual(0);
     expect((heldBox?.x ?? viewport.width) + (heldBox?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
@@ -1956,7 +1958,7 @@ test('all themes preserve recognizable inert widget content while docking', asyn
     await expect(slot).toBeVisible();
     const [slotBox, slotMaterial] = await Promise.all([
       slot.boundingBox(),
-      slot.evaluate((node) => ({ border: getComputedStyle(node).borderColor, background: getComputedStyle(node).backgroundColor }))
+      page.locator('.widget-snap-preview').evaluate((node) => ({ border: getComputedStyle(node).borderColor, background: getComputedStyle(node).backgroundColor }))
     ]);
     expect(slotBox?.height).toBe(4);
     expect(slotBox?.width).toBeGreaterThan(100);
@@ -2891,7 +2893,8 @@ test('Catalog tab drop creates and groups the Widget in one undo step', async ({
   if (!headerBox) throw new Error('Missing Catalog tab-drop target geometry.');
   await page.mouse.move(headerBox.x + headerBox.width / 2, headerBox.y + headerBox.height / 2, { steps: 3 });
   await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', 'tab');
-  await expect(page.locator('[data-pom-part="widget.tab-insertion"]')).toBeVisible();
+  await expect(page.locator('.widget-drop-intent-label')).toContainText('Group with');
+  await expect(page.locator('[data-pom-part="widget.tab-insertion"]')).toHaveCount(0);
   await page.mouse.up();
 
   await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 1));

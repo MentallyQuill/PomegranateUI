@@ -124,7 +124,7 @@ function intentFromTarget(point: DockPoint, target: DockTarget): DockIntent | nu
       key: `${target.id}:tab`,
       kind: 'tab',
       targetRect: target.rect,
-      previewRect: target.rect,
+      previewRect: target.previewRect ?? target.rect,
       label: `Group with ${targetLabel(target)}`
     };
   }
@@ -150,7 +150,7 @@ function intentFromTarget(point: DockPoint, target: DockTarget): DockIntent | nu
         key: `${target.id}:tab`,
         kind: 'tab',
         targetRect: header,
-        previewRect: header,
+        previewRect: target.previewRect ?? target.rect,
         label: `Group with ${targetLabel(target)}`
       };
     }
@@ -185,7 +185,7 @@ function intentFromTarget(point: DockPoint, target: DockTarget): DockIntent | nu
       key: `${target.id}:tab`,
       kind: 'tab',
       targetRect: zone,
-      previewRect: zone,
+      previewRect: target.previewRect ?? target.rect,
       label: `Group with ${targetLabel(target)}`
     };
   }

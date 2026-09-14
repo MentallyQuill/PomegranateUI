@@ -3,6 +3,7 @@ import {
   dockTargetKey,
   type DockIntent,
   type DockOwner,
+  type DockPoint,
   type DockRect,
   type DockTarget
 } from './widget-docking.js';
@@ -15,7 +16,8 @@ export interface DockTargetCollectionOptions {
 }
 
 export interface DockPreviewController {
-  sync(targets: readonly DockTarget[], intent: DockIntent | null): DockIntent | null;
+  sync(targets: readonly DockTarget[], intent: DockIntent | null, feedback?: { heldRect?: DockRect; floatingRect?: DockRect }): DockIntent | null;
+  setSurface(surface: HTMLElement): void;
   clearSlot(): void;
   getSlotRect(): DOMRect | null;
   destroy(): void;
@@ -157,6 +159,7 @@ function readDockTargets(
         id: dockTargetKey(owner, 'widget', targetId),
         kind: 'widget',
         rect: dockRectOf(article.getBoundingClientRect()),
+        ...(group ? { previewRect: dockRectOf(group.getBoundingClientRect()) } : {}),
         regionRect,
         regionDepth,
         ...(header ? { headerRect: dockRectOf(header.getBoundingClientRect()) } : {}),
@@ -222,6 +225,16 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
   overlay.dataset.pomPart = 'widget.drop-overlay';
   overlay.setAttribute('aria-hidden', 'true');
   overlayOwner.append(overlay);
+  const rails = new Map<string, HTMLElement>();
+  const snap = ownerDocument.createElement('div');
+  snap.className = 'widget-snap-preview';
+  snap.dataset.pomPart = 'widget.snap-preview';
+  const floating = ownerDocument.createElement('div');
+  floating.className = 'widget-float-preview';
+  floating.dataset.pomPart = 'widget.float-preview';
+  const label = ownerDocument.createElement('div');
+  label.className = 'widget-drop-intent-label';
+  label.dataset.pomPart = 'widget.drop-intent-label';
   let slot: HTMLElement | null = null;
   let slotIntentKey: string | null = null;
 
@@ -275,61 +288,82 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
     return slotRect.width > 0 && slotRect.height > 0 ? { ...intent, previewRect: slotRect } : intent;
   };
 
-  const paint = (targets: readonly DockTarget[], intent: DockIntent | null) => {
-    overlay.replaceChildren();
+  const mount = (node: HTMLElement) => { if (node.parentElement !== overlay) overlay.append(node); };
+  const paint = (targets: readonly DockTarget[], intent: DockIntent | null, feedback?: { heldRect?: DockRect; floatingRect?: DockRect }) => {
+    const activeIds = new Set<string>();
     for (const target of targets) {
       if (target.kind !== 'rail') continue;
-      const rail = ownerDocument.createElement('div');
-      rail.className = 'widget-drop-rail';
-      rail.dataset.pomPart = 'widget.drop-rail';
+      activeIds.add(target.id);
+      let rail = rails.get(target.id);
+      if (!rail) {
+        rail = ownerDocument.createElement('div');
+        rail.className = 'widget-drop-rail';
+        rail.dataset.pomPart = 'widget.drop-rail';
+        rails.set(target.id, rail);
+        overlay.append(rail);
+      }
       rail.dataset.dropRegion = target.regionId;
       rail.dataset.dropRailKind = target.railKind ?? 'append';
       rail.dataset.dropInsertOrder = String(target.insertOrder ?? 0);
       if (target.dockColumn !== undefined) rail.dataset.dropColumn = String(target.dockColumn);
+      else delete rail.dataset.dropColumn;
       rail.dataset.active = String(intent?.targetId === target.id);
       positionFixed(rail, target.rect);
-      const label = ownerDocument.createElement('span');
-      label.textContent = target.label ?? 'New shelf';
-      rail.append(label);
-      overlay.append(rail);
     }
-    if (!intent) return;
-    const snap = ownerDocument.createElement('div');
-    snap.className = 'widget-snap-preview';
-    snap.dataset.pomPart = 'widget.snap-preview';
-    snap.dataset.dropIntent = intent.kind;
-    snap.dataset.dropRegion = intent.regionId;
-    if (intent.dockColumn !== undefined) snap.dataset.dropColumn = String(intent.dockColumn);
-    positionFixed(snap, intent.previewRect);
-    overlay.append(snap);
-    if (intent.kind === 'tab') {
-      const marker = ownerDocument.createElement('div');
-      marker.className = 'widget-tab-insertion';
-      marker.dataset.pomPart = 'widget.tab-insertion';
-      positionFixed(marker, {
-        x: intent.previewRect.x + 8,
-        y: intent.previewRect.y + 4,
-        width: 2,
-        height: Math.max(20, Math.min(32, intent.previewRect.height - 8))
-      });
-      overlay.append(marker);
+    for (const [id, rail] of rails) {
+      if (!activeIds.has(id)) { rail.remove(); rails.delete(id); }
     }
-    const label = ownerDocument.createElement('div');
-    label.className = 'widget-drop-intent-label';
-    label.textContent = intent.label;
-    positionFixed(label, {
-      x: intent.previewRect.x + 12,
-      y: intent.previewRect.y + 8,
-      width: Math.max(120, Math.min(240, intent.previewRect.width - 24)),
-      height: 26
-    });
-    overlay.append(label);
+    const floatingRect = !intent ? feedback?.floatingRect : undefined;
+    const rect = intent?.previewRect ?? floatingRect;
+    if (intent) {
+      snap.dataset.dropIntent = intent.kind;
+      snap.dataset.dropRegion = intent.regionId;
+      if (intent.dockColumn !== undefined) snap.dataset.dropColumn = String(intent.dockColumn);
+      else delete snap.dataset.dropColumn;
+      positionFixed(snap, intent.previewRect);
+      mount(snap);
+    } else snap.remove();
+    if (floatingRect) { positionFixed(floating, floatingRect); mount(floating); }
+    else floating.remove();
+    if (!rect) { label.remove(); return; }
+    const text = intent?.label ?? 'Float here';
+    if (label.textContent !== text) label.textContent = text;
+    mount(label);
+    // Anchor to the destination, choosing the nearest side that the held object
+    // does not cover. Use measured text dimensions and clamp to the viewport.
+    const view = ownerDocument.defaultView!;
+    label.style.maxWidth = `${Math.min(300, view.innerWidth - 16)}px`;
+    const size = label.getBoundingClientRect();
+    const held = feedback?.heldRect;
+    const anchors = [
+      { x: rect.x + 8, y: rect.y - size.height - 8 },
+      { x: rect.x + 8, y: rect.y + rect.height + 8 },
+      ...(held ? [
+        { x: held.x + 8, y: held.y - size.height - 8 },
+        { x: held.x + 8, y: held.y + held.height + 8 },
+        { x: held.x - size.width - 8, y: held.y },
+        { x: held.x + held.width + 8, y: held.y }
+      ] : [])
+    ].map(point => ({
+      x: Math.max(8, Math.min(view.innerWidth - size.width - 8, point.x)),
+      y: Math.max(8, Math.min(view.innerHeight - size.height - 8, point.y))
+    }));
+    const overlap = (point: DockPoint) => held ? Math.max(0, Math.min(point.x + size.width, held.x + held.width) - Math.max(point.x, held.x))
+      * Math.max(0, Math.min(point.y + size.height, held.y + held.height) - Math.max(point.y, held.y)) : 0;
+    const anchor = anchors.find(point => overlap(point) === 0) ?? anchors.sort((a, b) => overlap(a) - overlap(b))[0]!;
+    label.style.left = `${anchor.x}px`;
+    label.style.top = `${anchor.y}px`;
   };
 
   return Object.freeze({
-    sync(targets: readonly DockTarget[], intent: DockIntent | null) {
+    setSurface(next: HTMLElement) {
+      if (next === surface) return;
+      clearSlot();
+      surface = next;
+    },
+    sync(targets: readonly DockTarget[], intent: DockIntent | null, feedback?: { heldRect?: DockRect; floatingRect?: DockRect }) {
       const synced = syncSlot(intent);
-      paint(targets, synced);
+      paint(targets, synced, feedback);
       return synced;
     },
     clearSlot,

@@ -11,7 +11,7 @@ import {
   type DockRect,
   type DockTarget
 } from './widget-docking.js';
-import { collectDockTargets, observeDockGeometry, positionWidgetInsertion } from './widget-docking-dom.js';
+import { collectDockTargets, observeDockGeometry, createDockPreviewController, type DockPreviewController } from './widget-docking-dom.js';
 import { dragActivationDecision, tabDragDecision } from './tab-reorder.js';
 import { animateWidgetPlacement, captureWidgetRects, createDragVisual, finishWidgetMotion, floatingBounds } from './widget-drag-motion.js';
 
@@ -33,11 +33,8 @@ interface DragCandidate {
   held: HTMLElement | null;
   heldOffset: DockPoint;
   floatSize: DockRect;
-  floatPreview: HTMLElement | null;
   stopMotion: (() => void) | null;
-  overlay: HTMLElement | null;
-  slot: HTMLElement | null;
-  slotIntentKey: string | null;
+  preview: DockPreviewController | null;
   intent: DockIntent | null;
   revealedDock: 'left' | 'right' | null;
   canFloat: boolean;
@@ -78,13 +75,6 @@ function pointInside(point: DockPoint, rect: DockRect): boolean {
     && point.y >= rect.y && point.y <= rect.y + rect.height;
 }
 
-function positionFixed(element: HTMLElement, rect: DockRect) {
-  element.style.left = `${rect.x}px`;
-  element.style.top = `${rect.y}px`;
-  element.style.width = `${rect.width}px`;
-  element.style.height = `${rect.height}px`;
-}
-
 function visiblePlacement(frame: WidgetFrameProjection) {
   return frame.placement.kind === 'shelved' ? frame.placement.lastVisible : frame.placement;
 }
@@ -94,7 +84,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
   let handledPointerMove: PointerEvent | null = null;
 
   function themeRoot(current: DragCandidate) {
-    return current.overlay?.closest<HTMLElement>('main[data-pom-theme-root]')
+    return current.held?.closest<HTMLElement>('main[data-pom-theme-root]')
       ?? current.surface.closest<HTMLElement>('main[data-pom-theme-root]')
       ?? document.querySelector<HTMLElement>('main[data-pom-theme-root]');
   }
@@ -128,6 +118,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         });
       }
       current.surface = surface;
+      current.preview?.setSurface(surface);
       syncSourcePlaceholder(current, surface);
     }
     return surface;
@@ -169,7 +160,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     current.intent = null;
     current.canFloat = false;
     removeSlot(current);
-    paintTargets(current, [], null);
+    current.preview?.sync([], null);
     clearPanelHover(current);
     const result = options.getStore().dispatch({ type: 'panel.activate', panelId: asPanelId(panelId) });
     if (!result.ok) {
@@ -224,14 +215,8 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     held.style.height = `${height}px`;
     overlayOwner.append(held);
 
-    const overlay = document.createElement('div');
-    overlay.className = 'widget-drop-overlay';
-    overlay.dataset.pomPart = 'widget.drop-overlay';
-    overlay.setAttribute('aria-hidden', 'true');
-    overlayOwner.append(overlay);
-
     current.held = held;
-    current.overlay = overlay;
+    current.preview = createDockPreviewController(current.surface);
     current.visualRoot.classList.add('is-widget-dragging');
     current.visualRoot.dataset.widgetDragPlaceholder = 'true';
     document.body.classList.add('pom-widget-drag-active');
@@ -279,66 +264,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     })];
   }
 
-  function regionForIntent(current: DragCandidate, intent: DockIntent) {
-    const surface = activeSurface(current);
-    if (!surface || surface.dataset.pomegranatePanel !== intent.panelId) return null;
-    return [...surface.querySelectorAll<HTMLElement>('[data-pomegranate-region-surface]')]
-      .find((region) => {
-        const owner = activeOwner(current, region);
-        return owner.panelId === intent.panelId
-          && owner.subPanelId === intent.subPanelId
-          && owner.lane === intent.lane
-          && owner.dockColumn === intent.dockColumn
-          && owner.regionId === intent.regionId;
-      }) ?? null;
-  }
-
-  function removeSlot(current: DragCandidate) {
-    current.slot?.remove();
-    current.slot = null;
-    current.slotIntentKey = null;
-  }
-
-  function syncDockSlot(current: DragCandidate, intent: DockIntent | null): DockIntent | null {
-    if (!intent || intent.kind === 'tab') {
-      removeSlot(current);
-      return intent;
-    }
-    const region = regionForIntent(current, intent);
-    if (!region) {
-      removeSlot(current);
-      return intent;
-    }
-    if (!current.slot) {
-      const slot = document.createElement('div');
-      slot.className = 'widget-dock-preview-slot';
-      slot.dataset.pomPart = 'widget.dock-slot';
-      slot.setAttribute('aria-hidden', 'true');
-      current.slot = slot;
-    }
-    const slot = current.slot;
-    slot.dataset.dropIntent = intent.kind;
-    slot.dataset.dropRegion = intent.regionId;
-    if (intent.kind === 'insert-before' || intent.kind === 'insert-after') {
-      current.slotIntentKey = intent.key;
-      return positionWidgetInsertion(slot, region, intent);
-    }
-    delete slot.dataset.dropWidgetBoundary;
-    slot.style.cssText = '';
-    slot.style.setProperty('--pom-dock-preview-size', `${Math.max(72, Math.min(112, intent.previewRect.height))}px`);
-
-    if (current.slotIntentKey !== intent.key || !slot.isConnected) {
-      const shelves = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')];
-      if (intent.kind === 'shelf') {
-        const before = shelves.find(shelf => Number(shelf.dataset.pomegranateShelfOrder) >= (intent.insertOrder ?? Infinity));
-        if (before) region.insertBefore(slot, before);
-        else region.append(slot);
-      } else region.append(slot);
-      current.slotIntentKey = intent.key;
-    }
-    const slotRect = rectOf(slot.getBoundingClientRect());
-    return slotRect.width > 0 && slotRect.height > 0 ? { ...intent, previewRect: slotRect } : intent;
-  }
+  function removeSlot(current: DragCandidate) { current.preview?.clearSlot(); }
 
   function syncCollapsedDockReveal(current: DragCandidate, point: DockPoint) {
     const root = themeRoot(current);
@@ -374,72 +300,23 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     }
   }
 
-  function paintTargets(current: DragCandidate, targets: readonly DockTarget[], intent: DockIntent | null) {
-    const overlay = current.overlay;
-    if (!overlay) return;
-    overlay.replaceChildren();
-    for (const target of targets) {
-      if (target.kind !== 'rail') continue;
-      const rail = document.createElement('div');
-      rail.className = 'widget-drop-rail';
-      rail.dataset.pomPart = 'widget.drop-rail';
-      rail.dataset.dropRegion = target.regionId;
-      rail.dataset.dropRailKind = target.railKind;
-      rail.dataset.dropInsertOrder = String(target.insertOrder ?? 0);
-      if (target.dockColumn !== undefined) rail.dataset.dropColumn = String(target.dockColumn);
-      rail.dataset.active = String(intent?.targetId === target.id);
-      positionFixed(rail, target.rect);
-      overlay.append(rail);
-    }
-    if (!intent) return;
-    const snap = document.createElement('div');
-    snap.className = 'widget-snap-preview';
-    snap.dataset.pomPart = 'widget.snap-preview';
-    snap.dataset.dropIntent = intent.kind;
-    snap.dataset.dropRegion = intent.regionId;
-    if (intent.dockColumn !== undefined) snap.dataset.dropColumn = String(intent.dockColumn);
-    positionFixed(snap, intent.previewRect);
-    overlay.append(snap);
-    if (intent.kind === 'tab') {
-      const marker = document.createElement('div');
-      marker.className = 'widget-tab-insertion';
-      marker.dataset.pomPart = 'widget.tab-insertion';
-      positionFixed(marker, {
-        x: intent.previewRect.x + 8,
-        y: intent.previewRect.y + 4,
-        width: 2,
-        height: Math.max(20, Math.min(32, intent.previewRect.height - 8))
-      });
-      overlay.append(marker);
-    }
-  }
-
   function updateDropState(current: DragCandidate, point: DockPoint) {
     syncCollapsedDockReveal(current, point);
     const targets = collectTargets(current);
     const next = resolveDockIntent(point, targets);
     current.intent = stabilizeDockIntent(point, current.intent, next, 10);
-    current.intent = syncDockSlot(current, current.intent);
     const surface = activeSurface(current);
     current.canFloat = surface ? pointInside(point, rectOf(surface.getBoundingClientRect())) : false;
-    paintTargets(current, targets, current.intent);
-    current.held?.toggleAttribute('data-float-ready', current.intent === null && current.canFloat);
+    let floatingRect: DockRect | undefined;
     if (!current.intent && current.canFloat && surface) {
       const surfaceBox = rectOf(surface.getBoundingClientRect());
       const bounds = floatingBounds(surfaceBox, current.floatSize, { x: current.grabX, y: current.grabY }, point);
-      if (!current.floatPreview) {
-        current.floatPreview = document.createElement('div');
-        current.floatPreview.className = 'widget-float-preview';
-        current.floatPreview.dataset.pomPart = 'widget.float-preview';
-        current.floatPreview.setAttribute('aria-hidden', 'true');
-        current.floatPreview.textContent = 'Float here';
-        (themeRoot(current) ?? document.body).append(current.floatPreview);
-      }
-      positionFixed(current.floatPreview, { ...bounds, x: bounds.x + surfaceBox.x, y: bounds.y + surfaceBox.y });
-    } else {
-      current.floatPreview?.remove();
-      current.floatPreview = null;
+      floatingRect = { ...bounds, x: bounds.x + surfaceBox.x, y: bounds.y + surfaceBox.y };
     }
+    current.intent = current.preview?.sync(targets, current.intent, {
+      ...(current.held ? { heldRect: rectOf(current.held.getBoundingClientRect()) } : {}),
+      ...(floatingRect ? { floatingRect } : {})
+    }) ?? current.intent;
   }
 
   function removeGlobalListeners(current: DragCandidate) {
@@ -463,8 +340,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     current.visualRoot.classList.remove('is-widget-dragging');
     delete current.visualRoot.dataset.widgetDragPlaceholder;
     current.held?.remove();
-    current.floatPreview?.remove();
-    current.overlay?.remove();
+    current.preview?.destroy();
     removeSlot(current);
     root?.removeAttribute('data-drag-reveal-left');
     root?.removeAttribute('data-drag-reveal-right');
@@ -496,8 +372,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     removeGlobalListeners(current);
     clearPanelHover(current);
     removeSlot(current);
-    current.overlay?.remove();
-    current.floatPreview?.remove();
+    current.preview?.destroy();
     if (!commit()) { cleanup(); return; }
     if (!held) { cleanup(); return; }
     current.stopMotion = animateWidgetPlacement({
@@ -761,11 +636,8 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         held: null,
         heldOffset: { x: 0, y: 0 },
         floatSize: rectOf(box),
-        floatPreview: null,
         stopMotion: null,
-        overlay: null,
-        slot: null,
-        slotIntentKey: null,
+        preview: null,
         intent: null,
         revealedDock: null,
         canFloat: false,

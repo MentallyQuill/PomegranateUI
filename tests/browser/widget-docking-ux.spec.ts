@@ -207,6 +207,66 @@ async function liftCatalogWidget(page: Page) {
   await expect(catalog).toBeHidden();
 }
 
+for (const source of ['existing', 'Catalog'] as const) {
+  test(`${source} retains its destination indicators and shows an unobstructed action in every theme`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    for (const theme of themes) {
+      await freshTheme(page, theme);
+      if (source === 'Catalog') await liftCatalogWidget(page);
+      else await beginPointerDrag(page, widgetDragSurface(page.getByRole('article', { name: 'Theme Materials', exact: true })));
+      await page.mouse.move(620, 200);
+      const body = await page.getByRole('article', { name: 'World State', exact: true }).locator(':scope > [data-pom-part="widget.content"]').boundingBox();
+      if (!body) throw new Error('Missing target body');
+      const x = body.x + body.width / 2;
+      await page.mouse.move(x, body.y + body.height / 2);
+      await page.evaluate(() => {
+        (window as any).__indicatorNodes = [...document.querySelectorAll('.widget-drop-rail, .widget-snap-preview')];
+      });
+      await page.mouse.move(x + 1, body.y + body.height / 2);
+      expect(await page.evaluate(() => (window as any).__indicatorNodes.every((node: Element) => node.isConnected))).toBe(true);
+      const label = page.locator('.widget-drop-intent-label');
+      for (const [ratio, text] of [[.5, 'Group with World State'], [.1, 'Insert before World State'], [.9, 'Insert after World State'], [-1, 'Float here']] as const) {
+        if (ratio < 0) await page.mouse.move(620, 200);
+        else await page.mouse.move(x, body.y + body.height * ratio);
+        await expect(label).toHaveText(text);
+        await expect(label).toBeVisible();
+        if (ratio === .5) {
+          const target = await page.getByRole('article', { name: 'World State', exact: true }).boundingBox();
+          const cue = await page.locator('.widget-snap-preview').boundingBox();
+          for (const key of ['x', 'y', 'width', 'height'] as const) expect(cue![key]).toBeCloseTo(target![key], 0);
+        }
+        const geometry = await label.evaluate(node => {
+          const label = node.getBoundingClientRect();
+          const held = document.querySelector('.widget-drag-preview, [data-catalog-placement-proxy]')!.getBoundingClientRect();
+          const style = getComputedStyle(node);
+          const luminance = (color: string) => {
+            const values = color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
+            return values[0]! * .2126 + values[1]! * .7152 + values[2]! * .0722;
+          };
+          const foreground = luminance(style.color), background = luminance(style.backgroundColor);
+          return { contrast: (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05), overlap: Math.max(0, Math.min(label.right, held.right) - Math.max(label.left, held.left)) * Math.max(0, Math.min(label.bottom, held.bottom) - Math.max(label.top, held.top)),
+            inViewport: label.left >= 0 && label.top >= 0 && label.right <= innerWidth && label.bottom <= innerHeight,
+            background: getComputedStyle(node).backgroundColor };
+        });
+        expect(geometry.overlap).toBe(0);
+        expect(geometry.contrast).toBeGreaterThanOrEqual(4.5);
+        expect(geometry.inViewport).toBe(true);
+        expect(geometry.background).not.toBe('rgba(0, 0, 0, 0)');
+        if (ratio >= 0) expect(await page.evaluate(() => (window as any).__indicatorNodes.every((node: Element) => node.isConnected))).toBe(true);
+        if (ratio === .5 || ratio === .1) await page.screenshot({ path: testInfo.outputPath(`${source}-${theme}-${ratio === .5 ? 'group' : 'insert'}.png`) });
+      }
+      await page.mouse.move(620, 200);
+      await expect(label).toHaveText('Float here');
+      await expect(page.locator('.widget-snap-preview')).toHaveCount(0);
+      await expect(page.locator('.widget-float-preview')).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath(`${source}-${theme}-feedback.png`) });
+      await page.keyboard.press('Escape');
+      await page.mouse.up();
+      await expect(page.locator('.widget-drop-overlay, .widget-float-preview, .widget-drop-intent-label')).toHaveCount(0);
+    }
+  });
+}
+
 for (const destination of ['dock', 'float'] as const) {
   test(`Catalog ${destination} placement carries its held preview into the real destination`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1280, height: 720 });

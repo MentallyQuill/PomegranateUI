@@ -196,7 +196,6 @@ export function createCatalogPlacementController(
   let stopObserving: (() => void) | null = null;
   let revealedDock: 'left' | 'right' | null = null;
   let floatingTarget: CatalogFloatingTarget | null = null;
-  let floatPreview: HTMLElement | null = null;
   let stopMotion: (() => void) | null = null;
   let committing = false;
   const floatingPanel = () => {
@@ -304,8 +303,6 @@ export function createCatalogPlacementController(
     const finishMotion = stopMotion;
     stopMotion = null;
     finishMotion?.();
-    floatPreview?.remove();
-    floatPreview = null;
     floatingTarget = null;
     const origin = candidate?.origin ?? null;
     const ownerDocument = candidate?.document ?? null;
@@ -509,25 +506,21 @@ export function createCatalogPlacementController(
     dockTargets = compatibleDockTargets(candidate.manifest, targets);
     const next = options.onDockCommit ? resolveDockIntent(point, dockTargets) : null;
     dockIntent = stabilizeDockIntent(point, dockIntent, next, 10);
-    dockIntent = dockPreview.sync(dockTargets, dockIntent);
     floatingTarget = null;
     const panel = floatingPanel();
     const box = panel?.getBoundingClientRect();
+    let floatingRect: DockRect | undefined;
     if (!dockIntent && options.onFloatCommit && panel && box && point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom) {
       const size = { x: 0, y: 0, width: 360, height: candidate.manifest.catalog?.geometry.idealHeight ?? 360 };
       const bounds = floatingBounds(dockRectOf(box), size, { x: state.proxy.offsetX, y: state.proxy.offsetY }, point);
       const subPanelId = panel.querySelector<HTMLElement>('[data-sub-panel]')?.dataset.subPanel;
       floatingTarget = { ...bounds, panelId: panel.dataset.pomegranatePanel!, ...(subPanelId ? { subPanelId } : {}) };
-      if (!floatPreview) {
-        floatPreview = candidate.document.createElement('div');
-        floatPreview.className = 'widget-float-preview';
-        floatPreview.dataset.pomPart = 'widget.float-preview';
-        floatPreview.setAttribute('aria-hidden', 'true');
-        floatPreview.textContent = 'Float here';
-        (panel.closest('main[data-pom-theme-root]') ?? candidate.document.body).append(floatPreview);
-      }
-      floatPreview.style.cssText = `left:${box.x + bounds.x}px;top:${box.y + bounds.y}px;width:${bounds.width}px;height:${bounds.height}px`;
-    } else { floatPreview?.remove(); floatPreview = null; }
+      floatingRect = { ...bounds, x: box.x + bounds.x, y: box.y + bounds.y };
+    }
+    dockIntent = dockPreview.sync(dockTargets, dockIntent, {
+      heldRect: { x: point.x - state.proxy.offsetX, y: point.y - state.proxy.offsetY, width: state.proxy.width, height: state.proxy.height },
+      ...(floatingRect ? { floatingRect } : {})
+    });
     publish(Object.freeze({
       ...state,
       proxy: Object.freeze({ ...state.proxy, x: point.x, y: point.y }),
@@ -695,8 +688,6 @@ export function createCatalogPlacementController(
     stopObserving = null;
     dockPreview?.destroy();
     dockPreview = null;
-    floatPreview?.remove();
-    floatPreview = null;
     try { commit(); } catch (error) { reset(); throw error; }
     if (!held) { reset(); return true; }
     stopMotion = animateWidgetPlacement({

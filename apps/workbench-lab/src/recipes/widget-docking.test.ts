@@ -25,6 +25,17 @@ const widget: DockTarget = {
 };
 
 describe('Atmospheric docking intent', () => {
+  it('outlines the whole grouping destination while keeping hit zones precise', () => {
+    for (const y of [52, 170]) {
+      const intent = resolveDockIntent({ x: 120, y }, [widget])!;
+      expect(intent.kind).toBe('tab');
+      expect(intent.previewRect).toEqual(widget.rect);
+      expect(intent.targetRect.height).toBeLessThan(widget.rect.height);
+    }
+    const group: DockTarget = { ...widget, kind: 'group-header', rect: widget.headerRect!, previewRect: widget.rect };
+    expect(resolveDockIntent({ x: 120, y: 52 }, [group])?.previewRect).toEqual(widget.rect);
+  });
+
   it('keeps same-region toolbar columns uniquely addressable', () => {
     const outer = { panelId: 'scene', regionId: 'left', dockColumn: 0 };
     const inner = { panelId: 'scene', regionId: 'left', dockColumn: 1 };

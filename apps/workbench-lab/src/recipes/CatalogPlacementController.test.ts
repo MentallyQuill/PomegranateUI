@@ -123,7 +123,7 @@ describe('CatalogPlacementController', () => {
     controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
     document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
     document.dispatchEvent(pointerEvent('pointermove', { clientX: 220, clientY: 180 }));
-    expect(document.querySelector('.widget-float-preview')?.textContent).toBe('Float here');
+    expect(document.querySelector('.widget-drop-intent-label')?.textContent).toBe('Float here');
     document.dispatchEvent(pointerEvent('pointerup', { clientX: 220, clientY: 180 }));
     expect(onFloatCommit).toHaveBeenCalledWith(manifest, expect.objectContaining({ panelId: 'panel-story', width: 360 }));
     expect(controller.getState().phase).toBe('idle');

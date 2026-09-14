@@ -108,7 +108,7 @@ export async function expectActiveWidgetDrag(
   expect(evidence.proxyCount).toBe(1);
   expect(evidence.proxyArticleCount).toBeGreaterThan(0);
   expect(evidence.proxyInteractiveCount).toBe(0);
-  expect(evidence.overlayText).toBe('');
+  await expect(page.locator('.widget-drop-intent-label')).toHaveCount(evidence.overlayText ? 1 : 0);
   expect(evidence.originVacant).toBe(true);
   if (expectation.reservationCount === 'at-most-one') {
     expect(evidence.activeReservationCount).toBeLessThanOrEqual(1);
@@ -233,7 +233,7 @@ export async function captureInteractionEvidence(page: Page, origin: Locator | s
       proxyArticleCount: proxy?.querySelectorAll('article').length ?? 0,
       proxyInteractiveCount: [...(proxy?.querySelectorAll('button,input,select,textarea,a[href],[tabindex]:not([tabindex="-1"])') ?? [])].filter(node => !node.closest('[inert]')).length,
       overlayText: overlay?.textContent?.trim() ?? '',
-      activeReservationCount: document.querySelectorAll('[data-pom-part="widget.dock-slot"], [data-pom-part="widget.tab-insertion"]').length,
+      activeReservationCount: document.querySelectorAll('[data-pom-part="widget.snap-preview"]').length,
       originVacant: visualRoot?.hasAttribute('data-widget-drag-placeholder') ?? false,
       originRect: box ? { x: box.x, y: box.y, width: box.width, height: box.height } : null,
       revision: document.querySelector('main')?.getAttribute('data-workbench-revision') ?? null
