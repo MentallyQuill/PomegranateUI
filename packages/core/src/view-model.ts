@@ -233,7 +233,9 @@ export function selectPanelSurface(
             const rightOrder = right.placement.kind === 'docked' ? right.placement.order : 0;
             return leftOrder - rightOrder || left.instanceId.localeCompare(right.instanceId);
           }))
-      })));
+      }))
+      // Retain stored shelves for restoration, but never allocate empty visual rows.
+      .filter(({ frames }) => frames.length > 0));
     const toolbarEdge = template.template.family === 'story-stage'
       && (region.role === 'left-instruments' || region.role === 'right-instruments')
       ? region.role === 'left-instruments' ? 'left' as const : 'right' as const

@@ -41,6 +41,25 @@ function state(): WorkbenchState {
 }
 
 describe('framework-neutral view projections', () => {
+  it('does not allocate visible shelves for empty or shelved-only contents', () => {
+    const id = asWidgetInstanceId('stored-widget');
+    const input: WorkbenchState = {
+      ...state(),
+      widgets: { [id]: { id, type: asWidgetType('story.summary'), manifestVersion: '1.0.0', configuration: {} } },
+      placements: { [id]: {
+        kind: 'shelved', panelId: scenePanel,
+        lastVisible: { kind: 'docked', panelId: scenePanel, regionId: 'left', shelfId: 'primary', order: 0 }
+      } }
+    };
+    const surface = selectPanelSurface(input, createWidgetRegistry());
+    expect(surface?.regions.find(({ region }) => region.id === 'left')?.shelves).toEqual([]);
+    expect(surface?.regions.find(({ region }) => region.id === 'left')?.toolbarColumns[0]?.shelves).toEqual([]);
+    expect(surface?.regions.find(({ region }) => region.id === 'stage')?.shelves).toEqual([]);
+    expect(surface?.widgetShelf.map((frame) => frame.instanceId)).toEqual([id]);
+    expect(input.shelves).toHaveLength(2);
+    expect(input.placements[id]).toMatchObject({ lastVisible: { shelfId: 'primary' } });
+  });
+
   it('projects sibling tabs and only the active sub-panel Widget owner', () => {
     const registry = createWidgetRegistry();
     const overviewWidget = asWidgetInstanceId('overview-widget');
