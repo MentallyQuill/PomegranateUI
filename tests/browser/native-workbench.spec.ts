@@ -1576,7 +1576,7 @@ test('desktop Widget headers expose actions alongside context and keyboard short
   await expect(menu.getByRole('menuitem')).toHaveText([
     'Focus',
     'Move…',
-    'Remove'
+    'Move to Widget Shelf'
   ]);
   await menu.getByRole('menuitem', { name: 'Move…' }).click();
   const moveMenu = page.getByRole('menu', { name: 'World State Widget move' });

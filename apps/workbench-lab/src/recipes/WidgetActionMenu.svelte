@@ -246,7 +246,7 @@
       {#if onfocuswidget}<button class="action-focus" role="menuitem" data-pom-part="button.surface" type="button" onclick={focus}>Focus</button>{/if}
       <button class="action-move" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => show('move')}>Move…</button>
       <hr />
-      <button class="action-remove" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.shelve())}>Remove</button>
+      <button class="action-remove" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.shelve())}>Move to Widget Shelf</button>
     {:else}
       <button class="action-back" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => show('actions')}>Back to Widget actions</button>
       <hr />

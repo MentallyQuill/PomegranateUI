@@ -544,7 +544,7 @@ describe('Svelte Workbench Lab mockup', () => {
       'Detach from group',
       'Focus',
       'Move…',
-      'Remove'
+      'Move to Widget Shelf'
     ]);
     expect(within(widgetActions).queryByRole('menuitem', { name: 'Group with previous Widget', hidden: true })).toBeNull();
     await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Move…', hidden: true }));
@@ -742,7 +742,7 @@ describe('Svelte Workbench Lab mockup', () => {
     if (!widgetActions) throw new Error('Expected the shared Widget action surface.');
     expect(widgetActions).toHaveAttribute('aria-label', 'Transcript Widget actions');
     expect(widgetActions).toHaveAttribute('data-fallback-open');
-    await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Remove', hidden: true }));
+    await fireEvent.click(within(widgetActions).getByRole('menuitem', { name: 'Move to Widget Shelf', hidden: true }));
     expect(screen.queryByRole('article', { name: 'Transcript' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Undo layout' })).not.toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Undo layout' }));

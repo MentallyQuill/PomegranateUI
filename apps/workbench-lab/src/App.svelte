@@ -307,6 +307,7 @@
   let leftCollapsed = $state(false);
   let rightCollapsed = $state(false);
   let compactDockDefaultsKey = '';
+  const narrowWorkbenchMedia = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 860px)') : null;
   let panelDialog: { showModal(): void; close(): void };
   let subPanelDialog: {
     open(request: { mode: 'create' | 'rename' | 'layout' | 'move' | 'delete'; panelId: PanelId; subPanelId?: SubPanelId; invokingTab?: HTMLElement }): void;
@@ -327,8 +328,9 @@
 
   onMount(() => {
     let current = true;
-    const collapseCompactDocks = (event: MediaQueryListEvent) => syncCompactDockDefaults(event.matches);
+    const collapseCompactDocks = () => syncCompactDockDefaults();
     compactWorkbenchMedia?.addEventListener('change', collapseCompactDocks);
+    narrowWorkbenchMedia?.addEventListener('change', collapseCompactDocks);
     void hydrateThemeDraft(initialThemeSnapshot.activeId);
     void loadLayout(storage, LAB_LAYOUT_KEY, store.getState()).then((loaded) => {
       if (current && loaded.ok) {
@@ -339,6 +341,7 @@
     return () => {
       current = false;
       compactWorkbenchMedia?.removeEventListener('change', collapseCompactDocks);
+      narrowWorkbenchMedia?.removeEventListener('change', collapseCompactDocks);
     };
   });
 
@@ -356,11 +359,12 @@
   function syncCompactDockDefaults(isCompact = compactWorkbenchMedia?.matches ?? false) {
     const shellPresentation = themeSnapshot.compiled.theme.recipes.shellPresentation;
     const templateId = activePanel?.templateId;
-    const key = `${isCompact}:${shellPresentation ?? 'standard'}:${templateId ?? 'none'}`;
+    const isNarrow = narrowWorkbenchMedia?.matches ?? false;
+    const key = `${isCompact}:${isNarrow}:${shellPresentation ?? 'standard'}:${templateId ?? 'none'}`;
     if (key === compactDockDefaultsKey) return;
     compactDockDefaultsKey = key;
     const shouldCollapse = isCompact
-      && shellPresentation === 'instrumented'
+      && (shellPresentation === 'instrumented' || isNarrow)
       && templateId === 'story-stage.v1';
     leftCollapsed = shouldCollapse;
     rightCollapsed = shouldCollapse;
@@ -700,7 +704,7 @@
     </div>
     <div class="shelf-actions">
       <IconAction label="Open Widget Catalog" visualLabel="Widgets" action="open-catalog" expanded={$catalogState.open} onclick={() => catalog.open('expanded')} />
-      <WidgetShelf {store} />
+      <WidgetShelf {store} onexpanddock={expandDock} />
       <LayoutUndo {store} />
       <IconAction label="Focus reading" action="focus-reading" pressed={focusMode} onclick={() => { focusMode = !focusMode; }} />
       <span class="runtime-status" aria-label={hostContext.systemStatus}><i></i><span aria-hidden="true">Ready</span></span>
