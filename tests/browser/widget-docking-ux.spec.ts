@@ -3,6 +3,106 @@ import { beginPointerDrag, cancelPointerDrag, dragToShelfRail, dragToWidgetTab, 
 
 const themes = ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber'] as const;
 
+test('held widgets retain recognizable content and a stable grab anchor as shelves resize', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await freshTheme(page, 'Deep Current');
+  const materials = page.getByRole('article', { name: 'Theme Materials', exact: true });
+  await beginPointerDrag(page, widgetDragSurface(materials));
+  await page.mouse.move(620, 280);
+  const held = page.locator('[data-pom-part="widget.drag-preview"]');
+  await expect(held).toContainText('Glass Density');
+  await expect(held).toHaveAttribute('inert', '');
+  await page.mouse.move(620, 280);
+  const before = await held.boundingBox();
+  const rail = page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="left"][data-drop-rail-kind="before"]');
+  const box = await rail.boundingBox();
+  if (!box || !before) throw new Error('Expected held and rail geometry.');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.move(620, 280);
+  const after = await held.boundingBox();
+  expect(after!.x).toBeCloseTo(before.x, 0);
+  expect(after!.y).toBeCloseTo(before.y, 0);
+  expect(after!.width).toBeCloseTo(before.width, 0);
+  expect(after!.height).toBeCloseTo(before.height, 0);
+  await page.screenshot({ path: testInfo.outputPath('held-content.png') });
+  await cancelPointerDrag(page);
+});
+
+test('the floating footprint matches the committed widget bounds', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await freshTheme(page, 'Bunny');
+  const materials = page.getByRole('article', { name: 'Theme Materials', exact: true });
+  await beginPointerDrag(page, widgetDragSurface(materials));
+  await page.mouse.move(630, 270);
+  const footprint = page.locator('[data-pom-part="widget.float-preview"]');
+  await expect(footprint).toBeVisible();
+  const expected = await footprint.boundingBox();
+  await page.mouse.up();
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
+  const actual = await materials.locator('xpath=..').boundingBox();
+  for (const key of ['x', 'y', 'width', 'height'] as const) expect(actual![key]).toBeCloseTo(expected![key], 0);
+});
+
+test('docking settles into the committed widget instead of stretching into the preview slot', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await freshTheme(page, 'Deep Current');
+  const materials = page.getByRole('article', { name: 'Theme Materials', exact: true });
+  const id = await materials.getAttribute('data-pomegranate-widget');
+  await beginPointerDrag(page, widgetDragSurface(materials));
+  await page.mouse.move(620, 280);
+  const rail = page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="right"][data-drop-rail-kind="before"]');
+  const box = await rail.boundingBox();
+  if (!box || !id) throw new Error('Expected docking geometry.');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.evaluate((id) => {
+    const samples: unknown[] = [];
+    (window as any).__motionSamples = samples;
+    const start = performance.now();
+    function sample() {
+      const held = document.querySelector<HTMLElement>('[data-pom-part="widget.drag-preview"]');
+      const target = document.querySelector(`[data-pomegranate-widget="${id}"]`)?.closest('[data-widget-type]');
+      samples.push({ time: performance.now() - start, held: held?.getBoundingClientRect().toJSON(), target: target?.getBoundingClientRect().toJSON(),
+        neighbours: document.getAnimations().filter(animation => animation.id === 'pom-widget-reflow').length,
+        animation: held?.getAnimations().find(animation => animation.id === 'pom-widget-settle')?.effect?.getComputedTiming().progress,
+        frames: (held?.getAnimations().find(animation => animation.id === 'pom-widget-settle')?.effect as KeyframeEffect | undefined)?.getKeyframes() });
+      if (performance.now() - start < 500) requestAnimationFrame(sample);
+    }
+    requestAnimationFrame(sample);
+  }, id);
+  await page.mouse.up();
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
+  const samples = await page.evaluate(() => (window as any).__motionSamples);
+  await testInfo.attach('motion-frames', { body: JSON.stringify(samples), contentType: 'application/json' });
+  const moving = samples.filter((sample: any) => sample.frames?.length);
+  expect(moving.length).toBeGreaterThan(1);
+  expect(moving.some((sample: any) => sample.neighbours > 0)).toBe(true);
+  const errors = moving.map((sample: any) => ['x', 'y', 'width', 'height'].reduce((error, key) => error + Math.abs(sample.held[key] - sample.target[key]), 0));
+  expect(Math.max(...errors)).toBeGreaterThan(20);
+  expect(Math.min(...errors)).toBeLessThan(2);
+  const last = moving.at(-1);
+  expect(parseFloat(last.frames.at(-1).width)).toBeCloseTo(last.target.width, 0);
+  expect(parseFloat(last.frames.at(-1).height)).toBeCloseTo(last.target.height, 0);
+  expect(last.frames.at(-1).transform).not.toContain('scale(');
+  expect(await materials.evaluate(node => node.getAnimations({ subtree: true }).some(animation => (animation as CSSAnimation).animationName === 'surface-in'))).toBe(false);
+});
+
+test('interrupting arrival leaves the committed widget visible and allows another drag', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await freshTheme(page, 'Deep Current');
+  const materials = page.getByRole('article', { name: 'Theme Materials', exact: true });
+  await beginPointerDrag(page, widgetDragSurface(materials));
+  await page.mouse.move(630, 270);
+  await page.mouse.up();
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await expect(page.locator('[data-pom-part="widget.drag-preview"], [data-widget-arriving]')).toHaveCount(0);
+  await expect(materials).toBeVisible();
+  await beginPointerDrag(page, widgetDragSurface(materials));
+  await page.mouse.move(650, 300);
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toBeVisible();
+  await cancelPointerDrag(page);
+  await expect(materials).toBeVisible();
+});
+
 async function freshTheme(page: Page, theme: typeof themes[number]) {
   await page.goto('/?dev=1');
   await page.evaluate(() => localStorage.clear());
@@ -105,6 +205,82 @@ async function liftCatalogWidget(page: Page) {
   await page.mouse.down();
   await page.mouse.move(box.x + 14, box.y + 8);
   await expect(catalog).toBeHidden();
+}
+
+for (const destination of ['dock', 'float'] as const) {
+  test(`Catalog ${destination} placement carries its held preview into the real destination`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await freshTheme(page, 'Bunny');
+    await liftCatalogWidget(page);
+    if (destination === 'dock') {
+      const box = await page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="right"][data-drop-rail-kind="before"]').boundingBox();
+      if (!box) throw new Error('Expected Catalog rail.');
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    } else await page.mouse.move(630, 270);
+    const footprint = destination === 'float' ? page.locator('[data-pom-part="widget.float-preview"]') : null;
+    if (footprint) await expect(footprint).toBeVisible();
+    const expected = await footprint?.boundingBox();
+    await page.evaluate(() => {
+      const frames: unknown[] = [];
+      (window as any).__catalogMotion = frames;
+      const start = performance.now();
+      function sample() {
+        const proxy = document.querySelector('[data-catalog-placement-proxy]');
+        frames.push(proxy?.getAnimations().find(animation => animation.id === 'pom-widget-settle')?.effect?.getComputedTiming().progress);
+        if (performance.now() - start < 500) requestAnimationFrame(sample);
+      }
+      requestAnimationFrame(sample);
+    });
+    await page.mouse.up();
+    await expect(page.locator('[data-catalog-placement-proxy]')).toHaveCount(0);
+    const frames = await page.evaluate(() => (window as any).__catalogMotion as Array<number | undefined>);
+    await testInfo.attach('catalog-motion-frames', { body: JSON.stringify(frames), contentType: 'application/json' });
+    expect(frames.filter(frame => typeof frame === 'number' && frame > 0 && frame < 1).length).toBeGreaterThan(1);
+    await page.getByRole('button', { name: 'Close Widget Catalog' }).click();
+    const widget = page.getByRole('article', { name: 'Library', exact: true });
+    await expect(widget).toBeVisible();
+    if (expected) {
+      const actual = await widget.locator('xpath=..').boundingBox();
+      for (const key of ['x', 'y', 'width', 'height'] as const) expect(actual![key]).toBeCloseTo(expected[key], 0);
+    }
+    await page.screenshot({ path: testInfo.outputPath('catalog-placed.png') });
+  });
+}
+
+for (const source of ['existing', 'Catalog'] as const) {
+  test(`${source} placement respects reduced motion and cleans up arrival state`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await freshTheme(page, 'Bunny');
+    if (source === 'Catalog') await liftCatalogWidget(page);
+    else await beginPointerDrag(page, widgetDragSurface(page.getByRole('article', { name: 'Theme Materials', exact: true })));
+    await page.mouse.move(630, 270);
+    await expect(page.locator('[data-pom-part="widget.float-preview"]')).toBeVisible();
+    await page.mouse.up();
+    await expect(page.locator('[data-pom-part="widget.drag-preview"], [data-catalog-placement-proxy], [data-widget-arriving], [data-pom-part="widget.float-preview"]')).toHaveCount(0);
+    expect(await page.evaluate(() => document.getAnimations().filter(animation => animation.id.startsWith('pom-widget-')).length)).toBe(0);
+    if (source === 'Catalog') await page.getByRole('button', { name: 'Close Widget Catalog' }).click();
+    await expect(page.getByRole('article', { name: source === 'Catalog' ? 'Library' : 'Theme Materials', exact: true })).toBeVisible();
+  });
+
+  for (const cancel of ['Escape', 'blur', 'pointercancel'] as const) {
+    test(`${source} floating preview cancels cleanly on ${cancel}`, async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await freshTheme(page, 'Deep Current');
+      const before = await page.locator('main').getAttribute('data-workbench-revision');
+      if (source === 'Catalog') await liftCatalogWidget(page);
+      else await beginPointerDrag(page, widgetDragSurface(page.getByRole('article', { name: 'Theme Materials', exact: true })));
+      await page.mouse.move(630, 270);
+      await expect(page.locator('[data-pom-part="widget.float-preview"]')).toBeVisible();
+      if (cancel === 'Escape') await page.keyboard.press('Escape');
+      else if (cancel === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+      else await page.evaluate(() => document.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', bubbles: true })));
+      await page.mouse.up();
+      await expect(page.locator('[data-pom-part="widget.drag-preview"], [data-catalog-placement-proxy], [data-pom-part="widget.float-preview"], [data-widget-arriving], [data-widget-drag-placeholder]')).toHaveCount(0);
+      await expect(page.locator('main')).toHaveAttribute('data-workbench-revision', before!);
+      await expect(page.locator('body')).not.toHaveClass(/pom-widget-drag-active/);
+    });
+  }
 }
 
 for (const source of ['existing', 'Catalog'] as const) {

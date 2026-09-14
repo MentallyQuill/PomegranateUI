@@ -109,6 +109,27 @@ function equalAreaRankingResult(
 }
 
 describe('CatalogPlacementController', () => {
+  it('supports floating-only placement when the target root is the Panel itself', () => {
+    const { root, origin } = placementSurface();
+    Object.defineProperty(root, 'getBoundingClientRect', { value: () => new DOMRect(0, 0, 800, 600) });
+    const onFloatCommit = vi.fn();
+    const controller = createCatalogPlacementController({
+      catalog: { suspend: vi.fn(), resume: vi.fn() },
+      getTargetRoot: () => root,
+      getInstanceCount: () => 0,
+      isCompatibleTarget: () => false,
+      onCommit: vi.fn(), onFloatCommit
+    });
+    controller.pointerDown(pointerEvent('pointerdown', { clientX: 10, clientY: 10 }), manifest, origin);
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 16, clientY: 10 }));
+    document.dispatchEvent(pointerEvent('pointermove', { clientX: 220, clientY: 180 }));
+    expect(document.querySelector('.widget-float-preview')?.textContent).toBe('Float here');
+    document.dispatchEvent(pointerEvent('pointerup', { clientX: 220, clientY: 180 }));
+    expect(onFloatCommit).toHaveBeenCalledWith(manifest, expect.objectContaining({ panelId: 'panel-story', width: 360 }));
+    expect(controller.getState().phase).toBe('idle');
+    controller.destroy();
+  });
+
   afterEach(() => {
     document.body.replaceChildren();
     vi.useRealTimers();

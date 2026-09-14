@@ -88,6 +88,8 @@ export async function expectNoWidgetDragResidue(page: Page): Promise<void> {
     '[data-pom-part="widget.drag-preview"]',
     '[data-pom-part="widget.drop-overlay"]',
     '[data-pom-part="widget.dock-slot"]',
+    '[data-pom-part="widget.float-preview"]',
+    '[data-widget-arriving]',
     '[data-pom-part="widget.tab-insertion"]',
     '[data-pom-part="tab.drag-preview"]',
     '[data-pom-part="tab.insertion"]'
@@ -104,7 +106,7 @@ export async function expectActiveWidgetDrag(
 ): Promise<InteractionEvidence> {
   const evidence = await captureInteractionEvidence(page, origin);
   expect(evidence.proxyCount).toBe(1);
-  expect(evidence.proxyArticleCount).toBe(0);
+  expect(evidence.proxyArticleCount).toBeGreaterThan(0);
   expect(evidence.proxyInteractiveCount).toBe(0);
   expect(evidence.overlayText).toBe('');
   expect(evidence.originVacant).toBe(true);
@@ -229,7 +231,7 @@ export async function captureInteractionEvidence(page: Page, origin: Locator | s
       proxyCount: document.querySelectorAll('[data-pom-part="widget.drag-preview"]').length,
       proxyText: proxy?.textContent?.trim() ?? '',
       proxyArticleCount: proxy?.querySelectorAll('article').length ?? 0,
-      proxyInteractiveCount: proxy?.querySelectorAll('button,input,select,textarea,a[href],[tabindex]:not([tabindex="-1"])').length ?? 0,
+      proxyInteractiveCount: [...(proxy?.querySelectorAll('button,input,select,textarea,a[href],[tabindex]:not([tabindex="-1"])') ?? [])].filter(node => !node.closest('[inert]')).length,
       overlayText: overlay?.textContent?.trim() ?? '',
       activeReservationCount: document.querySelectorAll('[data-pom-part="widget.dock-slot"], [data-pom-part="widget.tab-insertion"]').length,
       originVacant: visualRoot?.hasAttribute('data-widget-drag-placeholder') ?? false,

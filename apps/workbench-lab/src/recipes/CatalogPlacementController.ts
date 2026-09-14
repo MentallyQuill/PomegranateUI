@@ -6,6 +6,7 @@ import {
   stabilizeDockIntent,
   type DockIntent,
   type DockPoint,
+  type DockRect,
   type DockTarget
 } from './widget-docking.js';
 import {
@@ -15,6 +16,12 @@ import {
   observeDockGeometry,
   type DockPreviewController
 } from './widget-docking-dom.js';
+import { animateWidgetPlacement, captureWidgetRects, finishWidgetMotion, floatingBounds } from './widget-drag-motion.js';
+
+export interface CatalogFloatingTarget extends DockRect {
+  readonly panelId: string;
+  readonly subPanelId?: string;
+}
 
 export type CatalogPlacementInput = 'pointer' | 'keyboard';
 export type CatalogPlacementPhase = 'idle' | 'pressing' | 'lifted';
@@ -70,6 +77,7 @@ export interface CatalogPlacementControllerOptions {
   readonly isPotentialDockTarget?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
   readonly onCommit: (manifest: WidgetManifest, target: CatalogPlacementTarget) => void;
   readonly onDockCommit?: (manifest: WidgetManifest, intent: DockIntent) => void;
+  readonly onFloatCommit?: (manifest: WidgetManifest, target: CatalogFloatingTarget) => void;
   readonly onAnnounce?: (message: string) => void;
   readonly captureScrollAnchor?: () => unknown;
   readonly restoreScrollAnchor?: (anchor: unknown) => void;
@@ -187,6 +195,15 @@ export function createCatalogPlacementController(
   let dockPreview: DockPreviewController | null = null;
   let stopObserving: (() => void) | null = null;
   let revealedDock: 'left' | 'right' | null = null;
+  let floatingTarget: CatalogFloatingTarget | null = null;
+  let floatPreview: HTMLElement | null = null;
+  let stopMotion: (() => void) | null = null;
+  let committing = false;
+  const floatingPanel = () => {
+    const root = options.getTargetRoot();
+    return root instanceof HTMLElement && root.matches('[data-pomegranate-panel]')
+      ? root : root?.querySelector<HTMLElement>('[data-pomegranate-panel]') ?? null;
+  };
   const listeners = new Set<(state: CatalogPlacementState) => void>();
   const targetAttributes = new Map<HTMLElement, {
     readonly placementTarget: string | null;
@@ -283,6 +300,13 @@ export function createCatalogPlacementController(
   };
 
   const reset = () => {
+    committing = false;
+    const finishMotion = stopMotion;
+    stopMotion = null;
+    finishMotion?.();
+    floatPreview?.remove();
+    floatPreview = null;
+    floatingTarget = null;
     const origin = candidate?.origin ?? null;
     const ownerDocument = candidate?.document ?? null;
     const targetRoot = options.getTargetRoot();
@@ -386,6 +410,7 @@ export function createCatalogPlacementController(
     input: CatalogPlacementInput = 'pointer'
   ): boolean => {
     if (!candidate) return false;
+    finishWidgetMotion(candidate.document);
     if (
       candidate.manifest.catalog?.multiplicity === 'single'
       && options.getInstanceCount(candidate.manifest) > 0
@@ -396,14 +421,14 @@ export function createCatalogPlacementController(
     }
     const targetRoot = options.getTargetRoot();
     const richPointer = input === 'pointer'
-      && options.onDockCommit !== undefined
+      && (options.onDockCommit !== undefined || options.onFloatCommit !== undefined)
       && targetRoot instanceof HTMLElement;
     const visibleTargets = compatibleTargets(candidate.manifest);
     const targets = richPointer
       ? compatibleTargets(candidate.manifest, options.isPotentialDockTarget ?? options.isCompatibleTarget)
       : visibleTargets;
     const nextDockTargets = richPointer ? compatibleDockTargets(candidate.manifest, visibleTargets) : Object.freeze([]);
-    if (targets.length === 0) {
+    if (targets.length === 0 && !(richPointer && options.onFloatCommit && floatingPanel())) {
       options.onAnnounce?.(`No compatible target is available for ${candidate.manifest.title}.`);
       reset();
       return false;
@@ -470,21 +495,39 @@ export function createCatalogPlacementController(
         ? `Choose a placement for ${candidate.manifest.title}. Use arrow keys, Enter to place, or Escape to cancel.`
         : `${candidate.manifest.title} lifted. Drag to a highlighted Panel target.`
     }));
+    candidate.document.addEventListener('keydown', handleDocumentKeyDown);
     if (input === 'keyboard') {
-      candidate.document.addEventListener('keydown', handleDocumentKeyDown);
       if (targets[0]) options.requestTargetFocus?.(targets[0].element);
     }
     return true;
   };
 
   function updateDockState(point: DockPoint) {
-    if (!candidate || !dockPreview || !state.proxy) return;
+    if (!candidate || committing || !dockPreview || !state.proxy) return;
     syncCollapsedDockReveal(point);
     const targets = compatibleTargets(candidate.manifest);
     dockTargets = compatibleDockTargets(candidate.manifest, targets);
-    const next = resolveDockIntent(point, dockTargets);
+    const next = options.onDockCommit ? resolveDockIntent(point, dockTargets) : null;
     dockIntent = stabilizeDockIntent(point, dockIntent, next, 10);
     dockIntent = dockPreview.sync(dockTargets, dockIntent);
+    floatingTarget = null;
+    const panel = floatingPanel();
+    const box = panel?.getBoundingClientRect();
+    if (!dockIntent && options.onFloatCommit && panel && box && point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom) {
+      const size = { x: 0, y: 0, width: 360, height: candidate.manifest.catalog?.geometry.idealHeight ?? 360 };
+      const bounds = floatingBounds(dockRectOf(box), size, { x: state.proxy.offsetX, y: state.proxy.offsetY }, point);
+      const subPanelId = panel.querySelector<HTMLElement>('[data-sub-panel]')?.dataset.subPanel;
+      floatingTarget = { ...bounds, panelId: panel.dataset.pomegranatePanel!, ...(subPanelId ? { subPanelId } : {}) };
+      if (!floatPreview) {
+        floatPreview = candidate.document.createElement('div');
+        floatPreview.className = 'widget-float-preview';
+        floatPreview.dataset.pomPart = 'widget.float-preview';
+        floatPreview.setAttribute('aria-hidden', 'true');
+        floatPreview.textContent = 'Float here';
+        (panel.closest('main[data-pom-theme-root]') ?? candidate.document.body).append(floatPreview);
+      }
+      floatPreview.style.cssText = `left:${box.x + bounds.x}px;top:${box.y + bounds.y}px;width:${bounds.width}px;height:${bounds.height}px`;
+    } else { floatPreview?.remove(); floatPreview = null; }
     publish(Object.freeze({
       ...state,
       proxy: Object.freeze({ ...state.proxy, x: point.x, y: point.y }),
@@ -493,7 +536,7 @@ export function createCatalogPlacementController(
   }
 
   function handlePointerMove(event: PointerEvent) {
-    if (!candidate || event.pointerId !== candidate.pointerId) return;
+    if (!candidate || committing || event.pointerId !== candidate.pointerId) return;
     if (state.phase === 'pressing') {
       const distance = Math.hypot(event.clientX - candidate.startX, event.clientY - candidate.startY);
       if (candidate.pointerType === 'touch' && distance > 0) {
@@ -507,7 +550,7 @@ export function createCatalogPlacementController(
     }
     if (state.phase === 'lifted' && state.input === 'pointer' && state.proxy) {
       event.preventDefault();
-      if (options.onDockCommit && dockPreview) {
+      if (dockPreview) {
         updateDockState({ x: event.clientX, y: event.clientY });
         return;
       }
@@ -521,10 +564,14 @@ export function createCatalogPlacementController(
   }
 
   function handlePointerEnd(event: PointerEvent) {
-    if (!candidate || event.pointerId !== candidate.pointerId) return;
+    if (!candidate || committing || event.pointerId !== candidate.pointerId) return;
     if (state.phase === 'lifted') {
       suppressClickBriefly();
       if (event.type !== 'pointercancel' && dockIntent && options.onDockCommit) commitDockIntent();
+      else if (event.type !== 'pointercancel' && floatingTarget && options.onFloatCommit) {
+        const manifest = candidate.manifest, target = floatingTarget;
+        commitWithMotion(() => options.onFloatCommit!(manifest, target));
+      }
       else if (event.type !== 'pointercancel' && state.selectedTargetId) commitSelectedTarget();
       else cancelPlacement();
       return;
@@ -637,16 +684,35 @@ export function createCatalogPlacementController(
     return true;
   };
 
+  const commitWithMotion = (commit: () => void) => {
+    if (!candidate) return false;
+    const document = candidate.document;
+    const held = document.querySelector<HTMLElement>('[data-catalog-placement-proxy]');
+    const before = captureWidgetRects(document);
+    committing = true;
+    removePointerListeners();
+    stopObserving?.();
+    stopObserving = null;
+    dockPreview?.destroy();
+    dockPreview = null;
+    floatPreview?.remove();
+    floatPreview = null;
+    try { commit(); } catch (error) { reset(); throw error; }
+    if (!held) { reset(); return true; }
+    stopMotion = animateWidgetPlacement({
+      document, held, before,
+      destination: () => [...document.querySelectorAll<HTMLElement>('[data-pomegranate-widget]')]
+        .find(node => !node.closest('[data-catalog-placement-proxy]') && !before.has(node.dataset.pomegranateWidget!)) ?? null,
+      finished: () => { stopMotion = null; if (committing) reset(); }
+    });
+    return true;
+  };
+
   const commitDockIntent = () => {
     if (state.phase !== 'lifted' || !candidate || !dockIntent || !options.onDockCommit) return false;
     const activeManifest = candidate.manifest;
     const activeIntent = dockIntent;
-    try {
-      options.onDockCommit(activeManifest, activeIntent);
-    } finally {
-      reset();
-    }
-    return true;
+    return commitWithMotion(() => options.onDockCommit!(activeManifest, activeIntent));
   };
 
   const cancelPlacement = () => {
@@ -659,9 +725,11 @@ export function createCatalogPlacementController(
     if (state.phase !== 'lifted') return false;
     if (event.key === 'Escape') {
       event.preventDefault();
+      event.stopPropagation();
       cancelPlacement();
       return true;
     }
+    if (state.input !== 'keyboard') return false;
     if (event.key === 'Enter') {
       event.preventDefault();
       if (event.repeat) return true;

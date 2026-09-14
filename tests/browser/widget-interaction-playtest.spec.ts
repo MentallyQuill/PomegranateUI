@@ -58,15 +58,17 @@ async function expectSettledDockPreview(page: Page, expectedText: string): Promi
   const preview = page.locator('[data-pom-part="widget.drag-preview"]');
   const destination = page.locator('[data-pom-part="widget.dock-slot"]');
   await expect(preview).not.toHaveAttribute('data-float-ready');
-  await expect(preview).toHaveText(expectedText);
+  await expect(preview).toContainText(expectedText);
   await expect(preview).toHaveCSS('pointer-events', 'none');
   await expect(preview).toHaveCSS('border-style', 'solid');
-  await expect.poll(() => preview.evaluate((node) => getComputedStyle(node).opacity)).toBe('0.9');
+  await expect.poll(() => preview.evaluate((node) => getComputedStyle(node).opacity)).toBe('0.96');
   const previewBox = await preview.boundingBox();
   expect(previewBox).not.toBeNull();
-  expect(previewBox?.width).toBeGreaterThanOrEqual(180);
-  expect(previewBox?.width).toBeLessThanOrEqual(280);
-  expect(previewBox?.height).toBe(42);
+  expect(previewBox?.width).toBeGreaterThan(100);
+  expect(previewBox?.width).toBeLessThanOrEqual(320);
+  expect(previewBox?.height).toBeGreaterThan(64);
+  expect(previewBox?.height).toBeLessThanOrEqual(280);
+  await expect(preview).toHaveAttribute('inert', '');
   await expect(destination).toHaveText('');
   await expect(destination.locator('article, button, input, select, textarea, [data-widget-type]')).toHaveCount(0);
 }

@@ -1892,7 +1892,7 @@ test('grouped Widget tabs reorder when released inside the tab corridor', async 
   await expect(renderedCharacters).toHaveAttribute('data-pomegranate-placement', 'docked');
 });
 
-test('all themes preserve the same compact held-identity docking composition', async ({ page }, testInfo) => {
+test('all themes preserve recognizable inert widget content while docking', async ({ page }, testInfo) => {
   await openDeveloperTools(page);
   const themes = page.getByRole('group', { name: 'Visual target' });
 
@@ -1912,7 +1912,9 @@ test('all themes preserve the same compact held-identity docking composition', a
     await expect(held.locator('xpath=ancestor::main[@data-pom-theme-root]')).toHaveCount(1);
     await expect(held).toHaveAttribute('data-widget-drag-type', 'story.characters');
     await expect(held).toContainText('Characters');
-    await expect(held.locator('article, button, input, select, textarea, a[href]')).toHaveCount(0);
+    await expect(held).toHaveAttribute('inert', '');
+    await expect(held.locator('[data-drag-visual]')).toHaveCount(1);
+    await expect(held.locator('[id], [data-pomegranate-widget]')).toHaveCount(0);
     await expect(page.locator('[data-pom-part="widget.drop-overlay"]')).toHaveText('');
     const [heldBox, snapBox, railCount, colors, viewport] = await Promise.all([
       held.boundingBox(),
@@ -1921,9 +1923,10 @@ test('all themes preserve the same compact held-identity docking composition', a
       held.evaluate((node) => ({ border: getComputedStyle(node).borderColor, background: getComputedStyle(node).backgroundColor })),
       page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }))
     ]);
-    expect(heldBox?.width).toBeGreaterThanOrEqual(180);
-    expect(heldBox?.width).toBeLessThanOrEqual(280);
-    expect(heldBox?.height).toBeCloseTo(42, 1);
+    expect(heldBox?.width).toBeGreaterThan(100);
+    expect(heldBox?.width).toBeLessThanOrEqual(320);
+    expect(heldBox?.height).toBeGreaterThan(64);
+    expect(heldBox?.height).toBeLessThanOrEqual(280);
     expect(heldBox?.x).toBeGreaterThanOrEqual(0);
     expect(heldBox?.y).toBeGreaterThanOrEqual(0);
     expect((heldBox?.x ?? viewport.width) + (heldBox?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
@@ -1955,10 +1958,10 @@ test('all themes preserve the same compact held-identity docking composition', a
       slot.boundingBox(),
       slot.evaluate((node) => ({ border: getComputedStyle(node).borderColor, background: getComputedStyle(node).backgroundColor }))
     ]);
-    expect(slotBox?.height).toBeGreaterThanOrEqual(72);
+    expect(slotBox?.height).toBe(4);
     expect(slotBox?.width).toBeGreaterThan(100);
-    expect(slotMaterial.border).not.toBe('rgba(0, 0, 0, 0)');
-    await testInfo.attach(`welcoming-slot-${theme.toLowerCase().replaceAll(/[^a-z]+/g, '-')}`, {
+    expect(slotMaterial.background).not.toBe('rgba(0, 0, 0, 0)');
+    await testInfo.attach(`insertion-boundary-${theme.toLowerCase().replaceAll(/[^a-z]+/g, '-')}`, {
       body: await page.screenshot(),
       contentType: 'image/png'
     });

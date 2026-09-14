@@ -1089,16 +1089,15 @@ main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .to
   z-index: 2147483001;
   top: 0;
   left: 0;
-  display: flex;
-  align-items: center;
+  display: block;
   box-sizing: border-box;
   overflow: hidden;
-  padding: 0 12px;
+  padding: 0;
   border: 1px solid color-mix(in srgb, var(--pom-color-focus) 86%, white 8%);
   color: var(--ink);
   background: color-mix(in srgb, var(--pom-material-opaque, var(--pom-color-canvas, #071011)) 94%, var(--pom-color-focus) 6%);
   box-shadow: 0 24px 70px rgb(0 0 0 / 68%), 0 0 0 1px color-mix(in srgb, var(--pom-color-focus) 24%, transparent);
-  opacity: .9;
+  opacity: .96;
   pointer-events: none;
   transform-origin: 0 0;
   will-change: transform;
@@ -1113,6 +1112,7 @@ main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .to
 }
 .widget-drag-preview[data-float-ready] { border-style: dashed; opacity: .78; }
 .widget-drag-preview[data-drop-committing] { pointer-events: none; }
+.catalog-placement-proxy { transform: translate3d(var(--pom-placement-x), var(--pom-placement-y), 0); transform-origin: 0 0; }
 .widget-dock-preview-slot {
   position: relative;
   z-index: 3;
@@ -1134,6 +1134,11 @@ main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .to
   border: 1px dashed color-mix(in srgb, var(--pom-color-focus) 52%, transparent);
   content: "";
 }
+.widget-drag-preview [data-drag-visual] { pointer-events: none; }
+.widget-drag-preview .widget-frame { height: 100%; animation: none !important; }
+[data-widget-arriving] { opacity: 0; pointer-events: none; }
+[data-widget-motion-complete] .widget-frame, [data-widget-motion-complete].widget-frame { animation: none !important; }
+.widget-float-preview { position: fixed; z-index: 2147483000; box-sizing: border-box; padding: 10px; border: 2px dashed var(--pom-color-focus); border-radius: var(--pom-radius-medium, 8px); color: var(--ink); background: color-mix(in srgb, var(--pom-color-canvas) 55%, transparent); font: 600 var(--pom-type-xs)/1.3 var(--pom-font-ui); pointer-events: none; }
 .widget-dock-preview-slot[data-drop-widget-boundary] { border: 0; background: var(--pom-color-focus); }
 .widget-dock-preview-slot[data-drop-widget-boundary]::after { content: none; }
 @keyframes dock-slot-welcome {

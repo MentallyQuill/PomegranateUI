@@ -13,6 +13,7 @@ import {
 } from './widget-docking.js';
 import { collectDockTargets, observeDockGeometry, positionWidgetInsertion } from './widget-docking-dom.js';
 import { dragActivationDecision, tabDragDecision } from './tab-reorder.js';
+import { animateWidgetPlacement, captureWidgetRects, createDragVisual, finishWidgetMotion, floatingBounds } from './widget-drag-motion.js';
 
 interface DragCandidate {
   readonly pointerId: number;
@@ -30,6 +31,10 @@ interface DragCandidate {
   readonly origin: WidgetFrameProjection['placement'];
   active: boolean;
   held: HTMLElement | null;
+  heldOffset: DockPoint;
+  floatSize: DockRect;
+  floatPreview: HTMLElement | null;
+  stopMotion: (() => void) | null;
   overlay: HTMLElement | null;
   slot: HTMLElement | null;
   slotIntentKey: string | null;
@@ -62,7 +67,6 @@ interface WidgetDragControllerOptions {
   readonly activation?: 'any' | 'vertical-tearoff' | 'manual';
 }
 
-const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 const panelHoverDelayMs = 350;
 
 function rectOf(rect: DOMRectReadOnly): DockRect {
@@ -193,23 +197,29 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
   }
 
   function createHeldState(current: DragCandidate, event: PointerEvent) {
-    const box = current.visualRoot.getBoundingClientRect();
+    finishWidgetMotion(document);
+    const source = current.visualRoot.closest<HTMLElement>('[data-widget-group]') ?? current.visualRoot;
+    const box = source.getBoundingClientRect();
     const themeRoot = current.surface.closest<HTMLElement>('main[data-pom-theme-root]');
     const overlayOwner = themeRoot ?? document.body;
-    const width = Math.min(Math.max(180, box.width), 280, Math.max(160, window.innerWidth - 16));
-    const height = Math.min(42, Math.max(32, window.innerHeight - 16));
+    const scale = Math.min(1, 320 / box.width, 280 / box.height, (window.innerWidth - 16) / box.width, (window.innerHeight - 16) / box.height);
+    const width = box.width * scale, height = box.height * scale;
+    current.grabX = current.startX - box.x;
+    current.grabY = current.startY - box.y;
+    current.heldOffset = { x: current.grabX * scale, y: current.grabY * scale };
+    const origin = current.origin.kind === 'shelved' ? current.origin.lastVisible : current.origin;
+    current.floatSize = { x: 0, y: 0,
+      width: origin.kind === 'floating' ? origin.width : Math.min(420, Math.max(320, box.width)),
+      height: origin.kind === 'floating' ? origin.height : Math.min(520, Math.max(240, box.height)) };
     const held = document.createElement('div');
     held.className = 'widget-drag-preview';
     held.dataset.pomPart = 'widget.drag-preview';
     held.dataset.widgetDragType = options.getFrame().instance.type;
     held.setAttribute('aria-hidden', 'true');
     held.inert = true;
-    const identity = document.createElement('span');
-    identity.className = 'widget-drag-preview-identity';
-    identity.textContent = current.visualRoot
-      .querySelector<HTMLElement>('[data-pomegranate-widget]')
-      ?.getAttribute('aria-label') ?? options.getFrame().title;
-    held.append(identity);
+    const visual = createDragVisual(source, box.width, box.height);
+    visual.style.transform = `scale(${scale})`;
+    held.append(visual);
     held.style.width = `${width}px`;
     held.style.height = `${height}px`;
     overlayOwner.append(held);
@@ -233,12 +243,9 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     if (!current.held) return;
     const width = Number.parseFloat(current.held.style.width);
     const height = Number.parseFloat(current.held.style.height);
-    const original = current.visualRoot.getBoundingClientRect();
-    const scaleX = original.width > 0 ? width / original.width : 1;
-    const scaleY = original.height > 0 ? height / original.height : 1;
     const next = clampHeldRect(
       { x: event.clientX, y: event.clientY },
-      { x: current.grabX * scaleX, y: current.grabY * scaleY },
+      current.heldOffset,
       { width, height },
       { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight }
     );
@@ -417,6 +424,22 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     current.canFloat = surface ? pointInside(point, rectOf(surface.getBoundingClientRect())) : false;
     paintTargets(current, targets, current.intent);
     current.held?.toggleAttribute('data-float-ready', current.intent === null && current.canFloat);
+    if (!current.intent && current.canFloat && surface) {
+      const surfaceBox = rectOf(surface.getBoundingClientRect());
+      const bounds = floatingBounds(surfaceBox, current.floatSize, { x: current.grabX, y: current.grabY }, point);
+      if (!current.floatPreview) {
+        current.floatPreview = document.createElement('div');
+        current.floatPreview.className = 'widget-float-preview';
+        current.floatPreview.dataset.pomPart = 'widget.float-preview';
+        current.floatPreview.setAttribute('aria-hidden', 'true');
+        current.floatPreview.textContent = 'Float here';
+        (themeRoot(current) ?? document.body).append(current.floatPreview);
+      }
+      positionFixed(current.floatPreview, { ...bounds, x: bounds.x + surfaceBox.x, y: bounds.y + surfaceBox.y });
+    } else {
+      current.floatPreview?.remove();
+      current.floatPreview = null;
+    }
   }
 
   function removeGlobalListeners(current: DragCandidate) {
@@ -433,19 +456,21 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
   function cleanup() {
     if (!candidate) return;
     const current = candidate;
+    candidate = null;
+    current.stopMotion?.();
     const root = themeRoot(current);
     clearPanelHover(current);
     current.visualRoot.classList.remove('is-widget-dragging');
     delete current.visualRoot.dataset.widgetDragPlaceholder;
     current.held?.remove();
+    current.floatPreview?.remove();
     current.overlay?.remove();
     removeSlot(current);
     root?.removeAttribute('data-drag-reveal-left');
     root?.removeAttribute('data-drag-reveal-right');
-    document.body.classList.remove('pom-widget-drag-active');
+    if (!document.querySelector('.widget-drag-preview:not([data-drop-committing])')) document.body.classList.remove('pom-widget-drag-active');
     removeGlobalListeners(current);
     if (current.sourceMounted) options.setDragging(false);
-    candidate = null;
   }
 
   function escapeCancel(event: KeyboardEvent) {
@@ -463,36 +488,34 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     if (candidate && !candidate.committing) cleanup();
   }
 
-  function commitIntent(current: DragCandidate) {
-    if (!current.intent) return;
+  function commitPlacement(current: DragCandidate, commit: () => boolean) {
     current.committing = true;
     const held = current.held;
-    const target = current.slot?.getBoundingClientRect() ?? current.intent.previewRect;
-    const accepted = acceptIntent(current.intent);
-    if (!accepted) {
-      cleanup();
-      return;
-    }
-    if (current.revealedDock === current.intent.regionId) options.onExpandDock?.(current.revealedDock);
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!held || reduceMotion) {
-      cleanup();
-      return;
-    }
-    held.dataset.dropCommitting = 'true';
-    const heldRect = held.getBoundingClientRect();
-    const scaleX = Math.max(.08, target.width / Math.max(1, heldRect.width));
-    const scaleY = Math.max(.08, target.height / Math.max(1, heldRect.height));
-    const animation = held.animate([
-      { transform: getComputedStyle(held).transform, opacity: .9 },
-      { transform: `translate3d(${target.x}px, ${target.y}px, 0) scale(${scaleX}, ${scaleY})`, opacity: .42 }
-    ], { duration: 150, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
-    void animation.finished.catch(() => undefined).then(() => {
-      if (candidate !== current) return;
-      cleanup();
+    const id = options.getFrame().instanceId;
+    const before = captureWidgetRects(document);
+    removeGlobalListeners(current);
+    clearPanelHover(current);
+    removeSlot(current);
+    current.overlay?.remove();
+    current.floatPreview?.remove();
+    if (!commit()) { cleanup(); return; }
+    if (!held) { cleanup(); return; }
+    current.stopMotion = animateWidgetPlacement({
+      document, held, before,
+      destination: () => document.querySelector<HTMLElement>(`[data-pomegranate-widget="${CSS.escape(id)}"]`),
+      finished: () => { if (candidate === current) cleanup(); }
     });
   }
 
+  function commitIntent(current: DragCandidate) {
+    if (!current.intent) return;
+    const intent = current.intent;
+    commitPlacement(current, () => {
+      const accepted = acceptIntent(intent);
+      if (accepted && current.revealedDock === intent.regionId) options.onExpandDock?.(current.revealedDock);
+      return accepted;
+    });
+  }
   function finishPointerUp(event: PointerEvent) {
     if (!candidate || candidate.pointerId !== event.pointerId || candidate.committing) return;
     const current = candidate;
@@ -501,7 +524,10 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         commitIntent(current);
         return;
       }
-      if (current.canFloat) floatAt(current, event);
+      if (current.canFloat) {
+        commitPlacement(current, () => floatAt(current, event));
+        return;
+      }
     }
     cleanup();
   }
@@ -546,7 +572,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
   function movePointer(event: PointerEvent) {
     if (handledPointerMove === event) return;
     handledPointerMove = event;
-    if (!candidate || candidate.pointerId !== event.pointerId) return;
+    if (!candidate || candidate.committing || candidate.pointerId !== event.pointerId) return;
     candidate.lastPoint = { x: event.clientX, y: event.clientY };
     const dx = event.clientX - candidate.startX;
     const dy = event.clientY - candidate.startY;
@@ -582,26 +608,19 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     const state = store.getState();
     const surface = activeSurface(current);
     const panelId = surface?.dataset.pomegranatePanel;
-    if (!surface || !panelId) return;
+    if (!surface || !panelId) return false;
     const panel = state.panels.find((entry) => entry.id === panelId);
-    if (!panel) return;
+    if (!panel) return false;
     const surfaceBox = surface.getBoundingClientRect();
-    const rootBox = current.visualRoot.isConnected
-      ? rectOf(current.visualRoot.getBoundingClientRect())
-      : current.originRect;
-    const width = frame.placement.kind === 'floating' ? frame.placement.width : Math.min(420, Math.max(320, rootBox.width));
-    const height = frame.placement.kind === 'floating' ? frame.placement.height : Math.min(520, Math.max(240, rootBox.height));
-    const maxX = Math.max(8, surfaceBox.width - width - 8);
-    const maxY = Math.max(8, surfaceBox.height - height - 8);
-    const x = clamp(event.clientX - surfaceBox.left - current.grabX, 8, maxX);
-    const y = clamp(event.clientY - surfaceBox.top - current.grabY, 8, maxY);
+    const { x, y, width, height } = floatingBounds(rectOf(surfaceBox), current.floatSize,
+      { x: current.grabX, y: current.grabY }, { x: event.clientX, y: event.clientY });
     const z = Math.max(0, ...Object.values(state.placements).map((placement) => (
       placement.kind === 'floating' ? placement.z : 0
     ))) + 1;
     const visible = visiblePlacement(frame);
     const subPanelId = panel.activeSubPanelId
       ?? (panel.id === visible.panelId ? visible.subPanelId : undefined);
-    store.dispatch({
+    return store.dispatch({
       type: 'widget.place',
       instanceId: frame.instanceId,
       placement: {
@@ -614,7 +633,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         height,
         z
       }
-    });
+    }).ok;
   }
 
   function ownerFields(intent: DockIntent) {
@@ -712,6 +731,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
 
   return Object.freeze({
     pointerDown(event: PointerEvent) {
+      finishWidgetMotion(document);
       if (event.button !== 0 || candidate) return;
       if (event.pointerType === 'touch'
         && (!(event.target instanceof Element) || !event.target.closest('[data-widget-touch-drag-grip]'))) return;
@@ -739,6 +759,10 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         origin: options.getFrame().placement,
         active: false,
         held: null,
+        heldOffset: { x: 0, y: 0 },
+        floatSize: rectOf(box),
+        floatPreview: null,
+        stopMotion: null,
         overlay: null,
         slot: null,
         slotIntentKey: null,
@@ -789,6 +813,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         return;
       }
       if (candidate?.committing) {
+        candidate.sourceMounted = false;
         removeGlobalListeners(candidate);
         return;
       }

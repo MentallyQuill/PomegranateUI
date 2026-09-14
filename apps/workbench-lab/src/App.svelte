@@ -29,7 +29,7 @@
   import ThemeCanvas from './recipes/ThemeCanvas.svelte';
   import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
-  import type { CatalogPlacementTarget } from './recipes/CatalogPlacementController.js';
+  import type { CatalogFloatingTarget, CatalogPlacementTarget } from './recipes/CatalogPlacementController.js';
   import type { DockIntent } from './recipes/widget-docking.js';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
   import WidgetActionMenu from './recipes/WidgetActionMenu.svelte';
@@ -522,6 +522,17 @@
     status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
   }
 
+  function floatFromCatalog(manifest: WidgetManifest, target: CatalogFloatingTarget) {
+    const id = asWidgetInstanceId(`catalog-${manifest.type.replace(/[^a-z0-9]+/gi, '-')}-${workbench.revision + 1}`);
+    const result = store.dispatch({
+      type: 'widget.create',
+      instance: { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} },
+      placement: { kind: 'floating', ...target,
+        z: Math.max(0, ...Object.values(workbench.placements).map(p => p.kind === 'floating' ? p.z : 0)) + 1 }
+    });
+    status = result.ok ? `${manifest.title} placed.` : result.error.message;
+  }
+
   function isPotentialCatalogDockTarget(manifest: WidgetManifest, target: HTMLElement): boolean {
     const panel = activePanel;
     const shape = manifest.catalog?.shape;
@@ -809,6 +820,7 @@
     oncreate={placeFromCatalog}
     ontargetplace={placeFromCatalog}
     ondockplace={placeFromCatalog}
+    onfloatplace={floatFromCatalog}
     getPlacementTargetRoot={() => workbenchElement ?? null}
     isPlacementTargetCompatible={isCatalogPlacementTargetCompatible}
     isPotentialDockTarget={isPotentialCatalogDockTarget}
