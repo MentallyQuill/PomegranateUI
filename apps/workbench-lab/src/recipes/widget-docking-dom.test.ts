@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { resolveDockIntent, stabilizeDockIntent, type DockIntent } from './widget-docking.js';
-import { collectDockTargets, createDockPreviewController } from './widget-docking-dom.js';
+import { collectDockTargets, createDockPreviewController, observeDockGeometry } from './widget-docking-dom.js';
 
 function rect(x: number, y: number, width: number, height: number) {
   return () => new DOMRect(x, y, width, height);
@@ -25,6 +25,28 @@ function addWidget(region: HTMLElement, instanceId: string) {
 }
 
 describe('docking DOM targets', () => {
+  it('refreshes scrolled geometry once per frame and stops after cancellation', async () => {
+    vi.useFakeTimers();
+    const root = document.body.appendChild(document.createElement('div'));
+    const changed = vi.fn();
+    const stop = observeDockGeometry(root, changed);
+    try {
+      root.dispatchEvent(new Event('scroll'));
+      root.dispatchEvent(new Event('scroll'));
+      await vi.advanceTimersByTimeAsync(20);
+      expect(changed).toHaveBeenCalledTimes(1);
+      root.dispatchEvent(new Event('scroll'));
+      stop();
+      window.dispatchEvent(new Event('resize'));
+      await vi.advanceTimersByTimeAsync(40);
+      expect(changed).toHaveBeenCalledTimes(1);
+    } finally {
+      stop();
+      root.remove();
+      vi.useRealTimers();
+    }
+  });
+
   it('collects and previews duplicate toolbar regions by exact column owner', () => {
     const panel = document.body.appendChild(document.createElement('div'));
     panel.dataset.pomegranatePanel = 'scene';

@@ -11,7 +11,7 @@ import {
   type DockRect,
   type DockTarget
 } from './widget-docking.js';
-import { collectDockTargets } from './widget-docking-dom.js';
+import { collectDockTargets, observeDockGeometry } from './widget-docking-dom.js';
 import { dragActivationDecision, tabDragDecision } from './tab-reorder.js';
 
 interface DragCandidate {
@@ -42,6 +42,7 @@ interface DragCandidate {
   hoveredPanelTab: HTMLButtonElement | null;
   hoveredPanelTimer: number | null;
   lastPoint: DockPoint;
+  stopObserving: (() => void) | null;
 }
 
 export interface WidgetDragController {
@@ -116,6 +117,12 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       `[data-pomegranate-panel="${CSS.escape(panelId)}"]`
     );
     if (surface) {
+      if (surface !== current.surface || !current.stopObserving) {
+        current.stopObserving?.();
+        current.stopObserving = observeDockGeometry(surface, () => {
+          if (candidate === current && current.active && !current.committing) updateDropState(current, current.lastPoint);
+        });
+      }
       current.surface = surface;
       syncSourcePlaceholder(current, surface);
     }
@@ -427,6 +434,8 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
   }
 
   function removeGlobalListeners(current: DragCandidate) {
+    current.stopObserving?.();
+    current.stopObserving = null;
     window.removeEventListener('keydown', escapeCancel);
     window.removeEventListener('blur', blurCancel);
     window.removeEventListener('pointermove', windowPointerMove);
@@ -789,7 +798,8 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         switchingPanel: false,
         hoveredPanelTab: null,
         hoveredPanelTimer: null,
-        lastPoint: { x: event.clientX, y: event.clientY }
+        lastPoint: { x: event.clientX, y: event.clientY },
+        stopObserving: null
       };
       handledPointerMove = null;
       try { handle.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers need no capture. */ }

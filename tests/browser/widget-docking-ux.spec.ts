@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { dragToShelfRail, dragToWidgetTab, widgetDragSurface } from './support/widget-interaction-driver.js';
+import { beginPointerDrag, cancelPointerDrag, dragToShelfRail, dragToWidgetTab, widgetDragSurface } from './support/widget-interaction-driver.js';
 
 const themes = ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber'] as const;
 
@@ -42,6 +42,109 @@ test('a singleton fills its shelf after a cross-dock move in every theme', async
     });
     expect(source.widget, `${theme}: source must not retain a phantom row`).toBeGreaterThan(source.shelf - 3);
   }
+});
+
+test('an insertion stays stable under a stationary pointer and one-pixel adjustments', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await freshTheme(page, 'Deep Current');
+  const materials = page.getByRole('article', { name: 'Theme Materials', exact: true });
+  await beginPointerDrag(page, widgetDragSurface(materials));
+  await page.mouse.move(600, 350);
+  const body = await page.getByRole('article', { name: 'World State', exact: true }).locator(':scope > [data-pom-part="widget.content"]').boundingBox();
+  if (!body) throw new Error('Expected World State body geometry.');
+  const preview = page.locator('[data-pom-part="widget.snap-preview"]');
+  const samples = [];
+  const state = () => preview.evaluateAll((nodes) => nodes.map((node) => ({
+    intent: node.getAttribute('data-drop-intent'), region: node.getAttribute('data-drop-region'),
+    y: node.getBoundingClientRect().y
+  })));
+  for (let ratio = 0; ratio <= 1; ratio += .05) {
+    const point = { x: body.x + body.width / 2, y: body.y + body.height * ratio };
+    await page.mouse.move(point.x, point.y);
+    const first = await state();
+    for (const delta of [0, 1, 0, -1, 0]) {
+      await page.mouse.move(point.x + delta, point.y);
+      samples.push({ point, first, next: await state() });
+    }
+  }
+  await testInfo.attach('stationary-preview-samples', { body: JSON.stringify(samples), contentType: 'application/json' });
+  for (const sample of samples) {
+    expect(sample.next.map(({ intent, region }) => ({ intent, region })), JSON.stringify(sample.point))
+      .toEqual(sample.first.map(({ intent, region }) => ({ intent, region })));
+    if (sample.first[0] && sample.next[0]) expect(Math.abs(sample.first[0].y - sample.next[0].y)).toBeLessThanOrEqual(1);
+  }
+  await cancelPointerDrag(page);
+});
+
+test('a held docking preview follows a viewport resize without another pointer move', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await freshTheme(page, 'Deep Current');
+  await beginPointerDrag(page, widgetDragSurface(page.getByRole('article', { name: 'Theme Materials', exact: true })));
+  await page.mouse.move(600, 350);
+  const body = await page.getByRole('article', { name: 'World State', exact: true }).locator(':scope > [data-pom-part="widget.content"]').boundingBox();
+  if (!body) throw new Error('Expected World State body geometry.');
+  await page.mouse.move(body.x + body.width * .8, body.y + body.height * .1);
+  await expect(page.locator('[data-pom-part="widget.dock-slot"]')).toHaveCount(1);
+  await page.setViewportSize({ width: 1360, height: 720 });
+  await expect.poll(async () => {
+    const snap = await page.locator('[data-pom-part="widget.snap-preview"]').boundingBox();
+    const slot = await page.locator('[data-pom-part="widget.dock-slot"]').boundingBox();
+    return snap && slot ? Math.abs(snap.x - slot.x) + Math.abs(snap.width - slot.width) : Infinity;
+  }).toBeLessThanOrEqual(1);
+  await cancelPointerDrag(page);
+});
+
+async function liftCatalogWidget(page: Page) {
+  await page.getByRole('button', { name: 'Open Widget Catalog' }).click();
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const result = catalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
+  await result.scrollIntoViewIfNeeded();
+  const box = await result.boundingBox();
+  if (!box) throw new Error('Expected Catalog result geometry.');
+  await page.mouse.move(box.x + 8, box.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 14, box.y + 8);
+  await expect(catalog).toBeHidden();
+}
+
+test('a Catalog docking preview follows resize without pointer movement', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await freshTheme(page, 'Deep Current');
+  await liftCatalogWidget(page);
+  const body = await page.getByRole('article', { name: 'World State', exact: true }).locator(':scope > [data-pom-part="widget.content"]').boundingBox();
+  if (!body) throw new Error('Expected World State body geometry.');
+  await page.mouse.move(body.x + body.width * .8, body.y + body.height * .1);
+  await expect(page.locator('[data-pom-part="widget.dock-slot"]')).toHaveCount(1);
+  await page.setViewportSize({ width: 1360, height: 720 });
+  await expect.poll(async () => {
+    const snap = await page.locator('[data-pom-part="widget.snap-preview"]').boundingBox();
+    const slot = await page.locator('[data-pom-part="widget.dock-slot"]').boundingBox();
+    return snap && slot ? Math.abs(snap.x - slot.x) + Math.abs(snap.width - slot.width) : Infinity;
+  }).toBeLessThanOrEqual(1);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(page.locator('[data-catalog-placement-proxy]')).toHaveCount(0);
+});
+
+test('Catalog keeps a collapsed dock revealed while moving from its edge into a widget', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await freshTheme(page, 'Deep Current');
+  await page.getByRole('button', { name: 'Close left toolbar' }).click();
+  await liftCatalogWidget(page);
+  const surface = await page.locator('#workbench').boundingBox();
+  if (!surface) throw new Error('Expected Workbench geometry.');
+  await page.mouse.move(surface.x + 4, surface.y + surface.height / 2);
+  const main = page.locator('main[data-pom-theme-root]');
+  await expect(main).toHaveAttribute('data-drag-reveal-left', 'true');
+  const widget = await page.getByRole('article', { name: 'Characters (Story)', exact: true }).boundingBox();
+  if (!widget) throw new Error('Expected revealed widget geometry.');
+  await page.mouse.move(widget.x + widget.width / 2, widget.y + 12, { steps: 8 });
+  await expect(main).toHaveAttribute('data-drag-reveal-left', 'true');
+  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-region', 'left');
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(main).not.toHaveAttribute('data-drag-reveal-left');
+  await expect(main).toHaveClass(/left-collapsed/);
 });
 
 test('moving the final widget out of a shelf removes its space and divider', async ({ page }, testInfo) => {

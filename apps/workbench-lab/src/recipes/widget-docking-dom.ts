@@ -29,6 +29,71 @@ export function collectDockTargets(
   root: ParentNode,
   options: DockTargetCollectionOptions
 ): readonly DockTarget[] {
+  // A reservation may move or shrink its neighbours. Measure their underlying
+  // layout, never the layout produced by our own previous hover decision.
+  // Taking the slot out of flow preserves its identity and running animation.
+  const slots = [...root.querySelectorAll<HTMLElement>('[data-pom-part="widget.dock-slot"]')];
+  const positions = slots.map((slot) => ({
+    slot,
+    value: slot.style.getPropertyValue('position'),
+    priority: slot.style.getPropertyPriority('position')
+  }));
+  for (const { slot } of positions) slot.style.setProperty('position', 'absolute', 'important');
+  try {
+    return readDockTargets(root, options);
+  } finally {
+    for (const { slot, value, priority } of positions) {
+      if (value) slot.style.setProperty('position', value, priority);
+      else slot.style.removeProperty('position');
+    }
+  }
+}
+
+/** Refresh held feedback when geometry changes without a new pointer event. */
+export function observeDockGeometry(root: HTMLElement, changed: () => void): () => void {
+  const view = root.ownerDocument.defaultView;
+  if (!view) return () => undefined;
+  let frame: number | null = null;
+  const schedule = () => {
+    if (frame !== null) return;
+    frame = view.requestAnimationFrame(() => {
+      frame = null;
+      changed();
+    });
+  };
+  const resize = typeof view.ResizeObserver === 'function' ? new view.ResizeObserver(schedule) : null;
+  const refreshElements = () => {
+    resize?.disconnect();
+    resize?.observe(root);
+    for (const element of root.querySelectorAll<HTMLElement>('[data-pomegranate-region-surface], .dock-shelf, .widget-frame')) {
+      if (!element.closest('[data-catalog-placement-proxy], .widget-drag-preview')) resize?.observe(element);
+    }
+  };
+  refreshElements();
+  const mutation = new view.MutationObserver((records) => {
+    if (!records.some(({ target }) => {
+      const element = target instanceof Element ? target : target.parentElement;
+      return !element?.closest('.widget-drop-overlay, .widget-drag-preview, [data-catalog-placement-proxy]');
+    })) return;
+    refreshElements();
+    schedule();
+  });
+  mutation.observe(root, { childList: true, subtree: true });
+  view.addEventListener('resize', schedule);
+  root.ownerDocument.addEventListener('scroll', schedule, true);
+  return () => {
+    if (frame !== null) view.cancelAnimationFrame(frame);
+    resize?.disconnect();
+    mutation.disconnect();
+    view.removeEventListener('resize', schedule);
+    root.ownerDocument.removeEventListener('scroll', schedule, true);
+  };
+}
+
+function readDockTargets(
+  root: ParentNode,
+  options: DockTargetCollectionOptions
+): readonly DockTarget[] {
   const targets: DockTarget[] = [];
   const regions = options.regions
     ?? [...root.querySelectorAll<HTMLElement>('[data-pomegranate-region-surface]')];

@@ -33,9 +33,9 @@ Owners: `apps/workbench-lab/src/recipes/DockShelf.svelte`, `DockRegion.svelte`, 
 
 Owners: `widget-docking.ts`, `widget-docking-dom.ts`, `WidgetDragController.ts`, `CatalogPlacementController.ts`. Tests: corresponding native geometry tests and browser UX suite.
 
-- [ ] Add a regression which repeatedly moves by 0–1 px around a settled insertion preview and asserts destination identity and geometry do not oscillate.
-- [ ] Separate authoritative target geometry from in-layout preview effects; refresh deliberately on actual layout/scroll/panel changes. Use the shared controller for existing and Catalog drags.
-- [ ] Verify before/between/after rails, grouping boundaries, collapsed docks, scrolling and cross-panel retargeting. Ensure the last displayed stable intent is what release commits.
+- [x] Add a regression which repeatedly moves by 0–1 px around a settled insertion preview and asserts destination identity and geometry do not oscillate.
+- [x] Separate authoritative target geometry from in-layout preview effects; refresh deliberately on actual layout/scroll/panel changes. Use shared geometry collection/observation for existing and Catalog drags; unify presentation in item 5.
+- [x] Verify before/between/after rails, grouping boundaries, collapsed docks, scrolling and cross-panel retargeting. Ensure the last displayed stable intent is what release commits.
 
 ## 3. Destination semantics
 
@@ -90,3 +90,5 @@ Owners: `WidgetShelf.svelte`, `WidgetActionMenu.svelte`, shared placement integr
 - Item 1 red: real browser assertion received 129.55 px for a singleton requiring >322.5 px. Native empty-shelf projection assertion also failed before its fix.
 - Item 1 green: three browser tests cover all four themes at 1280x720 and grouped shelves at 1280x580, empty-shelf removal and undo. Screenshots in `test-results/widget-docking-ux-*` were captured with motion enabled; Deep Current and Ash & Amber inspected visually. All 629 native tests (59 files), typecheck, build and recipe verification passed. The registry exposes the same item-count/grid-row hooks, revision 5.
 - Final responsive audit still includes phone/tablet and all placement modalities; item 1's focused evidence does not substitute for that audit.
+- Item 2 red: 0–1 px pointer sweep changed preview Y by 64.61 px; viewport resize left both existing-widget and Catalog previews 80 px behind the slot; Catalog closed a revealed dock when entering its widget. Browser regressions failed before each fix.
+- Item 2 green: underlying geometry excludes temporary slot flow; frame-coalesced geometry observers handle resize, scroll, content changes and active-panel rebinding. Catalog retains a revealed dock until the pointer leaves it. Eleven focused browser tests passed, including cross-panel grouped/ungrouped commits, collapsed-dock cancellation, Catalog layouts, stationary sweep and both resize cases. 47 existing native tests passed; an additional native scroll/coalescing/cancellation regression passed. Typecheck and build passed. Geometry and motion remain separate: continuous arrival and persistent indicators are items 4–5.
