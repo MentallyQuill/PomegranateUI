@@ -1561,12 +1561,12 @@ test('Theme Library bottom-edge chevrons reuse edge tabs outside each toolbar an
   expect(Math.abs(collapsedRightBox.y + collapsedRightBox.height - viewport.height)).toBeLessThan(2);
 });
 
-test('desktop Widget headers replace the ellipsis with context and keyboard actions', async ({ page }) => {
+test('desktop Widget headers expose actions alongside context and keyboard shortcuts', async ({ page }) => {
   const worldState = page.getByRole('article', { name: 'World State' });
   const header = widgetDragSurface(worldState);
   const trigger = header.getByRole('button', { name: 'Widget actions' });
 
-  await expect(trigger).toBeHidden();
+  await expect(trigger).toBeVisible();
   await expect(header).toHaveAttribute('tabindex', '0');
   await expect(header).toHaveAttribute('aria-keyshortcuts', 'Shift+F10');
 
@@ -1607,14 +1607,14 @@ test('desktop Widget headers replace the ellipsis with context and keyboard acti
   await expect(namedGroup.getByRole('tab')).toHaveText(['Room Ambience', 'Promise Ledger', 'World State']);
 });
 
-test('narrow fine-pointer Widgets keep context menus and no touch ellipsis', async ({ page }) => {
+test('narrow fine-pointer Widgets expose actions and retain context menus', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${labOrigin}/?surface=settings.theme-materials`);
   await page.evaluate(() => document.fonts.ready);
   await expect.poll(() => page.evaluate(() => matchMedia('(pointer: fine)').matches)).toBe(true);
 
   const header = widgetDragSurface(page.getByRole('article', { name: 'Theme Materials' }));
-  await expect(header.getByRole('button', { name: 'Widget actions' })).toBeHidden();
+  await expect(header.getByRole('button', { name: 'Widget actions' })).toBeVisible();
   await header.click({ button: 'right' });
   const menu = page.getByRole('menu', { name: 'Theme Materials Widget actions' });
   const box = await menu.boundingBox();
@@ -1689,7 +1689,7 @@ test('right-clicking the open grouped Widget menu never reaches the native brows
   const menu = page.getByRole('menu', { name: 'Room Ambience Widget actions' });
   await expect(menu).toBeVisible();
 
-  await menu.getByRole('separator').click({ button: 'right' });
+  await menu.getByRole('separator').first().click({ button: 'right' });
 
   await expect.poll(() => page.evaluate(() => Reflect.get(window, '__widgetContextPrevented')))
     .toEqual([true, true]);
@@ -1716,7 +1716,8 @@ test.describe('coarse-pointer Widget actions', () => {
     const before = await geometry();
 
     expect(before.trigger.width).toBeGreaterThanOrEqual(44);
-    expect(before.trigger.height).toBeGreaterThanOrEqual(44);
+    expect(before.trigger.height).toBeGreaterThanOrEqual(43.99);
+    await expect(trigger).toHaveCSS('height', '44px');
     expect(before.trigger.x).toBeGreaterThanOrEqual(before.header.x - 1);
     expect(before.trigger.x + before.trigger.width).toBeLessThanOrEqual(before.header.x + before.header.width + 1);
     expect(before.trigger.y).toBeGreaterThanOrEqual(before.header.y - 1);

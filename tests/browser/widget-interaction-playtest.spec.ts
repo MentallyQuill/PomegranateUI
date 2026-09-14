@@ -168,12 +168,12 @@ test('AUDIT-P1-SINGLE-PRESENTATION lifted Widget has one compact payload and one
   await cancelPointerDrag(page);
 });
 
-test('AUDIT-P1-GROUP-ACTIONS desktop grouped Widget tabs expose unobstructed context actions', async ({ page }, testInfo) => {
+test('AUDIT-P1-GROUP-ACTIONS desktop grouped Widget tabs expose unobstructed visible and context actions', async ({ page }, testInfo) => {
   const article = page.getByRole('article', { name: 'Room Ambience' });
   const group = article.locator('xpath=ancestor::*[@data-widget-group][1]');
   const action = group.getByRole('button', { name: 'Widget actions' });
   const activeTab = group.getByRole('tab', { selected: true });
-  await expect(action).toBeHidden();
+  await expect(action).toBeVisible();
   const hit = await activeTab.evaluate((node) => {
     const box = node.getBoundingClientRect();
     const target = document.elementFromPoint(box.right - 4, box.y + box.height / 2);

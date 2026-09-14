@@ -821,6 +821,7 @@
     ontargetplace={placeFromCatalog}
     ondockplace={placeFromCatalog}
     onfloatplace={floatFromCatalog}
+    onpanelactivate={(panelId) => store.dispatch({ type: 'panel.activate', panelId: asPanelId(panelId) }).ok}
     getPlacementTargetRoot={() => workbenchElement ?? null}
     isPlacementTargetCompatible={isCatalogPlacementTargetCompatible}
     isPotentialDockTarget={isPotentialCatalogDockTarget}

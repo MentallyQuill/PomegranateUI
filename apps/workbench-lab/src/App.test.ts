@@ -539,6 +539,9 @@ describe('Svelte Workbench Lab mockup', () => {
     expect(widgetActions).toHaveAttribute('aria-label', 'Room Ambience Widget actions');
     expect(widgetActions).toHaveAttribute('data-fallback-open');
     expect(within(widgetActions).getAllByRole('menuitem', { hidden: true }).map((item) => item.textContent?.trim())).toEqual([
+      'Move tab left',
+      'Move tab right',
+      'Detach from group',
       'Focus',
       'Move…',
       'Remove'

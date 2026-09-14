@@ -1,3 +1,4 @@
+import { panelHoverDelayMs, type PanelHoverHint } from './widget-panel-hover.js';
 import {
   buildShelfRails,
   dockTargetKey,
@@ -15,8 +16,14 @@ export interface DockTargetCollectionOptions {
   readonly ownerForRegion: (region: HTMLElement) => DockOwner | null;
 }
 
+export interface DockPreviewFeedback {
+  readonly heldRect?: DockRect;
+  readonly floatingRect?: DockRect;
+  readonly panelHint?: PanelHoverHint;
+}
+
 export interface DockPreviewController {
-  sync(targets: readonly DockTarget[], intent: DockIntent | null, feedback?: { heldRect?: DockRect; floatingRect?: DockRect }): DockIntent | null;
+  sync(targets: readonly DockTarget[], intent: DockIntent | null, feedback?: DockPreviewFeedback): DockIntent | null;
   setSurface(surface: HTMLElement): void;
   clearSlot(): void;
   getSlotRect(): DOMRect | null;
@@ -289,7 +296,7 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
   };
 
   const mount = (node: HTMLElement) => { if (node.parentElement !== overlay) overlay.append(node); };
-  const paint = (targets: readonly DockTarget[], intent: DockIntent | null, feedback?: { heldRect?: DockRect; floatingRect?: DockRect }) => {
+  const paint = (targets: readonly DockTarget[], intent: DockIntent | null, feedback?: DockPreviewFeedback) => {
     const activeIds = new Set<string>();
     for (const target of targets) {
       if (target.kind !== 'rail') continue;
@@ -314,7 +321,7 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
       if (!activeIds.has(id)) { rail.remove(); rails.delete(id); }
     }
     const floatingRect = !intent ? feedback?.floatingRect : undefined;
-    const rect = intent?.previewRect ?? floatingRect;
+    const rect = feedback?.panelHint?.rect ?? intent?.previewRect ?? floatingRect;
     if (intent) {
       snap.dataset.dropIntent = intent.kind;
       snap.dataset.dropRegion = intent.regionId;
@@ -326,7 +333,9 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
     if (floatingRect) { positionFixed(floating, floatingRect); mount(floating); }
     else floating.remove();
     if (!rect) { label.remove(); return; }
-    const text = intent?.label ?? 'Float here';
+    const text = feedback?.panelHint?.label ?? intent?.label ?? 'Float here';
+    label.toggleAttribute('data-panel-hover-hint', Boolean(feedback?.panelHint));
+    label.style.setProperty('--panel-hover-duration', `${panelHoverDelayMs}ms`);
     if (label.textContent !== text) label.textContent = text;
     mount(label);
     // Anchor to the destination, choosing the nearest side that the held object
@@ -361,7 +370,7 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
       clearSlot();
       surface = next;
     },
-    sync(targets: readonly DockTarget[], intent: DockIntent | null, feedback?: { heldRect?: DockRect; floatingRect?: DockRect }) {
+    sync(targets: readonly DockTarget[], intent: DockIntent | null, feedback?: DockPreviewFeedback) {
       const synced = syncSlot(intent);
       paint(targets, synced, feedback);
       return synced;

@@ -883,7 +883,7 @@ main {
   background: transparent;
   backdrop-filter: none;
 }
-[data-pomegranate-floating-layer] { z-index: 10; }
+[data-pomegranate-floating-layer] { z-index: 30; }
 .left-collapsed .workbench-surface { --pom-left-width: 0px !important; }
 .right-collapsed .workbench-surface { --pom-right-width: 0px !important; }
 .left-collapsed .toolbar-resize-handle[data-dock-resizer="left"],
@@ -2753,7 +2753,7 @@ main[data-pom-chrome-presentation="compact"] .shelf-actions > button:not(:first-
   margin: 0;
   clip: auto;
 }
-main[data-pom-chrome-presentation="compact"] .shelf-actions > [data-pom-action="open-catalog"] {
+main[data-pom-chrome-presentation="compact"] .shelf-actions > :is([data-pom-action="open-catalog"], [data-pom-action="undo-layout"]) {
   position: static;
   display: inline-grid;
   width: 32px;
@@ -2768,7 +2768,7 @@ main[data-pom-chrome-presentation="compact"] .shelf-actions > [data-pom-action="
   clip: auto;
   outline-offset: calc(-1 * (var(--pom-focus-width, 2px) + 1px));
 }
-main[data-pom-action-content="text"][data-pom-chrome-presentation="compact"] .shelf-actions > [data-pom-action="open-catalog"] {
+main[data-pom-action-content="text"][data-pom-chrome-presentation="compact"] .shelf-actions > :is([data-pom-action="open-catalog"], [data-pom-action="undo-layout"]) {
   width: auto;
   padding-inline: 11px;
 }
@@ -3145,7 +3145,7 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
     clip: rect(0 0 0 0);
     transform: none;
   }
-  main[data-pom-shell-presentation="instrumented"] .shelf-actions > [data-pom-action="open-catalog"] {
+  main[data-pom-shell-presentation="instrumented"] .shelf-actions > :is([data-pom-action="open-catalog"], [data-pom-action="undo-layout"]) {
     width: 100px;
     min-width: 100px;
     height: 40px;
@@ -3508,24 +3508,6 @@ main[data-pom-shell-presentation="instrumented"] .panel-navigation .panel-create
     background-size: 10px;
     box-shadow: none;
   }
-  main[data-pom-shell-presentation="instrumented"]:not([data-active-panel="surface-preview"])
-  [data-widget-type="settings.custom-theme"] .widget-frame > header nav {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-  }
-  main[data-pom-shell-presentation="instrumented"]:not([data-active-panel="surface-preview"])
-  [data-widget-type="settings.custom-theme"] .widget-frame > header nav:focus-within {
-    position: static;
-    width: auto;
-    height: auto;
-    margin: 0;
-    overflow: visible;
-    clip: auto;
-  }
   main[data-pom-shell-presentation="instrumented"]
   [data-widget-type="settings.custom-theme"] .widget-frame-heading h2::before {
     display: inline-block;
@@ -3857,7 +3839,7 @@ main[data-pom-theme-root].right-collapsed [data-conformance-region="right"] {
     border: 0;
     clip: rect(0 0 0 0);
   }
-  main[data-pom-shell-presentation="instrumented"] .shelf-actions > [data-pom-action="open-catalog"] {
+  main[data-pom-shell-presentation="instrumented"] .shelf-actions > :is([data-pom-action="open-catalog"], [data-pom-action="undo-layout"]) {
     position: static;
     display: inline-grid;
     width: 44px;
@@ -4357,7 +4339,7 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
     min-width: 44px;
     min-height: 44px;
   }
-  main[data-pom-theme-root] .shelf-actions > [data-pom-action="open-catalog"] {
+  main[data-pom-theme-root] .shelf-actions > :is([data-pom-action="open-catalog"], [data-pom-action="undo-layout"]) {
     width: 44px !important;
     height: 44px !important;
     min-width: 44px !important;
@@ -4365,14 +4347,58 @@ main[data-pom-theme-root] [data-tab-rail-shell]:has(> [data-tab-rail-scroll][dat
   }
 }
 
-/* Widget ellipses and Widget sheets are coarse-pointer controls only. */
+/* Every input exposes actions; coarse pointers retain a larger hit target. */
+main[data-pom-theme-root] :is([data-story-stage], [data-story-composer]) [data-widget-type][data-pomegranate-placement] .widget-frame > header {
+  display: flex;
+  flex-shrink: 0;
+}
+main[data-pom-theme-root] .widget-frame > header > nav:not(.focused-widget-actions) {
+  position: static;
+  display: flex;
+  width: 28px;
+  min-width: 28px;
+  flex: 0 0 28px;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  opacity: 1;
+  translate: none;
+  transform: none;
+  background: transparent;
+}
+main[data-pom-theme-root] .widget-frame > header nav button.widget-actions-trigger,
+main[data-pom-theme-root] .widget-group-header > button.widget-actions-trigger {
+  display: block;
+  box-sizing: border-box;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background-color: transparent;
+  background-size: 12px;
+  color: transparent;
+  font-size: 0;
+  filter: var(--pom-icon-filter, invert(.72));
+}
+main[data-pom-theme-root] .widget-group-header { grid-template-columns: minmax(0, 1fr) 28px; }
+.widget-gesture-help { margin: 4px 6px 8px; color: var(--ink); font: 400 var(--pom-type-xs)/1.5 var(--pom-font-ui); }
+.widget-gesture-description { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+@media (prefers-reduced-motion: no-preference) {
+  [data-panel-hover-hint]::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--pom-color-focus); transform-origin: left; animation: panel-hover-progress var(--panel-hover-duration, 350ms) linear both; }
+}
+@keyframes panel-hover-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
 @media (pointer: coarse) {
   main[data-pom-theme-root] .widget-frame > header {
     height: 46px;
     min-height: 46px;
     padding-right: 0;
   }
-  main[data-pom-theme-root] .widget-frame > header > nav {
+  main[data-pom-theme-root] .widget-frame > header > nav:not(.focused-widget-actions) {
     position: static;
     display: flex;
     width: 44px;

@@ -3,6 +3,14 @@ import { beginPointerDrag, cancelPointerDrag, dragToShelfRail, dragToWidgetTab, 
 
 const themes = ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber'] as const;
 
+async function moveToFloatingSpace(page: Page) {
+  const stage = await page.locator('[data-pomegranate-region-surface="stage"]').boundingBox();
+  if (!stage) throw new Error('Missing stage background');
+  // The transcript now exposes its header and is itself a docking target.
+  // Float in the stage margin, outside the transcript and the shelf rails.
+  await page.mouse.move(stage.x + 8, stage.y + stage.height / 2);
+}
+
 test('held widgets retain recognizable content and a stable grab anchor as shelves resize', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await freshTheme(page, 'Deep Current');
@@ -33,7 +41,7 @@ test('the floating footprint matches the committed widget bounds', async ({ page
   await freshTheme(page, 'Bunny');
   const materials = page.getByRole('article', { name: 'Theme Materials', exact: true });
   await beginPointerDrag(page, widgetDragSurface(materials));
-  await page.mouse.move(630, 270);
+  await moveToFloatingSpace(page);
   const footprint = page.locator('[data-pom-part="widget.float-preview"]');
   await expect(footprint).toBeVisible();
   const expected = await footprint.boundingBox();
@@ -91,7 +99,7 @@ test('interrupting arrival leaves the committed widget visible and allows anothe
   await freshTheme(page, 'Deep Current');
   const materials = page.getByRole('article', { name: 'Theme Materials', exact: true });
   await beginPointerDrag(page, widgetDragSurface(materials));
-  await page.mouse.move(630, 270);
+  await moveToFloatingSpace(page);
   await page.mouse.up();
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await expect(page.locator('[data-pom-part="widget.drag-preview"], [data-widget-arriving]')).toHaveCount(0);
@@ -226,7 +234,7 @@ for (const source of ['existing', 'Catalog'] as const) {
       expect(await page.evaluate(() => (window as any).__indicatorNodes.every((node: Element) => node.isConnected))).toBe(true);
       const label = page.locator('.widget-drop-intent-label');
       for (const [ratio, text] of [[.5, 'Group with World State'], [.1, 'Insert before World State'], [.9, 'Insert after World State'], [-1, 'Float here']] as const) {
-        if (ratio < 0) await page.mouse.move(620, 200);
+        if (ratio < 0) await moveToFloatingSpace(page);
         else await page.mouse.move(x, body.y + body.height * ratio);
         await expect(label).toHaveText(text);
         await expect(label).toBeVisible();
@@ -255,7 +263,7 @@ for (const source of ['existing', 'Catalog'] as const) {
         if (ratio >= 0) expect(await page.evaluate(() => (window as any).__indicatorNodes.every((node: Element) => node.isConnected))).toBe(true);
         if (ratio === .5 || ratio === .1) await page.screenshot({ path: testInfo.outputPath(`${source}-${theme}-${ratio === .5 ? 'group' : 'insert'}.png`) });
       }
-      await page.mouse.move(620, 200);
+      await moveToFloatingSpace(page);
       await expect(label).toHaveText('Float here');
       await expect(page.locator('.widget-snap-preview')).toHaveCount(0);
       await expect(page.locator('.widget-float-preview')).toBeVisible();
@@ -276,7 +284,7 @@ for (const destination of ['dock', 'float'] as const) {
       const box = await page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="right"][data-drop-rail-kind="before"]').boundingBox();
       if (!box) throw new Error('Expected Catalog rail.');
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    } else await page.mouse.move(630, 270);
+    } else await moveToFloatingSpace(page);
     const footprint = destination === 'float' ? page.locator('[data-pom-part="widget.float-preview"]') : null;
     if (footprint) await expect(footprint).toBeVisible();
     const expected = await footprint?.boundingBox();
@@ -314,7 +322,7 @@ for (const source of ['existing', 'Catalog'] as const) {
     await freshTheme(page, 'Bunny');
     if (source === 'Catalog') await liftCatalogWidget(page);
     else await beginPointerDrag(page, widgetDragSurface(page.getByRole('article', { name: 'Theme Materials', exact: true })));
-    await page.mouse.move(630, 270);
+    await moveToFloatingSpace(page);
     await expect(page.locator('[data-pom-part="widget.float-preview"]')).toBeVisible();
     await page.mouse.up();
     await expect(page.locator('[data-pom-part="widget.drag-preview"], [data-catalog-placement-proxy], [data-widget-arriving], [data-pom-part="widget.float-preview"]')).toHaveCount(0);
@@ -330,7 +338,7 @@ for (const source of ['existing', 'Catalog'] as const) {
       const before = await page.locator('main').getAttribute('data-workbench-revision');
       if (source === 'Catalog') await liftCatalogWidget(page);
       else await beginPointerDrag(page, widgetDragSurface(page.getByRole('article', { name: 'Theme Materials', exact: true })));
-      await page.mouse.move(630, 270);
+      await moveToFloatingSpace(page);
       await expect(page.locator('[data-pom-part="widget.float-preview"]')).toBeVisible();
       if (cancel === 'Escape') await page.keyboard.press('Escape');
       else if (cancel === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));

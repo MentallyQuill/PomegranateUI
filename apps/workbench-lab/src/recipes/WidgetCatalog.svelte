@@ -30,6 +30,7 @@
     ontargetplace,
     ondockplace,
     onfloatplace,
+    onpanelactivate,
     getPlacementTargetRoot,
     isPlacementTargetCompatible,
     isPotentialDockTarget,
@@ -45,6 +46,7 @@
     ontargetplace?: (manifest: WidgetManifest, target: CatalogPlacementTarget) => void;
     ondockplace?: (manifest: WidgetManifest, intent: DockIntent) => void;
     onfloatplace?: (manifest: WidgetManifest, target: CatalogFloatingTarget) => void;
+    onpanelactivate?: (panelId: string) => boolean;
     getPlacementTargetRoot?: () => ParentNode | null;
     isPlacementTargetCompatible?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
     isPotentialDockTarget?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
@@ -306,6 +308,7 @@
           ontargetplace(manifest, target);
         },
         ...(onfloatplace ? { onFloatCommit: onfloatplace } : {}),
+        ...(onpanelactivate ? { onPanelActivate: onpanelactivate } : {}),
         ...(ondockplace ? {
           onDockCommit: (manifest: WidgetManifest, intent: DockIntent) => {
             placementAnnouncement = `${manifest.title} placement committed.`;

@@ -5,15 +5,17 @@
 
   function reserveDraftSpace(node: HTMLDivElement) {
     if (typeof ResizeObserver === 'undefined') return;
+    const header = node.closest('.widget-frame')?.querySelector<HTMLElement>(':scope > header');
     let panel: HTMLElement | null = null;
     const update = () => {
       const owner = node.closest<HTMLElement>('.panel-template-surface');
       if (owner !== panel) panel?.style.removeProperty('--pom-composer-height');
       panel = owner;
-      panel?.style.setProperty('--pom-composer-height', `${Math.ceil(node.getBoundingClientRect().height)}px`);
+      panel?.style.setProperty('--pom-composer-height', `${Math.ceil(node.getBoundingClientRect().height + (header?.getBoundingClientRect().height ?? 0))}px`);
     };
     const observer = new ResizeObserver(update);
     observer.observe(node);
+    if (header) observer.observe(header);
     update();
     return { destroy() { observer.disconnect(); panel?.style.removeProperty('--pom-composer-height'); } };
   }

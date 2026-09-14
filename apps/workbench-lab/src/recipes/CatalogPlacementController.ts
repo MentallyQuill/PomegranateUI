@@ -17,6 +17,7 @@ import {
   type DockPreviewController
 } from './widget-docking-dom.js';
 import { animateWidgetPlacement, captureWidgetRects, finishWidgetMotion, floatingBounds } from './widget-drag-motion.js';
+import { createWidgetPanelHover, type WidgetPanelHover } from './widget-panel-hover.js';
 
 export interface CatalogFloatingTarget extends DockRect {
   readonly panelId: string;
@@ -78,6 +79,7 @@ export interface CatalogPlacementControllerOptions {
   readonly onCommit: (manifest: WidgetManifest, target: CatalogPlacementTarget) => void;
   readonly onDockCommit?: (manifest: WidgetManifest, intent: DockIntent) => void;
   readonly onFloatCommit?: (manifest: WidgetManifest, target: CatalogFloatingTarget) => void;
+  readonly onPanelActivate?: (panelId: string) => boolean;
   readonly onAnnounce?: (message: string) => void;
   readonly captureScrollAnchor?: () => unknown;
   readonly restoreScrollAnchor?: (anchor: unknown) => void;
@@ -198,6 +200,7 @@ export function createCatalogPlacementController(
   let floatingTarget: CatalogFloatingTarget | null = null;
   let stopMotion: (() => void) | null = null;
   let committing = false;
+  let panelHover: WidgetPanelHover | null = null;
   const floatingPanel = () => {
     const root = options.getTargetRoot();
     return root instanceof HTMLElement && root.matches('[data-pomegranate-panel]')
@@ -299,6 +302,8 @@ export function createCatalogPlacementController(
   };
 
   const reset = () => {
+    panelHover?.clear();
+    panelHover = null;
     committing = false;
     const finishMotion = stopMotion;
     stopMotion = null;
@@ -459,6 +464,31 @@ export function createCatalogPlacementController(
     options.catalog.suspend();
     suspended = true;
     if (richPointer) {
+      if (options.onPanelActivate) panelHover = createWidgetPanelHover(
+        () => {
+          const root = options.getTargetRoot();
+          return root instanceof HTMLElement ? root.closest<HTMLElement>('main[data-pom-theme-root]') : null;
+        },
+        (panelId) => {
+          if (!candidate || committing) return;
+          const liftedCandidate = candidate;
+          dockIntent = null;
+          floatingTarget = null;
+          dockPreview?.sync([], null);
+          if (!options.onPanelActivate!(panelId)) return;
+          candidate.document.defaultView?.requestAnimationFrame(() => {
+            if (candidate !== liftedCandidate || committing || !state.proxy) return;
+            const root = options.getTargetRoot();
+            if (!(root instanceof HTMLElement)) return;
+            dockPreview?.setSurface(root);
+            stopObserving?.();
+            stopObserving = observeDockGeometry(root, () => {
+              if (state.proxy) updateDockState({ x: state.proxy.x, y: state.proxy.y });
+            });
+            updateDockState({ x: state.proxy.x, y: state.proxy.y });
+          });
+        }
+      );
       const root = options.getTargetRoot();
       if (root instanceof HTMLElement) {
         dockTargets = nextDockTargets;
@@ -501,6 +531,7 @@ export function createCatalogPlacementController(
 
   function updateDockState(point: DockPoint) {
     if (!candidate || committing || !dockPreview || !state.proxy) return;
+    panelHover?.update(point);
     syncCollapsedDockReveal(point);
     const targets = compatibleTargets(candidate.manifest);
     dockTargets = compatibleDockTargets(candidate.manifest, targets);
@@ -519,6 +550,7 @@ export function createCatalogPlacementController(
     }
     dockIntent = dockPreview.sync(dockTargets, dockIntent, {
       heldRect: { x: point.x - state.proxy.offsetX, y: point.y - state.proxy.offsetY, width: state.proxy.width, height: state.proxy.height },
+      ...(panelHover?.getHint() ? { panelHint: panelHover.getHint()! } : {}),
       ...(floatingRect ? { floatingRect } : {})
     });
     publish(Object.freeze({
@@ -679,6 +711,7 @@ export function createCatalogPlacementController(
 
   const commitWithMotion = (commit: () => void) => {
     if (!candidate) return false;
+    panelHover?.clear();
     const document = candidate.document;
     const held = document.querySelector<HTMLElement>('[data-catalog-placement-proxy]');
     const before = captureWidgetRects(document);

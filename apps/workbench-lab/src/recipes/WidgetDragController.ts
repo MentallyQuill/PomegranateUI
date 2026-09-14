@@ -12,6 +12,7 @@ import {
   type DockTarget
 } from './widget-docking.js';
 import { collectDockTargets, observeDockGeometry, createDockPreviewController, type DockPreviewController } from './widget-docking-dom.js';
+import { createWidgetPanelHover, type WidgetPanelHover } from './widget-panel-hover.js';
 import { dragActivationDecision, tabDragDecision } from './tab-reorder.js';
 import { animateWidgetPlacement, captureWidgetRects, createDragVisual, finishWidgetMotion, floatingBounds } from './widget-drag-motion.js';
 
@@ -41,8 +42,7 @@ interface DragCandidate {
   committing: boolean;
   sourceMounted: boolean;
   switchingPanel: boolean;
-  hoveredPanelTab: HTMLButtonElement | null;
-  hoveredPanelTimer: number | null;
+  panelHover: WidgetPanelHover | null;
   lastPoint: DockPoint;
   stopObserving: (() => void) | null;
 }
@@ -63,8 +63,6 @@ interface WidgetDragControllerOptions {
   readonly onExpandDock?: ((edge: 'left' | 'right') => void) | undefined;
   readonly activation?: 'any' | 'vertical-tearoff' | 'manual';
 }
-
-const panelHoverDelayMs = 350;
 
 function rectOf(rect: DOMRectReadOnly): DockRect {
   return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
@@ -124,22 +122,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     return surface;
   }
 
-  function clearPanelHover(current: DragCandidate) {
-    if (current.hoveredPanelTimer !== null) window.clearTimeout(current.hoveredPanelTimer);
-    current.hoveredPanelTimer = null;
-    current.hoveredPanelTab?.removeAttribute('data-widget-drag-hover');
-    current.hoveredPanelTab = null;
-  }
-
-  function panelTabAtPoint(current: DragCandidate, point: DockPoint): HTMLButtonElement | null {
-    const root = themeRoot(current);
-    if (!root) return null;
-    for (const tab of root.querySelectorAll<HTMLButtonElement>('[data-pomegranate-panel-tab] > [role="tab"]')) {
-      const rect = rectOf(tab.getBoundingClientRect());
-      if (rect.width > 0 && rect.height > 0 && pointInside(point, rect)) return tab;
-    }
-    return null;
-  }
+  function clearPanelHover(current: DragCandidate) { current.panelHover?.clear(); }
 
   function finishPanelSwitch(current: DragCandidate, panelId: string) {
     if (candidate !== current) return;
@@ -149,13 +132,8 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     updateDropState(current, current.lastPoint);
   }
 
-  function activateHoveredPanel(current: DragCandidate, tab: HTMLButtonElement) {
-    if (candidate !== current || !current.active || current.hoveredPanelTab !== tab) return;
-    const panelId = tab.closest<HTMLElement>('[data-pomegranate-panel-tab]')?.dataset.pomegranatePanelTab;
-    if (!panelId || options.getStore().getState().activePanelId === panelId) {
-      clearPanelHover(current);
-      return;
-    }
+  function activateHoveredPanel(current: DragCandidate, panelId: string) {
+    if (candidate !== current || !current.active || options.getStore().getState().activePanelId === panelId) return;
     current.switchingPanel = true;
     current.intent = null;
     current.canFloat = false;
@@ -170,29 +148,14 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     window.requestAnimationFrame(() => finishPanelSwitch(current, panelId));
   }
 
-  function syncPanelHover(current: DragCandidate, point: DockPoint) {
-    const tab = panelTabAtPoint(current, point);
-    const targetPanelId = tab?.closest<HTMLElement>('[data-pomegranate-panel-tab]')?.dataset.pomegranatePanelTab;
-    if (!tab || !targetPanelId || targetPanelId === options.getStore().getState().activePanelId) {
-      clearPanelHover(current);
-      return;
-    }
-    if (current.hoveredPanelTab === tab) return;
-    clearPanelHover(current);
-    current.hoveredPanelTab = tab;
-    tab.dataset.widgetDragHover = 'true';
-    current.hoveredPanelTimer = window.setTimeout(
-      () => activateHoveredPanel(current, tab),
-      panelHoverDelayMs
-    );
-  }
+  function syncPanelHover(current: DragCandidate, point: DockPoint) { current.panelHover?.update(point); }
 
   function createHeldState(current: DragCandidate, event: PointerEvent) {
     finishWidgetMotion(document);
     const source = current.visualRoot.closest<HTMLElement>('[data-widget-group]') ?? current.visualRoot;
     const box = source.getBoundingClientRect();
-    const themeRoot = current.surface.closest<HTMLElement>('main[data-pom-theme-root]');
-    const overlayOwner = themeRoot ?? document.body;
+    const root = current.surface.closest<HTMLElement>('main[data-pom-theme-root]');
+    const overlayOwner = root ?? document.body;
     const scale = Math.min(1, 320 / box.width, 280 / box.height, (window.innerWidth - 16) / box.width, (window.innerHeight - 16) / box.height);
     const width = box.width * scale, height = box.height * scale;
     current.grabX = current.startX - box.x;
@@ -217,6 +180,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
 
     current.held = held;
     current.preview = createDockPreviewController(current.surface);
+    current.panelHover = createWidgetPanelHover(() => themeRoot(current), panelId => activateHoveredPanel(current, panelId));
     current.visualRoot.classList.add('is-widget-dragging');
     current.visualRoot.dataset.widgetDragPlaceholder = 'true';
     document.body.classList.add('pom-widget-drag-active');
@@ -315,7 +279,8 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     }
     current.intent = current.preview?.sync(targets, current.intent, {
       ...(current.held ? { heldRect: rectOf(current.held.getBoundingClientRect()) } : {}),
-      ...(floatingRect ? { floatingRect } : {})
+      ...(floatingRect ? { floatingRect } : {}),
+      ...(current.panelHover?.getHint() ? { panelHint: current.panelHover.getHint()! } : {})
     }) ?? current.intent;
   }
 
@@ -644,8 +609,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
         committing: false,
         sourceMounted: true,
         switchingPanel: false,
-        hoveredPanelTab: null,
-        hoveredPanelTimer: null,
+        panelHover: null,
         lastPoint: { x: event.clientX, y: event.clientY },
         stopObserving: null
       };
