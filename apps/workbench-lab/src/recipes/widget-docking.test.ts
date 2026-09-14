@@ -178,6 +178,18 @@ describe('Atmospheric docking intent', () => {
     expect(stabilizeDockIntent({ x: 120, y: 265 }, center, after, 10)).toBe(after);
   });
 
+  it('lets a deliberate rail hit escape an overlapping widget insertion zone', () => {
+    const region = { x: 20, y: 40, width: 280, height: 240 };
+    const rails = buildShelfRails(region, [{ id: 'primary', order: 0, rect: region }], { panelId: 'scene', regionId: 'left' });
+    const previous = resolveDockIntent({ x: 120, y: 260 }, [widget])!;
+    const rail = rails.find(target => target.railKind === 'append')!;
+    const point = { x: 120, y: rail.rect.y + rail.rect.height / 2 };
+    const next = resolveDockIntent(point, [widget, rail])!;
+    expect(next.kind).toBe('shelf');
+    expect(stabilizeDockIntent(point, previous, next)).toBe(next);
+    expect(stabilizeDockIntent({ x: 120, y: rail.rect.y + 1 }, previous, next)).toBe(previous);
+  });
+
   it('preserves the grab offset while clamping a held card to the viewport', () => {
     expect(clampHeldRect(
       { x: 1180, y: 760 },

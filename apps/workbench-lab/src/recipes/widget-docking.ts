@@ -243,6 +243,10 @@ export function stabilizeDockIntent(
     || previous.dockColumn !== next.dockColumn
     || previous.regionId !== next.regionId
   )) return next;
+  // A broad widget zone can cover an entire shelf rail. Preserve edge jitter
+  // tolerance, but let the rail's interior express a deliberate new-shelf drop.
+  if (next?.kind === 'shelf' && previous.kind !== 'shelf'
+    && contains(next.targetRect, point, -2)) return next;
   return contains(previous.targetRect, point, hysteresis) ? previous : next;
 }
 

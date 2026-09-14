@@ -171,7 +171,7 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     held.dataset.widgetDragType = options.getFrame().instance.type;
     held.setAttribute('aria-hidden', 'true');
     held.inert = true;
-    const visual = createDragVisual(source, box.width, box.height);
+    const visual = createDragVisual(source, box.width, box.height, options.getFrame().instanceId);
     visual.style.transform = `scale(${scale})`;
     held.append(visual);
     held.style.width = `${width}px`;

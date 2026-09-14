@@ -183,7 +183,7 @@ test('Deep Current preserves the Atmospheric shell with readable content and an 
   if (composerBackdropFilter !== 'none') findings.push(`Composer overlay must not blur the Atmospheric canvas; found ${composerBackdropFilter}`);
   if (!portraitStatus.loaded) findings.push(`Expected four loaded character portraits, found ${portraitStatus.count}`);
   if (placementRailCount !== 0) findings.push(`Hover exposed ${placementRailCount} placement rail`);
-  if (actionMenuCount !== 0) findings.push(`Expected no visible desktop Widget actions triggers, found ${actionMenuCount}`);
+  if (actionMenuCount !== 6) findings.push(`Expected six discoverable actions triggers for the visible Widgets and group, found ${actionMenuCount}`);
   if (!pixels.compatible) findings.push('Candidate screenshot dimensions differ from the authority');
 
   const report = {

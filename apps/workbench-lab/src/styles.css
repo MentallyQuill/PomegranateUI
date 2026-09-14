@@ -4995,3 +4995,25 @@ main[data-pom-theme-root] .shelf-actions > .widget-shelf[data-widget-shelf] {
   main[data-pom-theme-root] .workbench-developer-drawer,
   main[data-pom-theme-root] .widget-shelf > button { height: 44px; min-height: 44px; }
 }
+
+/* Short windows keep the title separate and spend remaining height on prose.
+   Flow layouts already reserve the Composer row; only overlays reserve it here. */
+@media (max-height: 620px) {
+  main[data-pom-theme-root] [data-story-composer] > .dock-region[data-conformance-region="composer"] {
+    translate: none;
+  }
+  main[data-pom-theme-root] [data-story-stage] [data-widget-type="story.transcript"][data-pomegranate-placement] {
+    top: 64px;
+    bottom: 8px;
+    height: auto;
+  }
+  main[data-pom-theme-root] [data-story-stage] [data-widget-type="story.transcript"] .widget-frame > [data-pom-part="widget.content"] {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+@media (max-height: 620px) and (max-width: 1180px) {
+  main[data-pom-theme-root][data-pom-shell-presentation="instrumented"] [data-story-stage] [data-widget-type="story.transcript"][data-pomegranate-placement] {
+    bottom: calc(var(--pom-composer-height, 78px) + 28px);
+  }
+}

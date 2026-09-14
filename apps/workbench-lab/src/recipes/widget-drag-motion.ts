@@ -13,8 +13,15 @@ export function captureWidgetRects(root: ParentNode): ReadonlyMap<string, DOMRec
 }
 
 /** An inert snapshot, with no duplicate identities or active form controls. */
-export function createDragVisual(source: HTMLElement, width: number, height: number): HTMLElement {
+export function createDragVisual(source: HTMLElement, width: number, height: number, instanceId?: string): HTMLElement {
   const clone = source.cloneNode(true) as HTMLElement;
+  if (instanceId && clone.matches('[data-widget-group]')) {
+    clone.querySelector('.widget-gesture-description')?.remove();
+    for (const tab of clone.querySelectorAll<HTMLElement>('[data-group-tab]')) {
+      if (tab.dataset.groupTab !== instanceId) (tab.closest('[data-tab-reorder-item]') ?? tab).remove();
+      else tab.setAttribute('aria-selected', 'true');
+    }
+  }
   clone.dataset.dragVisual = 'true';
   clone.classList.remove('is-widget-dragging');
   clone.removeAttribute('data-widget-drag-placeholder');

@@ -302,7 +302,7 @@ test('composition metadata and icon art survive data-only theme compilation', as
     await expect(root).toHaveAttribute('data-pom-widget-grouping', /^(individual|unified)$/);
     await expect(root).toHaveAttribute('data-pom-chrome-presentation', /^(compact|overlay|full)$/);
     await expect(root).toHaveAttribute('data-pom-action-presentation', /^(compact|hover-focus|full|always)$/);
-    await expect(page.locator('.widget-actions-trigger:visible')).toHaveCount(0);
+    await expect(page.locator('.widget-actions-trigger:visible')).toHaveCount(6);
     const image = await page.getByRole('article', { name: 'World State' })
       .locator('button.widget-actions-trigger')
       .evaluate((button) => getComputedStyle(button).backgroundImage);
@@ -555,8 +555,8 @@ test('Bunny keeps the compact reader expressive, contained, and responsive', asy
     return {
       scrollWidth: document.documentElement.scrollWidth,
       viewportWidth: document.documentElement.clientWidth,
-      leftDisplay: getComputedStyle(leftDock).display,
-      rightDisplay: getComputedStyle(rightDock).display,
+      leftVisibility: getComputedStyle(leftDock).visibility,
+      rightVisibility: getComputedStyle(rightDock).visibility,
       readerRadius: readerStyle.borderRadius,
       readerImage: readerStyle.backgroundImage,
       fontSize: typeStyle.fontSize,
@@ -573,8 +573,8 @@ test('Bunny keeps the compact reader expressive, contained, and responsive', asy
   expect(evidence).toMatchObject({
     viewportWidth: 390,
     scrollWidth: 390,
-    leftDisplay: 'none',
-    rightDisplay: 'none',
+    leftVisibility: 'hidden',
+    rightVisibility: 'hidden',
     readerRadius: '18px',
     fontSize: '14px',
     lineHeight: '21.7px',
@@ -976,6 +976,7 @@ test('Ash readability expression leaves shared Theme authoring typography compac
 });
 
 test('an external non-preset definition renders the same live Workbench tree', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await fresh(page);
   const deepRail = await technicalRailPresentation(page);
 
@@ -1050,6 +1051,10 @@ test('an external non-preset definition renders the same live Workbench tree', a
   await expect.poll(() => page.locator('[data-pom-part="row.surface"][data-pom-spacing="recipe"]').first()
     .evaluate((row) => getComputedStyle(row).paddingTop)).toBe('6px');
   if (process.platform === 'win32') {
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
     await expect(page).toHaveScreenshot('external-copper-fixture.png', { animations: 'disabled', caret: 'hide' });
   }
 });

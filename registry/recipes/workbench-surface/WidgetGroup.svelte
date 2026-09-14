@@ -129,7 +129,7 @@
   .widget-group-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-width: 0; }
   .widget-group-tabs { display: flex; min-width: 0; overflow-x: auto; }
   .widget-actions-trigger { display: block; width: 32px; min-width: 32px; height: 32px; min-height: 32px; overflow: hidden; font-size: 0; }
-  .widget-actions-trigger::after { content: "…"; font-size: 20px; }
+  .widget-actions-trigger::after { content: "â€¦"; font-size: 20px; }
 
   @media (pointer: coarse) {
     .widget-group-header { grid-template-columns: minmax(0, 1fr) 44px; min-height: 44px; }

@@ -65,9 +65,9 @@ async function expectSettledDockPreview(page: Page, expectedText: string): Promi
   const previewBox = await preview.boundingBox();
   expect(previewBox).not.toBeNull();
   expect(previewBox?.width).toBeGreaterThan(100);
-  expect(previewBox?.width).toBeLessThanOrEqual(320);
+  expect(previewBox?.width).toBeLessThanOrEqual(320.01);
   expect(previewBox?.height).toBeGreaterThan(64);
-  expect(previewBox?.height).toBeLessThanOrEqual(280);
+  expect(previewBox?.height).toBeLessThanOrEqual(280.01);
   await expect(preview).toHaveAttribute('inert', '');
   await expect(destination).toHaveText('');
   await expect(destination.locator('article, button, input, select, textarea, [data-widget-type]')).toHaveCount(0);

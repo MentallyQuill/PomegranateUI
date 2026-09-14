@@ -1039,10 +1039,9 @@ test('Story toolbar columns add inward and populated removal warns, cancels, con
   await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 12, sourceBox.y + sourceBox.height / 2 + 12, { steps: 3 });
-  const innerRail = page.locator('[data-pom-part="widget.drop-rail"][data-drop-region="left"][data-drop-column="1"]').last();
-  const railBox = await innerRail.boundingBox();
-  if (!railBox) throw new Error('Expected an inner-column drop rail.');
-  await page.mouse.move(railBox.x + railBox.width / 2, railBox.y + railBox.height / 2, { steps: 6 });
+  const emptyColumn = await columns('left').nth(1).boundingBox();
+  if (!emptyColumn) throw new Error('Expected an empty inner-column destination.');
+  await page.mouse.move(emptyColumn.x + emptyColumn.width / 2, emptyColumn.y + emptyColumn.height / 2, { steps: 6 });
   await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-column', '1');
   await page.mouse.up();
   await expect(inner.getByRole('article', { name: 'World State' })).toBeVisible();
@@ -1285,6 +1284,7 @@ test('Deep Current pointer drag floats and subsequently moves a Widget within th
 
   const floating = page.locator('[data-widget-type="story.room-ambience"][data-pomegranate-placement="floating"]');
   await expect(floating).toBeVisible();
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
   const first = await floating.boundingBox();
   if (!first) throw new Error('Expected floating Widget geometry.');
   const floatingHandle = widgetDragSurface(floating);
@@ -1294,6 +1294,7 @@ test('Deep Current pointer drag floats and subsequently moves a Widget within th
     x: floatingHandleBox.x + floatingHandleBox.width / 2 + 60,
     y: floatingHandleBox.y + floatingHandleBox.height / 2 + 40
   });
+  await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
   const second = await floating.boundingBox();
   expect(second?.x).toBeGreaterThan(first.x + 20);
   expect(second?.y).toBeGreaterThan(first.y + 10);
@@ -1819,7 +1820,7 @@ test('Deep Current held Widget exposes inert content, rails, and a grouping cue'
   await expect(characters).toHaveAttribute('data-pomegranate-edge', 'left');
 });
 
-test('held Widget leaves a vacant origin and a full-size in-layout welcoming slot', async ({ page }) => {
+test('held Widget leaves a vacant origin and a stable widget-boundary insertion cue', async ({ page }) => {
   const source = page.locator('[data-widget-type="story.characters"]').first();
   const target = page.getByRole('article', { name: 'World State' });
   const handleBox = await widgetDragSurface(source).boundingBox();
@@ -1835,9 +1836,10 @@ test('held Widget leaves a vacant origin and a full-size in-layout welcoming slo
   await expect(slot).toBeVisible();
   const slotBox = await slot.boundingBox();
   const during = await target.boundingBox();
-  expect(slotBox?.height).toBeGreaterThanOrEqual(72);
+  await expect(slot).toHaveAttribute('data-drop-widget-boundary', 'true');
+  expect(slotBox?.height).toBe(4);
   expect(slotBox?.width).toBeGreaterThan(100);
-  expect(during?.y).toBeGreaterThan((before?.y ?? 0) + 50);
+  expect(Math.abs((during?.y ?? 0) - before.y)).toBeLessThan(4);
 
   await page.keyboard.press('Escape');
   await page.mouse.up();
@@ -1861,7 +1863,8 @@ test('dragging to a collapsed edge reveals and widens that dock before commit', 
   await expect(page.locator('[data-conformance-region="left"]')).toBeVisible();
   const slot = page.locator('[data-pom-part="widget.dock-slot"]');
   await expect(slot).toBeVisible();
-  expect((await slot.boundingBox())?.height).toBeGreaterThanOrEqual(72);
+  await expect(slot).toHaveAttribute('data-drop-widget-boundary', 'true');
+  expect((await slot.boundingBox())?.height).toBe(4);
   await page.mouse.up();
   await expect(page.getByRole('article', { name: 'Room Ambience' }).locator('xpath=ancestor::*[@data-widget-type][1]'))
     .toHaveAttribute('data-pomegranate-edge', 'left');
@@ -2871,7 +2874,10 @@ test('Catalog pointer drag exposes populated dock rails and widget body docking 
   const placed = page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])');
   await expect(placed).toHaveCount(1);
   await expect(placed).toHaveAttribute('data-pomegranate-region', 'left');
-  await expect(placed).not.toHaveAttribute('data-pomegranate-shelf', 'primary');
+  await expect(placed).toHaveAttribute('data-pomegranate-shelf', 'primary');
+  await expect(placed).toHaveAttribute('data-pomegranate-order', '1');
+  await expect(page.locator('[data-conformance-region="left"] [data-widget-type="settings.theme-materials"]'))
+    .toHaveAttribute('data-pomegranate-order', '2');
   await expect(page.locator('[data-pom-part="widget.drop-overlay"], [data-pom-part="widget.dock-slot"]')).toHaveCount(0);
 });
 
