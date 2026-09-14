@@ -11,7 +11,7 @@ import {
   type DockRect,
   type DockTarget
 } from './widget-docking.js';
-import { collectDockTargets, observeDockGeometry } from './widget-docking-dom.js';
+import { collectDockTargets, observeDockGeometry, positionWidgetInsertion } from './widget-docking-dom.js';
 import { dragActivationDecision, tabDragDecision } from './tab-reorder.js';
 
 interface DragCandidate {
@@ -286,17 +286,6 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
       }) ?? null;
   }
 
-  function shelfForTarget(region: HTMLElement, intent: DockIntent) {
-    if (intent.shelfId) {
-      const direct = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')]
-        .find((shelf) => shelf.dataset.pomegranateShelf === intent.shelfId);
-      if (direct) return direct;
-    }
-    if (!intent.targetInstanceId) return null;
-    return region.querySelector<HTMLElement>(`[data-pomegranate-widget="${CSS.escape(intent.targetInstanceId)}"]`)
-      ?.closest<HTMLElement>('.dock-shelf') ?? null;
-  }
-
   function removeSlot(current: DragCandidate) {
     current.slot?.remove();
     current.slot = null;
@@ -323,23 +312,20 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
     const slot = current.slot;
     slot.dataset.dropIntent = intent.kind;
     slot.dataset.dropRegion = intent.regionId;
+    if (intent.kind === 'insert-before' || intent.kind === 'insert-after') {
+      current.slotIntentKey = intent.key;
+      return positionWidgetInsertion(slot, region, intent);
+    }
+    delete slot.dataset.dropWidgetBoundary;
+    slot.style.cssText = '';
     slot.style.setProperty('--pom-dock-preview-size', `${Math.max(72, Math.min(112, intent.previewRect.height))}px`);
 
     if (current.slotIntentKey !== intent.key || !slot.isConnected) {
       const shelves = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')];
       if (intent.kind === 'shelf') {
-        const before = shelves[intent.insertOrder ?? shelves.length];
+        const before = shelves.find(shelf => Number(shelf.dataset.pomegranateShelfOrder) >= (intent.insertOrder ?? Infinity));
         if (before) region.insertBefore(slot, before);
         else region.append(slot);
-      } else if (intent.kind === 'insert-before' || intent.kind === 'insert-after') {
-        const shelf = shelfForTarget(region, intent);
-        if (shelf && intent.kind === 'insert-before') region.insertBefore(slot, shelf);
-        else if (shelf) {
-          const resizeHandle = shelf.nextElementSibling?.classList.contains('shelf-resize-handle')
-            ? shelf.nextElementSibling
-            : null;
-          (resizeHandle ?? shelf).after(slot);
-        } else region.append(slot);
       } else region.append(slot);
       current.slotIntentKey = intent.key;
     }
@@ -668,48 +654,14 @@ export function createWidgetDragController(options: WidgetDragControllerOptions)
   function acceptIntent(intent: DockIntent): boolean {
     const frame = options.getFrame();
     const store = options.getStore();
-    if (intent.kind === 'tab' && intent.targetInstanceId) {
-      const targetId = asWidgetInstanceId(intent.targetInstanceId);
-      const target = store.getState().placements[targetId];
-      if (target?.kind !== 'docked') return false;
-      const source = visiblePlacement(frame);
-      if (source.kind !== 'docked'
-        || source.panelId !== target.panelId
-        || source.subPanelId !== target.subPanelId) {
-        const placed = store.dispatch({
-          type: 'widget.place',
-          instanceId: frame.instanceId,
-          placement: {
-            kind: 'docked',
-            panelId: target.panelId,
-            ...(target.subPanelId === undefined || target.lane === undefined ? {} : { subPanelId: target.subPanelId, lane: target.lane }),
-            regionId: target.regionId,
-            shelfId: target.shelfId,
-            order: target.order + 1
-          }
-        });
-        if (!placed.ok) return false;
-      }
+    if ((intent.kind === 'tab' || intent.kind === 'insert-before' || intent.kind === 'insert-after') && intent.targetInstanceId) {
       return store.dispatch({
-        type: 'widget.group',
+        type: 'widget.place-relative',
         instanceId: frame.instanceId,
-        targetInstanceId: targetId,
-        groupId: target.group?.id ?? intent.groupId ?? `group-${targetId}`
+        targetInstanceId: asWidgetInstanceId(intent.targetInstanceId),
+        relation: intent.kind === 'tab' ? 'tab' : intent.kind === 'insert-before' ? 'before' : 'after'
       }).ok;
     }
-
-    if (intent.kind === 'insert-before' || intent.kind === 'insert-after') {
-      const state = store.getState();
-      const targetShelf = state.shelves.find((shelf) => (
-        shelf.panelId === intent.panelId
-        && shelf.regionId === intent.regionId
-        && (shelf.dockColumn ?? 0) === (intent.dockColumn ?? 0)
-        && shelf.id === intent.shelfId
-      ));
-      if (!targetShelf) return false;
-      return createShelfAndPlace(intent, targetShelf.order + (intent.kind === 'insert-after' ? 1 : 0));
-    }
-
     if (intent.kind === 'shelf') {
       return createShelfAndPlace(intent, intent.insertOrder ?? 0);
     }

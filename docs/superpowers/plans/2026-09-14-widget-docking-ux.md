@@ -41,9 +41,9 @@ Owners: `widget-docking.ts`, `widget-docking-dom.ts`, `WidgetDragController.ts`,
 
 Owners: `widget-docking.ts`, both placement controllers, `packages/contracts/src`, `packages/layout/src/operations.ts`, `packages/core/src/store.ts` as needed for one atomic command.
 
-- [ ] Regress insertion between two widgets sharing a shelf, including a group and multiple dock columns.
-- [ ] Represent widget-relative insertion explicitly and commit that position atomically; shelf rails remain shelf-relative. Preserve untouched ordering, ownership, undo and rejected-operation atomicity.
-- [ ] Verify preview and final neighbour order agree for before/after, same-shelf moves and Catalog additions.
+- [x] Regress insertion between two widgets sharing a shelf, including a group and multiple dock columns.
+- [x] Represent widget-relative insertion explicitly and commit that position atomically; shelf rails remain shelf-relative. Preserve untouched ordering, ownership, undo and rejected-operation atomicity.
+- [x] Verify preview and final neighbour order agree for before/after, same-shelf moves and Catalog additions.
 
 ## 4. Continuous motion
 
@@ -92,3 +92,7 @@ Owners: `WidgetShelf.svelte`, `WidgetActionMenu.svelte`, shared placement integr
 - Final responsive audit still includes phone/tablet and all placement modalities; item 1's focused evidence does not substitute for that audit.
 - Item 2 red: 0–1 px pointer sweep changed preview Y by 64.61 px; viewport resize left both existing-widget and Catalog previews 80 px behind the slot; Catalog closed a revealed dock when entering its widget. Browser regressions failed before each fix.
 - Item 2 green: underlying geometry excludes temporary slot flow; frame-coalesced geometry observers handle resize, scroll, content changes and active-panel rebinding. Catalog retains a revealed dock until the pointer leaves it. Eleven focused browser tests passed, including cross-panel grouped/ungrouped commits, collapsed-dock cancellation, Catalog layouts, stationary sweep and both resize cases. 47 existing native tests passed; an additional native scroll/coalescing/cancellation regression passed. Typecheck and build passed. Geometry and motion remain separate: continuous arrival and persistent indicators are items 4–5.
+- Item 3 red: four browser cases placed before/after markers 293–345 px from the requested widget boundary. Eight native relative-placement cases initially rejected the missing command. Additional regressions exposed persisted shelf-order gaps, cross-column shelf indexing/weight errors (requested .7 became .9032), and group-height mutation on an unrelated panel with the same group id.
+- Item 3 implementation: `widget.place-relative` parses source/optional new instance, target and before/after/tab relation. Layout resolves order after removing the source, treats target groups as one item and publishes one revision/event/undo step. Catalog and existing-widget controllers share it. Widget-relative markers use the widget/group boundary; shelf rails still create shelves and retain persisted order indices. Column and group ownership are scoped correctly.
+- Item 3 verification: all 647 native tests (60 files) passed; build, typecheck and recipe verification passed. Four real browser before/after cases cover existing/Catalog widgets and a grouped target, with motion-enabled before/after screenshots and undo. Screenshots inspected. Eighteen repeated browser runs cover these cases and cross-panel grouped/ungrouped docking.
+- Follow-up for item 5: one cross-panel browser run during simultaneous native/browser load encountered a transient missing rail element, while the held widget and slot remained present. Both controllers still replace overlay children on refresh. The same six scenarios passed three consecutive runs without concurrent native load. Retain indicator nodes in item 5 and verify this under load; do not treat a retry as resolving DOM churn.

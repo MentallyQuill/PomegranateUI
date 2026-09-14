@@ -113,6 +113,18 @@ describe('Atmospheric docking intent', () => {
     expect(dockRevealSide({ x: 25, y: 20 }, surface, 34)).toBeNull();
   });
 
+  it('keeps rail insertion orders tied to persisted shelves when empty shelves are omitted', () => {
+    const rails = buildShelfRails(
+      { x: 0, y: 0, width: 300, height: 500 },
+      [
+        { id: 'first-visible', order: 1, rect: { x: 0, y: 20, width: 300, height: 200 } },
+        { id: 'last-visible', order: 3, rect: { x: 0, y: 230, width: 300, height: 200 } }
+      ],
+      { panelId: 'scene', regionId: 'left' }
+    );
+    expect(rails.map(rail => rail.insertOrder)).toEqual([1, 3, 4, 4]);
+  });
+
   it('uses a full region target when empty and otherwise falls back to float', () => {
     const region: DockTarget = {
       id: 'region:right',

@@ -107,6 +107,41 @@ async function liftCatalogWidget(page: Page) {
   await expect(catalog).toBeHidden();
 }
 
+for (const source of ['existing', 'Catalog'] as const) {
+  for (const relation of ['before', 'after'] as const) {
+    test(`${source} ${relation} insertion uses the widget boundary within a shared shelf`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await freshTheme(page, 'Bunny');
+      const targetName = relation === 'after' ? 'World State' : 'Room Ambience';
+      const target = page.getByRole('article', { name: targetName, exact: true });
+      if (source === 'existing') await beginPointerDrag(page, widgetDragSurface(page.getByRole('article', { name: 'Theme Materials', exact: true })));
+      else await liftCatalogWidget(page);
+      await page.mouse.move(600, 350);
+      const body = await target.locator(':scope > [data-pom-part="widget.content"]').boundingBox();
+      if (!body) throw new Error('Expected target body geometry.');
+      await page.mouse.move(body.x + body.width / 2, body.y + body.height * (relation === 'before' ? .1 : .9));
+      await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveAttribute('data-drop-intent', `insert-${relation}`);
+      const slot = await page.locator('[data-pom-part="widget.dock-slot"]').boundingBox();
+      const targetBox = await target.evaluate(node => (node.closest('[data-widget-group]') ?? node).getBoundingClientRect().toJSON());
+      expect(slot).not.toBeNull();
+      expect(Math.abs(slot!.y + slot!.height / 2 - (relation === 'before' ? targetBox!.y : targetBox!.y + targetBox!.height))).toBeLessThanOrEqual(6);
+      await page.screenshot({ path: testInfo.outputPath('before-release.png') });
+      await page.mouse.up();
+      await expect(page.locator('[data-pom-part="widget.drag-preview"], [data-catalog-placement-proxy]')).toHaveCount(0);
+      if (source === 'Catalog') await page.getByRole('button', { name: 'Close Widget Catalog' }).click();
+      const right = page.getByRole('region', { name: 'Right instruments column 1', exact: true });
+      await expect(right.locator(':scope > .dock-shelf')).toHaveCount(1);
+      const titles = await right.locator('[data-pomegranate-widget]').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')));
+      expect(titles[0]).toBe('World State');
+      expect(titles[2]).toBe('Room Ambience');
+      expect(titles[1]).toBe(source === 'existing' ? 'Theme Materials' : 'Library');
+      await page.screenshot({ path: testInfo.outputPath('after-release.png') });
+      await page.getByRole('button', { name: 'Undo layout', exact: true }).click();
+      await expect(right.locator('[data-pomegranate-widget]')).toHaveCount(2);
+    });
+  }
+}
+
 test('a Catalog docking preview follows resize without pointer movement', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await freshTheme(page, 'Deep Current');

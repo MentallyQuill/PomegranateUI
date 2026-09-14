@@ -293,7 +293,7 @@ export function buildShelfRails(
     rect: railRect(region, first.rect.y - 6),
     previewRect: railPreviewRect(region, first.rect.y),
     railKind: 'before',
-    insertOrder: 0,
+    insertOrder: first.order,
     label: 'New shelf before'
   });
   for (let index = 1; index < ordered.length; index += 1) {
@@ -306,7 +306,7 @@ export function buildShelfRails(
       rect: railRect(region, (previous.rect.y + previous.rect.height + next.rect.y) / 2),
       previewRect: railPreviewRect(region, (previous.rect.y + previous.rect.height + next.rect.y) / 2),
       railKind: 'between',
-      insertOrder: index,
+      insertOrder: next.order,
       label: 'New shelf between'
     });
   }
@@ -318,7 +318,7 @@ export function buildShelfRails(
     rect: railRect(region, Math.min(last.rect.y + last.rect.height + 6, region.y + region.height - 28)),
     previewRect: railPreviewRect(region, last.rect.y + last.rect.height),
     railKind: 'after',
-    insertOrder: ordered.length,
+    insertOrder: last.order + 1,
     label: 'New shelf after'
   });
   targets.push({
@@ -328,7 +328,7 @@ export function buildShelfRails(
     rect: railRect(region, region.y + region.height - 8, 16),
     previewRect: railPreviewRect(region, region.y + region.height),
     railKind: 'append',
-    insertOrder: ordered.length,
+    insertOrder: last.order + 1,
     label: 'Append shelf'
   });
   return targets;

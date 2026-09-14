@@ -1134,6 +1134,8 @@ main[data-pom-toolbar-toggle-presentation="bottom-chevrons"].right-collapsed .to
   border: 1px dashed color-mix(in srgb, var(--pom-color-focus) 52%, transparent);
   content: "";
 }
+.widget-dock-preview-slot[data-drop-widget-boundary] { border: 0; background: var(--pom-color-focus); }
+.widget-dock-preview-slot[data-drop-widget-boundary]::after { content: none; }
 @keyframes dock-slot-welcome {
   from { opacity: 0; }
   to { opacity: 1; }

@@ -395,41 +395,20 @@
         ...(intent.subPanelId === undefined ? {} : { subPanelId: asSubPanelId(intent.subPanelId), lane: intent.lane ?? 0 }),
         regionId: intent.regionId
       };
-      if (intent.kind === 'tab' && intent.targetInstanceId) {
-        const targetId = asWidgetInstanceId(intent.targetInstanceId);
-        const targetPlacement = workbench.placements[targetId];
-        if (targetPlacement?.kind !== 'docked') return;
+      if ((intent.kind === 'tab' || intent.kind === 'insert-before' || intent.kind === 'insert-after') && intent.targetInstanceId) {
         const result = store.dispatch({
-          type: 'widget.create-and-group',
+          type: 'widget.place-relative',
+          instanceId: id,
           instance,
-          placement: {
-            kind: 'docked',
-            panelId: targetPlacement.panelId,
-            ...(targetPlacement.subPanelId === undefined || targetPlacement.lane === undefined
-              ? {}
-              : { subPanelId: targetPlacement.subPanelId, lane: targetPlacement.lane }),
-            regionId: targetPlacement.regionId,
-            shelfId: targetPlacement.shelfId,
-            order: targetPlacement.order + 1
-          },
-          targetInstanceId: targetId,
-          groupId: targetPlacement.group?.id ?? intent.groupId ?? `group-${targetId}`
+          targetInstanceId: asWidgetInstanceId(intent.targetInstanceId),
+          relation: intent.kind === 'tab' ? 'tab' : intent.kind === 'insert-before' ? 'before' : 'after'
         });
         status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
         return;
       }
 
-      if (intent.kind === 'shelf' || intent.kind === 'insert-before' || intent.kind === 'insert-after') {
-        const targetShelf = intent.shelfId
-          ? workbench.shelves.find((shelf) => shelf.panelId === panelId
-            && shelf.regionId === intent.regionId
-            && (shelf.dockColumn ?? 0) === (intent.dockColumn ?? 0)
-            && shelf.id === intent.shelfId)
-          : undefined;
-        const shelfOrder = intent.kind === 'shelf'
-          ? intent.insertOrder ?? 0
-          : targetShelf ? targetShelf.order + (intent.kind === 'insert-after' ? 1 : 0) : null;
-        if (shelfOrder === null) return;
+      if (intent.kind === 'shelf') {
+        const shelfOrder = intent.insertOrder ?? 0;
         const shelfId = `${intent.regionId}-shelf-${workbench.revision + 1}`;
         const result = store.dispatch({
           type: 'shelf.create-and-place',

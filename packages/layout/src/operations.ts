@@ -112,6 +112,8 @@ function placeInRecord(
   const siblings = Object.entries(normalized).filter(([, candidate]) => (
     candidate.kind === 'docked'
       && candidate.panelId === placement.panelId
+      && candidate.subPanelId === placement.subPanelId
+      && candidate.lane === placement.lane
       && placement.kind === 'docked'
       && candidate.regionId === placement.regionId
       && candidate.shelfId === placement.shelfId
@@ -461,7 +463,9 @@ export function mergeWidgetGroup(
   });
   const members = Object.entries(moved)
     .filter(([id, placement]) => id === targetInstanceId || id === instanceId
-      || (placement.kind === 'docked' && placement.group?.id === targetGroupId))
+      || (placement.kind === 'docked' && placement.group?.id === targetGroupId
+        && placement.panelId === target.panelId && placement.subPanelId === target.subPanelId
+        && placement.lane === target.lane && placement.regionId === target.regionId && placement.shelfId === target.shelfId))
     .sort(([leftId, left], [rightId, right]) => {
       const leftOrder = leftId === targetInstanceId ? -1 : left.kind === 'docked' ? (left.group?.order ?? left.order) : 0;
       const rightOrder = rightId === targetInstanceId ? -1 : right.kind === 'docked' ? (right.group?.order ?? right.order) : 0;
@@ -679,6 +683,50 @@ export function placeWidget(
   });
 }
 
+/** Place beside a visible item (a group counts as one), or join its tabs, atomically. */
+export function placeWidgetRelative(
+  state: WorkbenchState,
+  instanceId: WidgetInstanceId,
+  targetInstanceId: WidgetInstanceId,
+  relation: 'before' | 'after' | 'tab',
+  context: PlacementContext,
+  instance?: WidgetInstance
+): LayoutResult {
+  if (instanceId === targetInstanceId || (instance && instance.id !== instanceId)) {
+    return rejectLayout(state, 'INVALID_PLACEMENT', 'Source and target Widget identities must be distinct and valid.');
+  }
+  if (!state.widgets[targetInstanceId]) return rejectLayout(state, 'MISSING_WIDGET', 'The target Widget does not exist.');
+  // Remove the source before resolving order, so same-shelf moves cannot shift
+  // their own target. Keep the original state as the rollback boundary.
+  const withoutSource = { ...state.placements };
+  delete withoutSource[instanceId];
+  const placements = normalizeTabGroups(normalizeDockOrders(withoutSource));
+  const target = placements[targetInstanceId];
+  if (target?.kind !== 'docked') return rejectLayout(state, 'INVALID_PLACEMENT', 'The target Widget must be docked.');
+  const members = Object.values(placements).filter((p): p is DockedPlacement => p.kind === 'docked'
+    && p.panelId === target.panelId && p.subPanelId === target.subPanelId && p.lane === target.lane
+    && p.regionId === target.regionId && p.shelfId === target.shelfId
+    && (target.group ? p.group?.id === target.group.id : p === target));
+  const orders = members.map(p => p.order);
+  const placement: DockedPlacement = {
+    kind: 'docked', panelId: target.panelId,
+    ...(target.subPanelId === undefined ? {} : { subPanelId: target.subPanelId }),
+    ...(target.lane === undefined ? {} : { lane: target.lane }),
+    regionId: target.regionId, shelfId: target.shelfId,
+    order: relation === 'before' ? Math.min(...orders) : Math.max(...orders) + 1
+  };
+  const prepared = { ...state, placements };
+  const placed = instance
+    ? createWidget(prepared, instance, placement, context)
+    : placeWidget(prepared, instanceId, placement, context);
+  if (!placed.ok) return { ok: false, state, error: placed.error };
+  const result = relation === 'tab'
+    ? mergeWidgetGroup(placed.state, instanceId, targetInstanceId, target.group?.id ?? `group-${targetInstanceId}`)
+    : placed;
+  if (!result.ok) return { ok: false, state, error: result.error };
+  return acceptLayout({ ...result.state, revision: nextRevision(state) });
+}
+
 export function renamePanel(state: WorkbenchState, panelId: PanelId, name: string): LayoutResult {
   const index = state.panels.findIndex((panel) => panel.id === panelId);
   if (index < 0) return rejectLayout(state, 'MISSING_PANEL', `Panel '${panelId}' does not exist.`);
@@ -840,15 +888,17 @@ export function createShelf(
   if (!resolution.template.regions.some((region) => region.id === shelf.regionId)) {
     return rejectLayout(state, 'INVALID_PLACEMENT', `Region '${shelf.regionId}' does not exist in Panel '${panel.id}'.`);
   }
-  const siblings = state.shelves.filter((candidate) => candidate.panelId === shelf.panelId && candidate.regionId === shelf.regionId);
-  if (siblings.some((candidate) => candidate.id === shelf.id)) {
+  const regionShelves = state.shelves.filter((candidate) => candidate.panelId === shelf.panelId && candidate.regionId === shelf.regionId);
+  const siblings = regionShelves.filter(candidate => (candidate.dockColumn ?? 0) === (shelf.dockColumn ?? 0));
+  if (regionShelves.some((candidate) => candidate.id === shelf.id)) {
     return rejectLayout(state, 'DUPLICATE_ID', `Shelf '${shelf.id}' already exists in region '${shelf.regionId}'.`);
   }
   if (!Number.isInteger(shelf.order) || shelf.order < 0 || shelf.order > siblings.length) {
     return rejectLayout(state, 'INVALID_INDEX', 'Shelf insertion index is outside the region.');
   }
   const shifted = state.shelves.map((candidate) => (
-    candidate.panelId === shelf.panelId && candidate.regionId === shelf.regionId && candidate.order >= shelf.order
+    candidate.panelId === shelf.panelId && candidate.regionId === shelf.regionId
+      && (candidate.dockColumn ?? 0) === (shelf.dockColumn ?? 0) && candidate.order >= shelf.order
       ? { ...candidate, order: candidate.order + 1 }
       : candidate
   ));
@@ -885,11 +935,11 @@ export function createShelfWithWidget(
 }
 
 export function resizeShelf(state: WorkbenchState, key: ShelfKey, weight: number): LayoutResult {
-  const siblings = state.shelves
-    .filter((candidate) => candidate.panelId === key.panelId && candidate.regionId === key.regionId)
-    .sort((left, right) => left.order - right.order);
-  const selected = siblings.find((candidate) => candidate.id === key.shelfId);
+  const regionShelves = state.shelves.filter(candidate => candidate.panelId === key.panelId && candidate.regionId === key.regionId);
+  const selected = regionShelves.find((candidate) => candidate.id === key.shelfId);
   if (!selected) return rejectLayout(state, 'MISSING_SHELF', `Shelf '${key.shelfId}' does not exist.`);
+  const siblings = regionShelves.filter(candidate => (candidate.dockColumn ?? 0) === (selected.dockColumn ?? 0))
+    .sort((left, right) => left.order - right.order);
   if (!Number.isFinite(weight)) return rejectLayout(state, 'INVALID_INDEX', 'Shelf weight must be finite.');
   const maximum = siblings.length === 1 ? 1 : 1 - 0.05 * (siblings.length - 1);
   const requested = Math.min(maximum, Math.max(siblings.length === 1 ? 1 : 0.05, weight));
@@ -903,6 +953,7 @@ export function resizeShelf(state: WorkbenchState, key: ShelfKey, weight: number
   }
   const shelves = state.shelves.map((candidate) => (
     candidate.panelId === key.panelId && candidate.regionId === key.regionId
+      && (candidate.dockColumn ?? 0) === (selected.dockColumn ?? 0)
       ? { ...candidate, weight: replacement.get(candidate.id) ?? candidate.weight }
       : candidate
   ));

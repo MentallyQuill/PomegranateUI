@@ -25,6 +25,26 @@ export function dockRectOf(rect: DOMRectReadOnly): DockRect {
   return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 }
 
+/** Widget insertion marks the item boundary; shelf rails reserve a new shelf. */
+export function positionWidgetInsertion(slot: HTMLElement, region: HTMLElement, intent: DockIntent): DockIntent {
+  const article = intent.targetInstanceId
+    ? region.querySelector<HTMLElement>(`[data-pomegranate-widget="${CSS.escape(intent.targetInstanceId)}"]`)
+    : null;
+  const item = article?.closest<HTMLElement>('[data-widget-group]')
+    ?? article?.closest<HTMLElement>('[data-widget-type]') ?? article;
+  if (!item) return intent;
+  slot.style.position = 'fixed';
+  const rect = item.getBoundingClientRect();
+  const previewRect = { x: rect.x, y: (intent.kind === 'insert-before' ? rect.y : rect.bottom) - 2, width: rect.width, height: 4 };
+  slot.dataset.dropWidgetBoundary = 'true';
+  slot.style.cssText = `position:fixed;left:${previewRect.x}px;top:${previewRect.y}px;width:${previewRect.width}px;height:4px;min-height:4px;`;
+  // Filtered dock surfaces establish containing blocks for fixed children.
+  // Keep viewport coordinates in the same portal as the overlay.
+  const portal = region.closest<HTMLElement>('main[data-pom-theme-root]') ?? region.ownerDocument.body;
+  if (slot.parentElement !== portal) portal.append(slot);
+  return { ...intent, previewRect };
+}
+
 export function collectDockTargets(
   root: ParentNode,
   options: DockTargetCollectionOptions
@@ -210,17 +230,6 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
       .find((region) => ownerMatches(region, intent)) ?? null
   );
 
-  const shelfForTarget = (region: HTMLElement, intent: DockIntent) => {
-    if (intent.shelfId) {
-      const direct = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')]
-        .find((shelf) => shelf.dataset.pomegranateShelf === intent.shelfId);
-      if (direct) return direct;
-    }
-    if (!intent.targetInstanceId) return null;
-    return region.querySelector<HTMLElement>(`[data-pomegranate-widget="${CSS.escape(intent.targetInstanceId)}"]`)
-      ?.closest<HTMLElement>('.dock-shelf') ?? null;
-  };
-
   const clearSlot = () => {
     slot?.remove();
     slot = null;
@@ -245,23 +254,20 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
     }
     slot.dataset.dropIntent = intent.kind;
     slot.dataset.dropRegion = intent.regionId;
+    if (intent.kind === 'insert-before' || intent.kind === 'insert-after') {
+      slotIntentKey = intent.key;
+      return positionWidgetInsertion(slot, region, intent);
+    }
+    delete slot.dataset.dropWidgetBoundary;
+    slot.style.cssText = '';
     slot.style.setProperty('--pom-dock-preview-size', `${Math.max(72, Math.min(112, intent.previewRect.height))}px`);
 
     if (slotIntentKey !== intent.key || !slot.isConnected) {
       const shelves = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')];
       if (intent.kind === 'shelf') {
-        const before = shelves[intent.insertOrder ?? shelves.length];
+        const before = shelves.find(shelf => Number(shelf.dataset.pomegranateShelfOrder) >= (intent.insertOrder ?? Infinity));
         if (before) region.insertBefore(slot, before);
         else region.append(slot);
-      } else if (intent.kind === 'insert-before' || intent.kind === 'insert-after') {
-        const shelf = shelfForTarget(region, intent);
-        if (shelf && intent.kind === 'insert-before') region.insertBefore(slot, shelf);
-        else if (shelf) {
-          const resizeHandle = shelf.nextElementSibling?.classList.contains('shelf-resize-handle')
-            ? shelf.nextElementSibling
-            : null;
-          (resizeHandle ?? shelf).after(slot);
-        } else region.append(slot);
       } else region.append(slot);
       slotIntentKey = intent.key;
     }
