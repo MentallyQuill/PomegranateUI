@@ -223,7 +223,9 @@ describe('Svelte Workbench Lab mockup', () => {
 
     await user.click(within(library).getByRole('button', { name: /^Bunny/ }));
     await waitFor(() => expect(within(typography).getByRole('combobox', { name: 'Prose font' })).toHaveValue('Pomegranate Serif'));
-  });
+  // This persistence round trip mounts the full Workbench twice and recompiles
+  // multiple themes; Windows CI needs more than the unit-test default budget.
+  }, 15_000);
 
   it('uses one Atmospheric composition with integrated story surfaces and a dormant developer drawer', () => {
     const { container } = render(App);
