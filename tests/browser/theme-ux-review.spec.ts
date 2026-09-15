@@ -72,7 +72,7 @@ for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {
     const toggle = page.locator('.toolbar-edge-toggle-left');
     await expect.poll(() => toggle.evaluate((element) => {
       const expected = document.createElement('span');
-      expected.style.color = 'var(--pom-color-text)';
+      expected.style.color = 'var(--pom-part-button-surface-foreground)';
       element.append(expected);
       const result = { actual: getComputedStyle(element).color, expected: getComputedStyle(expected).color };
       expected.remove();
