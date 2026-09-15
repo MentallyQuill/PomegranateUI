@@ -58,15 +58,17 @@ async function expectSettledDockPreview(page: Page, expectedText: string): Promi
   const preview = page.locator('[data-pom-part="widget.drag-preview"]');
   const destination = page.locator('[data-pom-part="widget.dock-slot"]');
   await expect(preview).not.toHaveAttribute('data-float-ready');
-  await expect(preview).toHaveText(expectedText);
+  await expect(preview).toContainText(expectedText);
   await expect(preview).toHaveCSS('pointer-events', 'none');
   await expect(preview).toHaveCSS('border-style', 'solid');
-  await expect.poll(() => preview.evaluate((node) => getComputedStyle(node).opacity)).toBe('0.9');
+  await expect.poll(() => preview.evaluate((node) => getComputedStyle(node).opacity)).toBe('0.96');
   const previewBox = await preview.boundingBox();
   expect(previewBox).not.toBeNull();
-  expect(previewBox?.width).toBeGreaterThanOrEqual(180);
-  expect(previewBox?.width).toBeLessThanOrEqual(280);
-  expect(previewBox?.height).toBe(42);
+  expect(previewBox?.width).toBeGreaterThan(100);
+  expect(previewBox?.width).toBeLessThanOrEqual(320.01);
+  expect(previewBox?.height).toBeGreaterThan(64);
+  expect(previewBox?.height).toBeLessThanOrEqual(280.01);
+  await expect(preview).toHaveAttribute('inert', '');
   await expect(destination).toHaveText('');
   await expect(destination.locator('article, button, input, select, textarea, [data-widget-type]')).toHaveCount(0);
 }
@@ -166,12 +168,12 @@ test('AUDIT-P1-SINGLE-PRESENTATION lifted Widget has one compact payload and one
   await cancelPointerDrag(page);
 });
 
-test('AUDIT-P1-GROUP-ACTIONS desktop grouped Widget tabs expose unobstructed context actions', async ({ page }, testInfo) => {
+test('AUDIT-P1-GROUP-ACTIONS desktop grouped Widget tabs expose unobstructed visible and context actions', async ({ page }, testInfo) => {
   const article = page.getByRole('article', { name: 'Room Ambience' });
   const group = article.locator('xpath=ancestor::*[@data-widget-group][1]');
   const action = group.getByRole('button', { name: 'Widget actions' });
   const activeTab = group.getByRole('tab', { selected: true });
-  await expect(action).toBeHidden();
+  await expect(action).toBeVisible();
   const hit = await activeTab.evaluate((node) => {
     const box = node.getBoundingClientRect();
     const target = document.elementFromPoint(box.right - 4, box.y + box.height / 2);

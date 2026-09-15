@@ -104,7 +104,7 @@ function expectResponsiveAtmosphericContract(
   expect(document.scrollWidth, 'page has no horizontal overflow').toBe(viewport.width);
   expect(document.scrollHeight, 'page stays locked to the browser viewport').toBe(viewport.height);
   expect(geometry.shelf?.y, 'Atmospheric shelf begins at the page edge').toBe(0);
-  expect(geometry.shelf?.height, 'Atmospheric shelf is a single touch row').toBe(44);
+  expect(geometry.shelf?.height, 'Atmospheric shelf reserves 44px targets inside its borders').toBe(46);
   for (const [label, rectangle] of Object.entries({
     wordmark: geometry.wordmark,
     tabs: geometry.tabs,

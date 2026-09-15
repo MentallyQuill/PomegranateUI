@@ -13,10 +13,10 @@
   import {
     createCatalogPlacementController,
     type CatalogPlacementController,
-    type CatalogFloatingPlacementIntent,
     type CatalogPlacementState,
     type CatalogPlacementTarget
   } from './CatalogPlacementController.js';
+  import type { CatalogFloatingTarget } from './CatalogPlacementController.js';
   import type { DockIntent } from './widget-docking.js';
   import CatalogWidgetPreview from './CatalogWidgetPreview.svelte';
 
@@ -30,6 +30,7 @@
     ontargetplace,
     ondockplace,
     onfloatplace,
+    onpanelactivate,
     getPlacementTargetRoot,
     isPlacementTargetCompatible,
     isPotentialDockTarget,
@@ -44,7 +45,8 @@
     onplace?: (manifest: WidgetManifest, result: HTMLElement) => void;
     ontargetplace?: (manifest: WidgetManifest, target: CatalogPlacementTarget) => void;
     ondockplace?: (manifest: WidgetManifest, intent: DockIntent) => void;
-    onfloatplace?: (manifest: WidgetManifest, intent: CatalogFloatingPlacementIntent) => void;
+    onfloatplace?: (manifest: WidgetManifest, target: CatalogFloatingTarget) => void;
+    onpanelactivate?: (panelId: string) => boolean;
     getPlacementTargetRoot?: () => ParentNode | null;
     isPlacementTargetCompatible?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
     isPotentialDockTarget?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
@@ -305,16 +307,12 @@
           placementAnnouncement = `${manifest.title} placement committed.`;
           ontargetplace(manifest, target);
         },
+        ...(onfloatplace ? { onFloatCommit: onfloatplace } : {}),
+        ...(onpanelactivate ? { onPanelActivate: onpanelactivate } : {}),
         ...(ondockplace ? {
           onDockCommit: (manifest: WidgetManifest, intent: DockIntent) => {
             placementAnnouncement = `${manifest.title} placement committed.`;
             ondockplace(manifest, intent);
-          }
-        } : {}),
-        ...(onfloatplace ? {
-          onFloatCommit: (manifest: WidgetManifest, intent: CatalogFloatingPlacementIntent) => {
-            placementAnnouncement = `${manifest.title} placement committed.`;
-            onfloatplace(manifest, intent);
           }
         } : {}),
         onAnnounce: (message) => { placementAnnouncement = message; },
@@ -603,6 +601,7 @@
             data-widget-category={manifest.catalog?.category}
             data-preview-shape={manifest.catalog?.shape}
             data-pom-part="row.surface"
+            data-pom-control-shape="content-tile"
             role="button"
             tabindex="0"
             aria-disabled={unavailable}
@@ -652,6 +651,7 @@
     data-placement-y={placementSnapshot.proxy.y}
     data-placement-target={placementSnapshot.selectedTargetId ?? ''}
     aria-hidden="true"
+    inert
     style={`--pom-placement-x:${placementSnapshot.proxy.x - placementSnapshot.proxy.offsetX}px;--pom-placement-y:${placementSnapshot.proxy.y - placementSnapshot.proxy.offsetY}px;--pom-placement-width:${placementSnapshot.proxy.width}px;--pom-placement-height:${placementSnapshot.proxy.height}px`}
   >
     <div class="catalog-placement-proxy-title">{placementManifest.title}</div>

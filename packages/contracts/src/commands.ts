@@ -110,6 +110,13 @@ export type WorkbenchCommand =
       readonly groupId: string;
     }
   | { readonly type: 'widget.place'; readonly instanceId: WidgetInstanceId; readonly placement: VisibleWidgetPlacement }
+  | {
+      readonly type: 'widget.place-relative';
+      readonly instanceId: WidgetInstanceId;
+      readonly instance?: WidgetInstance;
+      readonly targetInstanceId: WidgetInstanceId;
+      readonly relation: 'before' | 'after' | 'tab';
+    }
   | { readonly type: 'widget.shelve'; readonly instanceId: WidgetInstanceId }
   | { readonly type: 'widget.restore'; readonly instanceId: WidgetInstanceId }
   | { readonly type: 'widget.delete'; readonly instanceId: WidgetInstanceId }
@@ -282,6 +289,16 @@ export const WorkbenchCommandSchema = z.discriminatedUnion('type', [
     placement: VisibleWidgetPlacementSchema
   }).strict(),
   z.object({ type: z.literal('widget.shelve'), instanceId: WidgetInstanceIdSchema }).strict(),
+  z.object({
+    type: z.literal('widget.place-relative'),
+    instanceId: WidgetInstanceIdSchema,
+    instance: WidgetInstanceSchema.optional(),
+    targetInstanceId: WidgetInstanceIdSchema,
+    relation: z.enum(['before', 'after', 'tab'])
+  }).strict().refine(
+    ({ instance, instanceId }) => instance === undefined || instance.id === instanceId,
+    { path: ['instance'], message: 'Created Widget identity must match the placed instance.' }
+  ),
   z.object({ type: z.literal('widget.restore'), instanceId: WidgetInstanceIdSchema }).strict(),
   z.object({ type: z.literal('widget.delete'), instanceId: WidgetInstanceIdSchema }).strict(),
   z.object({

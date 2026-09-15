@@ -57,6 +57,7 @@
   class="dock-shelf"
   data-pomegranate-shelf={projection.shelf.id}
   data-pomegranate-shelf-order={projection.shelf.order}
+  data-shelf-item-count={items.length}
   data-pomegranate-shelf-item-count={items.length}
   aria-label={`${projection.shelf.id} shelf`}
   style={`--pom-shelf-weight:${projection.shelf.weight};--pom-shelf-item-count:${Math.max(items.length, 1)}`}

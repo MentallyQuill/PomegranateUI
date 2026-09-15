@@ -474,7 +474,7 @@ test('Theme elements use compact Widget typography and accessible control geomet
 
   for (const sample of samples) {
     const element = sample.locator('[data-theme-authoring-element]');
-    expect(await element.evaluate((node) => getComputedStyle(node).fontSize)).toBe('10px');
+    expect(await element.evaluate((node) => getComputedStyle(node).fontSize)).toBe('11px');
   }
   await expect(settings.colors.getByRole('application', { name: 'Saturation and value' })).toHaveCSS('min-height', '96px');
   for (const slider of await page.locator('[data-theme-authoring-element] input[type="range"]').all()) {

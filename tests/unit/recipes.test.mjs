@@ -36,13 +36,17 @@ test('recipe registry is deterministic, source-owned, and renderer-contract comp
     'workbench-surface'
   ]);
   for (const entry of manifest.recipes) {
-    const revised = { 'theme-settings': 6, 'widget-frame': 4, 'workbench-surface': 4 };
+    const revised = { 'theme-settings': 6, 'widget-frame': 4, 'workbench-surface': 6 };
     assert.equal(entry.revision, revised[entry.id] ?? 1);
     assert.equal(entry.compatiblePomegranateRange, '>=0.1.0-private.0 <0.2.0');
     assert.ok(entry.dependencies.includes('svelte'));
     assert.ok(entry.rendererContractIds.length > 0);
     assert.deepEqual(Object.keys(entry.sha256), entry.files);
     assert.ok(entry.files.every((file) => !file.includes('\\')));
+    for (const file of entry.files) {
+      const bytes = await readFile(path.join(root, 'registry', 'recipes', entry.id, file));
+      assert.doesNotThrow(() => new TextDecoder('utf-8', { fatal: true }).decode(bytes), `${entry.id}/${file} must be valid UTF-8`);
+    }
     assert.ok(Object.values(entry.sha256).every((hash) => /^[0-9A-F]{64}$/.test(hash)));
     const owned = (await readdir(path.join(root, 'registry', 'recipes', entry.id)))
       .filter((file) => file.endsWith('.svelte') || file.endsWith('.ts'))

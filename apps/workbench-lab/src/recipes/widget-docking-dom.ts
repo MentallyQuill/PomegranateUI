@@ -1,8 +1,10 @@
+import { panelHoverDelayMs, type PanelHoverHint } from './widget-panel-hover.js';
 import {
   buildShelfRails,
   dockTargetKey,
   type DockIntent,
   type DockOwner,
+  type DockPoint,
   type DockRect,
   type DockTarget
 } from './widget-docking.js';
@@ -14,8 +16,15 @@ export interface DockTargetCollectionOptions {
   readonly ownerForRegion: (region: HTMLElement) => DockOwner | null;
 }
 
+export interface DockPreviewFeedback {
+  readonly heldRect?: DockRect;
+  readonly floatingRect?: DockRect;
+  readonly panelHint?: PanelHoverHint;
+}
+
 export interface DockPreviewController {
-  sync(targets: readonly DockTarget[], intent: DockIntent | null): DockIntent | null;
+  sync(targets: readonly DockTarget[], intent: DockIntent | null, feedback?: DockPreviewFeedback): DockIntent | null;
+  setSurface(surface: HTMLElement): void;
   clearSlot(): void;
   getSlotRect(): DOMRect | null;
   destroy(): void;
@@ -25,7 +34,92 @@ export function dockRectOf(rect: DOMRectReadOnly): DockRect {
   return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 }
 
+/** Widget insertion marks the item boundary; shelf rails reserve a new shelf. */
+export function positionWidgetInsertion(slot: HTMLElement, region: HTMLElement, intent: DockIntent): DockIntent {
+  const article = intent.targetInstanceId
+    ? region.querySelector<HTMLElement>(`[data-pomegranate-widget="${CSS.escape(intent.targetInstanceId)}"]`)
+    : null;
+  const item = article?.closest<HTMLElement>('[data-widget-group]')
+    ?? article?.closest<HTMLElement>('[data-widget-type]') ?? article;
+  if (!item) return intent;
+  slot.style.position = 'fixed';
+  const rect = item.getBoundingClientRect();
+  const previewRect = { x: rect.x, y: (intent.kind === 'insert-before' ? rect.y : rect.bottom) - 2, width: rect.width, height: 4 };
+  slot.dataset.dropWidgetBoundary = 'true';
+  slot.style.cssText = `position:fixed;left:${previewRect.x}px;top:${previewRect.y}px;width:${previewRect.width}px;height:4px;min-height:4px;`;
+  // Filtered dock surfaces establish containing blocks for fixed children.
+  // Keep viewport coordinates in the same portal as the overlay.
+  const portal = region.closest<HTMLElement>('main[data-pom-theme-root]') ?? region.ownerDocument.body;
+  if (slot.parentElement !== portal) portal.append(slot);
+  return { ...intent, previewRect };
+}
+
 export function collectDockTargets(
+  root: ParentNode,
+  options: DockTargetCollectionOptions
+): readonly DockTarget[] {
+  // A reservation may move or shrink its neighbours. Measure their underlying
+  // layout, never the layout produced by our own previous hover decision.
+  // Taking the slot out of flow preserves its identity and running animation.
+  const slots = [...root.querySelectorAll<HTMLElement>('[data-pom-part="widget.dock-slot"]')];
+  const positions = slots.map((slot) => ({
+    slot,
+    value: slot.style.getPropertyValue('position'),
+    priority: slot.style.getPropertyPriority('position')
+  }));
+  for (const { slot } of positions) slot.style.setProperty('position', 'absolute', 'important');
+  try {
+    return readDockTargets(root, options);
+  } finally {
+    for (const { slot, value, priority } of positions) {
+      if (value) slot.style.setProperty('position', value, priority);
+      else slot.style.removeProperty('position');
+    }
+  }
+}
+
+/** Refresh held feedback when geometry changes without a new pointer event. */
+export function observeDockGeometry(root: HTMLElement, changed: () => void): () => void {
+  const view = root.ownerDocument.defaultView;
+  if (!view) return () => undefined;
+  let frame: number | null = null;
+  const schedule = () => {
+    if (frame !== null) return;
+    frame = view.requestAnimationFrame(() => {
+      frame = null;
+      changed();
+    });
+  };
+  const resize = typeof view.ResizeObserver === 'function' ? new view.ResizeObserver(schedule) : null;
+  const refreshElements = () => {
+    resize?.disconnect();
+    resize?.observe(root);
+    for (const element of root.querySelectorAll<HTMLElement>('[data-pomegranate-region-surface], .dock-shelf, .widget-frame')) {
+      if (!element.closest('[data-catalog-placement-proxy], .widget-drag-preview')) resize?.observe(element);
+    }
+  };
+  refreshElements();
+  const mutation = new view.MutationObserver((records) => {
+    if (!records.some(({ target }) => {
+      const element = target instanceof Element ? target : target.parentElement;
+      return !element?.closest('.widget-drop-overlay, .widget-drag-preview, [data-catalog-placement-proxy]');
+    })) return;
+    refreshElements();
+    schedule();
+  });
+  mutation.observe(root, { childList: true, subtree: true });
+  view.addEventListener('resize', schedule);
+  root.ownerDocument.addEventListener('scroll', schedule, true);
+  return () => {
+    if (frame !== null) view.cancelAnimationFrame(frame);
+    resize?.disconnect();
+    mutation.disconnect();
+    view.removeEventListener('resize', schedule);
+    root.ownerDocument.removeEventListener('scroll', schedule, true);
+  };
+}
+
+function readDockTargets(
   root: ParentNode,
   options: DockTargetCollectionOptions
 ): readonly DockTarget[] {
@@ -72,6 +166,7 @@ export function collectDockTargets(
         id: dockTargetKey(owner, 'widget', targetId),
         kind: 'widget',
         rect: dockRectOf(article.getBoundingClientRect()),
+        ...(group ? { previewRect: dockRectOf(group.getBoundingClientRect()) } : {}),
         regionRect,
         regionDepth,
         ...(header ? { headerRect: dockRectOf(header.getBoundingClientRect()) } : {}),
@@ -137,6 +232,16 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
   overlay.dataset.pomPart = 'widget.drop-overlay';
   overlay.setAttribute('aria-hidden', 'true');
   overlayOwner.append(overlay);
+  const rails = new Map<string, HTMLElement>();
+  const snap = ownerDocument.createElement('div');
+  snap.className = 'widget-snap-preview';
+  snap.dataset.pomPart = 'widget.snap-preview';
+  const floating = ownerDocument.createElement('div');
+  floating.className = 'widget-float-preview';
+  floating.dataset.pomPart = 'widget.float-preview';
+  const label = ownerDocument.createElement('div');
+  label.className = 'widget-drop-intent-label';
+  label.dataset.pomPart = 'widget.drop-intent-label';
   let slot: HTMLElement | null = null;
   let slotIntentKey: string | null = null;
 
@@ -144,17 +249,6 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
     [...surface.querySelectorAll<HTMLElement>('[data-pomegranate-region-surface]')]
       .find((region) => ownerMatches(region, intent)) ?? null
   );
-
-  const shelfForTarget = (region: HTMLElement, intent: DockIntent) => {
-    if (intent.shelfId) {
-      const direct = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')]
-        .find((shelf) => shelf.dataset.pomegranateShelf === intent.shelfId);
-      if (direct) return direct;
-    }
-    if (!intent.targetInstanceId) return null;
-    return region.querySelector<HTMLElement>(`[data-pomegranate-widget="${CSS.escape(intent.targetInstanceId)}"]`)
-      ?.closest<HTMLElement>('.dock-shelf') ?? null;
-  };
 
   const clearSlot = () => {
     slot?.remove();
@@ -180,23 +274,20 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
     }
     slot.dataset.dropIntent = intent.kind;
     slot.dataset.dropRegion = intent.regionId;
+    if (intent.kind === 'insert-before' || intent.kind === 'insert-after') {
+      slotIntentKey = intent.key;
+      return positionWidgetInsertion(slot, region, intent);
+    }
+    delete slot.dataset.dropWidgetBoundary;
+    slot.style.cssText = '';
     slot.style.setProperty('--pom-dock-preview-size', `${Math.max(72, Math.min(112, intent.previewRect.height))}px`);
 
     if (slotIntentKey !== intent.key || !slot.isConnected) {
       const shelves = [...region.querySelectorAll<HTMLElement>(':scope > .dock-shelf')];
       if (intent.kind === 'shelf') {
-        const before = shelves[intent.insertOrder ?? shelves.length];
+        const before = shelves.find(shelf => Number(shelf.dataset.pomegranateShelfOrder) >= (intent.insertOrder ?? Infinity));
         if (before) region.insertBefore(slot, before);
         else region.append(slot);
-      } else if (intent.kind === 'insert-before' || intent.kind === 'insert-after') {
-        const shelf = shelfForTarget(region, intent);
-        if (shelf && intent.kind === 'insert-before') region.insertBefore(slot, shelf);
-        else if (shelf) {
-          const resizeHandle = shelf.nextElementSibling?.classList.contains('shelf-resize-handle')
-            ? shelf.nextElementSibling
-            : null;
-          (resizeHandle ?? shelf).after(slot);
-        } else region.append(slot);
       } else region.append(slot);
       slotIntentKey = intent.key;
     }
@@ -204,61 +295,84 @@ export function createDockPreviewController(surface: HTMLElement): DockPreviewCo
     return slotRect.width > 0 && slotRect.height > 0 ? { ...intent, previewRect: slotRect } : intent;
   };
 
-  const paint = (targets: readonly DockTarget[], intent: DockIntent | null) => {
-    overlay.replaceChildren();
+  const mount = (node: HTMLElement) => { if (node.parentElement !== overlay) overlay.append(node); };
+  const paint = (targets: readonly DockTarget[], intent: DockIntent | null, feedback?: DockPreviewFeedback) => {
+    const activeIds = new Set<string>();
     for (const target of targets) {
       if (target.kind !== 'rail') continue;
-      const rail = ownerDocument.createElement('div');
-      rail.className = 'widget-drop-rail';
-      rail.dataset.pomPart = 'widget.drop-rail';
+      activeIds.add(target.id);
+      let rail = rails.get(target.id);
+      if (!rail) {
+        rail = ownerDocument.createElement('div');
+        rail.className = 'widget-drop-rail';
+        rail.dataset.pomPart = 'widget.drop-rail';
+        rails.set(target.id, rail);
+        overlay.append(rail);
+      }
       rail.dataset.dropRegion = target.regionId;
       rail.dataset.dropRailKind = target.railKind ?? 'append';
       rail.dataset.dropInsertOrder = String(target.insertOrder ?? 0);
       if (target.dockColumn !== undefined) rail.dataset.dropColumn = String(target.dockColumn);
+      else delete rail.dataset.dropColumn;
       rail.dataset.active = String(intent?.targetId === target.id);
       positionFixed(rail, target.rect);
-      const label = ownerDocument.createElement('span');
-      label.textContent = target.label ?? 'New shelf';
-      rail.append(label);
-      overlay.append(rail);
     }
-    if (!intent) return;
-    const snap = ownerDocument.createElement('div');
-    snap.className = 'widget-snap-preview';
-    snap.dataset.pomPart = 'widget.snap-preview';
-    snap.dataset.dropIntent = intent.kind;
-    snap.dataset.dropRegion = intent.regionId;
-    if (intent.dockColumn !== undefined) snap.dataset.dropColumn = String(intent.dockColumn);
-    positionFixed(snap, intent.previewRect);
-    overlay.append(snap);
-    if (intent.kind === 'tab') {
-      const marker = ownerDocument.createElement('div');
-      marker.className = 'widget-tab-insertion';
-      marker.dataset.pomPart = 'widget.tab-insertion';
-      positionFixed(marker, {
-        x: intent.previewRect.x + 8,
-        y: intent.previewRect.y + 4,
-        width: 2,
-        height: Math.max(20, Math.min(32, intent.previewRect.height - 8))
-      });
-      overlay.append(marker);
+    for (const [id, rail] of rails) {
+      if (!activeIds.has(id)) { rail.remove(); rails.delete(id); }
     }
-    const label = ownerDocument.createElement('div');
-    label.className = 'widget-drop-intent-label';
-    label.textContent = intent.label;
-    positionFixed(label, {
-      x: intent.previewRect.x + 12,
-      y: intent.previewRect.y + 8,
-      width: Math.max(120, Math.min(240, intent.previewRect.width - 24)),
-      height: 26
-    });
-    overlay.append(label);
+    const floatingRect = !intent ? feedback?.floatingRect : undefined;
+    const rect = feedback?.panelHint?.rect ?? intent?.previewRect ?? floatingRect;
+    if (intent) {
+      snap.dataset.dropIntent = intent.kind;
+      snap.dataset.dropRegion = intent.regionId;
+      if (intent.dockColumn !== undefined) snap.dataset.dropColumn = String(intent.dockColumn);
+      else delete snap.dataset.dropColumn;
+      positionFixed(snap, intent.previewRect);
+      mount(snap);
+    } else snap.remove();
+    if (floatingRect) { positionFixed(floating, floatingRect); mount(floating); }
+    else floating.remove();
+    if (!rect) { label.remove(); return; }
+    const text = feedback?.panelHint?.label ?? intent?.label ?? 'Float here';
+    label.toggleAttribute('data-panel-hover-hint', Boolean(feedback?.panelHint));
+    label.style.setProperty('--panel-hover-duration', `${panelHoverDelayMs}ms`);
+    if (label.textContent !== text) label.textContent = text;
+    mount(label);
+    // Anchor to the destination, choosing the nearest side that the held object
+    // does not cover. Use measured text dimensions and clamp to the viewport.
+    const view = ownerDocument.defaultView!;
+    label.style.maxWidth = `${Math.min(300, view.innerWidth - 16)}px`;
+    const size = label.getBoundingClientRect();
+    const held = feedback?.heldRect;
+    const anchors = [
+      { x: rect.x + 8, y: rect.y - size.height - 8 },
+      { x: rect.x + 8, y: rect.y + rect.height + 8 },
+      ...(held ? [
+        { x: held.x + 8, y: held.y - size.height - 8 },
+        { x: held.x + 8, y: held.y + held.height + 8 },
+        { x: held.x - size.width - 8, y: held.y },
+        { x: held.x + held.width + 8, y: held.y }
+      ] : [])
+    ].map(point => ({
+      x: Math.max(8, Math.min(view.innerWidth - size.width - 8, point.x)),
+      y: Math.max(8, Math.min(view.innerHeight - size.height - 8, point.y))
+    }));
+    const overlap = (point: DockPoint) => held ? Math.max(0, Math.min(point.x + size.width, held.x + held.width) - Math.max(point.x, held.x))
+      * Math.max(0, Math.min(point.y + size.height, held.y + held.height) - Math.max(point.y, held.y)) : 0;
+    const anchor = anchors.find(point => overlap(point) === 0) ?? anchors.sort((a, b) => overlap(a) - overlap(b))[0]!;
+    label.style.left = `${anchor.x}px`;
+    label.style.top = `${anchor.y}px`;
   };
 
   return Object.freeze({
-    sync(targets: readonly DockTarget[], intent: DockIntent | null) {
+    setSurface(next: HTMLElement) {
+      if (next === surface) return;
+      clearSlot();
+      surface = next;
+    },
+    sync(targets: readonly DockTarget[], intent: DockIntent | null, feedback?: DockPreviewFeedback) {
       const synced = syncSlot(intent);
-      paint(targets, synced);
+      paint(targets, synced, feedback);
       return synced;
     },
     clearSlot,

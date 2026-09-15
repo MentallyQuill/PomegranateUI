@@ -99,7 +99,7 @@
     aria-pressed={leftCollapsed}
     data-toolbar-toggle-presentation={toolbarTogglePresentation}
     onclick={ontoggleleft}
-  >{#if toolbarTogglePresentation === 'bottom-chevrons'}<span class="toolbar-toggle-chevron" aria-hidden="true">{leftCollapsed ? '›' : '‹'}</span>{:else}{leftCollapsed ? 'OPEN' : 'CLOSE'} TOOLBAR LFT{/if}</button>
+  >{#if toolbarTogglePresentation === 'bottom-chevrons'}<span class="toolbar-toggle-chevron" aria-hidden="true">{leftCollapsed ? '›' : '‹'}</span>{:else}{leftCollapsed ? 'Open' : 'Close'} left{/if}</button>
   <button
     type="button"
     class="toolbar-edge-toggle toolbar-edge-toggle-right"
@@ -108,7 +108,7 @@
     aria-pressed={rightCollapsed}
     data-toolbar-toggle-presentation={toolbarTogglePresentation}
     onclick={ontoggleright}
-  >{#if toolbarTogglePresentation === 'bottom-chevrons'}<span class="toolbar-toggle-chevron" aria-hidden="true">{rightCollapsed ? '‹' : '›'}</span>{:else}{rightCollapsed ? 'OPEN' : 'CLOSE'} TOOLBAR RGT{/if}</button>
+  >{#if toolbarTogglePresentation === 'bottom-chevrons'}<span class="toolbar-toggle-chevron" aria-hidden="true">{rightCollapsed ? '‹' : '›'}</span>{:else}{rightCollapsed ? 'Open' : 'Close'} right{/if}</button>
 {/snippet}
 
 {#if surface}

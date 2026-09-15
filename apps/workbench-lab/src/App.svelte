@@ -29,7 +29,7 @@
   import ThemeCanvas from './recipes/ThemeCanvas.svelte';
   import FocusedWidget from './recipes/FocusedWidget.svelte';
   import WidgetCatalog from './recipes/WidgetCatalog.svelte';
-  import type { CatalogFloatingPlacementIntent, CatalogPlacementTarget } from './recipes/CatalogPlacementController.js';
+  import type { CatalogFloatingTarget, CatalogPlacementTarget } from './recipes/CatalogPlacementController.js';
   import type { DockIntent } from './recipes/widget-docking.js';
   import WidgetFrame from './recipes/WidgetFrame.svelte';
   import WidgetActionMenu from './recipes/WidgetActionMenu.svelte';
@@ -322,6 +322,7 @@
   let leftCollapsed = $state(false);
   let rightCollapsed = $state(false);
   let compactDockDefaultsKey = '';
+  const narrowWorkbenchMedia = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 860px)') : null;
   let panelDialog: { showModal(): void; close(): void };
   let subPanelDialog: {
     open(request: { mode: 'create' | 'rename' | 'layout' | 'move' | 'delete'; panelId: PanelId; subPanelId?: SubPanelId; invokingTab?: HTMLElement }): void;
@@ -342,8 +343,9 @@
 
   onMount(() => {
     let current = true;
-    const collapseCompactDocks = (event: MediaQueryListEvent) => syncCompactDockDefaults(event.matches);
+    const collapseCompactDocks = () => syncCompactDockDefaults();
     compactWorkbenchMedia?.addEventListener('change', collapseCompactDocks);
+    narrowWorkbenchMedia?.addEventListener('change', collapseCompactDocks);
     void hydrateThemeDraft(initialThemeSnapshot.activeId);
     void loadLayout(storage, LAB_LAYOUT_KEY, store.getState()).then((loaded) => {
       if (current && loaded.ok) {
@@ -354,6 +356,7 @@
     return () => {
       current = false;
       compactWorkbenchMedia?.removeEventListener('change', collapseCompactDocks);
+      narrowWorkbenchMedia?.removeEventListener('change', collapseCompactDocks);
     };
   });
 
@@ -371,11 +374,12 @@
   function syncCompactDockDefaults(isCompact = compactWorkbenchMedia?.matches ?? false) {
     const shellPresentation = themeSnapshot.compiled.theme.recipes.shellPresentation;
     const templateId = activePanel?.templateId;
-    const key = `${isCompact}:${shellPresentation ?? 'standard'}:${templateId ?? 'none'}`;
+    const isNarrow = narrowWorkbenchMedia?.matches ?? false;
+    const key = `${isCompact}:${isNarrow}:${shellPresentation ?? 'standard'}:${templateId ?? 'none'}`;
     if (key === compactDockDefaultsKey) return;
     compactDockDefaultsKey = key;
     const shouldCollapse = isCompact
-      && shellPresentation === 'instrumented'
+      && (shellPresentation === 'instrumented' || isNarrow)
       && templateId === 'story-stage.v1';
     leftCollapsed = shouldCollapse;
     rightCollapsed = shouldCollapse;
@@ -394,14 +398,9 @@
       : '';
   }
 
-  function placeFromCatalog(manifest: WidgetManifest, selectedTarget?: CatalogPlacementTarget | CatalogFloatingPlacementIntent | DockIntent | HTMLElement) {
+  function placeFromCatalog(manifest: WidgetManifest, selectedTarget?: CatalogPlacementTarget | DockIntent | HTMLElement) {
     const target = selectedTarget && 'identity' in selectedTarget ? selectedTarget : undefined;
-    const floatingIntent = selectedTarget && 'kind' in selectedTarget && selectedTarget.kind === 'floating'
-      ? selectedTarget as CatalogFloatingPlacementIntent
-      : undefined;
-    const intent = selectedTarget && 'kind' in selectedTarget && selectedTarget.kind !== 'floating'
-      ? selectedTarget as DockIntent
-      : undefined;
+    const intent = selectedTarget && 'kind' in selectedTarget ? selectedTarget as DockIntent : undefined;
     const panelId = intent ? asPanelId(intent.panelId) : target ? asPanelId(target.identity.panelId) : workbench.activePanelId;
     if (!panelId) return;
     const panel = workbench.panels.find((candidate) => candidate.id === panelId);
@@ -409,81 +408,26 @@
     const id = asWidgetInstanceId(`catalog-${manifest.type.replace(/[^a-z0-9]+/gi, '-')}-${workbench.revision + 1}`);
     const instance = { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} };
 
-    if (floatingIntent) {
-      const surface = workbenchElement?.querySelector<HTMLElement>(`[data-pomegranate-panel="${CSS.escape(panelId)}"]`);
-      if (!surface) return;
-      const surfaceBox = surface.getBoundingClientRect();
-      const defaults = manifest.defaultPlacement.kind === 'floating'
-        ? manifest.defaultPlacement
-        : { width: 360, height: 240 };
-      const maxX = Math.max(8, surfaceBox.width - defaults.width - 8);
-      const maxY = Math.max(8, surfaceBox.height - defaults.height - 8);
-      const x = Math.max(8, Math.min(maxX,
-        floatingIntent.point.x - surfaceBox.left - defaults.width * floatingIntent.grabRatio.x));
-      const y = Math.max(8, Math.min(maxY,
-        floatingIntent.point.y - surfaceBox.top - defaults.height * floatingIntent.grabRatio.y));
-      const z = Math.max(0, ...Object.values(workbench.placements).map((placement) => (
-        placement.kind === 'floating' ? placement.z : 0
-      ))) + 1;
-      const result = store.dispatch({
-        type: 'widget.create',
-        instance,
-        placement: {
-          kind: 'floating',
-          panelId,
-          ...(panel.activeSubPanelId === undefined ? {} : { subPanelId: panel.activeSubPanelId }),
-          x,
-          y,
-          width: defaults.width,
-          height: defaults.height,
-          z
-        }
-      });
-      status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
-      return;
-    }
-
     if (intent) {
       const owner = {
         panelId,
         ...(intent.subPanelId === undefined ? {} : { subPanelId: asSubPanelId(intent.subPanelId), lane: intent.lane ?? 0 }),
         regionId: intent.regionId
       };
-      if (intent.kind === 'tab' && intent.targetInstanceId) {
-        const targetId = asWidgetInstanceId(intent.targetInstanceId);
-        const targetPlacement = workbench.placements[targetId];
-        if (targetPlacement?.kind !== 'docked') return;
+      if ((intent.kind === 'tab' || intent.kind === 'insert-before' || intent.kind === 'insert-after') && intent.targetInstanceId) {
         const result = store.dispatch({
-          type: 'widget.create-and-group',
+          type: 'widget.place-relative',
+          instanceId: id,
           instance,
-          placement: {
-            kind: 'docked',
-            panelId: targetPlacement.panelId,
-            ...(targetPlacement.subPanelId === undefined || targetPlacement.lane === undefined
-              ? {}
-              : { subPanelId: targetPlacement.subPanelId, lane: targetPlacement.lane }),
-            regionId: targetPlacement.regionId,
-            shelfId: targetPlacement.shelfId,
-            order: targetPlacement.order + 1
-          },
-          targetInstanceId: targetId,
-          groupId: targetPlacement.group?.id ?? intent.groupId ?? `group-${targetId}`
+          targetInstanceId: asWidgetInstanceId(intent.targetInstanceId),
+          relation: intent.kind === 'tab' ? 'tab' : intent.kind === 'insert-before' ? 'before' : 'after'
         });
         status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
         return;
       }
 
-      if (intent.kind === 'shelf' || intent.kind === 'insert-before' || intent.kind === 'insert-after') {
-        const targetShelf = intent.shelfId
-          ? workbench.shelves.find((shelf) => shelf.panelId === panelId
-            && shelf.regionId === intent.regionId
-            && (shelf.dockColumn ?? 0) === (intent.dockColumn ?? 0)
-            && shelf.id === intent.shelfId)
-          : undefined;
-        const shelfOrder = intent.kind === 'shelf'
-          ? intent.insertOrder ?? 0
-          : targetShelf ? targetShelf.order + (intent.kind === 'insert-after' ? 1 : 0) : null;
-        if (shelfOrder === null) return;
+      if (intent.kind === 'shelf') {
+        const shelfOrder = intent.insertOrder ?? 0;
         const shelfId = `${intent.regionId}-shelf-${workbench.revision + 1}`;
         const result = store.dispatch({
           type: 'shelf.create-and-place',
@@ -595,6 +539,17 @@
           placement: { ...placement, order: 0 }
         });
     status = result.ok ? `${manifest.title} added to ${panel.name}.` : result.error.message;
+  }
+
+  function floatFromCatalog(manifest: WidgetManifest, target: CatalogFloatingTarget) {
+    const id = asWidgetInstanceId(`catalog-${manifest.type.replace(/[^a-z0-9]+/gi, '-')}-${workbench.revision + 1}`);
+    const result = store.dispatch({
+      type: 'widget.create',
+      instance: { id, type: manifest.type, manifestVersion: manifest.version, configuration: {} },
+      placement: { kind: 'floating', ...target,
+        z: Math.max(0, ...Object.values(workbench.placements).map(p => p.kind === 'floating' ? p.z : 0)) + 1 }
+    });
+    status = result.ok ? `${manifest.title} placed.` : result.error.message;
   }
 
   function isPotentialCatalogDockTarget(manifest: WidgetManifest, target: HTMLElement): boolean {
@@ -768,7 +723,7 @@
     </div>
     <div class="shelf-actions">
       <IconAction label="Open Widget Catalog" visualLabel="Widgets" action="open-catalog" expanded={$catalogState.open} onclick={() => catalog.open('expanded')} />
-      <WidgetShelf {store} />
+      <WidgetShelf {store} onexpanddock={expandDock} />
       <LayoutUndo {store} />
       <IconAction label="Focus reading" action="focus-reading" pressed={focusMode} onclick={() => { focusMode = !focusMode; }} />
       <span class="runtime-status" aria-label={hostContext.systemStatus}><i></i><span aria-hidden="true">Ready</span></span>
@@ -888,7 +843,8 @@
     oncreate={placeFromCatalog}
     ontargetplace={placeFromCatalog}
     ondockplace={placeFromCatalog}
-    onfloatplace={placeFromCatalog}
+    onfloatplace={floatFromCatalog}
+    onpanelactivate={(panelId) => store.dispatch({ type: 'panel.activate', panelId: asPanelId(panelId) }).ok}
     getPlacementTargetRoot={() => workbenchElement ?? null}
     isPlacementTargetCompatible={isCatalogPlacementTargetCompatible}
     isPotentialDockTarget={isPotentialCatalogDockTarget}

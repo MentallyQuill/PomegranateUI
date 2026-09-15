@@ -26,6 +26,7 @@ import {
   decodeLayoutSnapshot,
   encodeLayoutSnapshot,
   placeWidget,
+  placeWidgetRelative,
   duplicatePanel,
   duplicateSubPanel,
   mergeWidgetGroup,
@@ -186,6 +187,8 @@ function eventFor(command: WorkbenchCommand, state: WorkbenchState): WorkbenchEv
       return { type: 'widget.grouped', revision, instanceId: command.instance.id };
     case 'widget.place':
       return { type: 'widget.placed', revision, instanceId: command.instanceId };
+    case 'widget.place-relative':
+      return { type: command.relation === 'tab' ? 'widget.grouped' : command.instance ? 'widget.created' : 'widget.placed', revision, instanceId: command.instanceId };
     case 'widget.group':
       return { type: 'widget.grouped', revision, instanceId: command.instanceId };
     case 'widget.group.activate':
@@ -306,7 +309,7 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
 
         const createdInstance = command.type === 'widget.create' || command.type === 'widget.create-and-group'
           ? command.instance
-          : command.type === 'shelf.create-and-place'
+          : command.type === 'shelf.create-and-place' || command.type === 'widget.place-relative'
             ? command.instance
             : undefined;
         if (createdInstance && !registry.has(createdInstance.type)) {
@@ -462,6 +465,9 @@ export function createWorkbenchStore(options: WorkbenchStoreOptions = {}): Workb
             break;
           case 'widget.place':
             transition = placeWidget(before, command.instanceId, command.placement, placementContext);
+            break;
+          case 'widget.place-relative':
+            transition = placeWidgetRelative(before, command.instanceId, command.targetInstanceId, command.relation, placementContext, command.instance);
             break;
           case 'widget.shelve':
             transition = shelveWidget(before, command.instanceId);

@@ -153,7 +153,12 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
   for (const [index, child] of evidence.shelfInternals.entries()) expectContained(child, evidence.shelf, `shelf internal ${index}`);
   expectContained(evidence.catalogLauncher, evidence.shelf, 'catalog launcher');
   expectContained(evidence.developerLauncher, evidence.shelf, 'developer launcher');
-  for (const [index, tab] of evidence.tabs.entries()) expectContained(tab, evidence.panelTabs, `panel tab ${index}`);
+  const rail = page.locator('.panel-tabs');
+  await expect(rail).toHaveCSS('overflow-x', 'auto');
+  for (const [index, tab] of evidence.tabs.entries()) {
+    expect(tab.top, `panel tab ${index} top`).toBeGreaterThanOrEqual(evidence.panelTabs.top - 1);
+    expect(tab.bottom, `panel tab ${index} bottom`).toBeLessThanOrEqual(evidence.panelTabs.bottom + 1);
+  }
   if (viewport.width <= 680) {
     expect(evidence.panelTabs.right, 'panel tabs end before compact Catalog launcher')
       .toBeLessThanOrEqual(evidence.catalogLauncher.left + 1);
@@ -167,8 +172,11 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
     }
   }
   if (viewport.width <= 860) {
-    expect(evidence.leftDock.width, 'hidden left dock width').toBeLessThanOrEqual(1);
-    expect(evidence.rightDock.width, 'hidden right dock width').toBeLessThanOrEqual(1);
+    for (const side of ['left', 'right']) {
+      const dock = page.locator(`[data-conformance-region="${side}"]`);
+      await expect(dock).toBeHidden();
+      await expect(dock).toHaveCSS('pointer-events', 'none');
+    }
   } else {
     expectContained(evidence.leftStack.bounds, evidence.leftDock, 'left stack');
     for (const [index, child] of evidence.leftStack.children.entries()) {
@@ -197,6 +205,17 @@ test(`PomOS ${viewport.name} keeps side stacks, composer, and chrome inside thei
   expectContained(evidence.textarea, evidence.composerSurface, 'composer textarea');
   expectContained(evidence.submit, evidence.composerSurface, 'composer submit');
   expect(evidence.composer.bottom).toBeLessThanOrEqual(evidence.viewport.height);
+  // Overflowing tabs remain reachable through the same keyboard navigation as wide rails.
+  const firstTab = rail.getByRole('tab').first();
+  await firstTab.focus();
+  await firstTab.press('End');
+  const lastTab = rail.getByRole('tab').last();
+  await expect(lastTab).toBeFocused();
+  await expect.poll(async () => {
+    const owner = await rail.boundingBox();
+    const tab = await lastTab.boundingBox();
+    return !!owner && !!tab && tab.x >= owner.x - 1 && tab.x + tab.width <= owner.x + owner.width + 1;
+  }).toBe(true);
 });
 }
 
@@ -578,7 +597,7 @@ test('PomOS metadata remains legible and the compact composer retains its comple
       contained: bounds.top >= field.top - 1 && bounds.bottom <= field.bottom + 1
     };
   });
-  expect(compactStatus).toMatchObject({ fontSize: 9, whiteSpace: 'normal', textOverflow: 'clip', contained: true });
+  expect(compactStatus).toMatchObject({ fontSize: 11, whiteSpace: 'normal', textOverflow: 'clip', contained: true });
   expect(compactStatus.scrollWidth).toBeLessThanOrEqual(compactStatus.clientWidth + 1);
   expect(compactStatus.scrollHeight).toBeLessThanOrEqual(compactStatus.clientHeight + 1);
 });
@@ -934,7 +953,7 @@ test('Developer tools uses a centered inline SVG and an independent 44px accessi
   expect(Math.abs((geometry.icon.top + geometry.icon.bottom) / 2 - (geometry.button.top + geometry.button.bottom) / 2)).toBeLessThanOrEqual(1);
 });
 
-test('normal public mode removes the developer gear and reclaims its compact chrome slot', async ({ page }) => {
+test('normal public mode exposes Catalog, Shelf and Undo without developer chrome', async ({ page }) => {
   const url = new URL(labOrigin);
   url.searchParams.set('dev', '0');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -947,7 +966,8 @@ test('normal public mode removes the developer gear and reclaims its compact chr
     const box = node.getBoundingClientRect();
     return { width: box.width, right: box.right, viewport: innerWidth };
   });
-  expect(geometry.width).toBe(44);
+  expect(geometry.width).toBe(132);
+  for (const name of ['Open Widget Catalog', 'Open Widget Shelf', 'Undo layout']) await expect(page.getByRole('button', { name, exact: true })).toBeInViewport({ ratio: 1 });
   expect(geometry.right).toBe(geometry.viewport);
 });
 
@@ -1146,7 +1166,7 @@ for (const viewport of [
   });
 }
 
-test('shared Widget headers retain one-line titles without reserving hidden action space', async ({ page }) => {
+test('shared Widget headers retain one-line titles beside discoverable actions', async ({ page }) => {
   await openFresh(page, 1440, 900);
 
   for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber'] as const) {
@@ -1168,6 +1188,8 @@ test('shared Widget headers retain one-line titles without reserving hidden acti
           headingClientWidth: heading.clientWidth,
           lineHeight,
           actionWidth: actions.getBoundingClientRect().width,
+          headingRight: heading.getBoundingClientRect().right,
+          actionLeft: actions.getBoundingClientRect().left,
           triggerDisplay: getComputedStyle(trigger).display
         };
       });
@@ -1176,8 +1198,9 @@ test('shared Widget headers retain one-line titles without reserving hidden acti
       if (theme === 'Ash & Amber') {
         expect(evidence.headingScrollWidth, `${theme} ${title} title width`).toBeLessThanOrEqual(evidence.headingClientWidth + 1);
       }
-      expect(evidence.triggerDisplay, `${theme} ${title} desktop trigger`).toBe('none');
-      expect(evidence.actionWidth, `${theme} ${title} hidden action space`).toBe(0);
+      expect(evidence.triggerDisplay, `${theme} ${title} desktop trigger`).not.toBe('none');
+      expect(evidence.actionWidth, `${theme} ${title} action space`).toBeGreaterThanOrEqual(28);
+      expect(evidence.headingRight, `${theme} ${title} separate actions`).toBeLessThanOrEqual(evidence.actionLeft + 1);
     }
   }
 });
@@ -1264,7 +1287,7 @@ test('all themes keep story prose inside the visible reading stage', async ({ pa
   }
 });
 
-test('reduced motion removes transitions from hidden desktop Widget action hosts', async ({ page }) => {
+test('reduced motion removes transitions from desktop Widget action hosts', async ({ page }) => {
   const session = await page.context().newCDPSession(page);
   await session.send('Emulation.setEmulatedMedia', {
     features: [{ name: 'prefers-reduced-motion', value: 'reduce' }]

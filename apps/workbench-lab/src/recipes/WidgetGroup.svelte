@@ -40,6 +40,7 @@
     ? active
     : ordered.find((frame) => frame.instanceId === previewFrameId) ?? active);
   const groupId = $derived(active?.placement.kind === 'docked' ? active.placement.group?.id : undefined);
+  const gestureHelpId = $derived(`widget-gesture-help-${active?.instanceId}`);
   let dragFrame = $state<WidgetFrameProjection | null>(null);
   let dragging = $state(false);
   let tablist = $state<HTMLElement>();
@@ -238,6 +239,7 @@
   data-pom-part="group.surface"
   style={rowHeight === undefined ? undefined : `height:${rowHeight}px;min-height:${rowHeight}px`}
 >
+  <p id={gestureHelpId} class="widget-gesture-description">Drag along the tabs to reorder; drag away to detach. Control+Shift+Left or Right reorders this tab. Widget actions also offers reorder and detach.</p>
   <div class="widget-group-header" data-widget-group-header data-pom-part="widget.header">
     <div bind:this={tablist} class="widget-group-tabs" data-pom-control-group="joined" role="tablist" aria-label="Grouped Widgets">
       {#each ordered as frame, index (frame.instanceId)}
@@ -256,7 +258,9 @@
             data-tab-touch-reorder-grip
             data-focus-widget-for={frame.instanceId}
             aria-selected={frame.instanceId === active?.instanceId}
-            aria-keyshortcuts="Shift+F10"
+            aria-keyshortcuts="Shift+F10 Control+Shift+ArrowLeft Control+Shift+ArrowRight"
+            title="Drag along the tabs to reorder. Drag away to detach."
+            aria-describedby={gestureHelpId}
             tabindex={frame.instanceId === active?.instanceId ? 0 : -1}
             onclick={() => { if (!reorderDrag.consumeClick()) activate(frame); }}
             oncontextmenu={(event) => tabContextMenu(event, frame)}
@@ -275,6 +279,7 @@
         type="button"
         data-pom-part="button.icon"
         aria-label="Widget actions"
+        title={`Actions for ${titleFor?.(active) ?? active.title}`}
         aria-haspopup="menu"
         aria-expanded={actionsOpen}
         onclick={(event) => openActions(active, event.currentTarget, 'touch')}

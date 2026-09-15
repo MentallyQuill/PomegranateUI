@@ -134,6 +134,7 @@
     data-widget-drag-surface={onexitfocus ? undefined : ''}
     tabindex={onexitfocus || grouped ? undefined : 0}
     aria-keyshortcuts={onexitfocus || grouped ? undefined : 'Shift+F10'}
+    title={onexitfocus || grouped ? undefined : 'Drag to move. Open Widget actions for placement and focus options.'}
     onkeydown={onexitfocus ? undefined : handleHeaderKey}
     onpointerdown={onexitfocus ? undefined : dragSurfacePointerDown}
     onpointermove={onexitfocus ? undefined : drag.pointerMove}
@@ -152,6 +153,7 @@
         data-pom-part="button.icon"
         type="button"
         aria-label="Widget actions"
+        title={`Actions for ${displayTitle}`}
         aria-haspopup="menu"
         aria-expanded={actionsOpen}
         onclick={(event) => openActions(event.currentTarget, 'touch')}

@@ -22,6 +22,17 @@
   const actions = $derived(request ? createWidgetActions(store, request.frame.instanceId) : undefined);
   const requestIsFocused = $derived(Boolean(request?.anchor.closest('.focused-widget-dialog')));
   const surface = $derived(snapshot ? selectPanelSurface(snapshot, store.registry, store.templates) : null);
+  const groupMembers = $derived.by(() => {
+    const current = request && snapshot?.placements[request.frame.instanceId];
+    if (current?.kind !== 'docked' || !current.group) return [];
+    return Object.entries(snapshot!.placements).filter(([, placement]) => placement.kind === 'docked'
+      && placement.panelId === current.panelId && placement.subPanelId === current.subPanelId
+      && placement.regionId === current.regionId && placement.shelfId === current.shelfId
+      && placement.lane === current.lane
+      && placement.group?.id === current.group!.id)
+      .sort(([, left], [, right]) => (left.kind === 'docked' ? left.group?.order ?? 0 : 0) - (right.kind === 'docked' ? right.group?.order ?? 0 : 0));
+  });
+  const groupIndex = $derived(groupMembers.findIndex(([id]) => id === request?.frame.instanceId));
   const currentEdge = $derived.by(() => {
     const placement = request?.frame.placement;
     if (!placement) return undefined;
@@ -246,8 +257,11 @@
   }
 
   function opened() {
+    if (!isMenuOpen()) return;
     positionMenu();
-    menu?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus({ preventScroll: true });
+    if (!menu?.contains(document.activeElement)) {
+      menu?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus({ preventScroll: true });
+    }
   }
 </script>
 
@@ -267,10 +281,17 @@
 >
   {#if actions}
     {#if view === 'actions'}
+      {#if groupMembers.length > 1}
+        <p class="widget-gesture-help">Drag along the tabs to reorder. Drag away to detach.</p>
+        <button role="menuitem" data-pom-part="button.surface" type="button" disabled={groupIndex === 0} onclick={() => run(() => store.dispatch({ type: 'widget.group.reorder', instanceId: request!.frame.instanceId, toIndex: groupIndex - 1 }))}>Move tab left</button>
+        <button role="menuitem" data-pom-part="button.surface" type="button" disabled={groupIndex === groupMembers.length - 1} onclick={() => run(() => store.dispatch({ type: 'widget.group.reorder', instanceId: request!.frame.instanceId, toIndex: groupIndex + 1 }))}>Move tab right</button>
+        <button role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.float())}>Detach from group</button>
+        <hr />
+      {/if}
       {#if onfocuswidget && !requestIsFocused}<button class="action-focus" role="menuitem" data-pom-part="button.surface" type="button" onclick={focus}>Focus</button>{/if}
       <button class="action-move" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => show('move')}>Move…</button>
       <hr />
-      <button class="action-remove" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.shelve())}>Remove</button>
+      <button class="action-remove" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => run(() => actions.shelve())}>Move to Widget Shelf</button>
     {:else}
       <button class="action-back" role="menuitem" data-pom-part="button.surface" type="button" onclick={() => show('actions')}>Back to Widget actions</button>
       <hr />

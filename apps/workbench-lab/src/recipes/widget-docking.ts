@@ -124,7 +124,7 @@ function intentFromTarget(point: DockPoint, target: DockTarget): DockIntent | nu
       key: `${target.id}:tab`,
       kind: 'tab',
       targetRect: target.rect,
-      previewRect: target.rect,
+      previewRect: target.previewRect ?? target.rect,
       label: `Group with ${targetLabel(target)}`
     };
   }
@@ -150,7 +150,7 @@ function intentFromTarget(point: DockPoint, target: DockTarget): DockIntent | nu
         key: `${target.id}:tab`,
         kind: 'tab',
         targetRect: header,
-        previewRect: header,
+        previewRect: target.previewRect ?? target.rect,
         label: `Group with ${targetLabel(target)}`
       };
     }
@@ -185,7 +185,7 @@ function intentFromTarget(point: DockPoint, target: DockTarget): DockIntent | nu
       key: `${target.id}:tab`,
       kind: 'tab',
       targetRect: zone,
-      previewRect: zone,
+      previewRect: target.previewRect ?? target.rect,
       label: `Group with ${targetLabel(target)}`
     };
   }
@@ -243,7 +243,9 @@ export function stabilizeDockIntent(
     || previous.dockColumn !== next.dockColumn
     || previous.regionId !== next.regionId
   )) return next;
-  if (next?.kind === 'shelf') return next;
+  // A broad widget zone can cover an entire shelf rail. Preserve edge jitter
+  // tolerance, but let the rail's interior express a deliberate new-shelf drop.
+  if (next?.kind === 'shelf' && (previous.kind === 'shelf' || contains(next.targetRect, point, -2))) return next;
   return contains(previous.targetRect, point, hysteresis) ? previous : next;
 }
 
@@ -294,7 +296,7 @@ export function buildShelfRails(
     rect: railRect(region, first.rect.y - 6),
     previewRect: railPreviewRect(region, first.rect.y),
     railKind: 'before',
-    insertOrder: 0,
+    insertOrder: first.order,
     label: 'New shelf before'
   });
   for (let index = 1; index < ordered.length; index += 1) {
@@ -307,7 +309,7 @@ export function buildShelfRails(
       rect: railRect(region, (previous.rect.y + previous.rect.height + next.rect.y) / 2),
       previewRect: railPreviewRect(region, (previous.rect.y + previous.rect.height + next.rect.y) / 2),
       railKind: 'between',
-      insertOrder: index,
+      insertOrder: next.order,
       label: 'New shelf between'
     });
   }
@@ -319,7 +321,7 @@ export function buildShelfRails(
     rect: railRect(region, Math.min(last.rect.y + last.rect.height + 6, region.y + region.height - 28)),
     previewRect: railPreviewRect(region, last.rect.y + last.rect.height),
     railKind: 'after',
-    insertOrder: ordered.length,
+    insertOrder: last.order + 1,
     label: 'New shelf after'
   });
   targets.push({
@@ -329,7 +331,7 @@ export function buildShelfRails(
     rect: railRect(region, region.y + region.height - 8, 16),
     previewRect: railPreviewRect(region, region.y + region.height),
     railKind: 'append',
-    insertOrder: ordered.length,
+    insertOrder: last.order + 1,
     label: 'Append shelf'
   });
   return targets;

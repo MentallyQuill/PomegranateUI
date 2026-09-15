@@ -6,14 +6,23 @@ import {
   stabilizeDockIntent,
   type DockIntent,
   type DockPoint,
+  type DockRect,
   type DockTarget
 } from './widget-docking.js';
 import {
   collectDockTargets,
   createDockPreviewController,
   dockRectOf,
+  observeDockGeometry,
   type DockPreviewController
 } from './widget-docking-dom.js';
+import { animateWidgetPlacement, captureWidgetRects, finishWidgetMotion, floatingBounds } from './widget-drag-motion.js';
+import { createWidgetPanelHover, type WidgetPanelHover } from './widget-panel-hover.js';
+
+export interface CatalogFloatingTarget extends DockRect {
+  readonly panelId: string;
+  readonly subPanelId?: string;
+}
 
 export type CatalogPlacementInput = 'pointer' | 'keyboard';
 export type CatalogPlacementPhase = 'idle' | 'pressing' | 'lifted';
@@ -47,12 +56,6 @@ export interface CatalogPlacementProxyState {
   readonly offsetY: number;
 }
 
-export interface CatalogFloatingPlacementIntent {
-  readonly kind: 'floating';
-  readonly point: DockPoint;
-  readonly grabRatio: DockPoint;
-}
-
 export interface CatalogPlacementState {
   readonly phase: CatalogPlacementPhase;
   readonly input: CatalogPlacementInput | null;
@@ -75,7 +78,8 @@ export interface CatalogPlacementControllerOptions {
   readonly isPotentialDockTarget?: (manifest: WidgetManifest, target: HTMLElement) => boolean;
   readonly onCommit: (manifest: WidgetManifest, target: CatalogPlacementTarget) => void;
   readonly onDockCommit?: (manifest: WidgetManifest, intent: DockIntent) => void;
-  readonly onFloatCommit?: (manifest: WidgetManifest, intent: CatalogFloatingPlacementIntent) => void;
+  readonly onFloatCommit?: (manifest: WidgetManifest, target: CatalogFloatingTarget) => void;
+  readonly onPanelActivate?: (panelId: string) => boolean;
   readonly onAnnounce?: (message: string) => void;
   readonly captureScrollAnchor?: () => unknown;
   readonly restoreScrollAnchor?: (anchor: unknown) => void;
@@ -191,6 +195,17 @@ export function createCatalogPlacementController(
   let dockTargets: readonly DockTarget[] = Object.freeze([]);
   let dockIntent: DockIntent | null = null;
   let dockPreview: DockPreviewController | null = null;
+  let stopObserving: (() => void) | null = null;
+  let revealedDock: 'left' | 'right' | null = null;
+  let floatingTarget: CatalogFloatingTarget | null = null;
+  let stopMotion: (() => void) | null = null;
+  let committing = false;
+  let panelHover: WidgetPanelHover | null = null;
+  const floatingPanel = () => {
+    const root = options.getTargetRoot();
+    return root instanceof HTMLElement && root.matches('[data-pomegranate-panel]')
+      ? root : root?.querySelector<HTMLElement>('[data-pomegranate-panel]') ?? null;
+  };
   const listeners = new Set<(state: CatalogPlacementState) => void>();
   const targetAttributes = new Map<HTMLElement, {
     readonly placementTarget: string | null;
@@ -287,6 +302,13 @@ export function createCatalogPlacementController(
   };
 
   const reset = () => {
+    panelHover?.clear();
+    panelHover = null;
+    committing = false;
+    const finishMotion = stopMotion;
+    stopMotion = null;
+    finishMotion?.();
+    floatingTarget = null;
     const origin = candidate?.origin ?? null;
     const ownerDocument = candidate?.document ?? null;
     const targetRoot = options.getTargetRoot();
@@ -296,11 +318,14 @@ export function createCatalogPlacementController(
     const input = state.input;
     const anchor = savedScrollAnchor;
     removePointerListeners();
+    stopObserving?.();
+    stopObserving = null;
     clearTargets();
     dockPreview?.destroy();
     dockPreview = null;
     dockTargets = Object.freeze([]);
     dockIntent = null;
+    revealedDock = null;
     ownerDocument?.body.classList.remove('pom-widget-drag-active');
     themeRoot?.removeAttribute('data-drag-reveal-left');
     themeRoot?.removeAttribute('data-drag-reveal-right');
@@ -356,9 +381,20 @@ export function createCatalogPlacementController(
     if (!(targetRoot instanceof HTMLElement)) return;
     const themeRoot = targetRoot.closest<HTMLElement>('main[data-pom-theme-root]');
     if (!themeRoot) return;
-    const side = dockRevealSide(point, dockRectOf(targetRoot.getBoundingClientRect()), 34);
-    const revealLeft = side === 'left' && themeRoot.classList.contains('left-collapsed');
-    const revealRight = side === 'right' && themeRoot.classList.contains('right-collapsed');
+    if (revealedDock) {
+      const region = targetRoot.querySelector<HTMLElement>(`[data-pomegranate-region-surface="${revealedDock}"]`);
+      const rect = region?.getBoundingClientRect();
+      if (!rect || point.x < rect.left || point.x > rect.right || point.y < rect.top || point.y > rect.bottom) {
+        revealedDock = null;
+      }
+    }
+    if (!revealedDock) {
+      const side = dockRevealSide(point, dockRectOf(targetRoot.getBoundingClientRect()), 34);
+      if (side === 'left' && themeRoot.classList.contains('left-collapsed')) revealedDock = 'left';
+      if (side === 'right' && themeRoot.classList.contains('right-collapsed')) revealedDock = 'right';
+    }
+    const revealLeft = revealedDock === 'left';
+    const revealRight = revealedDock === 'right';
     const changed = themeRoot.hasAttribute('data-drag-reveal-left') !== revealLeft
       || themeRoot.hasAttribute('data-drag-reveal-right') !== revealRight;
     if (revealLeft) themeRoot.dataset.dragRevealLeft = 'true';
@@ -376,6 +412,7 @@ export function createCatalogPlacementController(
     input: CatalogPlacementInput = 'pointer'
   ): boolean => {
     if (!candidate) return false;
+    finishWidgetMotion(candidate.document);
     if (
       candidate.manifest.catalog?.multiplicity === 'single'
       && options.getInstanceCount(candidate.manifest) > 0
@@ -386,14 +423,14 @@ export function createCatalogPlacementController(
     }
     const targetRoot = options.getTargetRoot();
     const richPointer = input === 'pointer'
-      && options.onDockCommit !== undefined
+      && (options.onDockCommit !== undefined || options.onFloatCommit !== undefined)
       && targetRoot instanceof HTMLElement;
     const visibleTargets = compatibleTargets(candidate.manifest);
     const targets = richPointer
       ? compatibleTargets(candidate.manifest, options.isPotentialDockTarget ?? options.isCompatibleTarget)
       : visibleTargets;
     const nextDockTargets = richPointer ? compatibleDockTargets(candidate.manifest, visibleTargets) : Object.freeze([]);
-    if (targets.length === 0) {
+    if (targets.length === 0 && !(richPointer && options.onFloatCommit && floatingPanel())) {
       options.onAnnounce?.(`No compatible target is available for ${candidate.manifest.title}.`);
       reset();
       return false;
@@ -427,12 +464,42 @@ export function createCatalogPlacementController(
     options.catalog.suspend();
     suspended = true;
     if (richPointer) {
+      if (options.onPanelActivate) panelHover = createWidgetPanelHover(
+        () => {
+          const root = options.getTargetRoot();
+          return root instanceof HTMLElement ? root.closest<HTMLElement>('main[data-pom-theme-root]') : null;
+        },
+        (panelId) => {
+          if (!candidate || committing) return;
+          const liftedCandidate = candidate;
+          dockIntent = null;
+          floatingTarget = null;
+          dockPreview?.sync([], null);
+          if (!options.onPanelActivate!(panelId)) return;
+          candidate.document.defaultView?.requestAnimationFrame(() => {
+            if (candidate !== liftedCandidate || committing || !state.proxy) return;
+            const root = options.getTargetRoot();
+            if (!(root instanceof HTMLElement)) return;
+            dockPreview?.setSurface(root);
+            stopObserving?.();
+            stopObserving = observeDockGeometry(root, () => {
+              if (state.proxy) updateDockState({ x: state.proxy.x, y: state.proxy.y });
+            });
+            updateDockState({ x: state.proxy.x, y: state.proxy.y });
+          });
+        }
+      );
       const root = options.getTargetRoot();
       if (root instanceof HTMLElement) {
         dockTargets = nextDockTargets;
         dockPreview = createDockPreviewController(root);
         candidate.document.body.classList.add('pom-widget-drag-active');
         dockPreview.sync(dockTargets, null);
+        stopObserving = observeDockGeometry(root, () => {
+          if (state.phase === 'lifted' && state.input === 'pointer' && state.proxy) {
+            updateDockState({ x: state.proxy.x, y: state.proxy.y });
+          }
+        });
       }
     }
     publish(Object.freeze({
@@ -455,15 +522,48 @@ export function createCatalogPlacementController(
         ? `Choose a placement for ${candidate.manifest.title}. Use arrow keys, Enter to place, or Escape to cancel.`
         : `${candidate.manifest.title} lifted. Drag to a highlighted Panel target.`
     }));
+    candidate.document.addEventListener('keydown', handleDocumentKeyDown);
     if (input === 'keyboard') {
-      candidate.document.addEventListener('keydown', handleDocumentKeyDown);
       if (targets[0]) options.requestTargetFocus?.(targets[0].element);
+    } else if (dockPreview) {
+      updateDockState({ x: event.clientX, y: event.clientY });
     }
     return true;
   };
 
+  function updateDockState(point: DockPoint) {
+    if (!candidate || committing || !dockPreview || !state.proxy) return;
+    panelHover?.update(point);
+    syncCollapsedDockReveal(point);
+    const targets = compatibleTargets(candidate.manifest);
+    dockTargets = compatibleDockTargets(candidate.manifest, targets);
+    const next = options.onDockCommit ? resolveDockIntent(point, dockTargets) : null;
+    dockIntent = stabilizeDockIntent(point, dockIntent, next, 10);
+    floatingTarget = null;
+    const panel = floatingPanel();
+    const box = panel?.getBoundingClientRect();
+    let floatingRect: DockRect | undefined;
+    if (!dockIntent && options.onFloatCommit && panel && box && point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom) {
+      const size = { x: 0, y: 0, width: 360, height: candidate.manifest.catalog?.geometry.idealHeight ?? 360 };
+      const bounds = floatingBounds(dockRectOf(box), size, { x: state.proxy.offsetX, y: state.proxy.offsetY }, point);
+      const subPanelId = panel.querySelector<HTMLElement>('[data-sub-panel]')?.dataset.subPanel;
+      floatingTarget = { ...bounds, panelId: panel.dataset.pomegranatePanel!, ...(subPanelId ? { subPanelId } : {}) };
+      floatingRect = { ...bounds, x: box.x + bounds.x, y: box.y + bounds.y };
+    }
+    dockIntent = dockPreview.sync(dockTargets, dockIntent, {
+      heldRect: { x: point.x - state.proxy.offsetX, y: point.y - state.proxy.offsetY, width: state.proxy.width, height: state.proxy.height },
+      ...(panelHover?.getHint() ? { panelHint: panelHover.getHint()! } : {}),
+      ...(floatingRect ? { floatingRect } : {})
+    });
+    publish(Object.freeze({
+      ...state,
+      proxy: Object.freeze({ ...state.proxy, x: point.x, y: point.y }),
+      selectedTargetId: dockIntent?.key ?? null
+    }));
+  }
+
   function handlePointerMove(event: PointerEvent) {
-    if (!candidate || event.pointerId !== candidate.pointerId) return;
+    if (!candidate || committing || event.pointerId !== candidate.pointerId) return;
     if (state.phase === 'pressing') {
       const distance = Math.hypot(event.clientX - candidate.startX, event.clientY - candidate.startY);
       if (candidate.pointerType === 'touch' && distance > 0) {
@@ -477,19 +577,8 @@ export function createCatalogPlacementController(
     }
     if (state.phase === 'lifted' && state.input === 'pointer' && state.proxy) {
       event.preventDefault();
-      if (options.onDockCommit && dockPreview) {
-        const point = { x: event.clientX, y: event.clientY };
-        syncCollapsedDockReveal(point);
-        const targets = compatibleTargets(candidate.manifest);
-        dockTargets = compatibleDockTargets(candidate.manifest, targets);
-        const next = resolveDockIntent(point, dockTargets);
-        dockIntent = stabilizeDockIntent(point, dockIntent, next, 10);
-        dockIntent = dockPreview.sync(dockTargets, dockIntent);
-        publish(Object.freeze({
-          ...state,
-          proxy: Object.freeze({ ...state.proxy, x: event.clientX, y: event.clientY }),
-          selectedTargetId: dockIntent?.key ?? null
-        }));
+      if (dockPreview) {
+        updateDockState({ x: event.clientX, y: event.clientY });
         return;
       }
       const hit = candidate.document.elementFromPoint?.(event.clientX, event.clientY) ?? null;
@@ -502,12 +591,15 @@ export function createCatalogPlacementController(
   }
 
   function handlePointerEnd(event: PointerEvent) {
-    if (!candidate || event.pointerId !== candidate.pointerId) return;
+    if (!candidate || committing || event.pointerId !== candidate.pointerId) return;
     if (state.phase === 'lifted') {
       suppressClickBriefly();
       if (event.type !== 'pointercancel' && dockIntent && options.onDockCommit) commitDockIntent();
+      else if (event.type !== 'pointercancel' && floatingTarget && options.onFloatCommit) {
+        const manifest = candidate.manifest, target = floatingTarget;
+        commitWithMotion(() => options.onFloatCommit!(manifest, target));
+      }
       else if (event.type !== 'pointercancel' && state.selectedTargetId) commitSelectedTarget();
-      else if (event.type !== 'pointercancel' && options.onFloatCommit && pointIsInsideTargetRoot(event)) commitFloating(event);
       else cancelPlacement();
       return;
     }
@@ -619,46 +711,34 @@ export function createCatalogPlacementController(
     return true;
   };
 
+  const commitWithMotion = (commit: () => void) => {
+    if (!candidate) return false;
+    panelHover?.clear();
+    const document = candidate.document;
+    const held = document.querySelector<HTMLElement>('[data-catalog-placement-proxy]');
+    const before = captureWidgetRects(document);
+    committing = true;
+    removePointerListeners();
+    stopObserving?.();
+    stopObserving = null;
+    dockPreview?.destroy();
+    dockPreview = null;
+    try { commit(); } catch (error) { reset(); throw error; }
+    if (!held) { reset(); return true; }
+    stopMotion = animateWidgetPlacement({
+      document, held, before,
+      destination: () => [...document.querySelectorAll<HTMLElement>('[data-pomegranate-widget]')]
+        .find(node => !node.closest('[data-catalog-placement-proxy]') && !before.has(node.dataset.pomegranateWidget!)) ?? null,
+      finished: () => { stopMotion = null; if (committing) reset(); }
+    });
+    return true;
+  };
+
   const commitDockIntent = () => {
     if (state.phase !== 'lifted' || !candidate || !dockIntent || !options.onDockCommit) return false;
     const activeManifest = candidate.manifest;
     const activeIntent = dockIntent;
-    try {
-      options.onDockCommit(activeManifest, activeIntent);
-    } finally {
-      reset();
-    }
-    return true;
-  };
-
-  const pointIsInsideTargetRoot = (point: Pick<PointerEvent, 'clientX' | 'clientY'>) => {
-    const root = options.getTargetRoot();
-    if (!(root instanceof HTMLElement)) return false;
-    const rect = root.getBoundingClientRect();
-    return point.clientX >= rect.left
-      && point.clientX <= rect.right
-      && point.clientY >= rect.top
-      && point.clientY <= rect.bottom;
-  };
-
-  const commitFloating = (point: Pick<PointerEvent, 'clientX' | 'clientY'>) => {
-    if (state.phase !== 'lifted' || !state.proxy || !candidate || !options.onFloatCommit) return false;
-    const activeManifest = candidate.manifest;
-    const proxy = state.proxy;
-    const intent: CatalogFloatingPlacementIntent = Object.freeze({
-      kind: 'floating',
-      point: Object.freeze({ x: point.clientX, y: point.clientY }),
-      grabRatio: Object.freeze({
-        x: proxy.width > 0 ? proxy.offsetX / proxy.width : 0,
-        y: proxy.height > 0 ? proxy.offsetY / proxy.height : 0
-      })
-    });
-    try {
-      options.onFloatCommit(activeManifest, intent);
-    } finally {
-      reset();
-    }
-    return true;
+    return commitWithMotion(() => options.onDockCommit!(activeManifest, activeIntent));
   };
 
   const cancelPlacement = () => {
@@ -671,9 +751,11 @@ export function createCatalogPlacementController(
     if (state.phase !== 'lifted') return false;
     if (event.key === 'Escape') {
       event.preventDefault();
+      event.stopPropagation();
       cancelPlacement();
       return true;
     }
+    if (state.input !== 'keyboard') return false;
     if (event.key === 'Enter') {
       event.preventDefault();
       if (event.repeat) return true;

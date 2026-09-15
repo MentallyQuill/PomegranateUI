@@ -198,8 +198,9 @@
 </article>
 
 <style>
-  .widget-actions-host { display: none; width: 0; min-width: 0; flex: 0 0 0; }
-  .widget-actions-trigger { display: none; }
+  .widget-actions-host { display: flex; width: 32px; min-width: 32px; flex: 0 0 32px; }
+  .widget-actions-trigger { display: block; width: 32px; min-width: 32px; height: 32px; min-height: 32px; overflow: hidden; font-size: 0; }
+  .widget-actions-trigger::after { content: "…"; font-size: 20px; }
 
   @media (pointer: coarse) {
     .widget-actions-host { display: flex; width: 44px; min-width: 44px; flex: 0 0 44px; }
