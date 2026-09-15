@@ -278,6 +278,10 @@ describe('Workbench Lab theme conformance', () => {
     expect(ASH_AMBER_THEME.recipes.shellPresentation).toBeUndefined();
   });
 
+  it('uses the quieter bottom-edge chevrons for Bunny toolbar controls', () => {
+    expect(BUNNY_THEME.recipes.toolbarTogglePresentation).toBe('bottom-chevrons');
+  });
+
   it('compiles Deep Current free edges as an upper highlight and lower shadow tonal bevel', () => {
     const result = resolveThemeV2(DEEP_CURRENT_THEME, assetRegistry);
     expect(result.ok).toBe(true);

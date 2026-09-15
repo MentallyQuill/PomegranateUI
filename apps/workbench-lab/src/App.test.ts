@@ -362,6 +362,8 @@ describe('Svelte Workbench Lab mockup', () => {
     const leftToggle = screen.getByRole('button', { name: 'Close left toolbar' });
     const rightToggle = screen.getByRole('button', { name: 'Close right toolbar' });
 
+    expect(leftToggle).toHaveAttribute('data-pom-part', 'button.surface');
+    expect(rightToggle).toHaveAttribute('data-pom-part', 'button.surface');
     expect(leftToggle).toHaveTextContent('Close left');
     expect(rightToggle).toHaveTextContent('Close right');
     await user.click(leftToggle);

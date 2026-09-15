@@ -513,8 +513,8 @@ export function createCatalogPlacementController(
         y: event.clientY,
         width,
         height,
-        offsetX: Math.max(0, Math.min(width, Math.round((event.clientX - originRect.left) * scale))),
-        offsetY: Math.max(0, Math.min(height, Math.round((event.clientY - originRect.top) * scale)))
+        offsetX: Math.max(0, Math.min(width, Math.round((candidate.startX - originRect.left) * scale))),
+        offsetY: Math.max(0, Math.min(height, Math.round((candidate.startY - originRect.top) * scale)))
       }),
       targets,
       selectedTargetId,
@@ -525,6 +525,8 @@ export function createCatalogPlacementController(
     candidate.document.addEventListener('keydown', handleDocumentKeyDown);
     if (input === 'keyboard') {
       if (targets[0]) options.requestTargetFocus?.(targets[0].element);
+    } else if (dockPreview) {
+      updateDockState({ x: event.clientX, y: event.clientY });
     }
     return true;
   };

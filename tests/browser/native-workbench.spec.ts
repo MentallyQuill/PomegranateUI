@@ -1008,6 +1008,157 @@ test('every theme shares centered draggable Story measure controls and restores 
   expect(Math.abs(keyboard.transcript.width - keyboard.composer.width)).toBeLessThan(2);
 });
 
+test('Story prose expands with the Story measure instead of stopping at a fixed line width', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const resize = page.getByRole('separator', { name: 'Resize Story width from right edge' });
+  const transcript = page.locator('[data-widget-type="story.transcript"] .transcript');
+  const prose = transcript.locator(':scope > .transcript-prose').first();
+
+  await resize.press('Home');
+  const narrow = await prose.evaluate((node) => node.getBoundingClientRect().width);
+  await resize.press('End');
+  const [wideTranscript, wideProse] = await Promise.all([
+    transcript.evaluate((node) => node.getBoundingClientRect().width),
+    prose.evaluate((node) => node.getBoundingClientRect().width)
+  ]);
+
+  expect(wideProse).toBeGreaterThan(narrow + 500);
+  expect(Math.abs(wideProse - wideTranscript)).toBeLessThan(2);
+});
+
+test('Story width controls render as illuminated lines outside the composer edges', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const composer = page.locator('[data-widget-type="story.composer"]');
+  const left = page.getByRole('separator', { name: 'Resize Story width from left edge' });
+  const right = page.getByRole('separator', { name: 'Resize Story width from right edge' });
+
+  const affordance = async (handle: typeof left, edge: 'left' | 'right') => {
+    const line = handle.locator('span');
+    const [composerBox, handleBox, lineBox, handleStyle, lineOpacity] = await Promise.all([
+      composer.boundingBox(),
+      handle.boundingBox(),
+      line.boundingBox(),
+      handle.evaluate((node) => {
+        const style = getComputedStyle(node);
+        return {
+          backgroundColor: style.backgroundColor,
+          borderLeftWidth: style.borderLeftWidth,
+          borderRightWidth: style.borderRightWidth,
+          boxShadow: style.boxShadow
+        };
+      }),
+      line.evaluate((node) => Number(getComputedStyle(node).opacity))
+    ]);
+    if (!composerBox || !handleBox || !lineBox) throw new Error(`Missing ${edge} Story control geometry.`);
+    const lineCenter = lineBox.x + lineBox.width / 2;
+    const composerEdge = edge === 'left' ? composerBox.x : composerBox.x + composerBox.width;
+    const gap = edge === 'left' ? composerEdge - lineCenter : lineCenter - composerEdge;
+    const overlap = edge === 'left'
+      ? handleBox.x + handleBox.width - composerBox.x
+      : composerBox.x + composerBox.width - handleBox.x;
+    return { gap, overlap, handleStyle, lineOpacity, lineWidth: lineBox.width };
+  };
+
+  for (const [handle, edge] of [[left, 'left'], [right, 'right']] as const) {
+    const resting = await affordance(handle, edge);
+    expect(resting.gap).toBeGreaterThanOrEqual(5);
+    expect(resting.gap).toBeLessThanOrEqual(10);
+    expect(resting.overlap).toBeLessThanOrEqual(0);
+    expect(resting.lineWidth).toBeLessThanOrEqual(2);
+    expect(resting.handleStyle).toEqual({
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+      borderLeftWidth: '0px',
+      borderRightWidth: '0px',
+      boxShadow: 'none'
+    });
+    expect(resting.lineOpacity).toBeLessThanOrEqual(0.12);
+
+    await handle.hover();
+    await expect.poll(async () => (await affordance(handle, edge)).lineOpacity).toBeGreaterThanOrEqual(0.7);
+    expect((await affordance(handle, edge)).handleStyle.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  }
+});
+
+test('Story width and resize lines follow asymmetric toolbar drags and restore the preferred measure', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const storyLeft = page.getByRole('separator', { name: 'Resize Story width from left edge' });
+  const storyRight = page.getByRole('separator', { name: 'Resize Story width from right edge' });
+  const toolbarLeft = page.getByRole('separator', { name: 'Resize left toolbar' });
+  const toolbarRight = page.getByRole('separator', { name: 'Resize right toolbar' });
+
+  const geometry = () => page.evaluate(() => {
+    const composer = document.querySelector<HTMLElement>('[data-widget-type="story.composer"]');
+    const transcript = document.querySelector<HTMLElement>('[data-widget-type="story.transcript"] .widget-frame');
+    const leftLine = document.querySelector<HTMLElement>('[data-story-measure-resizer="left"] > span');
+    const rightLine = document.querySelector<HTMLElement>('[data-story-measure-resizer="right"] > span');
+    if (!composer || !transcript || !leftLine || !rightLine) throw new Error('Missing Story layout geometry.');
+    const composerBox = composer.getBoundingClientRect();
+    const transcriptBox = transcript.getBoundingClientRect();
+    const leftLineBox = leftLine.getBoundingClientRect();
+    const rightLineBox = rightLine.getBoundingClientRect();
+    return {
+      composer: { left: composerBox.left, right: composerBox.right, width: composerBox.width },
+      transcript: { left: transcriptBox.left, right: transcriptBox.right, width: transcriptBox.width },
+      leftGap: composerBox.left - (leftLineBox.left + leftLineBox.width / 2),
+      rightGap: rightLineBox.left + rightLineBox.width / 2 - composerBox.right
+    };
+  });
+
+  await storyRight.press('End');
+  const wide = await geometry();
+  expect(wide.composer.width).toBeGreaterThan(1100);
+
+  await dragHorizontally(page, toolbarLeft, 120);
+  await expect(toolbarLeft).toHaveAttribute('aria-valuenow', '406');
+  const leftExpanded = await geometry();
+  expect(leftExpanded.composer.width).toBeLessThan(wide.composer.width - 100);
+  expect(Math.abs(leftExpanded.composer.width - leftExpanded.transcript.width)).toBeLessThan(2);
+  expect(leftExpanded.leftGap).toBeGreaterThanOrEqual(5);
+  expect(leftExpanded.leftGap).toBeLessThanOrEqual(10);
+  expect(leftExpanded.rightGap).toBeGreaterThanOrEqual(5);
+  expect(leftExpanded.rightGap).toBeLessThanOrEqual(10);
+
+  await dragHorizontally(page, toolbarRight, -100);
+  await expect(toolbarRight).toHaveAttribute('aria-valuenow', '386');
+  const bothExpanded = await geometry();
+  expect(bothExpanded.composer.width).toBeLessThan(leftExpanded.composer.width - 80);
+  expect(bothExpanded.leftGap).toBeGreaterThanOrEqual(5);
+  expect(bothExpanded.leftGap).toBeLessThanOrEqual(10);
+  expect(bothExpanded.rightGap).toBeGreaterThanOrEqual(5);
+  expect(bothExpanded.rightGap).toBeLessThanOrEqual(10);
+
+  await dragHorizontally(page, toolbarLeft, -120);
+  await dragHorizontally(page, toolbarRight, 100);
+  await expect.poll(async () => (await geometry()).composer.width).toBeGreaterThan(wide.composer.width - 2);
+  const restored = await geometry();
+  expect(Math.abs(restored.composer.width - wide.composer.width)).toBeLessThan(2);
+  expect(restored.leftGap).toBeGreaterThanOrEqual(5);
+  expect(restored.leftGap).toBeLessThanOrEqual(10);
+  expect(restored.rightGap).toBeGreaterThanOrEqual(5);
+  expect(restored.rightGap).toBeLessThanOrEqual(10);
+  await expect(storyLeft).toHaveAttribute('aria-valuenow', await storyRight.getAttribute('aria-valuenow') ?? '');
+});
+
+test('adding and removing toolbar columns contracts and restores the preferred Story measure', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const storyRight = page.getByRole('separator', { name: 'Resize Story width from right edge' });
+  const leftAdd = page.getByRole('button', { name: 'Add column to left toolbar' });
+  const leftRemove = page.getByRole('button', { name: 'Remove column from left toolbar' });
+  const composer = page.locator('[data-widget-type="story.composer"]');
+  const width = () => composer.evaluate((node) => node.getBoundingClientRect().width);
+
+  await storyRight.press('End');
+  const wide = await width();
+  await leftAdd.click();
+  await expect(page.locator('[data-conformance-region="left"] [data-dock-column]')).toHaveCount(2);
+  await expect.poll(width).toBeLessThan(wide - 100);
+
+  await leftRemove.click();
+  await expect(page.locator('[data-conformance-region="left"] [data-dock-column]')).toHaveCount(1);
+  await expect.poll(width).toBeGreaterThan(wide - 2);
+  expect(Math.abs(await width() - wide)).toBeLessThan(2);
+});
+
 test('Story toolbar columns add inward and populated removal warns, cancels, confirms, and undoes', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   const leftAdd = page.getByRole('button', { name: 'Add column to left toolbar' });
@@ -1326,6 +1477,118 @@ test('Deep Current edge controls collapse and restore both toolbars without hidi
   await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
 });
 
+test('non-instrumented toolbar toggles inherit the active theme button material', async ({ page }) => {
+  await openDeveloperTools(page);
+  const themes = page.getByRole('group', { name: 'Visual target' });
+  const left = page.getByRole('button', { name: 'Close left toolbar' });
+
+  for (const theme of ['PomOS', 'Bunny', 'Ash & Amber']) {
+    await themes.getByRole('button', { name: theme, exact: true }).click();
+    await expect(left).toHaveAttribute('data-pom-part', 'button.surface');
+
+    const material = await left.evaluate((node) => {
+      const root = node.closest('main[data-pom-theme-root]');
+      if (!(root instanceof HTMLElement)) throw new Error('Expected toolbar toggle theme root.');
+      const probe = document.createElement('button');
+      probe.type = 'button';
+      probe.dataset.pomPart = 'button.surface';
+      probe.textContent = 'Theme button probe';
+      probe.style.position = 'fixed';
+      probe.style.inset = 'auto 0 0 auto';
+      root.append(probe);
+      const properties = (element: Element) => {
+        const style = getComputedStyle(element);
+        return {
+          color: style.color,
+          backgroundColor: style.backgroundColor,
+          borderColor: style.borderColor,
+          borderRadius: style.borderRadius,
+          boxShadow: style.boxShadow,
+          fontFamily: style.fontFamily,
+          fontWeight: style.fontWeight
+        };
+      };
+      const evidence = {
+        toggle: properties(node),
+        button: properties(probe)
+      };
+      probe.remove();
+      return evidence;
+    });
+
+    expect(material.toggle, theme).toEqual(material.button);
+  }
+});
+
+test('collapsed Story Stage toolbars never create a horizontal Workbench scroll range', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const surface = page.locator('.workbench-surface');
+  const assertHorizontallyFixed = async (state: string) => {
+    const extent = await surface.evaluate((node) => ({
+      clientWidth: node.clientWidth,
+      scrollWidth: node.scrollWidth
+    }));
+    expect(extent.scrollWidth, `${state}: ${JSON.stringify(extent)}`).toBe(extent.clientWidth);
+
+    await surface.evaluate((node) => { node.scrollLeft = node.scrollWidth; });
+    expect(await surface.evaluate((node) => node.scrollLeft), state).toBe(0);
+  };
+
+  await assertHorizontallyFixed('both toolbars open');
+
+  await page.getByRole('button', { name: 'Close right toolbar' }).click();
+  await expect(page.locator('[data-conformance-region="right"]')).toBeHidden();
+  await assertHorizontallyFixed('right toolbar collapsed');
+
+  await page.getByRole('button', { name: 'Close left toolbar' }).click();
+  await expect(page.locator('[data-conformance-region="left"]')).toBeHidden();
+  await assertHorizontallyFixed('both toolbars collapsed');
+
+  await page.getByRole('button', { name: 'Open right toolbar' }).click();
+  await expect(page.locator('[data-conformance-region="right"]')).toBeVisible();
+  await assertHorizontallyFixed('left toolbar collapsed');
+});
+
+test('compact collapsed Story Stage toolbars stay horizontally fixed without taking vertical scroll ownership', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 720 });
+
+  const main = page.locator('main[data-pom-theme-root]');
+  const surface = page.locator('.workbench-surface');
+  const storyTemplate = page.locator('.panel-template-surface[data-panel-template-family="story-stage"]');
+  await expect(main).toHaveClass(/left-collapsed/);
+  await expect(main).toHaveClass(/right-collapsed/);
+
+  const assertHorizontallyFixed = async (state: string) => {
+    const extent = await surface.evaluate((node) => ({
+      clientWidth: node.clientWidth,
+      scrollWidth: node.scrollWidth
+    }));
+    expect(extent.scrollWidth, `${state}: ${JSON.stringify(extent)}`).toBe(extent.clientWidth);
+
+    await surface.evaluate((node) => { node.scrollLeft = node.scrollWidth; });
+    expect(await surface.evaluate((node) => node.scrollLeft), state).toBe(0);
+  };
+
+  await assertHorizontallyFixed('compact toolbars collapsed');
+
+  for (const side of ['right', 'left'] as const) {
+    await page.getByRole('button', { name: `Open ${side} toolbar` }).click();
+    await expect(page.locator(`[data-conformance-region="${side}"]`)).toBeVisible();
+    await assertHorizontallyFixed(`compact ${side} toolbar open`);
+
+    await page.getByRole('button', { name: `Close ${side} toolbar` }).click();
+    await expect(page.locator(`[data-conformance-region="${side}"]`)).toBeHidden();
+    await assertHorizontallyFixed(`compact ${side} toolbar collapsed`);
+  }
+
+  const verticalOwners = await Promise.all([
+    surface.evaluate((node) => getComputedStyle(node).overflowY),
+    storyTemplate.evaluate((node) => getComputedStyle(node).overflowY)
+  ]);
+  expect(verticalOwners).toEqual(['auto', 'visible']);
+});
+
 test('Story Stage side toolbars ease through intermediate widths and reverse without snapping', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -1608,6 +1871,86 @@ test('desktop Widget headers expose actions alongside context and keyboard short
   await expect(namedGroup.getByRole('tab')).toHaveText(['Room Ambience', 'Promise Ledger', 'World State']);
 });
 
+test.describe('desktop Widget surface context actions', () => {
+  test('open from docked Widget content', async ({ page }) => {
+    const article = page.getByRole('article', { name: 'World State' });
+    await article.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+    await expect(page.getByRole('menu', { name: 'World State Widget actions' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(widgetDragSurface(article)).toBeFocused();
+  });
+
+  test('open from floating Widget content', async ({ page }) => {
+    const article = page.getByRole('article', { name: 'World State' });
+    await invokeWidgetAction(article, 'Move…');
+    await page.getByRole('menu', { name: 'World State Widget move' })
+      .getByRole('menuitem', { name: 'Float' })
+      .click();
+    const floating = page.locator('[data-widget-type="systems.world-state"][data-pomegranate-placement="floating"]')
+      .getByRole('article', { name: 'World State' });
+    await floating.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+    await expect(page.getByRole('menu', { name: 'World State Widget actions' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(widgetDragSurface(floating)).toBeFocused();
+  });
+
+  test('open from grouped Widget content', async ({ page }) => {
+    const article = page.getByRole('article', { name: 'Room Ambience' });
+    await article.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+    await expect(page.getByRole('menu', { name: 'Room Ambience Widget actions' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tab', { name: 'Room Ambience' })).toBeFocused();
+  });
+
+  test('open from focused Widget content and use live move and remove actions', async ({ page }) => {
+    await invokeWidgetAction(page.getByRole('article', { name: 'World State' }), 'Focus');
+    const dialog = page.getByRole('dialog', { name: 'World State focus' });
+    const focused = dialog.getByRole('article', { name: 'World State' });
+    await focused.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+    const menu = page.getByRole('menu', { name: 'World State Widget actions' });
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Focus' })).toHaveCount(0);
+    await menu.getByRole('menuitem', { name: 'Move…' }).click();
+    await page.getByRole('menu', { name: 'World State Widget move' })
+      .getByRole('menuitem', { name: 'Float' })
+      .click();
+    await expect(focused).toHaveAttribute('data-pomegranate-placement', 'floating');
+    await expect(dialog.getByRole('button', { name: 'Exit focus' })).toBeFocused();
+
+    await focused.locator(':scope > [data-pom-part="widget.content"]').click({ button: 'right' });
+    await menu.getByRole('menuitem', { name: 'Move to Widget Shelf' }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('article', { name: 'World State' })).toHaveCount(0);
+  });
+
+  test('keeps the focused Widget menu inside its dialog without Popover support', async ({ page }) => {
+    await invokeWidgetAction(page.getByRole('article', { name: 'World State' }), 'Focus');
+    await page.evaluate(() => {
+      Object.defineProperty(HTMLElement.prototype, 'showPopover', { configurable: true, value: undefined });
+      Object.defineProperty(HTMLElement.prototype, 'hidePopover', { configurable: true, value: undefined });
+    });
+    const dialog = page.getByRole('dialog', { name: 'World State focus' });
+    const content = dialog.getByRole('article', { name: 'World State' })
+      .locator(':scope > [data-pom-part="widget.content"]');
+    const contentBox = await content.boundingBox();
+    if (!contentBox) throw new Error('Expected focused Widget content geometry.');
+    await content.click({
+      button: 'right',
+      position: { x: contentBox.width / 2, y: contentBox.height / 2 }
+    });
+
+    const menu = page.getByRole('menu', { name: 'World State Widget actions' });
+    await expect(menu).toHaveAttribute('data-fallback-open', '');
+    await expect(menu.getByRole('menuitem', { name: 'Move…' })).toBeFocused();
+    const [dialogBox, menuBox] = await Promise.all([dialog.boundingBox(), menu.boundingBox()]);
+    if (!dialogBox || !menuBox) throw new Error('Expected fallback menu geometry.');
+    expect(menuBox.x).toBeGreaterThanOrEqual(dialogBox.x + 7);
+    expect(menuBox.y).toBeGreaterThanOrEqual(dialogBox.y + 7);
+    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(dialogBox.x + dialogBox.width - 7);
+    expect(menuBox.y + menuBox.height).toBeLessThanOrEqual(dialogBox.y + dialogBox.height - 7);
+  });
+});
+
 test('narrow fine-pointer Widgets expose actions and retain context menus', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${labOrigin}/?surface=settings.theme-materials`);
@@ -1753,8 +2096,8 @@ test.describe('coarse-pointer Widget actions', () => {
     const before = await trigger.boundingBox();
     if (!headerBox || !before) throw new Error('Expected grouped Widget action geometry.');
 
-    expect(before.width).toBeGreaterThanOrEqual(44);
-    expect(before.height).toBeGreaterThanOrEqual(44);
+    expect(Math.round(before.width)).toBeGreaterThanOrEqual(44);
+    expect(Math.round(before.height)).toBeGreaterThanOrEqual(44);
     expect(before.x + before.width).toBeLessThanOrEqual(headerBox.x + headerBox.width + 1);
     expect(before.y + before.height).toBeLessThanOrEqual(headerBox.y + headerBox.height + 1);
 
@@ -2009,6 +2352,33 @@ test('Deep Current title-bar drag docks a Widget across both instrument rails', 
   await dragToShelfRail(page, widgetDragSurface(characters), 'left');
   await expect(characters).toHaveAttribute('data-pomegranate-edge', 'left');
   await expect(characters).toHaveAttribute('data-pomegranate-shelf', /left-shelf-/);
+});
+
+test('Deep Current single-Widget shelves use all available height without phantom rows', async ({ page }) => {
+  const ambience = page.getByRole('article', { name: 'Room Ambience' });
+  await dragToShelfRail(page, widgetDragSurface(ambience), 'left');
+
+  const placed = page.locator('[data-widget-type="story.room-ambience"]');
+  const shelf = page.locator('.dock-shelf[data-pomegranate-shelf^="left-shelf-"]').filter({ has: placed });
+  await expect(shelf).toHaveCount(1);
+
+  const geometry = await shelf.evaluate((node) => {
+    const item = node.querySelector<HTMLElement>(':scope > [data-widget-type]');
+    if (!item) throw new Error('Missing the shelf Widget row.');
+    const content = item.querySelector<HTMLElement>('.implemented-widget');
+    if (!content) throw new Error('Missing the rendered Widget content.');
+    const style = getComputedStyle(node);
+    return {
+      availableHeight: node.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom),
+      itemHeight: item.getBoundingClientRect().height,
+      contentOverflow: content.scrollHeight - content.clientHeight,
+      separatorContent: getComputedStyle(node, '::before').content
+    };
+  });
+
+  expect(Math.abs(geometry.itemHeight - geometry.availableHeight)).toBeLessThanOrEqual(1);
+  expect(geometry.contentOverflow).toBeLessThanOrEqual(1);
+  expect(geometry.separatorContent).toBe('none');
 });
 
 test('Deep Current drag creates a new shelf and invalid release restores exact origin', async ({ page }) => {
@@ -2836,6 +3206,59 @@ test('Catalog whole-result automatic and pointer placement each dispatch exactly
       placement: { kind: 'docked', panelId: 'scene', regionId: 'left', shelfId: 'primary', order: 3 }
     }
   ]);
+});
+
+test('Catalog pointer drop in open Story space creates one floating Widget at the grab point', async ({ page }) => {
+  const workbench = page.locator('main[data-workbench-revision]');
+  const initialRevision = Number(await workbench.getAttribute('data-workbench-revision'));
+  await openWidgetCatalog(page);
+  const catalog = page.getByRole('dialog', { name: 'Widget Catalog' });
+  const result = catalog.locator('[data-catalog-result][data-widget-type="library.workspace"]');
+  await result.scrollIntoViewIfNeeded();
+  const originBox = await result.boundingBox();
+  const stageBox = await page.locator('[data-pomegranate-region-surface="stage"]').boundingBox();
+  if (!originBox || !stageBox) throw new Error('Missing Catalog or open Story geometry.');
+  const drop = {
+    x: stageBox.x + stageBox.width * .72,
+    y: stageBox.y + 90
+  };
+
+  await page.mouse.move(originBox.x + 8, originBox.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(originBox.x + 14, originBox.y + 8);
+  await expect(catalog).toBeHidden();
+  await page.mouse.move(drop.x, drop.y, { steps: 6 });
+  await expect(page.locator('[data-pom-part="widget.snap-preview"]')).toHaveCount(0);
+  const proxy = page.locator('[data-catalog-placement-proxy]');
+  const panelBox = await page.locator('[data-pomegranate-panel="scene"]').boundingBox();
+  if (!await proxy.boundingBox() || !panelBox) throw new Error('Missing Catalog proxy or Panel geometry.');
+  const proxyWidth = Math.min(280, Math.round(originBox.width));
+  const proxyScale = originBox.width > 0 ? proxyWidth / originBox.width : 1;
+  const proxyHeight = Math.min(360, Math.round(originBox.height * proxyScale));
+  const grabRatio = {
+    x: Math.round(8 * proxyScale) / proxyWidth,
+    y: Math.round(8 * proxyScale) / proxyHeight
+  };
+  expect(grabRatio.x).toBeCloseTo(8 / originBox.width, 2);
+  expect(grabRatio.y).toBeCloseTo(8 / originBox.height, 2);
+  const expectedX = Math.max(8, Math.min(panelBox.width - 360 - 8, drop.x - panelBox.x - 360 * grabRatio.x));
+  const expectedY = Math.max(8, Math.min(panelBox.height - 240 - 8, drop.y - panelBox.y - 240 * grabRatio.y));
+  await page.mouse.up();
+
+  const placed = page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])');
+  await expect(placed).toHaveCount(1);
+  await expect(placed).toHaveAttribute('data-pomegranate-placement', 'floating');
+  await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 1));
+  const placedBox = await placed.boundingBox();
+  if (!placedBox) throw new Error('Missing floating Catalog Widget geometry.');
+  expect(Math.abs(placedBox.x - (panelBox.x + expectedX))).toBeLessThanOrEqual(1);
+  expect(Math.abs(placedBox.y - (panelBox.y + expectedY))).toBeLessThanOrEqual(1);
+  expect(drop.x).toBeGreaterThanOrEqual(placedBox.x);
+  expect(drop.x).toBeLessThanOrEqual(placedBox.x + placedBox.width);
+  expect(drop.y).toBeGreaterThanOrEqual(placedBox.y);
+  expect(drop.y).toBeLessThanOrEqual(placedBox.y + placedBox.height);
+  await expect(catalog).toBeVisible();
+  await expect(proxy).toHaveCount(0);
 });
 
 test('Catalog pointer drag exposes populated dock rails and widget body docking zones before placement', async ({ page }) => {

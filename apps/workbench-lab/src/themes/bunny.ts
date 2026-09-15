@@ -19,7 +19,8 @@ const BUNNY_RECIPES: ThemeDefinitionV2['recipes'] = (() => {
   const recipes = themeRecipes({
     widgetGrouping: 'individual',
     chromePresentation: 'full',
-    actionPresentation: 'always'
+    actionPresentation: 'always',
+    toolbarTogglePresentation: 'bottom-chevrons'
   });
   recipes.parts['dock.surface'] = { ...recipes.parts['dock.surface'], material: 'canvas', shape: 'dock' };
   recipes.parts['panel.surface'] = { ...recipes.parts['panel.surface'], shape: 'shell' };

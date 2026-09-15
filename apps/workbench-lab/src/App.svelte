@@ -298,7 +298,22 @@
 
   let workbench: WorkbenchState = $state(store.getState());
   let focusMode = $state(false);
-  let focusedFrame = $state<WidgetFrameProjection | null>(null);
+  let focusedInstanceId = $state<WidgetFrameProjection['instanceId'] | null>(null);
+  const focusedFrame = $derived.by((): WidgetFrameProjection | null => {
+    if (!focusedInstanceId) return null;
+    const instance = workbench.widgets[focusedInstanceId];
+    const placement = workbench.placements[focusedInstanceId];
+    if (!instance || !placement || placement.kind === 'shelved') return null;
+    const manifest = store.registry.get(instance.type);
+    return Object.freeze({
+      instanceId: instance.id,
+      instanceIdAttribute: instance.id,
+      title: manifest?.title ?? instance.type,
+      instance,
+      manifest,
+      placement
+    });
+  });
   let focusReturnId: string | null = null;
   let focusReturnElement: HTMLElement | null = null;
   const compactWorkbenchMedia = typeof window.matchMedia === 'function'
@@ -625,7 +640,7 @@
   function focusWidget(frame: WidgetFrameProjection, returnElement: HTMLElement) {
     focusReturnId = frame.instanceId;
     focusReturnElement = returnElement;
-    focusedFrame = frame;
+    focusedInstanceId = frame.instanceId;
   }
 
   function expandDock(edge: 'left' | 'right') {
@@ -636,7 +651,7 @@
   async function returnFromFocusedWidget() {
     const returnId = focusReturnId;
     const returnElement = focusReturnElement;
-    focusedFrame = null;
+    focusedInstanceId = null;
     focusReturnId = null;
     focusReturnElement = null;
     await tick();
@@ -645,6 +660,10 @@
     const control = document.querySelector<HTMLElement>(selector);
     (returnElement?.isConnected ? returnElement : control)?.focus();
   }
+
+  $effect(() => {
+    if (focusedInstanceId && !focusedFrame) void returnFromFocusedWidget();
+  });
 
   function frameSurfacePart(frame: WidgetFrameProjection) {
     if (frame.placement.kind === 'floating') return 'floating.surface';

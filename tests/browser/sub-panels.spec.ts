@@ -387,6 +387,18 @@ async function addSubPanel(page: Page, name: string) {
   await dialog.getByRole('button', { name: 'Apply' }).click();
 }
 
+test('desktop Add sub-panel matches the Create Panel control width', async ({ page }) => {
+  await openClean(page);
+
+  const [createPanel, addSubPanel] = await Promise.all([
+    page.getByRole('button', { name: 'Create Panel' }).boundingBox(),
+    page.getByRole('button', { name: 'Add sub-panel' }).boundingBox()
+  ]);
+  if (!createPanel || !addSubPanel) throw new Error('Expected visible Panel creation controls.');
+
+  expect(Math.abs(addSubPanel.width - createPanel.width)).toBeLessThanOrEqual(1);
+});
+
 test('Add sub-panel follows the final tab when the rail fits and pins to the rail edge on overflow', async ({ page }) => {
   await openClean(page);
 

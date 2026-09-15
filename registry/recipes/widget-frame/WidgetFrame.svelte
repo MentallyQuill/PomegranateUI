@@ -55,6 +55,15 @@
     onrequestactions?.({ frame, title: displayTitle, anchor, source, ...(point ? { point } : {}) });
   }
 
+  function actionAnchor(surface: HTMLElement) {
+    if (grouped) {
+      const activeTab = surface.closest<HTMLElement>('[data-widget-group]')
+        ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+      if (activeTab) return activeTab;
+    }
+    return surface.querySelector<HTMLElement>(':scope > [data-pom-part="widget.header"]') ?? surface;
+  }
+
   function clearSecondaryPointer(current = secondaryPointer) {
     if (!current || secondaryPointer !== current) return;
     secondaryPointer = undefined;
@@ -88,11 +97,11 @@
   }
 
   function handleContextMenu(event: MouseEvent) {
-    if (!onrequestactions || grouped) return;
+    if (!onrequestactions) return;
     event.preventDefault();
     const pointerType = (event as MouseEvent & { pointerType?: string }).pointerType;
     if (pointerType ? pointerType === 'touch' : event.timeStamp - lastTouchPointerAt < 2_000) return;
-    const anchor = event.currentTarget as HTMLElement;
+    const anchor = actionAnchor(event.currentTarget as HTMLElement);
     if (secondaryDuplicate && performance.now() > secondaryDuplicate.until) secondaryDuplicate = undefined;
     if (secondaryDuplicate?.anchor === anchor) {
       secondaryDuplicate = undefined;
@@ -103,14 +112,14 @@
   }
 
   function handleSecondaryPointerDown(event: PointerEvent) {
-    if (!onrequestactions || grouped) return;
+    if (!onrequestactions) return;
     if (event.pointerType === 'touch') {
       lastTouchPointerAt = event.timeStamp;
       return;
     }
     if (event.button !== 2) return;
     event.preventDefault();
-    const anchor = event.currentTarget as HTMLElement;
+    const anchor = actionAnchor(event.currentTarget as HTMLElement);
     clearSecondaryPointer();
     secondaryPointer = { pointerId: event.pointerId, anchor, releaseQueued: false };
     window.addEventListener('pointerup', finishSecondaryPointer);
@@ -136,6 +145,10 @@
   data-pomegranate-widget={frame.instanceIdAttribute}
   data-pom-part={surfacePart ?? undefined}
   data-pomegranate-placement={frame.placement.kind}
+  onpointerdown={handleSecondaryPointerDown}
+  onpointerup={(event) => { finishSecondaryPointer(event); }}
+  onpointercancel={cancelSecondaryPointer}
+  oncontextmenu={handleContextMenu}
 >
   <header
     data-pom-part="widget.header"
@@ -143,10 +156,6 @@
     aria-label={`${displayTitle} Widget header`}
     aria-keyshortcuts={onrequestactions && !grouped ? 'Shift+F10' : undefined}
     tabindex={onrequestactions && !grouped ? 0 : undefined}
-    onpointerdown={handleSecondaryPointerDown}
-    onpointerup={(event) => { finishSecondaryPointer(event); }}
-    onpointercancel={cancelSecondaryPointer}
-    oncontextmenu={handleContextMenu}
     onkeydown={handleHeaderKey}
   >
     <div class="widget-frame-heading">
