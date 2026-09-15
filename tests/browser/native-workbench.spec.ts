@@ -3234,25 +3234,25 @@ test('Catalog pointer drop in open Story space creates one floating Widget at th
   if (!await proxy.boundingBox() || !panelBox) throw new Error('Missing Catalog proxy or Panel geometry.');
   const proxyWidth = Math.min(280, Math.round(originBox.width));
   const proxyScale = originBox.width > 0 ? proxyWidth / originBox.width : 1;
-  const proxyHeight = Math.min(360, Math.round(originBox.height * proxyScale));
-  const grabRatio = {
-    x: Math.round(8 * proxyScale) / proxyWidth,
-    y: Math.round(8 * proxyScale) / proxyHeight
-  };
-  expect(grabRatio.x).toBeCloseTo(8 / originBox.width, 2);
-  expect(grabRatio.y).toBeCloseTo(8 / originBox.height, 2);
-  const expectedX = Math.max(8, Math.min(panelBox.width - 360 - 8, drop.x - panelBox.x - 360 * grabRatio.x));
-  const expectedY = Math.max(8, Math.min(panelBox.height - 240 - 8, drop.y - panelBox.y - 240 * grabRatio.y));
+  const footprint = await page.locator('[data-pom-part="widget.float-preview"]').boundingBox();
+  if (!footprint) throw new Error('Missing committed-size floating footprint.');
+  const grabOffset = Math.round(8 * proxyScale);
+  const expectedX = Math.max(8, Math.min(panelBox.width - footprint.width - 8, drop.x - panelBox.x - grabOffset));
+  const expectedY = Math.max(8, Math.min(panelBox.height - footprint.height - 8, drop.y - panelBox.y - grabOffset));
   await page.mouse.up();
 
   const placed = page.locator('[data-widget-type="library.workspace"]:not([data-catalog-result])');
   await expect(placed).toHaveCount(1);
   await expect(placed).toHaveAttribute('data-pomegranate-placement', 'floating');
   await expect(workbench).toHaveAttribute('data-workbench-revision', String(initialRevision + 1));
+  await expect(page.locator('[data-widget-arriving]')).toHaveCount(0);
   const placedBox = await placed.boundingBox();
   if (!placedBox) throw new Error('Missing floating Catalog Widget geometry.');
   expect(Math.abs(placedBox.x - (panelBox.x + expectedX))).toBeLessThanOrEqual(1);
   expect(Math.abs(placedBox.y - (panelBox.y + expectedY))).toBeLessThanOrEqual(1);
+  for (const key of ['x', 'y', 'width', 'height'] as const) {
+    expect(Math.abs(placedBox[key] - footprint[key]), key).toBeLessThanOrEqual(1);
+  }
   expect(drop.x).toBeGreaterThanOrEqual(placedBox.x);
   expect(drop.x).toBeLessThanOrEqual(placedBox.x + placedBox.width);
   expect(drop.y).toBeGreaterThanOrEqual(placedBox.y);

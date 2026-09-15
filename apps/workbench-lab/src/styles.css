@@ -4895,7 +4895,7 @@ main[data-pom-theme-root] .composer-field > .composer-meta {
 /* Edge labels and chevrons share the active theme's control material. */
 main[data-pom-theme-root] .toolbar-edge-toggle {
   z-index: 13;
-  color: var(--pom-color-text);
+  color: var(--pom-part-button-surface-foreground);
   background: var(--pom-part-button-surface-material-fill);
   border: var(--pom-part-button-surface-material-border);
   box-shadow: var(--pom-part-button-surface-material-shadow);
@@ -4906,7 +4906,7 @@ main[data-pom-theme-root] .toolbar-edge-toggle:hover {
   background: var(--pom-part-button-surface-state-hover-fill);
 }
 main[data-pom-theme-root] .toolbar-edge-toggle:focus-visible {
-  color: var(--pom-color-text);
+  color: var(--pom-part-button-surface-state-focus-foreground);
   outline: var(--pom-focus-width) solid var(--pom-color-focus);
   outline-offset: -2px;
 }

@@ -34,7 +34,7 @@
   function minimumFor(item: ShelfItem) { return Math.max(...item.frames.map((frame) => frame.manifest?.catalog?.geometry.minHeight ?? 80)); }
   function maximumFor(item: ShelfItem) { return Math.max(minimumFor(item), Math.min(...item.frames.map((frame) => frame.manifest?.catalog?.geometry.maxHeight ?? 1200))); }
 </script>
-<section class="dock-shelf" data-pomegranate-shelf={projection.shelf.id} data-pomegranate-shelf-order={projection.shelf.order} data-shelf-item-count={items.length} aria-label={`${projection.shelf.id} shelf`} style={`--pom-shelf-weight:${projection.shelf.weight};${items.length === 2 ? '' : `--pom-shelf-grid-rows:repeat(${Math.max(1, items.length)}, minmax(0, 1fr))`}`}>
+<section class="dock-shelf" data-pomegranate-shelf={projection.shelf.id} data-pomegranate-shelf-order={projection.shelf.order} data-shelf-item-count={items.length} data-pomegranate-shelf-item-count={items.length} aria-label={`${projection.shelf.id} shelf`} style={`--pom-shelf-weight:${projection.shelf.weight};--pom-shelf-item-count:${Math.max(1, items.length)};${items.length === 2 ? '' : `--pom-shelf-grid-rows:repeat(${Math.max(1, items.length)}, minmax(0, 1fr))`}`}>
   {#each items as item (item.id)}
     {@const rowFrame = frameFor(item)}
     <div class="dock-row" data-pomegranate-row-height={rowFrame.placement.kind === 'docked' ? rowFrame.placement.height : undefined}
