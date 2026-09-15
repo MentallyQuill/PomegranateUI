@@ -11,6 +11,31 @@ async function fresh(page: Page, theme = 'Deep Current') {
   await page.evaluate(() => document.fonts.ready);
 }
 
+test('delayed menu opening preserves the selected keyboard action', async ({ page }) => {
+  await fresh(page);
+  const group = page.getByRole('group', { name: 'Widget group' });
+  const before = await group.getByRole('tab').allTextContents();
+  await page.evaluate(() => {
+    const requestFrame = window.requestAnimationFrame;
+    const callbacks: FrameRequestCallback[] = [];
+    window.requestAnimationFrame = callback => callbacks.push(callback);
+    (window as any).__flushMenuOpening = () => {
+      window.requestAnimationFrame = requestFrame;
+      for (const callback of callbacks) callback(performance.now());
+    };
+  });
+  await group.getByRole('tab', { name: 'Room Ambience', exact: true }).dispatchEvent('contextmenu', {
+    button: 2, clientX: 1100, clientY: 350
+  });
+  const move = page.getByRole('menu', { name: 'Room Ambience Widget actions' }).getByRole('menuitem', { name: 'Move…', exact: true });
+  await move.focus();
+  await page.evaluate(() => (window as any).__flushMenuOpening());
+  await expect(move).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu', { name: 'Room Ambience Widget move' }).getByRole('menuitem', { name: 'Float', exact: true })).toBeVisible();
+  await expect(group.getByRole('tab')).toHaveText(before);
+});
+
 test('visible Widget actions remain separate from titles and tabs in every theme', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   for (const theme of ['Deep Current', 'PomOS', 'Bunny', 'Ash & Amber']) {

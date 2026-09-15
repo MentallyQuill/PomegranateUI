@@ -257,8 +257,11 @@
   }
 
   function opened() {
+    if (!isMenuOpen()) return;
     positionMenu();
-    menu?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus({ preventScroll: true });
+    if (!menu?.contains(document.activeElement)) {
+      menu?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus({ preventScroll: true });
+    }
   }
 </script>
 

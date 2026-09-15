@@ -62,24 +62,39 @@ test('docking settles into the committed widget instead of stretching into the p
   const box = await rail.boundingBox();
   if (!box || !id) throw new Error('Expected docking geometry.');
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.evaluate((id) => {
-    const samples: unknown[] = [];
-    (window as any).__motionSamples = samples;
-    const start = performance.now();
-    function sample() {
-      const held = document.querySelector<HTMLElement>('[data-pom-part="widget.drag-preview"]');
-      const target = document.querySelector(`[data-pomegranate-widget="${id}"]`)?.closest('[data-widget-type]');
-      samples.push({ time: performance.now() - start, held: held?.getBoundingClientRect().toJSON(), target: target?.getBoundingClientRect().toJSON(),
-        neighbours: document.getAnimations().filter(animation => animation.id === 'pom-widget-reflow').length,
-        animation: held?.getAnimations().find(animation => animation.id === 'pom-widget-settle')?.effect?.getComputedTiming().progress,
-        frames: (held?.getAnimations().find(animation => animation.id === 'pom-widget-settle')?.effect as KeyframeEffect | undefined)?.getKeyframes() });
-      if (performance.now() - start < 500) requestAnimationFrame(sample);
-    }
-    requestAnimationFrame(sample);
-  }, id);
+  await page.evaluate(() => {
+    const animate = Element.prototype.animate;
+    (window as any).__motionAnimations = [];
+    (window as any).__restoreAnimate = () => { Element.prototype.animate = animate; };
+    Element.prototype.animate = function(keyframes, options) {
+      const animation = animate.call(this, keyframes, options);
+      // Sample the real animation at fixed times: busy CI runners may skip
+      // every frame in the final 40ms of a normally running transition.
+      animation.pause();
+      (window as any).__motionAnimations.push(animation);
+      return animation;
+    };
+  });
   await page.mouse.up();
+  await page.waitForFunction(() => (window as any).__motionAnimations.some((animation: Animation) => animation.id === 'pom-widget-settle'));
+  const samples = await page.evaluate(async (id) => {
+    const animations = (window as any).__motionAnimations as Animation[];
+    await Promise.all(animations.map(animation => animation.ready));
+    const held = document.querySelector<HTMLElement>('[data-pom-part="widget.drag-preview"]')!;
+    const target = document.querySelector(`[data-pomegranate-widget="${id}"]`)!.closest('[data-widget-type]')!;
+    const settle = animations.find(animation => animation.id === 'pom-widget-settle')!;
+    const samples = [0, 100, 170].map(time => {
+      for (const animation of animations) animation.currentTime = time;
+      return { time, held: held.getBoundingClientRect().toJSON(), target: target.getBoundingClientRect().toJSON(),
+        neighbours: animations.filter(animation => animation.id === 'pom-widget-reflow').length,
+        animation: settle.effect?.getComputedTiming().progress,
+        frames: (settle.effect as KeyframeEffect).getKeyframes() };
+    });
+    (window as any).__restoreAnimate();
+    for (const animation of animations) animation.play();
+    return samples;
+  }, id);
   await expect(page.locator('[data-pom-part="widget.drag-preview"]')).toHaveCount(0);
-  const samples = await page.evaluate(() => (window as any).__motionSamples);
   await testInfo.attach('motion-frames', { body: JSON.stringify(samples), contentType: 'application/json' });
   const moving = samples.filter((sample: any) => sample.frames?.length);
   expect(moving.length).toBeGreaterThan(1);
@@ -87,10 +102,11 @@ test('docking settles into the committed widget instead of stretching into the p
   const errors = moving.map((sample: any) => ['x', 'y', 'width', 'height'].reduce((error, key) => error + Math.abs(sample.held[key] - sample.target[key]), 0));
   expect(Math.max(...errors)).toBeGreaterThan(20);
   expect(Math.min(...errors)).toBeLessThan(2);
-  const last = moving.at(-1);
-  expect(parseFloat(last.frames.at(-1).width)).toBeCloseTo(last.target.width, 0);
-  expect(parseFloat(last.frames.at(-1).height)).toBeCloseTo(last.target.height, 0);
-  expect(last.frames.at(-1).transform).not.toContain('scale(');
+  const last = moving.at(-1)!;
+  const endpoint = last.frames.at(-1)!;
+  expect(parseFloat(String(endpoint.width))).toBeCloseTo(last.target.width, 0);
+  expect(parseFloat(String(endpoint.height))).toBeCloseTo(last.target.height, 0);
+  expect(endpoint.transform).not.toContain('scale(');
   expect(await materials.evaluate(node => node.getAnimations({ subtree: true }).some(animation => (animation as CSSAnimation).animationName === 'surface-in'))).toBe(false);
 });
 
